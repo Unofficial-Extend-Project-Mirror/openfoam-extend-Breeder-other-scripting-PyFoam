@@ -1,0 +1,222 @@
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/FileBasis.py 2931 2008-03-24T19:03:43.670798Z bgschaid  $ 
+"""Basis for the handling of OpenFOAM-files
+
+Transparently accepts gnuzipped files"""
+
+import os,re
+from os import path
+from tempfile import mktemp
+import gzip
+
+
+from PyFoam.Basics.Utilities import Utilities
+from PyFoam.Basics.LineReader import LineReader
+
+from PyFoam.Error import warning
+
+class FileBasis(Utilities):
+    """ Base class for the other OpenFOAM--file-classes"""
+    
+    removedString="//PyFoamRemoved: "
+    """Comment for lines that were overwritten by PyFoam-routines"""
+    
+    addedString="//PyFoamAdded"
+    """Comment for lines that were added by PyFoam-routines"""
+    
+    def __init__(self,name):
+        """@param name: Name of the file. If the field is zipped the .gz is
+        appended"""
+        self.name = path.abspath(name)
+        if path.exists(self.name):
+            self.zipped=False
+            if path.splitext(self.name)[1]==".gz":
+                self.zipped=True
+            elif path.exists(self.name+".gz"):
+                warning(self.name+".gz","and",self.name,"existing - using the unzipped")
+        elif path.exists(self.name+".gz"):
+            self.zipped=True
+        else:
+            self.zipped=True
+
+        if path.splitext(self.name)[1]==".gz":
+            self.name=self.name[:-3]
+
+        self.fh=None
+        self.content=None
+
+    def realName(self):
+        """The full filename with appended .gz (if zipped)"""
+        if self.zipped:
+            return self.name+".gz"
+        else:
+            return self.name
+
+    def baseName(self):
+        """Returns the basic file name (without .gz)"""
+        return path.basename(self.name)
+    
+    def openFile(self,keepContent=False,mode="r"):
+        """opens the file. To be overloaded by derived classes"""
+        if not keepContent:
+            self.content=None
+        if self.zipped:
+            self.fh=gzip.open(self.name+".gz",mode)
+        else:
+            self.fh=open(self.name,mode)
+
+    def closeFile(self):
+        """ closes the file"""
+        self.fh.close()
+        self.fh=None
+
+    def readFile(self):
+        """ read the whole File into memory"""
+        self.openFile()
+        self.content=self.parse(self.fh.read())
+        self.closeFile()
+
+    def writeFile(self,content=None):
+        """ write the whole File from memory
+        @param content: content that should replace the old content"""
+        if content!=None:
+            self.content=content
+        if self.content!=None:
+            self.openFile(keepContent=True,mode="w")
+            self.fh.write(str(self))
+            self.closeFile()
+
+    def writeFileAs(self,name):
+        """ Writes a copy of the file. Extends with .gz if the original
+        is zipped
+        @param name: Name under which the file is written"""
+        if path.abspath(self.name)==path.abspath(name):
+            warning(name,"and",self.name,"seem to be the same. Nothing done")
+            return
+
+        erase=False
+        if self.content==None:
+            erase=True
+            self.readFile()
+
+        tmp=self.name
+        self.name=name
+        self.writeFile()
+        self.name=tmp
+        
+        if erase:
+            self.content=None
+            
+    def parse(self,cnt):
+        """ Parse a string that is to be the content, to be overriden
+        by the sub-classes"""
+
+        return cnt
+
+    def __str__(self):
+        """Build a string from self.content, to be overriden by sub-classes"""
+
+        return self.content
+    
+    def makeTemp(self):
+        """creates a temporary file"""
+        fn=mktemp(dir=path.dirname(self.name))
+        if self.zipped:
+            fh=gzip.open(fn,"w")
+        else:
+            fh=open(fn,"w")
+
+        return fh,fn
+
+    def goTo(self,l,s,out=None,echoLast=False,stop=None):
+        """Read lines until a token is found
+
+        @param l: a LineReader object
+        @param s: the string to look for
+        @param out: filehandle to echo the lines to
+        @param stop: pattern that indicates that exp will never be found (only passed through to goMatch)
+        @param echoLast: echo the line with the string"""
+        exp=re.compile("( |^)"+s+"( |$)")
+        m=self.goMatch(l,exp,out=out,stop=stop)
+        if out!=None and echoLast:
+            out.write(l.line+"\n")
+            
+    def goMatch(self,l,exp,out=None,stop=None):
+        """Read lines until a regular expression is matched
+
+        @param l: a LineReader object
+        @param exp: the expression to look for
+        @param out: filehandle to echo the lines to
+        @param stop: pattern that indicates that exp will never be found
+        @return: match-object if exp is found, the line if stop is found and None if the end of the file is reached"""        
+        while l.read(self.fh):
+            m=exp.match(l.line)
+            if m!=None:
+                return m
+            elif stop!=None:
+                if stop.match(l.line):
+                    return l.line
+            if out!=None:
+                out.write(l.line+"\n")
+
+        return None
+    
+    def copyRest(self,l,out):
+        """Copy the rest of the file
+        
+        @param l: a LineReader object
+        @param out: filehandle to echo the lines to"""        
+        while l.read(self.fh):
+            out.write(l.line+"\n")
+
+    def purgeFile(self):
+        """Undo all the manipulations done by PyFOAM
+
+        Goes through the file and removes all lines that were added"""
+        rmExp= re.compile("^"+self.removedString+"(.*)$")
+        addExp=re.compile("^(.*)"+self.addedString+"$")
+        
+        l=LineReader()
+        self.openFile()
+
+        (fh,fn)=self.makeTemp()
+
+        while l.read(self.fh):
+            toPrint=l.line
+
+            m=addExp.match(l.line)
+            if m!=None:
+                continue
+            
+            m=rmExp.match(l.line)
+            if m!=None:
+                toPrint=m.group(1)
+                
+            fh.write(toPrint+"\n")
+        
+        self.closeFile()
+        fh.close()
+        os.rename(fn,self.name)
+
+class FileBasisBackup(FileBasis):
+    """A file with a backup-copy"""
+
+    def __init__(self,name,backup=False):
+        """@param name: The name of the parameter file
+        @type name: str
+        @param backup: create a backup-copy of the file
+        @type backup: boolean"""
+        
+        FileBasis.__init__(self,name)
+
+        if backup:
+            self.backupName=self.name+".backup"
+            self.execute("cp "+self.name+" "+self.backupName)
+        else:
+            self.backupName=None
+
+    def restore(self):
+        """if a backup-copy was made the file is restored from this"""
+        if self.backupName!=None:
+            self.execute("cp "+self.backupName+" "+self.name)
+            self.execute("rm "+self.backupName)
+    

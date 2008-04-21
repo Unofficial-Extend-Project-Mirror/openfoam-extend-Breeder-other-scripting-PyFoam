@@ -1,0 +1,123 @@
+import unittest
+
+from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
+from PyFoam.RunDictionary.SolutionFile import SolutionFile
+from PyFoam.RunDictionary.FileBasis import FileBasis
+
+from os import path,environ,system
+
+theSuite=unittest.TestSuite()
+
+class TimeDirectoryTest(unittest.TestCase):
+    def setUp(self):
+        self.theFile="/tmp/test.damBreak"
+        system("cp -r "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak")+" "+self.theFile)
+        
+    def tearDown(self):
+        system("rm -rf "+self.theFile)
+    
+    def testTimeDirectoryBasicContainerStuff(self):
+        test=SolutionDirectory(self.theFile)["0"]
+        self.assertEqual(len(test),4)
+        self.assert_("gamma" in test)
+        self.assert_("nix" not in test)
+        tf=test["U"]
+        self.assertEqual(type(tf),SolutionFile)
+        self.assert_(FileBasis in tf.__class__.__mro__)
+        self.assertRaises(KeyError,test.__getitem__,"nix")
+        self.assertRaises(TypeError,test.__getitem__,42)
+        lst=[]
+        for v in test:
+            lst.append(v.baseName())
+        self.assert_("gamma" in lst)
+        self.assertEqual(len(lst),len(test))
+        
+    def testTimeDirectoryAdding(self):
+        test=SolutionDirectory(self.theFile)["0"]
+        self.assertEqual(len(test),4)
+        test["U2"]=test["U"]
+        self.assertEqual(len(test),5)
+        test["nix"]=23
+        self.assertEqual(len(test),6)
+        del test["nix"]
+        self.assertEqual(len(test),5)
+        del test["U2"]
+        self.assertEqual(len(test),4)
+
+    def testTimeDirectoryCreating(self):
+        self.assertEqual(len(SolutionDirectory(self.theFile)),1)
+        test=TimeDirectory(self.theFile,"42",create=True)
+        self.assertEqual(len(test),0)
+        self.assertEqual(len(SolutionDirectory(self.theFile)),2)
+        
+theSuite.addTest(unittest.makeSuite(TimeDirectoryTest,"test"))
+
+class TimeDirectoryTestZipped(unittest.TestCase):
+    def setUp(self):
+        self.theFile="/tmp/test.damBreak"
+        system("cp -r "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak")+" "+self.theFile)
+        system("gzip "+path.join(self.theFile,"0","gamma"))
+        
+    def tearDown(self):
+        system("rm -rf "+self.theFile)
+    
+    def testTimeReplacingZippedFile(self):
+        test=SolutionDirectory(self.theFile)["0"]
+        self.assertEqual(len(test),4)
+        test["gamma"]=test["gamma.org"]
+        self.assertEqual(len(test),4)
+
+theSuite.addTest(unittest.makeSuite(TimeDirectoryTestZipped,"test"))
+
+class TimeDirectoryTestCopy(unittest.TestCase):
+    def setUp(self):
+        self.theFile="/tmp/test.damBreak"
+        system("cp -r "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak")+" "+self.theFile)
+        
+    def tearDown(self):
+        system("rm -rf "+self.theFile)
+    
+    def testTimeCopy(self):
+        sol=SolutionDirectory(self.theFile)
+        self.assertEqual(len(sol),1)
+        sol["42"]=sol["0"]
+        sol["13"]=sol["0"]
+        self.assertEqual(len(sol),3)
+        test1=sol["0"]
+        test2=sol["13"]
+        test3=sol["42"]
+        self.assertEqual(len(test3),4)
+        del test3["gamma"]
+        self.assertEqual(len(test3),3)
+        res=test1.copy(test3)
+        self.assertEqual(len(test1),4)
+        self.assertEqual(len(res),3)
+        res=test1.copy(test3,purge=True)
+        self.assertEqual(len(test1),3)
+        self.assertEqual(len(res),3)
+        res=test1.copy(test2,overwrite=False)
+        self.assertEqual(len(test1),4)
+        self.assertEqual(len(res),1)
+        test1.clear()
+        self.assertEqual(len(test1),0)
+        res=test1.copy(test2,overwrite=False)
+        self.assertEqual(len(test1),4)
+        self.assertEqual(len(res),4)
+        res=test1.copy(test2,overwrite=False)
+        self.assertEqual(len(test1),4)
+        self.assertEqual(len(res),0)
+        self.assertEqual(len(test3),3)
+        res=test3.copy(test1,mustExist=True)
+        self.assertEqual(len(test3),3)
+        self.assertEqual(len(res),3)
+        test1.clear()
+        res=test1.copy(test2,include=["gamma*"])
+        self.assertEqual(len(test1),2)
+        self.assertEqual(len(res),2)
+        res=test1.copy(test2,exclude=["U"],overwrite=False)
+        self.assertEqual(len(test1),3)
+        self.assertEqual(len(res),1)
+        
+theSuite.addTest(unittest.makeSuite(TimeDirectoryTestCopy,"test"))
+

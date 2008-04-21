@@ -1,0 +1,12 @@
+#!/bin/sh
+#
+# use "sh ./makelinks-pyFoam" to create links
+# 
+
+list=$( cd ../bin && for i in *.py; do echo $i; done )
+
+for i in $list
+do
+    ln -sv pyFoam $i
+done
+

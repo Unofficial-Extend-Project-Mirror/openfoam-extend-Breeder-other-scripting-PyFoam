@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Komodo Project File - DO NOT EDIT -->
+<project id="10958C7DBB1L351cd56f0x12ce" name="PyFoam" kpf_version="2">
+<preference-set id="">
+  <string id="import_exclude_matches">*.*~;*.bak;*.tmp;CVS;.#*;*.pyo;*.pyc;.svn;*%*;dist;doc;build</string>
+  <string id="import_dirname">/Volumes/FOAM/bgschaid-1.2/Subversion/OpenFOAM/Python/PyFoam</string>
+  <string id="import_include_matches">*.py</string>
+</preference-set>
+<file url="setup.py" id="10958C8A8CEL15845a390x12ce" name="setup.py">
+</file>
+<folder url="PyFoam" id="10958C8A8DCL4f329ff30x12ce" name="PyFoam">
+<preference-set id="">
+</preference-set>
+<file url="PyFoam/FoamInformation.py" id="10958C8A8CEL3c4b43250x12ce" name="FoamInformation.py">
+</file>
+<file url="PyFoam/__init__.py" id="10958C8A8CEL7edc749d0x12ce" name="__init__.py">
+</file>
+<folder url="PyFoam/Basics" id="10958C8A8DFL14c4c1ae0x12ce" name="Basics">
+<file url="PyFoam/Basics/BasicFile.py" id="10958C8A8CEL63a28cad0x12ce" name="BasicFile.py">
+</file>
+<file url="PyFoam/Basics/GnuplotCompare.py" id="10958C8A8CFL5299a1fb0x12ce" name="GnuplotCompare.py">
+</file>
+<file url="PyFoam/Basics/GnuplotFile.py" id="10958C8A8CFL49fa1ec30x12ce" name="GnuplotFile.py">
+</file>
+<file url="PyFoam/Basics/Helpers.py" id="10958C8A8CFL96f22b40x12ce" name="Helpers.py">
+</file>
+<file url="PyFoam/Basics/LineReader.py" id="10958C8A8CFL32256ecb0x12ce" name="LineReader.py">
+</file>
+<file url="PyFoam/Basics/OutFileCollection.py" id="10958C8A8CFL7547bd560x12ce" name="OutFileCollection.py">
+</file>
+<file url="PyFoam/Basics/OutputFile.py" id="10958C8A8CFL5b76651f0x12ce" name="OutputFile.py">
+</file>
+<file url="PyFoam/Basics/Utilities.py" id="10958C8A8CFL7a0398be0x12ce" name="Utilities.py">
+</file>
+<file url="PyFoam/Basics/__init__.py" id="10958C8A8CFL7e11899a0x12ce" name="__init__.py">
+</file>
+<file url="PyFoam/Basics/TimeLineCollection.py" id="10962419FD4L76ce247a0x1354" name="TimeLineCollection.py">
+</file>
+</folder>
+<folder url="PyFoam/Execution" id="10958C8A8E4L257c24ab0x12ce" name="Execution">
+<file url="PyFoam/Execution/AnalyzedRunner.py" id="10958C8A8CFL5174465e0x12ce" name="AnalyzedRunner.py">
+</file>
+<file url="PyFoam/Execution/BasicRunner.py" id="10958C8A8CFL6b7a9e4a0x12ce" name="BasicRunner.py">
+</file>
+<file url="PyFoam/Execution/ConvergenceRunner.py" id="10958C8A8CFL3e3f01dd0x12ce" name="ConvergenceRunner.py">
+</file>
+<file url="PyFoam/Execution/FoamThread.py" id="10958C8A8D0L630b39a20x12ce" name="FoamThread.py">
+</file>
+<file url="PyFoam/Execution/ParallelExecution.py" id="10958C8A8D0L101453e80x12ce" name="ParallelExecution.py">
+</file>
+<file url="PyFoam/Execution/UtilityRunner.py" id="10958C8A8D0L740f84ea0x12ce" name="UtilityRunner.py">
+</file>
+<file url="PyFoam/Execution/__init__.py" id="10958C8A8D0L1491b0920x12ce" name="__init__.py">
+</file>
+</folder>
+<folder url="PyFoam/LogAnalysis" id="10958C8A8E8L4f2681090x12ce" name="LogAnalysis">
+<preference-set id="">
+</preference-set>
+<file url="PyFoam/LogAnalysis/BoundingLineAnalyzer.py" id="10958C8A8D0L9e0b7dd0x12ce" name="BoundingLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/BoundingLogAnalyzer.py" id="10958C8A8D0L393548800x12ce" name="BoundingLogAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/ContextLineAnalyzer.py" id="10958C8A8D0L55ca9cfa0x12ce" name="ContextLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/ContinuityLineAnalyzer.py" id="10958C8A8D0L82b21410x12ce" name="ContinuityLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/EchoLineAnalyzer.py" id="10958C8A8D0L5706b6f30x12ce" name="EchoLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/EchoLogAnalyzer.py" id="10958C8A8D0L8c779b20x12ce" name="EchoLogAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/ExecutionTimeLineAnalyzer.py" id="10958C8A8D0L7b57c3ea0x12ce" name="ExecutionTimeLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/FileLineAnalyzer.py" id="10958C8A8D1L5e19b2850x12ce" name="FileLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/FoamLogAnalyzer.py" id="10958C8A8D1L1dfb7cc30x12ce" name="FoamLogAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/LinearSolverLineAnalyzer.py" id="10958C8A8D1L2927ca6e0x12ce" name="LinearSolverLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/LogAnalyzerApplication.py" id="10958C8A8D1L4af7bc8a0x12ce" name="LogAnalyzerApplication.py">
+</file>
+<file url="PyFoam/LogAnalysis/LogLineAnalyzer.py" id="10958C8A8D1L4ef6c6cc0x12ce" name="LogLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/NameFinderLineAnalyzer.py" id="10958C8A8D1L4397382b0x12ce" name="NameFinderLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/RegExpLineAnalyzer.py" id="10958C8A8D1L1a9e206d0x12ce" name="RegExpLineAnalyzer.py">
+<preference-set id="">
+</preference-set>
+</file>
+<file url="PyFoam/LogAnalysis/SimpleLineAnalyzer.py" id="10958C8A8D1L1dfe3f260x12ce" name="SimpleLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/StandardLogAnalyzer.py" id="10958C8A8D1L3186ecf10x12ce" name="StandardLogAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/SteadyConvergedLineAnalyzer.py" id="10958C8A8D1L2053ae2d0x12ce" name="SteadyConvergedLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/TimeLineAnalyzer.py" id="10958C8A8D2L2bf8d9620x12ce" name="TimeLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/UtilityAnalyzer.py" id="10958C8A8D2L67230760x12ce" name="UtilityAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/ValueLineAnalyzer.py" id="10958C8A8D2L539ff9db0x12ce" name="ValueLineAnalyzer.py">
+</file>
+<file url="PyFoam/LogAnalysis/__init__.py" id="10958C8A8D2L563111e80x12ce" name="__init__.py">
+</file>
+<file url="PyFoam/LogAnalysis/TimeLineLineAnalyzer.py" id="1096244E47EL1758224f0x1354" name="TimeLineLineAnalyzer.py">
+</file>
+</folder>
+<folder url="PyFoam/RunDictionary" id="10958C8A8F0L348acb6e0x12ce" name="RunDictionary">
+<file url="PyFoam/RunDictionary/BlockMesh.py" id="10958C8A8D2L79d167000x12ce" name="BlockMesh.py">
+</file>
+<file url="PyFoam/RunDictionary/FileBasis.py" id="10958C8A8D2L1b4511c00x12ce" name="FileBasis.py">
+</file>
+<file url="PyFoam/RunDictionary/ParameterFile.py" id="10958C8A8D2L2bf70dbb0x12ce" name="ParameterFile.py">
+</file>
+<file url="PyFoam/RunDictionary/SolutionDirectory.py" id="10958C8A8D2L184850e80x12ce" name="SolutionDirectory.py">
+</file>
+<file url="PyFoam/RunDictionary/SolutionFile.py" id="10958C8A8D2L200f07a70x12ce" name="SolutionFile.py">
+</file>
+<file url="PyFoam/RunDictionary/TimeDirectory.py" id="10958C8A8D2L16b933d00x12ce" name="TimeDirectory.py">
+</file>
+<file url="PyFoam/RunDictionary/__init__.py" id="10958C8A8D2L5ea4350d0x12ce" name="__init__.py">
+</file>
+</folder>
+</folder>
+<folder url="bin" id="10958C8A8F3Le14647a0x12ce" name="bin">
+<file url="bin/pyFoamPlotResiduals.py" id="10958C8A8D3L1a8a1bbc0x12ce" name="pyFoamPlotResiduals.py">
+</file>
+<file url="bin/pyFoamRunner.py" id="10958C8A8D3L6e1772260x12ce" name="pyFoamRunner.py">
+</file>
+<file url="bin/pyFoamStandardLogAnalyzer.py" id="10958C8A8D3L684a4a850x12ce" name="pyFoamStandardLogAnalyzer.py">
+</file>
+<file url="bin/pyFoamSteadyRunner.py" id="10958C8A8D3L277c6930x12ce" name="pyFoamSteadyRunner.py">
+</file>
+<file url="bin/pyFoamUtilityRunner.py" id="10958C8A8D3L50c980e20x12ce" name="pyFoamUtilityRunner.py">
+</file>
+<file url="bin/pyFoamPlotRunner.py" id="109625AE6D6L7d781d850x1354" name="pyFoamPlotRunner.py">
+</file>
+</folder>
+<folder url="examples" id="10958C8A8F6L3795874e0x12ce" name="examples">
+<file url="examples/benchFoam.py" id="10958C8A8D3L2905c8960x12ce" name="benchFoam.py">
+</file>
+<file url="examples/compactOutput.py" id="10958C8A8D3L356f04f40x12ce" name="compactOutput.py">
+</file>
+<file url="examples/doInletVariation.py" id="10958C8A8D3L5ea786fc0x12ce" name="doInletVariation.py">
+</file>
+<file url="examples/interFoamLogAnalyzer.py" id="10958C8A8D3L22fb95be0x12ce" name="interFoamLogAnalyzer.py">
+</file>
+<file url="examples/trivialLogAnalyzer.py" id="10958C8A8D6L4be568680x12ce" name="trivialLogAnalyzer.py">
+</file>
+</folder>
+<folder url="test" id="10958C8A8F9L45f951f70x12ce" name="test">
+<file url="test/testParameterFile.py" id="10958C8A8D7L4f4f28040x12ce" name="testParameterFile.py">
+</file>
+<file url="test/testSolutionDir.py" id="10958C8A8D7L1c5eebff0x12ce" name="testSolutionDir.py">
+</file>
+<file url="test/testSolutionFile.py" id="10958C8A8D7L721de2190x12ce" name="testSolutionFile.py">
+</file>
+</folder>
+</project>

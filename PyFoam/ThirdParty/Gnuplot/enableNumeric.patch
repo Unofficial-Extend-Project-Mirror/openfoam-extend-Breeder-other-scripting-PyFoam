@@ -1,0 +1,138 @@
+=== PlotItems.py
+==================================================================
+--- PlotItems.py	(revision 2715)
++++ PlotItems.py	(local)
+@@ -21,8 +21,12 @@
+ except ImportError:
+     from StringIO import StringIO
+ 
+-import numpy
+-
++try:
++    import numpy
++except ImportError:
++    import Numeric as numpy
++    numpy.newaxis=numpy.NewAxis
++    
+ import gp, utils, Errors
+ 
+ 
+=== demo.py
+==================================================================
+--- demo.py	(revision 2715)
++++ demo.py	(local)
+@@ -13,8 +13,11 @@
+ 
+ """
+ 
+-from numpy import *
+-
++try:
++    from numpy import *
++except ImportError:
++    from Numeric import *
++    newaxis=NewAxis
+ # If the package has been installed correctly, this should work:
+ import Gnuplot, Gnuplot.funcutils
+ 
+@@ -36,7 +39,11 @@
+     g.reset()
+     # Plot one dataset from an array and one via a gnuplot function;
+     # also demonstrate the use of item-specific options:
+-    x = arange(10, dtype='float_')
++    try:
++        x = arange(10, dtype='float_')
++    except TypeError:
++        x = arange(10, typecode='d')
++        
+     y1 = x**2
+     # Notice how this plotitem is created here but used later?  This
+     # is convenient if the same dataset has to be plotted multiple
+=== funcutils.py
+==================================================================
+--- funcutils.py	(revision 2715)
++++ funcutils.py	(local)
+@@ -14,8 +14,11 @@
+ 
+ """
+ 
+-import numpy
+-
++try:
++    import numpy
++except ImportError:
++    import Numeric as numpy
++    
+ import Gnuplot, utils
+ 
+ 
+@@ -55,8 +58,11 @@
+             return f(xvals)
+         else:
+             if dtype is None:
+-                dtype = xvals.dtype.char
+-
++                try:
++                    dtype = xvals.dtype.char
++                except AttributeError:
++                    dtype = xvals.typecode()
++                    
+             m = numpy.zeros((len(xvals),), dtype)
+             for xi in range(len(xvals)):
+                 x = xvals[xi]
+@@ -73,9 +79,14 @@
+             if dtype is None:
+                 # choose a result dtype based on what '+' would return
+                 # (yecch!):
+-                dtype = (numpy.zeros((1,), xvals.dtype.char) +
+-                            numpy.zeros((1,), yvals.dtype.char)).dtype.char
+ 
++                try:
++                    dtype = (numpy.zeros((1,), xvals.dtype.char) +
++                             numpy.zeros((1,), yvals.dtype.char)).dtype.char
++                except AttributeError:
++                    dtype = (numpy.zeros((1,), xvals.typecode()) +
++                             numpy.zeros((1,), xvals.typecode())).typecode()
++
+             m = numpy.zeros((len(xvals), len(yvals)), dtype)
+             for xi in range(len(xvals)):
+                 x = xvals[xi]
+=== test.py
+==================================================================
+--- test.py	(revision 2715)
++++ test.py	(local)
+@@ -15,9 +15,12 @@
+ """
+ 
+ import os, time, math, tempfile
+-import numpy
+-
+ try:
++    import numpy
++except ImportError:
++    import Numeric as numpy
++    
++try:
+     import Gnuplot, Gnuplot.PlotItems, Gnuplot.funcutils
+ except ImportError:
+     # kludge in case Gnuplot hasn't been installed as a module yet:
+=== utils.py
+==================================================================
+--- utils.py	(revision 2715)
++++ utils.py	(local)
+@@ -15,8 +15,13 @@
+ """
+ 
+ import string
+-import numpy
+-
++try:
++    import numpy
++except ImportError:
++    import Numeric as numpy
++    numpy.float32=numpy.Float32
++    numpy.float_=numpy.Float
++    
+ def float_array(m):
+     """Return the argument as a numpy array of type at least 'Float32'.
+ 

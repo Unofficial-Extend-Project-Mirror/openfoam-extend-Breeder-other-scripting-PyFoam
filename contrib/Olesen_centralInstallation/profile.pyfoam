@@ -1,0 +1,18 @@
+#---------------------------------*-sh-*----------------------------------
+# profile.pyfoam
+#
+# Settings for PyFoam (python utilities for OpenFOAM)
+#
+# Affected variables: PATH
+#
+# $Id: profile.pyfoam,v 1.2 2007/01/25 08:21:54 cfdadmin Exp $
+#-------------------------------------------------------------------------
+dir=/data/app/OpenFOAM/PyFoam/local
+
+if [ -d "$dir" -a -x "$dir/pyFoam" ]; then
+    type pyFoam >/dev/null 2>&1 || PATH=$dir:$PATH
+fi
+
+unset dir
+#------------------------------------------------------------- end-of-file
+

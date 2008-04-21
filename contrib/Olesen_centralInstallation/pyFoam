@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# PyFoam dynamic symbolic link
+#
+Script=$(basename $0)                   # what to call
+
+# determine the installation directory
+installDir=$(dirname $0)
+
+if [ "$installDir" = "." ]; then
+   installDir=".."                      # special case - called from cwd
+else
+   installDir=$(dirname $installDir)    # parent directory
+fi
+
+# check for correct installation
+for dir in $installDir/PyFoam $installDir/bin
+do
+    if [ ! -d $dir ]; then
+        echo "***ERROR*** no directory '$dir'" 1>&2
+        exit 1
+    fi
+done
+
+export PYTHONPATH=$installDir:$PYTHONPATH
+exec $installDir/bin/$Script "$@"

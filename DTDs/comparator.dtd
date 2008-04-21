@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!ELEMENT comparator (base,variation+)>
+<!ATTLIST comparator name CDATA #REQUIRED>
+<!ATTLIST comparator steady (True|False) #IMPLIED>
+<!ATTLIST comparator purge (True|False) #IMPLIED>
+<!ELEMENT base (preparation, evaluation)>
+<!ATTLIST base solver CDATA #REQUIRED>
+<!ATTLIST base template CDATA #REQUIRED>
+<!ATTLIST base extension CDATA #IMPLIED>
+<!ELEMENT preparation (derived*,genericcommand*,foamcommand*,dictwrite*,boundary*,initial*,setdictionary*,decompose*,foamversion*,changeenvironment*,setenv*)>
+<!ELEMENT evaluation (derived*,genericcommand*,foamcommand*,foamutility*,dictionary*,lastresult*,copylog*,reconstruct*,foamversion*,changeenvironment*,setenv*)>
+<!ELEMENT variation (value+)>
+<!ATTLIST variation name CDATA #REQUIRED>
+<!ATTLIST variation key CDATA #REQUIRED>
+<!ATTLIST variation condition CDATA "">
+<!ELEMENT derived EMPTY>
+<!ATTLIST derived name CDATA #REQUIRED>
+<!ATTLIST derived expression CDATA #REQUIRED>
+<!ATTLIST derived condition CDATA "">
+<!ELEMENT setenv EMPTY>
+<!ATTLIST setenv variable CDATA #REQUIRED>
+<!ATTLIST setenv value CDATA #REQUIRED>
+<!ELEMENT genericcommand (#PCDATA)>
+<!ATTLIST genericcommand condition CDATA "">
+<!ELEMENT reconstruct EMPTY>
+<!ATTLIST reconstruct onlyLatest (True|False) #IMPLIED>
+<!ELEMENT foamversion EMPTY>
+<!ATTLIST foamversion version CDATA #REQUIRED>
+<!ATTLIST foamversion condition CDATA "">
+<!ELEMENT changeenvironment EMPTY>
+<!ATTLIST changeenvironment scriptfile CDATA #REQUIRED>
+<!ATTLIST changeenvironment condition CDATA "">
+<!ELEMENT decompose EMPTY>
+<!ATTLIST decompose cpus CDATA #REQUIRED>
+<!ATTLIST decompose hostfile CDATA "">
+<!ATTLIST decompose options CDATA "">
+<!ATTLIST decompose condition CDATA "">
+<!ELEMENT foamcommand EMPTY>
+<!ATTLIST foamcommand utility CDATA #REQUIRED>
+<!ATTLIST foamcommand options CDATA "">
+<!ATTLIST foamcommand condition CDATA "">
+<!ELEMENT foamutility EMPTY>
+<!ATTLIST foamutility utility CDATA #REQUIRED>
+<!ATTLIST foamutility options CDATA "">
+<!ATTLIST foamutility regexp CDATA #REQUIRED>
+<!ATTLIST foamutility condition CDATA "">
+<!ELEMENT dictwrite EMPTY>
+<!ATTLIST dictwrite directory CDATA #REQUIRED>
+<!ATTLIST dictwrite dictionary CDATA #REQUIRED>
+<!ATTLIST dictwrite key CDATA #REQUIRED>
+<!ATTLIST dictwrite subexpression CDATA "">
+<!ATTLIST dictwrite value CDATA #REQUIRED>
+<!ATTLIST dictwrite condition CDATA "">
+<!ELEMENT boundary EMPTY>
+<!ATTLIST boundary field CDATA #REQUIRED>
+<!ATTLIST boundary patch CDATA #REQUIRED>
+<!ATTLIST boundary element CDATA #IMPLIED>
+<!ATTLIST boundary value CDATA #REQUIRED>
+<!ATTLIST boundary condition CDATA "">
+<!ELEMENT initial EMPTY>
+<!ATTLIST initial field CDATA #REQUIRED>
+<!ATTLIST initial value CDATA #REQUIRED>
+<!ATTLIST initial condition CDATA "">
+<!ELEMENT value (#PCDATA)>
+<!ATTLIST value name CDATA #IMPLIED>
+<!ELEMENT dictionary EMPTY>
+<!ATTLIST dictionary key CDATA #REQUIRED>
+<!ELEMENT setdictionary EMPTY>
+<!ATTLIST setdictionary key CDATA #REQUIRED>
+<!ATTLIST setdictionary value CDATA #REQUIRED>
+<!ATTLIST setdictionary condition CDATA "">
+<!ELEMENT lastresult EMPTY>
+<!ELEMENT copylog EMPTY>
