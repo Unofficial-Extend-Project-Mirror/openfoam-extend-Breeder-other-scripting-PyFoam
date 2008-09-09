@@ -20,7 +20,13 @@ and adds the corresponding patches to the boundary field setting it to
 zeroGradient for all patches and walls
         """
         
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <fieldfile>",nr=1,interspersed=True)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <fieldfile>",
+                                   changeVersion=False,
+                                   nr=1,
+                                   interspersed=True)
         
     def addOptions(self):
         self.parser.add_option("--clear-unused",

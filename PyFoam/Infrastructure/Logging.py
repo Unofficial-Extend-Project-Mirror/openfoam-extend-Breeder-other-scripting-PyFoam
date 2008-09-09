@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Logging.py 1906 2007-08-28T16:16:19.392553Z bgschaid  $ 
+#  ICE Revision: $Id: Logging.py 7832 2007-08-28 13:07:26Z bgschaid $ 
 """Writes Logfiles"""
 
 try:

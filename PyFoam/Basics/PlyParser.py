@@ -1,12 +1,13 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/PlyParser.py 2962 2008-03-31T17:30:07.010870Z bgschaid  $ 
+#  ICE Revision: $Id: PlyParser.py 9163 2008-08-04 08:01:10Z bgschaid $ 
 """Base class for all parser classes based on PLY
 
 Most of this class was shamelessly stolen from the examples"""
 
 import sys
+from PyFoam.Error import PyFoamException
 
 if sys.version_info < (2,3):
-    raise "PyFoam","Version "+str(sys.version_info)+" is not sufficient for ply (2.3 needed)"
+    raise PyFoamException("Version "+str(sys.version_info)+" is not sufficient for ply (2.3 needed)")
 
 import PyFoam.ThirdParty.ply.lex as lex
 import PyFoam.ThirdParty.ply.yacc as yacc

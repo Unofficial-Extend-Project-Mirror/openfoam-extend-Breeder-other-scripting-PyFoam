@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GnuplotTimelines.py 2846 2008-03-03T22:57:45.744826Z bgschaid  $ 
+#  ICE Revision: $Id: GnuplotTimelines.py 8804 2008-05-04 17:35:01Z bgschaid $ 
 """Plots a collection of timelines"""
 
 from PyFoam.ThirdParty.Gnuplot import Gnuplot,Data
@@ -10,7 +10,18 @@ class GnuplotTimelines(Gnuplot):
     
     terminalNr=1
     
-    def __init__(self,timelines,persist=None,raiseit=True,with="lines",alternateAxis=[],forbidden=[],start=None,end=None,logscale=False):
+    def __init__(self,
+                 timelines,
+                 persist=None,
+                 raiseit=True,
+                 with="lines",
+                 alternateAxis=[],
+                 forbidden=[],
+                 start=None,
+                 end=None,
+                 logscale=False,
+                 ylabel=None,
+                 y2label=None):
         """@param timelines: The timelines object
         @type timelines: TimeLineCollection
         @param persist: Gnuplot window persistst after run
@@ -21,6 +32,8 @@ class GnuplotTimelines(Gnuplot):
         @param start: First time that should be plotted. If undefined everything from the start is plotted
         @param end: Last time that should be plotted. If undefined data is plotted indefinitly
         @param logscale: Scale the y-axis logarithmic
+        @param ylabel: Label of the y-axis        
+        @param y2label: Label of the alternate y-axis        
         """
 
         Gnuplot.__init__(self,persist=persist)
@@ -42,6 +55,11 @@ class GnuplotTimelines(Gnuplot):
 
         if logscale:
             self.set_string("logscale y")
+
+        if ylabel:
+            self.set_string('ylabel "'+ylabel+'"')
+        if y2label:
+            self.set_string('y2label  "'+y2label+'"')
             
         if raiseit:
             x11addition=" raise"

@@ -22,7 +22,13 @@ the destination file by searching the equivalent place in the destination
 case
         """
         
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <source> <destination-case>",nr=2,interspersed=True)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <source> <destination-case>",
+                                   nr=2,
+                                   changeVersion=False,
+                                   interspersed=True)
         
     def addOptions(self):
         self.parser.add_option("--interactive",
@@ -93,6 +99,23 @@ case
                                dest="max",
                                help="Maximum depth of the recursive decent into dictionaries (default: %default)")
 
+        self.parser.add_option("--no-header",
+                               action="store_true",
+                               default=False,
+                               dest="noHeader",
+                               help="Don't expect a header while parsing")
+        
+        self.parser.add_option("--boundary",
+                               action="store_true",
+                               default=False,
+                               dest="boundaryDict",
+                               help="Expect that this file is a boundary dictionary")
+        self.parser.add_option("--list",
+                               action="store_true",
+                               default=False,
+                               dest="listDict",
+                               help="Expect that this file only contains a list")
+        
     def ask(self,*question):
         if not self.opts.interactive:
             return False
@@ -204,7 +227,7 @@ case
             self.opts.clear=True
             
         try:
-            source=ParsedParameterFile(sName,backup=False)
+            source=ParsedParameterFile(sName,backup=False,noHeader=self.opts.noHeader,boundaryDict=self.opts.boundaryDict,listDict=self.opts.listDict)
         except IOError,e:
             self.error("Problem with file",sName,":",e)
 
@@ -227,15 +250,18 @@ case
             error("Source",sName,"and destination",dName,"are the same")
         
         try:
-            dest=ParsedParameterFile(dName,backup=False)
+            dest=ParsedParameterFile(dName,backup=False,noHeader=self.opts.noHeader,boundaryDict=self.opts.boundaryDict,listDict=self.opts.listDict)
         except IOError,e:
             self.error("Problem with file",dName,":",e)
 
         if self.opts.interactive:
             self.opts.verbose=True
+
+        if not self.opts.boundaryDict and not self.opts.listDict:
+            self.workDict(source.content,dest.content,1)
+        else:
+            self.workList(source.content,dest.content,1)
             
-        self.workDict(source.content,dest.content,1)
-        
         if self.opts.test or self.opts.interactive:
             print str(dest)
 

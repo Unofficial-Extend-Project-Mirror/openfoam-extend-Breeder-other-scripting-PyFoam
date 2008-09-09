@@ -1,16 +1,16 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Decomposer.py 2494 2007-12-14T14:37:46.025021Z bgschaid  $ 
+#  ICE Revision: $Id: Decomposer.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Class that implements pyFoamDecompose
 """
 
 from PyFoamApplication import PyFoamApplication
-from PyFoam.FoamInformation import changeFoamVersion
 from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator
 from PyFoam.Error import error
 from PyFoam.Basics.Utilities import writeDictionaryHeader
 from PyFoam.Execution.UtilityRunner import UtilityRunner
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.RegionCases import RegionCases
+from PyFoam.FoamInformation import oldAppConvention as oldApp
 
 from os import path,system
 import sys
@@ -20,7 +20,12 @@ class Decomposer(PyFoamApplication):
         description="""
 Generates a decomposeParDict for a case and runs the decompose-Utility on that case
 """
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <case> <procnr>",interspersed=True,nr=2)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <case> <procnr>",
+                                   interspersed=True,
+                                   nr=2)
 
     def addOptions(self):
         self.parser.add_option("--method",
@@ -97,11 +102,6 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                                action="store",
                                default="decomposePar",
                                help="The decompose Utility that should be used")
-        
-        self.parser.add_option("--foamVersion",
-                               dest="foamVersion",
-                               default=None,
-                               help="Change the OpenFOAM-version that is to be used")
         
         self.parser.add_option("--all-regions",
                                action="store_true",
@@ -200,7 +200,15 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                 if theRegion!=None:
                     theCase+="."+theRegion
 
-                run=UtilityRunner(argv=[self.opts.decomposer,".",theCase],silent=self.opts.silent,logname=self.opts.log,server=False)
+                if oldApp():
+                    argv=[self.opts.decomposer,".",theCase]
+                else:
+                    argv=[self.opts.decomposer,"-case",theCase]
+                    
+                run=UtilityRunner(argv=argv,
+                                  silent=self.opts.silent,
+                                  logname=self.opts.log,
+                                  server=False)
                 run.start()
 
                 if theRegion!=None:

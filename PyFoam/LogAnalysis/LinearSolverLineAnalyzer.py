@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/LinearSolverLineAnalyzer.py 2261 2007-11-01T16:59:33.800451Z bgschaid  $ 
+#  ICE Revision: $Id: LinearSolverLineAnalyzer.py 8144 2007-11-05 09:18:04Z bgschaid $ 
 """Analyze information from the linear solver"""
 
 import re

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GnuplotCompare.py 1906 2007-08-28T16:16:19.392553Z bgschaid  $ 
+#  ICE Revision: $Id: GnuplotCompare.py 7833 2007-08-28 15:28:57Z bgschaid $ 
 """Compare files with Gnuplot"""
 
 from glob import glob

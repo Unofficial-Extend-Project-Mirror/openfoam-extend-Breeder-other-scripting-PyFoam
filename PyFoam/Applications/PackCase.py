@@ -14,7 +14,13 @@ class PackCase(PyFoamApplication):
 Packs a case into a tar-file copying the system, constant and 0-directories.
 Excludes all .svn-direcotries and all files ending with ~
 """
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog <case>",interspersed=True,nr=1)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog <case>",
+                                   interspersed=True,
+                                   changeVersion=False,
+                                   nr=1)
 
     def addOptions(self):
         self.parser.add_option("--last",

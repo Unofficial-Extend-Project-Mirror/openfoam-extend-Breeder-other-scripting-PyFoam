@@ -1,11 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotRunner.py 2881 2008-03-11T18:56:34.676111Z bgschaid  $ 
+#  ICE Revision: $Id: PlotRunner.py 9325 2008-09-05 12:01:56Z bgschaid $ 
 """
 Class that implements pyFoamPlotRunner
 """
 
 from PyFoamApplication import PyFoamApplication
-
-from PyFoam.FoamInformation import changeFoamVersion
 
 from PyFoam.Execution.GnuplotRunner import GnuplotRunner
 
@@ -20,6 +18,7 @@ from CommonPlotOptions import CommonPlotOptions
 from CommonClearCase import CommonClearCase
 from CommonSafeTrigger import CommonSafeTrigger
 from CommonWriteAllTrigger import CommonWriteAllTrigger
+from CommonLibFunctionTrigger import CommonLibFunctionTrigger
 
 from os import path
 
@@ -28,6 +27,7 @@ class PlotRunner(PyFoamApplication,
                  CommonPlotLines,
                  CommonSafeTrigger,
                  CommonWriteAllTrigger,
+                 CommonLibFunctionTrigger,
                  CommonClearCase):
     def __init__(self,args=None):
         description="""
@@ -79,11 +79,6 @@ class PlotRunner(PyFoamApplication,
                                dest="progress",
                                help="Only prints the progress of the simulation, but swallows all the other output")
         
-        self.parser.add_option("--foamVersion",
-                               dest="foamVersion",
-                               default=None,
-                               help="Change the OpenFOAM-version that is to be used")
-
         self.parser.add_option("--report-usage",
                                action="store_true",
                                default=False,
@@ -94,16 +89,16 @@ class PlotRunner(PyFoamApplication,
         CommonClearCase.addOptions(self)
         CommonSafeTrigger.addOptions(self)
         CommonWriteAllTrigger.addOptions(self)
+        CommonLibFunctionTrigger.addOptions(self)
         
     def run(self):
-        if self.opts.foamVersion!=None:
-            changeFoamVersion(self.opts.foamVersion)
-
         self.processPlotOptions()
         
-        self.processPlotLineOptions(autoPath=path.join(self.parser.getArgs()[1],self.parser.getArgs()[2]))
+        cName=self.parser.casePath()
+        self.checkCase(cName)
+
+        self.processPlotLineOptions(autoPath=cName)
         
-        cName=self.parser.getArgs()[2]
         sol=SolutionDirectory(cName,archive=None)
         
         self.clearCase(sol)
@@ -124,6 +119,7 @@ class PlotRunner(PyFoamApplication,
                           plotDeltaT=self.opts.deltaT,
                           customRegexp=self.plotLines(),
                           writeFiles=self.opts.writeFiles,
+                          hardcopy=self.opts.hardcopy,
                           server=True,
                           lam=lam,
                           raiseit=self.opts.raiseit,
@@ -133,6 +129,7 @@ class PlotRunner(PyFoamApplication,
 
         self.addSafeTrigger(run,sol,steady=self.opts.steady)
         self.addWriteAllTrigger(run,sol)
+        self.addLibFunctionTrigger(run,sol)        
         
         run.start()
 

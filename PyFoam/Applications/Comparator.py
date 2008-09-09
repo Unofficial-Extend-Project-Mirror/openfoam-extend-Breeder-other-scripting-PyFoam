@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Comparator.py 2509 2007-12-21T17:28:09.663932Z bgschaid  $ 
+#  ICE Revision: $Id: Comparator.py 8318 2007-12-21 14:46:02Z bgschaid $ 
 """
 Application class that implements pyFoamComparator
 """

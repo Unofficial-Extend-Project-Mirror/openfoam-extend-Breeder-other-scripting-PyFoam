@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/WriteDictionary.py 2717 2008-01-27T18:25:09.300764Z bgschaid  $ 
+#  ICE Revision: $Id: WriteDictionary.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Application class that implements pyFoamWriteDictionary
 """
@@ -22,7 +22,13 @@ Example of usage:
                             > pyFoamWriteDictionary.py --test pitzDaily/0/U "boundaryField['inlet']['type']" zeroGradient <
         """
         
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <dictfile> <key> <val>",nr=3,interspersed=True)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <dictfile> <key> <val>",
+                                   changeVersion=False,
+                                   nr=3,
+                                   interspersed=True)
         
     def addOptions(self):
         self.parser.add_option("--test",action="store_true",dest="test",default=False,help="Doesn't write to the file, but outputs the result on stdout")

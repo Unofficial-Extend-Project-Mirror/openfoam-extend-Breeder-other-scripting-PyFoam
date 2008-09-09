@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ReadDictionary.py 2717 2008-01-27T18:25:09.300764Z bgschaid  $ 
+#  ICE Revision: $Id: ReadDictionary.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Application class that implements pyFoamReadDictionary
 """
@@ -22,10 +22,20 @@ Example of usage:
       pyFoamReadDictionary.py pitzDaily/0/U "boundaryField['inlet']['type']" 
         """
         
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <dictfile> <key>",nr=2,interspersed=True)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <dictfile> <key>",
+                                   nr=2,
+                                   changeVersion=False,
+                                   interspersed=True)
         
     def addOptions(self):
-        self.parser.add_option("--debug",action="store_true",default=None,dest="debug",help="Debugs the parser")
+        self.parser.add_option("--debug",
+                               action="store_true",
+                               default=None,
+                               dest="debug",
+                               help="Debugs the parser")
         
     
     def run(self):

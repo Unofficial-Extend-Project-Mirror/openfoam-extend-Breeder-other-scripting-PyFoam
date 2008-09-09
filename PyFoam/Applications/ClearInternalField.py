@@ -17,7 +17,13 @@ Takes a field-file and makes the whole internal field uniform. Either taking
 the value from a patch or using a user-specified value
         """
         
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <fieldfile>",nr=1,interspersed=True)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <fieldfile>",
+                                   changeVersion=False,
+                                   nr=1,
+                                   interspersed=True)
         
     def addOptions(self):
         self.parser.add_option("--patch",

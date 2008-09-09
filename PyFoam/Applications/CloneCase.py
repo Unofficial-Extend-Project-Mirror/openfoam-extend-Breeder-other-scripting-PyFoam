@@ -14,7 +14,13 @@ class CloneCase(PyFoamApplication):
         description="""
 Clones a case by copying the system, constant and 0-directories
 """
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog <source> <destination>",interspersed=True,nr=2)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog <source> <destination>",
+                                   changeVersion=False,
+                                   interspersed=True,
+                                   nr=2)
 
     def addOptions(self):
         self.parser.add_option("--chemkin",

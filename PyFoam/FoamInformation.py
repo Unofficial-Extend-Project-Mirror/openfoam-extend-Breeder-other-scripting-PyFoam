@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/FoamInformation.py 2998 2008-04-09T16:20:08.924143Z bgschaid  $ 
+#  ICE Revision: $Id: FoamInformation.py 9158 2008-08-04 08:00:55Z bgschaid $ 
 """Getting Information about the Foam-Installation (like the installation directory)"""
 
 from os import environ,path,listdir
@@ -70,6 +70,12 @@ def foamVersionNumber():
         
     return tuple(nr)
 
+def oldAppConvention():
+    """Returns true if the version of OpenFOAM is older than 1.5 and
+    it therefor uses the 'old' convention to call utilities ("dot, case")
+    """
+    return foamVersionNumber()<(1,5)
+
 def foamInstalledVersions():
     """@return: A list with the installed versions of OpenFOAM"""
 
@@ -89,7 +95,10 @@ def foamInstalledVersions():
             if path.isdir(dname):
                 name=m.groups(1)[0]
                 dotDir=path.join(dname,".OpenFOAM-"+name)
-                if path.isdir(dotDir) and path.exists(path.join(dotDir,"bashrc")):
+                etcDir=path.join(dname,"etc")
+                if path.isdir(etcDir) and path.exists(path.join(etcDir,"bashrc")):
+                    versions.append(m.groups(1)[0])
+                elif path.isdir(dotDir) and path.exists(path.join(dotDir,"bashrc")):
                     versions.append(m.groups(1)[0])
             
     return versions
@@ -113,9 +122,12 @@ def changeFoamVersion(new):
         basedir=environ["WM_PROJECT_INST_DIR"]
     else:
         basedir=path.expanduser(config().get("OpenFOAM","Installation"))
-            
-    script=path.join(basedir,"OpenFOAM-"+new,".OpenFOAM-"+new,"bashrc")
 
+    if path.exists(path.join(basedir,"OpenFOAM-"+new,"etc")):
+        script=path.join(basedir,"OpenFOAM-"+new,"etc","bashrc")
+    else:
+        script=path.join(basedir,"OpenFOAM-"+new,".OpenFOAM-"+new,"bashrc")
+    
     injectVariables(script)
     
     if new!=environ["WM_PROJECT_VERSION"]:

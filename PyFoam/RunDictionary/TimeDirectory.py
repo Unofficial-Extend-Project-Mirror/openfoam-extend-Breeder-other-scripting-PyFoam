@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/TimeDirectory.py 2892 2008-03-15T11:01:57.727610Z bgschaid  $ 
+#  ICE Revision: $Id: TimeDirectory.py 8589 2008-03-17 09:09:04Z bgschaid $ 
 """Working with direcotries from a time-step"""
 
 from SolutionFile import SolutionFile

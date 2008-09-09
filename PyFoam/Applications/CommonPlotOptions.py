@@ -78,6 +78,11 @@ class CommonPlotOptions(object):
                                default=False,
                                dest="writeFiles",
                                help="Writes the parsed data to files")
+        self.parser.add_option("--hardcopy",
+                               action="store_true",
+                               default=False,
+                               dest="hardcopy",
+                               help="Writes postscript hardcopies of the plot at the end of the run")
 
     def processPlotOptions(self):
         if self.opts.nodefault:

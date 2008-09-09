@@ -1,11 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UtilityRunnerApp.py 2639 2008-01-10T19:49:30.139712Z bgschaid  $ 
+#  ICE Revision: $Id: UtilityRunnerApp.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Application class that implements pyFoamUtilityRunner
 """
 
 from PyFoamApplication import PyFoamApplication
-
-from PyFoam.FoamInformation import changeFoamVersion
 
 from PyFoam.Execution.UtilityRunner import UtilityRunner
 
@@ -55,15 +53,7 @@ class UtilityRunnerApp(PyFoamApplication):
                                default=False,
                                help="Don't print the output of the utility to the console")
         
-        self.parser.add_option("--foamVersion",
-                               dest="foamVersion",
-                               default=None,
-                               help="Change the OpenFOAM-version that is to be used")
-
     def run(self):
-        if self.opts.foamVersion!=None:
-            changeFoamVersion(self.opts.foamVersion)
-
         if self.opts.regexp==None:
             self.parser.error("Regular expression needed")
     

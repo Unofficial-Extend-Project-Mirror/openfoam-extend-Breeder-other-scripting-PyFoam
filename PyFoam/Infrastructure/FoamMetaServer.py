@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/FoamMetaServer.py 1906 2007-08-28T16:16:19.392553Z bgschaid  $ 
+#  ICE Revision: $Id: FoamMetaServer.py 7833 2007-08-28 15:28:57Z bgschaid $ 
 """A XMLRPC-Server that knows all PyFoam-Runs in its subnet"""
 
 from ServerBase import ServerBase

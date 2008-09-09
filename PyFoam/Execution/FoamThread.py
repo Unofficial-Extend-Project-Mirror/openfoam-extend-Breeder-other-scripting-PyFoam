@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/FoamThread.py 2448 2007-12-07T22:29:02.266528Z bgschaid  $ 
+#  ICE Revision: $Id: FoamThread.py 8275 2007-12-10 09:40:38Z bgschaid $ 
 """Thread wrappers for OpenFOAM"""
 
 import sys

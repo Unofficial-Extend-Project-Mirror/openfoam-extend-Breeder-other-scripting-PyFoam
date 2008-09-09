@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/LogLineAnalyzer.py 2494 2007-12-14T14:37:46.025021Z bgschaid  $ 
+#  ICE Revision: $Id: LogLineAnalyzer.py 8292 2007-12-12 15:22:00Z bgschaid $ 
 """Base class for analyzing lines"""
 
 from PyFoam.Error import error

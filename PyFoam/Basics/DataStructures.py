@@ -97,10 +97,13 @@ class FixedLength(FoamDataType):
     def __setitem__(self,key,value):
         self.vals[key]=value
 
+    def __len__(self):
+        return len(self.vals)
+    
 class Vector(FixedLength):
     def __init__(self,x,y,z):
         FixedLength.__init__(self,[x,y,z])
-        
+
 class Tensor(FixedLength):
     def __init__(self,v1,v2,v3,v4,v5,v6,v7,v8,v9):
         FixedLength.__init__(self,[v1,v2,v3,v4,v5,v6,v7,v8,v9])
@@ -137,7 +140,7 @@ class TupleProxy(list):
 
     def __init__(self,tup=()):
         list.__init__(self,tup)
-        
+
 class Unparsed(object):
     """A class that encapsulates an unparsed string"""
 

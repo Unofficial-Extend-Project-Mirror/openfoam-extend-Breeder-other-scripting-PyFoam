@@ -18,7 +18,13 @@ conditions)
 
 Whether or not the data fits the destination case is not the problem
 of this script"""
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <source caseDirectory> <destination caseDirectory>",interspersed=True,nr=2)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <source caseDirectory> <destination caseDirectory>",
+                                   interspersed=True,
+                                   changeVersion=False,
+                                   nr=2)
 
     def addOptions(self):
         self.parser.add_option("--no-overwrite",

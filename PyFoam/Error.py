@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Error.py 2316 2007-11-09T10:40:25.919130Z bgschaid  $ 
+#  ICE Revision: $Id: Error.py 9163 2008-08-04 08:01:10Z bgschaid $ 
 """Standardized Error Messages"""
 
 import traceback
@@ -39,3 +39,12 @@ def debug(*text):
     @param text: The error message"""
     __common("Debug",*text)
     
+class PyFoamException(Exception):
+     """The simplest exception for PyFoam"""
+
+     def __init__(self,descr):
+          self.descr=descr
+
+     def __str__(self):
+          return "Problem in PyFoam: '"+self.descr+"'"
+          

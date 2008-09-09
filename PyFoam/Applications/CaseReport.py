@@ -1,16 +1,22 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CaseReport.py 2962 2008-03-31T17:30:07.010870Z bgschaid  $ 
+#  ICE Revision: $Id: CaseReport.py 9241 2008-08-18 10:44:52Z bgschaid $ 
 """
 Application class that implements pyFoamCasedReport.py
 """
 
 import sys,string
 
+from fnmatch import fnmatch
+
 from PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.BoundaryDict import BoundaryDict
-from PyFoam.RunDictionary.ParsedParameterFile import PyFoamParserError
+from PyFoam.RunDictionary.MeshInformation import MeshInformation
+from PyFoam.RunDictionary.ParsedParameterFile import PyFoamParserError,ParsedBoundaryDict
 
 from PyFoam.Error import error,warning
+
+from math import log10,ceil
+from os import path
 
 class CaseReport(PyFoamApplication):
     def __init__(self,args=None):
@@ -25,6 +31,7 @@ dictionary-files
                                    description=description,
                                    usage="%prog [options] <casedir>",
                                    nr=1,
+                                   changeVersion=False,
                                    interspersed=True)
         
     def addOptions(self):
@@ -71,6 +78,36 @@ dictionary-files
                                dest="longlist",
                                help="Fields that are longer than this won't be parsed, but read into memory (nad compared as strings)")
 
+        self.parser.add_option("--patches",
+                               action="append",
+                               default=None,
+                               dest="patches",
+                               help="Patches which should be processed (pattern, can be used more than once)")
+
+        self.parser.add_option("--exclude-patches",
+                               action="append",
+                               default=None,
+                               dest="expatches",
+                               help="Patches which should not be processed (pattern, can be used more than once)")
+
+        self.parser.add_option("--processor-matrix",
+                               action="store_true",
+                               default=False,
+                               dest="processorMatrix",
+                               help="Prints the matrix how many faces from one processor interact with another")
+
+        self.parser.add_option("--case-size",
+                               action="store_true",
+                               default=False,
+                               dest="caseSize",
+                               help="Report the number of cells, points and faces in the case")
+
+        self.parser.add_option("--decomposition",
+                               action="store_true",
+                               default=False,
+                               dest="decomposition",
+                               help="Reports the size of the parallel decomposition")
+        
     def run(self):
         sol=SolutionDirectory(self.parser.getArgs()[0],archive=None,paraviewLink=False,region=self.opts.region)
         
@@ -87,17 +124,46 @@ dictionary-files
             needsInitialTime=True
         if self.opts.internal:
             needsInitialTime=True
-
+        if self.opts.decomposition:
+            needsPolyBoundaries=True
+            
         if needsPolyBoundaries:
             boundary=BoundaryDict(sol.name,region=self.opts.region)
 
             boundMaxLen=0
             boundaryNames=[]
             for b in boundary:
-                boundMaxLen=max(boundMaxLen,len(b))
                 boundaryNames.append(b)
 
+            if self.opts.patches!=None:
+                tmp=boundaryNames
+                boundaryNames=[]
+                for b in tmp:
+                    for p in self.opts.patches:
+                        if fnmatch(b,p):
+                            boundaryNames.append(b)
+                            break
+
+            if self.opts.expatches!=None:
+                tmp=boundaryNames
+                boundaryNames=[]
+                for b in tmp:
+                    keep=True
+                    for p in self.opts.expatches:
+                        if fnmatch(b,p):
+                            keep=False
+                            break
+                    if keep:
+                        boundaryNames.append(b)
+                        
+            for b in boundaryNames:
+                boundMaxLen=max(boundMaxLen,len(b))
             boundaryNames.sort()
+
+        if self.opts.time==None:
+            procTime="constant"
+        else:
+            procTime=sol.timeName(sol.timeIndex(self.opts.time,minTime=True))
             
         if needsInitialTime:
             fields={}
@@ -122,7 +188,70 @@ dictionary-files
                     
             fieldNames=fields.keys()
             fieldNames.sort()
+
+        if self.opts.caseSize:
+            print "Size of the case"
+            print
+            info=MeshInformation(sol.name)
+            print "Faces:  \t",info.nrOfFaces()
+            print "Points: \t",info.nrOfPoints()
+            try:
+                print "Cells:  \t",info.nrOfCells()
+            except:
+                print "Not available"
             
+        if self.opts.decomposition:
+            if sol.nrProcs()<2:
+                error("The case is not decomposed")
+            print "Case is decomposed for",sol.nrProcs(),"processors"
+
+            nCells=[]
+            nFaces=[]
+            nPoints=[]
+            for p in sol.processorDirs():
+                info=MeshInformation(sol.name,processor=p)
+                nPoints.append(info.nrOfPoints())
+                nFaces.append(info.nrOfFaces())
+                nCells.append(info.nrOfCells())
+                
+            digits=int(ceil(log10(max(sol.nrProcs(),
+                                      max(nCells),
+                                      max(nFaces),
+                                      max(nPoints)
+                                      ))))+2
+            nameLen=max(len("Points"),boundMaxLen)
+            
+            nrFormat  ="%%%dd" % digits
+            nameFormat="%%%ds" % nameLen
+            
+            print " "*nameLen,"|",
+            for i in range(sol.nrProcs()):
+                print nrFormat % i,
+            print
+
+            print "-"*(nameLen+3+(digits+1)*sol.nrProcs())
+            
+            print nameFormat % "Points","|",
+            for p in nPoints:
+                print nrFormat % p,
+            print
+            print nameFormat % "Faces","|",
+            for p in nFaces:
+                print nrFormat % p,
+            print
+            print nameFormat % "Cells","|",
+            for p in nCells:
+                print nrFormat % p,
+            print
+            
+            print "-"*(nameLen+3+(digits+1)*sol.nrProcs())
+
+            for b in boundaryNames:
+                print nameFormat % b,"|",
+                for p in sol.processorDirs():
+                    print nrFormat % ParsedBoundaryDict(sol.boundaryDict(processor=p))[b]["nFaces"],
+                print
+                
         if self.opts.longBCreport:
             print "\nThe boundary conditions for t =",time
 
@@ -244,3 +373,38 @@ dictionary-files
                     print cont[:cont.find("\n")],"..."
                 else:
                     print cont
+
+        if self.opts.processorMatrix:
+            if sol.nrProcs()<2:
+                error("The case is not decomposed")
+
+            matrix=[ [0,]*sol.nrProcs() for i in range(sol.nrProcs())]
+
+            for i,p in enumerate(sol.processorDirs()):
+                bound=ParsedBoundaryDict(path.join(sol.name,p,procTime,"polyMesh","boundary"))
+                for j in range(sol.nrProcs()):
+                    name="procBoundary%dto%d" %(i,j)
+                    if name in bound:
+                        matrix[i][j]=bound[name]["nFaces"]
+                        
+            print "Matrix of processor interactions (faces)"
+            print
+            
+            digits=int(ceil(log10(sol.nrProcs())))+2
+            colDigits=int(ceil(log10(max(digits,max(max(matrix))))))+2
+            
+            format="%%%dd" % digits
+            colFormat="%%%dd" % colDigits
+
+            print " "*(digits),"|",
+            for j in range(sol.nrProcs()):
+                print colFormat % j,
+            print
+            print "-"*(digits+3+(colDigits+1)*sol.nrProcs())
+                       
+            for i,col in enumerate(matrix):
+                print format % i,"|",
+                for j,nr in enumerate(col):
+                    print colFormat % matrix[i][j],
+                print
+                

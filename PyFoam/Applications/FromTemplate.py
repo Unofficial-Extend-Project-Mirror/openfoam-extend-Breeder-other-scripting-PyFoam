@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/FromTemplate.py 2123 2007-10-01T13:36:11.873841Z bgschaid  $ 
+#  ICE Revision: $Id: FromTemplate.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Application class that implements pyFoamFromTemplate
 """
@@ -20,7 +20,13 @@ a Python-dictionary. Lines in the template file that start with $$ are used as
 definitons for intermediate expressions
         """
         
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <file> <vals>",nr=2,interspersed=True)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <file> <vals>",
+                                   nr=2,
+                                   changeVersion=False,
+                                   interspersed=True)
         
     def addOptions(self):
         self.parser.add_option("--template-file",

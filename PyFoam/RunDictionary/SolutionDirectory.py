@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionDirectory.py 2892 2008-03-15T11:01:57.727610Z bgschaid  $ 
+#  ICE Revision: $Id: SolutionDirectory.py 9241 2008-08-18 10:44:52Z bgschaid $ 
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -391,16 +391,21 @@ class SolutionDirectory(Utilities):
         else:
             return None
         
-    def constantDir(self,region=None):
+    def constantDir(self,region=None,processor=None):
         """@param region: Specify the region for cases with more than 1 mesh
+        @param processor: name of the processor directory
         @return: the name of the C{constant}-directory
         @rtype: str"""
+        pre=self.name
+        if processor!=None:
+            pre=path.join(pre,processor)
+            
         if region==None and self.region!=None:
             region=self.region
         if region:
-            return path.join(self.name,"constant",region)
+            return path.join(pre,"constant",region)
         else:
-            return path.join(self.name,"constant")
+            return path.join(pre,"constant")
 
     def systemDir(self,region=None):
         """@param region: Specify the region for cases with more than 1 mesh
@@ -419,21 +424,23 @@ class SolutionDirectory(Utilities):
         @rtype: str"""
         return path.join(self.systemDir(),"controlDict")
 
-    def polyMeshDir(self,region=None):
+    def polyMeshDir(self,region=None,time="constant",processor=None):
         """@param region: Specify the region for cases with more than 1 mesh
         @return: the name of the C{polyMesh}
+        @param time: Time for which the  mesh should be looked at
+        @param processor: Name of the processor directory for decomposed cases
         @rtype: str"""
         if region==None and self.region!=None:
             region=self.region
-        return path.join(self.constantDir(region=region),"polyMesh")
+        return path.join(self.constantDir(region=region,processor=processor),"polyMesh")
 
-    def boundaryDict(self,region=None):
+    def boundaryDict(self,region=None,time="constant",processor=None):
         """@param region: Specify the region for cases with more than 1 mesh
         @return: name of the C{boundary}-file
         @rtype: str"""
         if region==None and self.region!=None:
             region=self.region
-        return path.join(self.polyMeshDir(region=region),"boundary")
+        return path.join(self.polyMeshDir(region=region,time=time,processor=processor),"boundary")
     
     def blockMesh(self,region=None):
         """@param region: Specify the region for cases with more than 1 mesh

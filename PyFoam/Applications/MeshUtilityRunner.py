@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/MeshUtilityRunner.py 2866 2008-03-07T13:42:45.412013Z bgschaid  $ 
+#  ICE Revision: $Id: MeshUtilityRunner.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Application class that implements pyFoamMeshUtilityRunner
 """
@@ -7,12 +7,12 @@ from os import listdir,path,system
 
 from PyFoamApplication import PyFoamApplication
 
-from PyFoam.FoamInformation import changeFoamVersion
-
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+from CommonLibFunctionTrigger import CommonLibFunctionTrigger
 
-class MeshUtilityRunner(PyFoamApplication):
+class MeshUtilityRunner(PyFoamApplication,
+                        CommonLibFunctionTrigger):
     def __init__(self,args=None):
         description="""
 Runs an OpenFoam utility that manipulates meshes.  Needs the usual 3
@@ -36,24 +36,29 @@ should therefor be used with care
                                    description=description)
         
     def addOptions(self):
-        self.parser.add_option("--foamVersion",dest="foamVersion",default=None,help="Change the OpenFOAM-version that is to be used")
+        CommonLibFunctionTrigger.addOptions(self)
         
     def run(self):
-        if self.opts.foamVersion!=None:
-            changeFoamVersion(self.opts.foamVersion)
-            
-        cName=self.parser.getArgs()[2]
+        cName=self.parser.casePath()
+
+        self.checkCase(cName)
+        
         sol=SolutionDirectory(cName,archive=None)
 
         print "Clearing out old timesteps ...."
             
         sol.clearResults()
-
             
-        run=BasicRunner(argv=self.parser.getArgs(),server=False,logname="PyFoamMeshUtility")
+        run=BasicRunner(argv=self.parser.getArgs(),
+                        server=False,
+                        logname="PyFoamMeshUtility")
+        
+        self.addLibFunctionTrigger(run,sol)        
 
         run.start()
 
+        sol.reread(force=True)
+        
         if sol.latestDir()!=sol.initialDir():
             for f in listdir(path.join(sol.latestDir(),"polyMesh")):
                 system("mv -f "+path.join(sol.latestDir(),"polyMesh",f)+" "+sol.polyMeshDir())

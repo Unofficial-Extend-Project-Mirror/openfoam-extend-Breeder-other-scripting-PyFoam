@@ -1,11 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Execute.py 2547 2007-12-31T11:01:25.898379Z bgschaid  $ 
+#  ICE Revision: $Id: Execute.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Application class that implements pyFoamExecute
 """
 
 from PyFoamApplication import PyFoamApplication
-
-from PyFoam.FoamInformation import changeFoamVersion
 
 from subprocess import call
 
@@ -24,17 +22,9 @@ OpenFOAM-version. Is of use for using wmake for a specific version
                                    description=description)
         
     def addOptions(self):
-        self.parser.add_option("--foamVersion",
-                               dest="foamVersion",
-                               default=None,
-                               help="Change the OpenFOAM-version that is to be used")
-                               
-    def run(self):
-        if self.opts.foamVersion!=None:
-            changeFoamVersion(self.opts.foamVersion)
-        else:
-            self.error("No Foam Version specified!")
-            
+        pass
+    
+    def run(self):            
         result=call(self.parser.getArgs())
         if result!=0:
             print "\nError result:",result

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/EchoLineAnalyzer.py 1532 2007-06-29T11:15:55.577361Z bgschaid  $ 
+#  ICE Revision: $Id: EchoLineAnalyzer.py 7581 2007-06-27 15:29:14Z bgschaid $ 
 """Echos a line"""
 
 from LogLineAnalyzer import LogLineAnalyzer

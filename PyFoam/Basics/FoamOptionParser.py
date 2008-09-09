@@ -1,8 +1,13 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/FoamOptionParser.py 2717 2008-01-27T18:25:09.300764Z bgschaid  $ 
+#  ICE Revision: $Id: FoamOptionParser.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """Parse options for the PyFoam-Scripts"""
 
 from optparse import OptionParser,TitledHelpFormatter
 from PyFoam import versionString
+
+from PyFoam.FoamInformation import changeFoamVersion
+from PyFoam.FoamInformation import oldAppConvention as oldApp
+
+from os import path
 
 class FoamOptionParser(OptionParser):
     """Wrapper to the usual OptionParser to honor the conventions of OpenFOAM-utilities
@@ -19,8 +24,11 @@ class FoamOptionParser(OptionParser):
         Can be a string: it will be splitted then unsing the spaces (very primitive), or a list of strings (prefered)
         """
         if usage==None:
-            usage="%prog [options] <foamApplication> <caseDir> <caseName> [foamOptions]"
-
+            if oldApp():
+                usage="%prog [options] <foamApplication> <caseDir> <caseName> [foamOptions]"
+            else:
+                usage="%prog [options] <foamApplication> [foamOptions]"
+                
         if version==None:
             version="%prog "+versionString()
 
@@ -41,17 +49,33 @@ class FoamOptionParser(OptionParser):
         self.options=None
         self.args=None
         
-    def parse(self,nr=3,exactNr=True):
+    def parse(self,nr=None,exactNr=True):
         """
         parse the options
         @param nr: minimum number of arguments that are to be passed to the application
+        3 is default for pre-1.5 versions of OpenFOAM
         """
         (self.options,self.args)=self.parse_args(args=self.argLine)
-
+        
+        if "foamVersion" in dir(self.options):
+            if self.options.foamVersion!=None:
+                changeFoamVersion(self.options.foamVersion)
+            
+        if nr==None:
+            if oldApp():
+                nr=3
+            else:
+                nr=1
+                
         if len(self.args)<nr:
             self.error("Too few arguments (%d needed, %d given)" %(nr,len(self.args)))
 
-        if exactNr and len(self.args)>nr:
+        maxNr=nr
+        if not oldApp():
+            if "-case" in self.args:
+                maxNr+=2
+                
+        if exactNr and len(self.args)>maxNr:
             self.error("Too many arguments (%d needed, %d given)" %(nr,len(self.args)))
             
         tmp=self.args
@@ -75,3 +99,12 @@ class FoamOptionParser(OptionParser):
             
         return self.options
         
+    def casePath(self):
+        """Returns the path to the case (if applicable)"""
+        if oldApp():
+            return path.join(self.getArgs()[1],self.getArgs()[2])
+        else:
+            if "-case" in self.getArgs():
+                return self.getArgs()[self.getArgs().index("-case")+1]
+            else:
+                return path.curdir

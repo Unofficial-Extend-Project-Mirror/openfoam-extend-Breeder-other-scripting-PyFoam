@@ -7,6 +7,9 @@ from PyFoam.RunDictionary.ParsedParameterFile import FoamStringParser,ParsedPara
 
 from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,Tensor,SymmTensor
 
+from PyFoam.FoamInformation import oldAppConvention as oldApp
+from PyFoam.FoamInformation import foamVersionNumber
+
 theSuite=unittest.TestSuite()
     
 class FoamStringParserTest(unittest.TestCase):
@@ -32,9 +35,21 @@ class FoamStringParserTest(unittest.TestCase):
         p1=FoamStringParser('test  name;')
         self.assertEqual(p1["test"],"name")
     
+    def testParseWordUniform(self):
+        p1=FoamStringParser('test  uniform;')
+        self.assertEqual(p1["test"],"uniform")
+    
     def testParseWordMinus(self):
         p1=FoamStringParser('test  name-0;')
         self.assertEqual(p1["test"],"name-0")
+    
+    def testParseWordWithBrackets(self):
+        p1=FoamStringParser('test  div((phi*nix),U);')
+        self.assertEqual(p1["test"],"div((phi*nix),U)")
+    
+    def testParseWordWithBrackets2(self):
+        p1=FoamStringParser('test  div((phi&nix),U);')
+        self.assertEqual(p1["test"],"div((phi&nix),U)")
     
     def testParseError(self):
         try:
@@ -53,6 +68,11 @@ class FoamStringParserTest(unittest.TestCase):
         self.assertEqual(type(p1["test"]),list)
         self.assertEqual(len(p1["test"]),4)
         self.assertEqual(p1["test"][-1],"d")
+        
+    def testDataList3(self):
+        p1=FoamStringParser("test (5 4 (2 3 4 5));")
+        self.assertEqual(type(p1["test"]),list)
+        self.assertEqual(len(p1["test"]),2)
         
     def testDataDictionary(self):
         p1=FoamStringParser("test { dings 2;}")
@@ -89,6 +109,9 @@ class FoamStringParserTest(unittest.TestCase):
         p1=FoamStringParser("test [1 2 -3 0 1.4 1 2];")
         self.assertEqual(p1["test"].__class__,Dimension)
         
+        p1=FoamStringParser("test [1 2 -3 0 1.4];")
+        self.assertEqual(p1["test"].__class__,Dimension)
+        
     def testStringConversion(self):
         p1=FoamStringParser("test dings 2;")
         self.assertEqual(str(p1),"test dings     2 ;\n")
@@ -100,7 +123,9 @@ class FoamStringParserTest(unittest.TestCase):
         // test dings 2;
         test2 dings 3;""")
         self.assertEqual(str(p1),"test2 dings     3 ;\n")
-
+        p1=FoamStringParser("test ding; // test dings 2;")
+        self.assertEqual(p1["test"],"ding")
+        
     def testMultiLineComment(self):
         p=FoamStringParser("""
         /* this should never be read
@@ -113,6 +138,50 @@ class FoamStringParserTest(unittest.TestCase):
         test dings 2;
         /* Here goes the next comment */""")
         self.assertEqual(str(p),"test dings     2 ;\n")
+
+    def testCommentOutElements(self):
+        p1=FoamStringParser("""things (
+// test dings 2;
+nix // Hepp
+);""")
+        self.assertEqual(len(p1["things"]),1)
+        self.assertEqual(p1["things"][0],"nix")
+
+    def testListInList(self):
+        p=FoamStringParser("test (2.3 (3.3 -3 3) 2);")
+        self.assertEqual(len(p["test"]),3)
+        self.assertEqual(type(p["test"][1]),Vector)
+        self.assertEqual(p["test"][1][0],3.3)
+
+    def testReactionList(self):
+        p=FoamStringParser("""test (
+someReaction
+   0.5 H2 + O2 = H2O
+   (1000 0 10)
+otherReaction
+   C + O2 = CO2
+   ((1000 0 10) (3 4 5))
+);""")
+        self.assertEqual(type(p["test"][0]),str)
+        self.assertEqual(type(p["test"][1]),str)
+        self.assertEqual(type(p["test"][2]),Vector)
+        self.assertEqual(type(p["test"][3]),str)
+        self.assertEqual(type(p["test"][4]),str)
+        self.assertEqual(type(p["test"][5]),list)
+
+    def testFalseReactionBug(self):
+        p1=FoamStringParser("""things (
+test // test = dings 2;
+nix
+);""")
+        self.assertEqual(len(p1["things"]),2)
+        self.assertEqual(p1["things"][0],"test")
+
+    def testDeletionOfEntry(self):
+        p1=FoamStringParser("nix 2; test  3;")
+        self.assertEqual(p1["nix"],2)
+        del p1["nix"]
+        self.assert_("nix" not in p1)
         
 theSuite.addTest(unittest.makeSuite(FoamStringParserTest,"test"))
 
@@ -128,21 +197,34 @@ class ParsedBoundaryDictTest(unittest.TestCase):
         test=ParsedBoundaryDict(self.theFile)
         self.assertEqual(len(test.content),5)
         self.assert_("inlet" in test)
-    
+        
 theSuite.addTest(unittest.makeSuite(ParsedBoundaryDict,"test"))
                  
 class ParsedParameterFileTest(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.turbulence"
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"simpleFoam/pitzDaily/constant/turbulenceProperties")+" "+self.theFile)
+        turb=path.join("simpleFoam","pitzDaily","constant")
+        if oldApp():
+            turb=path.join(turb,"turbulenceProperties")
+        else:
+            turb=path.join(turb,"RASProperties")
+
+        system("cp "+path.join(environ["FOAM_TUTORIALS"],turb)+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
         
     def testReadTutorial(self):
         test=ParsedParameterFile(self.theFile)
-        self.assertEqual(len(test.content),17)
-        self.assertEqual(test["turbulenceModel"],"kEpsilon")
+        if foamVersionNumber()<(1,5):
+            nrTurbModels=17
+            model="turbulenceModel"
+        else:
+            nrTurbModels=19
+            model="RASModel"
+            
+        self.assertEqual(len(test.content),nrTurbModels)
+        self.assertEqual(test[model],"kEpsilon")
     
 theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest,"test"))
                  
@@ -202,8 +284,11 @@ class ParsedParameterFileTest5(unittest.TestCase):
         test=ParsedParameterFile(self.theFile)
         self.assertEqual(test["internalField"].__class__,Field)
         self.assertEqual(test["internalField"].isUniform(),True)
-        self.assertEqual(test["internalField"].value().__class__,Tensor)
-        
+        if foamVersionNumber()<(1,5):
+            self.assertEqual(test["internalField"].value().__class__,Tensor)
+        else:
+            self.assertEqual(test["internalField"].value().__class__,SymmTensor)
+            
 theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest5,"test"))
                  
 class ParsedParameterFileTest6(unittest.TestCase):

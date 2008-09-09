@@ -12,6 +12,7 @@ from PyFoam.Applications.CloneCase import CloneCase
 from PyFoam.FoamInformation import changeFoamVersion
 from PyFoam.Error import error,warning
 from PyFoam import configuration as config
+from PyFoam.FoamInformation import oldAppConvention as oldApp
 
 def checkForMessageFromAbove(job):
     if not job.listenToTimer:
@@ -183,6 +184,9 @@ class ClusterJob:
                 self.setState("Reconstructing")
                 self.autoReconstruct()
 
+            if self.nproc>0:
+                self.additionalReconstruct(parameters)
+                
             self.setState("Cleaning")
             self.cleanup(parameters)
             self.setState("Finished")
@@ -232,7 +236,12 @@ class ClusterJob:
         if self.restarted:
             arglist+=["--restart"]
             
-        arglist+=[application,".",self.casename()]
+        arglist+=[application]
+        if oldApp():
+            arglist+=[".",self.casename()]
+        else:
+            arglist+=["-case",self.casename()]
+            
         arglist+=foamArgs
 
         self.message("Executing",arglist)
@@ -246,6 +255,8 @@ class ClusterJob:
     def autoDecompose(self):
         """Automatically decomposes the grid with a metis-algorithm"""
 
+        if path.isdir(path.join(self.casedir(),"processor0")):
+            warning("A processor directory already exists. There might be a problem")
         args=["--method=metis",
               "--clear",
               self.casename(),
@@ -298,6 +309,13 @@ class ClusterJob:
 
     def cleanup(self,parameters):
         """Clean up after a job
+        @param parameters: a dictionary with parameters"""
+
+        pass
+    
+    def additionalReconstruct(self,parameters):
+        """Additional reconstruction of parallel runs (Stuff that the
+        OpenFOAM-reconstructPar doesn't do
         @param parameters: a dictionary with parameters"""
 
         pass

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/TimeLineCollection.py 2259 2007-11-01T13:46:01.807838Z bgschaid  $ 
+#  ICE Revision: $Id: TimeLineCollection.py 8847 2008-05-18 19:30:54Z bgschaid $ 
 """Collection of array of timelines"""
 
 from PyFoam.Error import error
@@ -91,7 +91,7 @@ class TimeLineCollection(object):
                 v.append(val)
             if self.thres:
                 if len(self.times)==self.thres:
-                    self.times=self.split(self.times,mean)
+                    self.times=self.split(self.times,min)
                     for k in self.values.keys():
                         self.values[k]=self.split(self.values[k],self.fun)
             self.occured={}

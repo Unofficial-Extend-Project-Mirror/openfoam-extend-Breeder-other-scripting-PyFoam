@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotWatcher.py 2814 2008-02-24T19:49:36.025041Z bgschaid  $ 
+#  ICE Revision: $Id: PlotWatcher.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Class that implements pyFoamPlotWatcher
 """
@@ -25,7 +25,13 @@ class PlotWatcher(PyFoamApplication,
 
         CommonPlotOptions.__init__(self,persist=False)
         CommonPlotLines.__init__(self)
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <logfile>",interspersed=True,nr=1)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <logfile>",
+                                   changeVersion=False,
+                                   interspersed=True,
+                                   nr=1)
 
     def addOptions(self):
         CommonPlotOptions.addOptions(self)

@@ -1,7 +1,7 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/FoamFileGenerator.py 2962 2008-03-31T17:30:07.010870Z bgschaid  $ 
+#  ICE Revision: $Id: FoamFileGenerator.py 9163 2008-08-04 08:01:10Z bgschaid $ 
 """Transform a Python data-structure into a OpenFOAM-File-Representation"""
 
-from PyFoam.Error import error
+from PyFoam.Error import error,PyFoamException
 from PyFoam.Basics.DataStructures import Vector,Field,Dimension,TupleProxy,DictProxy,Tensor,SymmTensor,Unparsed,UnparsedList
 
 import string
@@ -34,7 +34,7 @@ class FoamFileGenerator(object):
         elif type(self.data) in [list,UnparsedList]:
             result+=self.strList(self.data)
         elif self.data==None:
-            raise "GeneratorError","<None> found"
+            raise FoamFileGeneratorError("<None> found")
         else:
             result+=self.strPrimitive(self.data)
             
@@ -162,3 +162,7 @@ class FoamFileGenerator(object):
 
 def makeString(data):
     return str(FoamFileGenerator(data))
+
+class FoamFileGeneratorError(PyFoamException):
+    def __init__(self,descr):
+        PyFoamException.__init__(self,descr)

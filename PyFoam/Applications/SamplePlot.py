@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SamplePlot.py 2683 2008-01-18T15:00:48.175145Z bgschaid  $ 
+#  ICE Revision: $Id: SamplePlot.py 9323 2008-09-04 21:26:43Z bgschaid $ 
 """
 Application class that implements pyFoamSamplePlot.py
 """
@@ -8,7 +8,7 @@ import sys,string
 from PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.SampleDirectory import SampleDirectory
 
-from PyFoam.Error import error
+from PyFoam.Error import error,warning
 
 class SamplePlot(PyFoamApplication):
     def __init__(self,args=None):
@@ -22,6 +22,7 @@ gnuplot-commands
                                    description=description,
                                    usage="%prog [options] <casedir>",
                                    nr=1,
+                                   changeVersion=False,
                                    interspersed=True)
         
     modeChoices=["separate","timesInOne","fieldsInOne","complete"]    
@@ -71,6 +72,11 @@ gnuplot-commands
                                dest="scaled",
                                default=True,
                                help="Don't scale a value to the same range for all plots")
+        self.parser.add_option("--scale-all",
+                               action="store_true",
+                               dest="scaleAll",
+                               default=False,
+                               help="Use the same scale for all fields (else use one scale for each field)")
         self.parser.add_option("--info",
                                action="store_true",
                                dest="info",
@@ -139,6 +145,10 @@ gnuplot-commands
                                              value=[f],
                                              time=self.opts.time))
         elif self.opts.mode=="fieldsInOne":
+            if self.opts.scaled and not self.opts.scaleAll:
+                warning("In mode '",self.opts.mode,"' all fields are scaled to the same value")
+                self.opts.scaleAll=True
+                
             if self.opts.time==None:
                 self.opts.time=samples.times
             for t in self.opts.time:
@@ -146,19 +156,36 @@ gnuplot-commands
                                              value=self.opts.field,
                                              time=[t]))
         elif self.opts.mode=="complete":
+            if self.opts.scaled and not self.opts.scaleAll:
+                warning("In mode '",self.opts.mode,"' all fields are scaled to the same value")
+                self.opts.scaleAll=True
+
             plots.append(samples.getData(line=self.opts.line,
                                          value=self.opts.field,
                                          time=self.opts.time))
 
         if self.opts.scaled:
-            vRange=None
+            if self.opts.scaleAll:
+                vRange=None
+            else:
+                vRanges={}
+                
             for p in plots:
                 for d in p:
                     mi,ma=d.range()
+                    nm=d.name
+                    if not self.opts.scaleAll:
+                        if nm in vRanges:
+                            vRange=vRanges[nm]
+                        else:
+                            vRange=None
+                            
                     if vRange==None:
                         vRange=mi,ma
                     else:
                         vRange=min(vRange[0],mi),max(vRange[1],ma)
+                    if not self.opts.scaleAll:
+                        vRanges[nm]=vRange
                         
         result="set term png\n"
 
@@ -195,7 +222,12 @@ gnuplot-commands
                 
             result+="plot "
             if self.opts.scaled:
-                result+="[][%f:%f] " % vRange
+                if not self.opts.scaleAll:
+                    vRange=vRanges[p[0].name]
+
+                # only scale if extremas are sufficiently different
+                if abs(vRange[0]-vRange[1])>1e-5*max(abs(vRange[0]),abs(vRange[1])) and max(abs(vRange[0]),abs(vRange[1]))>1e-10:
+                    result+="[][%g:%g] " % vRange
 
             first=True
 

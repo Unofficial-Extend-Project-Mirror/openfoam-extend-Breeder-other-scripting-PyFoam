@@ -42,6 +42,11 @@ class NetList(PyFoamApplication):
                                dest="time",
                                default=False,
                                help="Request timing information")
+        self.parser.add_option("--ip",
+                               action="store_true",
+                               dest="ip",
+                               default=False,
+                               help="Output the IP-number instead of the machine name")
         
     def run(self):
         try:
@@ -62,8 +67,13 @@ class NetList(PyFoamApplication):
         for name,info in data.iteritems():
             if len(info["commandLine"])>maxcommandline:
                 maxcommandline=len(info["commandLine"])
-            if len(info["hostname"])>maxhost:
-                maxhost=len(info["hostname"])
+            if self.opts.ip:
+                tmpHost=info["ip"]
+            else:
+                tmpHost=info["hostname"]
+                
+            if len(tmpHost)>maxhost:
+                maxhost=len(tmpHost)
 
         header=hostString+(" "*(maxhost-len(hostString)))+" | "+" Port  | User       | "+cmdString+"\n"
         line=("-"*(len(header)))
@@ -73,7 +83,12 @@ class NetList(PyFoamApplication):
         print header
         
         for name,info in data.iteritems():
-            print formatString % (info["hostname"],info["port"],info["user"],info["commandLine"])
+            if self.opts.ip:
+                tmpHost=info["ip"]
+            else:
+                tmpHost=info["hostname"]
+
+            print formatString % (tmpHost,info["port"],info["user"],info["commandLine"])
             if self.parser.options.process:
                 isParallel=self.forwardCommand(info,"isParallel()")
                 if isParallel:

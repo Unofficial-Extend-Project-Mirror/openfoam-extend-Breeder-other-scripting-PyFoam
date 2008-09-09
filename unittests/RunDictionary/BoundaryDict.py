@@ -3,6 +3,8 @@ import unittest
 from PyFoam.RunDictionary.BoundaryDict import BoundaryDict
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
+from PyFoam.Error import PyFoamException
+
 from os import path,environ,system
 
 theSuite=unittest.TestSuite()
@@ -33,7 +35,7 @@ class BoundaryDictTest(unittest.TestCase):
         try:
             bnd["nix"]=test2
             self.fail()
-        except "BoundaryType":
+        except PyFoamException:
             pass
         
 theSuite.addTest(unittest.makeSuite(BoundaryDictTest,"test"))

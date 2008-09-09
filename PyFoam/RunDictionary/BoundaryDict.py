@@ -2,6 +2,7 @@
 
 from ParsedParameterFile import ParsedBoundaryDict
 from SolutionDirectory import SolutionDirectory
+from PyFoam.Error import PyFoamException
 
 class BoundaryDict(ParsedBoundaryDict):
     """Handles data in a boundary-File"""
@@ -15,10 +16,10 @@ class BoundaryDict(ParsedBoundaryDict):
     
     def __setitem__(self,key,value):
         if not type(value)==dict:
-            raise "BoundaryType",("Type of boundary element must be dict, is",type(value))
+            raise PyFoamException("Type of boundary element must be dict, is"+str(type(value)))
         for k in ["type","nFaces","startFace"]:
             if not value.has_key(k):
-                raise "BoundaryType",("Required key",k,"is missing from",value,"not a valid patch")
+                raise PyFoamException("Required key "+str(k)+" is missing from"+str(value)+"not a valid patch")
                 
         self.content[key]=value
 

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionFile.py 2962 2008-03-31T17:30:07.010870Z bgschaid  $ 
+#  ICE Revision: $Id: SolutionFile.py 8665 2008-03-31 17:28:46Z bgschaid $ 
 """ Working with solutions """
 
 import re,os

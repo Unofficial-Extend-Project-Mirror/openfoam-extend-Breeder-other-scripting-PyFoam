@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PotentialRunner.py 2535 2007-12-30T10:08:58.891162Z bgschaid  $ 
+#  ICE Revision: $Id: PotentialRunner.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -6,13 +6,14 @@ Application class that implements pyFoamSteadyRunner
 from os import path,environ
 
 from PyFoamApplication import PyFoamApplication
-from PyFoam.FoamInformation import changeFoamVersion
 
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 from PyFoam.Execution.ParallelExecution import LAMMachine
 from PyFoam.Error import warning,error
+
+from PyFoam.FoamInformation import oldAppConvention as oldApp
 
 class PotentialRunner(PyFoamApplication):
     def __init__(self,args=None):
@@ -39,10 +40,6 @@ Copies the current fields for U and p to backup-files.
                                dest="machinefile",
                                default=None,
                                help="The machinefile that specifies the parallel machine")
-        self.parser.add_option("--foamVersion",
-                               dest="foamVersion",
-                               default=None,
-                               help="Change the OpenFOAM-version that is to be used")
         self.parser.add_option("--non-orthogonal-correctors",
                                type="int",
                                dest="noCorr",
@@ -75,9 +72,6 @@ Copies the current fields for U and p to backup-files.
                                help="Sets the pressure reference value for closed cases")
 
     def run(self):
-        if self.opts.foamVersion!=None:
-            changeFoamVersion(self.opts.foamVersion)
-            
         cName=self.parser.getArgs()[0]
         sol=SolutionDirectory(cName,archive=None)
         initial=sol[0]
@@ -95,8 +89,14 @@ Copies the current fields for U and p to backup-files.
             writep=["-writep"]
         else:
             writep=[]
-            
-        run=BasicRunner(argv=["potentialFoam",".",cName]+writep,
+
+        argv=["potentialFoam"]
+        if oldApp():
+            argv+=[".",cName]
+        else:
+            argv+=["-case",cName]
+        
+        run=BasicRunner(argv=argv+writep,
                         server=False,
                         logname="PotentialFoam",
                         lam=lam)

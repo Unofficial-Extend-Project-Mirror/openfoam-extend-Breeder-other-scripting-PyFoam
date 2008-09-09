@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/RegionCases.py 2045 2007-09-19T21:09:58.071878Z bgschaid  $ 
+#  ICE Revision: $Id: RegionCases.py 7963 2007-09-20 08:33:19Z bgschaid $ 
 """Pseudo-Cases for Regions, built from symlinks"""
 
 from SolutionDirectory import SolutionDirectory

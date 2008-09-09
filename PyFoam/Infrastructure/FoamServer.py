@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/FoamServer.py 2046 2007-09-19T21:34:23.657871Z bgschaid  $ 
+#  ICE Revision: $Id: FoamServer.py 7964 2007-09-20 08:33:20Z bgschaid $ 
 """A XMLRPC-Server that answeres about the current state of a Foam-Run"""
 
 from ServerBase import ServerBase

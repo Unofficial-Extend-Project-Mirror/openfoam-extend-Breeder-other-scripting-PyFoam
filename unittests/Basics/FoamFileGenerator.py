@@ -1,7 +1,7 @@
 
 import unittest
 
-from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator,makeString
+from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator,makeString,FoamFileGeneratorError
 from PyFoam.Basics.DataStructures import DictProxy,TupleProxy,Unparsed,UnparsedList
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
@@ -78,7 +78,7 @@ class FoamFileGeneratorTest(unittest.TestCase):
         try:
             self.assertEqual(str(g),"")
             self.fail()
-        except "GeneratorError":
+        except FoamFileGeneratorError:
             pass
 
 theSuite.addTest(unittest.makeSuite(FoamFileGeneratorTest,"test"))

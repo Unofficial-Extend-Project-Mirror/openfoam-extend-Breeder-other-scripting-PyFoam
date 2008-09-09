@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Configuration.py 2931 2008-03-24T19:03:43.670798Z bgschaid  $ 
+#  ICE Revision: $Id: Configuration.py 8948 2008-06-05 15:23:51Z bgschaid $ 
 """Reads configuration-files that define defaults for various PyFoam-Settings
 
 Also hardcodes defaults for the settings"""
@@ -36,7 +36,7 @@ _defaults={
 #    "run_OPENMPI":"mpirun",
 #    "run_LAM":"mpirun",
     "options_OPENMPI_pre":'["--mca","pls_rsh_agent","rsh"]',
-    "options_OPENMPI_post":'["-x","LD_LIBRARY_PATH","-x","WM_PROJECT_DIR","-x","FOAM_MPI_LIBBIN","-x","MPI_BUFFER_SIZE"]'
+    "options_OPENMPI_post":'["-x","PATH","-x","LD_LIBRARY_PATH","-x","WM_PROJECT_DIR","-x","FOAM_MPI_LIBBIN","-x","MPI_BUFFER_SIZE"]'
     },
     "Paths": {
     "python" : "/usr/bin/python",

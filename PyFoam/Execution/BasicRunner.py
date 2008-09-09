@@ -1,10 +1,12 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/BasicRunner.py 2931 2008-03-24T19:03:43.670798Z bgschaid  $ 
+#  ICE Revision: $Id: BasicRunner.py 9166 2008-08-04 12:21:49Z bgschaid $ 
 """Run a OpenFOAM command"""
 
 import sys
 import string
 from os import path
 from threading import Timer
+
+from PyFoam.FoamInformation import oldAppConvention as oldApp
 
 if not 'curdir' in dir(path) or not 'sep' in dir(path):
     print "Warning: Inserting symbols into os.path (Python-Version<2.3)"
@@ -60,10 +62,16 @@ class BasicRunner(object):
             self.argv=sys.argv[1:]
         else:
             self.argv=argv
-        self.dir=path.join(self.argv[1],self.argv[2])
-        if self.argv[2][-1]==path.sep:
-            self.argv[2]=self.argv[2][:-1]
 
+        if oldApp():
+            self.dir=path.join(self.argv[1],self.argv[2])
+            if self.argv[2][-1]==path.sep:
+                self.argv[2]=self.argv[2][:-1]
+        else:
+            self.dir=path.curdir
+            if "-case" in self.argv:
+                self.dir=self.argv[self.argv.index("-case")+1]
+                
         if logname==None:
             logname="PyFoam."+path.basename(argv[0])
 
@@ -83,6 +91,9 @@ class BasicRunner(object):
         self.logFile=path.join(self.dir,logname+".logfile")
         
         self.fatalError=False
+        self.fatalFPE=False
+        self.fatalStackdump=False
+        
         self.warnings=0
         self.started=False
 
@@ -162,7 +173,11 @@ class BasicRunner(object):
                     
                 if line.find("FOAM FATAL ERROR")>=0 or line.find("FOAM FATAL IO ERROR")>=0:
                     self.fatalError=True
-
+                if line.find("Foam::sigFpe::sigFpeHandler")>=0:
+                    self.fatalFPE=True
+                if line.find("Foam::error::printStack")>=0:
+                    self.fatalStackdump=True
+                    
                 if self.fatalError and line!="":
                     foamLogger().error(line)
 
@@ -196,7 +211,7 @@ class BasicRunner(object):
     def runOK(self):
         """checks whether the run was successful"""
         if self.started:
-            return not self.fatalError
+            return not self.fatalError and not self.fatalFPE and not self.fatalStackdump
         else:
             return False
         

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ClusterTester.py 2135 2007-10-05T11:26:45.018481Z bgschaid  $ 
+#  ICE Revision: $Id: ClusterTester.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Application class that implements pyFoamClusterTester
 """
@@ -31,6 +31,7 @@ this context means the Sun Grid Engine
                                    args=args,
                                    description=description,
                                    usage="%prog [options] <cluster-script>",
+                                   changeVersion=False,
                                    nr=1,
                                    interspersed=1)
         

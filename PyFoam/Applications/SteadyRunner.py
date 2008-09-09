@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SteadyRunner.py 2881 2008-03-11T18:56:34.676111Z bgschaid  $ 
+#  ICE Revision: $Id: SteadyRunner.py 9161 2008-08-04 08:01:05Z bgschaid $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -6,7 +6,6 @@ Application class that implements pyFoamSteadyRunner
 from os import path
 
 from PyFoamApplication import PyFoamApplication
-from PyFoam.FoamInformation import changeFoamVersion
 
 from PyFoam.Execution.ConvergenceRunner import ConvergenceRunner
 from PyFoam.LogAnalysis.BoundingLogAnalyzer import BoundingLogAnalyzer
@@ -54,15 +53,16 @@ stopped and the last simulation state is written to disk
                                dest="machinefile",
                                default=None,
                                help="The machinefile that specifies the parallel machine")
+        self.parser.add_option("--restart",
+                               action="store_true",
+                               default=False,
+                               dest="restart",
+                               help="Restart the simulation from the last time-step")
         self.parser.add_option("--progress",
                                action="store_true",
                                default=False,
                                dest="progress",
                                help="Only prints the progress of the simulation, but swallows all the other output")
-        self.parser.add_option("--foamVersion",
-                               dest="foamVersion",
-                               default=None,
-                               help="Change the OpenFOAM-version that is to be used")
         self.parser.add_option("--report-usage",
                                action="store_true",
                                default=False,
@@ -75,12 +75,11 @@ stopped and the last simulation state is written to disk
         CommonWriteAllTrigger.addOptions(self)
         
     def run(self):
-        if self.opts.foamVersion!=None:
-            changeFoamVersion(self.opts.foamVersion)
-            
-        self.processPlotLineOptions(autoPath=path.join(self.parser.getArgs()[1],self.parser.getArgs()[2]))
+        cName=self.parser.casePath()
+        self.checkCase(cName)
 
-        cName=self.parser.getArgs()[2]
+        self.processPlotLineOptions(autoPath=cName)
+
         sol=SolutionDirectory(cName,archive=None)
         
         self.clearCase(sol)
@@ -90,7 +89,7 @@ stopped and the last simulation state is written to disk
             lam=LAMMachine(machines=self.opts.machinefile,nr=self.opts.procnr)
 
 
-        run=ConvergenceRunner(BoundingLogAnalyzer(progress=self.opts.progress),silent=self.opts.progress,argv=self.parser.getArgs(),server=True,lam=lam)
+        run=ConvergenceRunner(BoundingLogAnalyzer(progress=self.opts.progress),silent=self.opts.progress,argv=self.parser.getArgs(),restart=self.opts.restart,server=True,lam=lam)
 
         self.addPlotLineAnalyzers(run)
 

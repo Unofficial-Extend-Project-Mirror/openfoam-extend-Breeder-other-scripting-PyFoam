@@ -1,11 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Runner.py 2881 2008-03-11T18:56:34.676111Z bgschaid  $ 
+#  ICE Revision: $Id: Runner.py 9160 2008-08-04 08:00:59Z bgschaid $ 
 """
 Application class that implements pyFoamRunner
 """
 
 from PyFoamApplication import PyFoamApplication
-
-from PyFoam.FoamInformation import changeFoamVersion
 
 from PyFoam.Execution.AnalyzedRunner import AnalyzedRunner
 from PyFoam.LogAnalysis.BoundingLogAnalyzer import BoundingLogAnalyzer
@@ -19,12 +17,14 @@ from PyFoam.Error import warning,error
 from CommonPlotLines import CommonPlotLines
 from CommonClearCase import CommonClearCase
 from CommonWriteAllTrigger import CommonWriteAllTrigger
+from CommonLibFunctionTrigger import CommonLibFunctionTrigger
 
 from os import path
 
 class Runner(PyFoamApplication,
              CommonPlotLines,
              CommonWriteAllTrigger,
+             CommonLibFunctionTrigger,
              CommonClearCase):
     def __init__(self,args=None):
         description="""
@@ -64,10 +64,6 @@ class Runner(PyFoamApplication,
                                default=False,
                                dest="progress",
                                help="Only prints the progress of the simulation, but swallows all the other output")
-        self.parser.add_option("--foamVersion",
-                               dest="foamVersion",
-                               default=None,
-                               help="Change the OpenFOAM-version that is to be used")
         self.parser.add_option("--logname",
                                dest="logname",
                                default=None,
@@ -98,27 +94,29 @@ class Runner(PyFoamApplication,
         CommonPlotLines.addOptions(self)
         CommonClearCase.addOptions(self)
         CommonWriteAllTrigger.addOptions(self)
-                               
+        CommonLibFunctionTrigger.addOptions(self)
+        
     def run(self):
         if self.opts.keeppseudo and (not self.opts.regions and self.opts.region==None):
             warning("Option --keep-pseudocases only makes sense for multi-region-cases")
         regionNames=[self.opts.region]
         regions=None
+
+        casePath=self.parser.casePath()
+
+        self.checkCase(casePath)
         
         if self.opts.regions or self.opts.region!=None:
             print "Building Pseudocases"
-            sol=SolutionDirectory(self.parser.getArgs()[2],archive=None)
+            sol=SolutionDirectory(casePath,archive=None)
             regions=RegionCases(sol,clean=True)
             
             if self.opts.regions:
                 regionNames=sol.getRegions()
             
-        if self.opts.foamVersion!=None:
-            changeFoamVersion(self.opts.foamVersion)
-            
-        self.processPlotLineOptions(autoPath=path.join(self.parser.getArgs()[1],self.parser.getArgs()[2]))
+        self.processPlotLineOptions(autoPath=casePath)
 
-        self.clearCase(SolutionDirectory(self.parser.getArgs()[2],archive=None))
+        self.clearCase(SolutionDirectory(casePath,archive=None))
 
         lam=None
         if self.opts.procnr!=None or self.opts.machinefile!=None:
@@ -130,13 +128,14 @@ class Runner(PyFoamApplication,
                 args[2]+="."+theRegion
 
             if self.opts.logname==None:
-                self.opts.logname="PyFoamSolve."+args[0]
+                self.opts.logname="PyFoamSolve."+path.basename(args[0])
                 
             run=AnalyzedRunner(BoundingLogAnalyzer(progress=self.opts.progress),silent=self.opts.progress,argv=args,server=True,lam=lam,restart=self.opts.restart,logname=self.opts.logname)
 
             self.addPlotLineAnalyzers(run)
             
-            self.addWriteAllTrigger(run,SolutionDirectory(self.parser.getArgs()[2],archive=None))
+            self.addWriteAllTrigger(run,SolutionDirectory(casePath,archive=None))
+            self.addLibFunctionTrigger(run,SolutionDirectory(casePath,archive=None))
 
             run.start()
 

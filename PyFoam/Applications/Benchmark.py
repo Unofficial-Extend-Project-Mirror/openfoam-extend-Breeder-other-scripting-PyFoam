@@ -1,10 +1,11 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Benchmark.py 2789 2008-02-15T15:35:58.159689Z bgschaid  $ 
+#  ICE Revision: $Id: Benchmark.py 9166 2008-08-04 12:21:49Z bgschaid $ 
 """
 Class that implements pyFoamBenchmark
 """
 
 from PyFoamApplication import PyFoamApplication
-from PyFoam.FoamInformation import changeFoamVersion
+
+from fnmatch import fnmatch
 
 import sys,string,ConfigParser
 
@@ -19,6 +20,7 @@ from PyFoam.RunDictionary.BlockMesh import BlockMesh
 from PyFoam.Execution.ParallelExecution import LAMMachine
 from PyFoam.Basics.Utilities import execute
 from PyFoam.Basics.CSVCollection import CSVCollection
+from PyFoam.FoamInformation import oldAppConvention as oldApp
 
 class Benchmark(PyFoamApplication):
     def __init__(self,args=None):
@@ -38,14 +40,18 @@ class Benchmark(PyFoamApplication):
                                dest="removeCases",
                                default=False,
                                help="Remove the case directories and log files for all successfully run cases")
-        self.parser.add_option("--foamVersion",
-                               dest="foamVersion",
-                               default=None,help="Change the OpenFOAM-version that is to be used")
+        self.parser.add_option("--exclude-cases",
+                               action="append",
+                               default=None,
+                               dest="excases",
+                               help="Cases which should not be processed (pattern, can be used more than once)")
+        self.parser.add_option("--cases",
+                               action="append",
+                               default=None,
+                               dest="cases",
+                               help="Cases which should be processed (pattern, can be used more than once)")
         
     def run(self):
-        if self.opts.foamVersion!=None:
-            changeFoamVersion(self.opts.foamVersion)
-
         config=ConfigParser.ConfigParser()
         files=self.parser.getArgs()
 
@@ -95,10 +101,23 @@ class Benchmark(PyFoamApplication):
         for sec in config.sections():
             print "Reading: ",sec
             skipIt=False
+            skipReason=""
             if config.has_option(sec,"skip"):
                 skipIt=config.getboolean(sec,"skip")
+                skipReason="Switched off in file"
+            if self.opts.excases!=None and not skipIt:
+                for p in self.opts.excases:
+                    if fnmatch(sec,p):
+                        skipIt=True
+                        skipReason="Switched off by pattern '"+p+"'"
+            if self.opts.cases!=None:
+                for p in self.opts.cases:
+                    if fnmatch(sec,p):
+                        skipIt=False
+                        skipReason=""
+                
             if skipIt:
-                print "Skipping case ....."
+                print "Skipping case ..... Reason:"+skipReason
                 continue
             sol=config.get(sec,"solver")
             cas=config.get(sec,"case")
@@ -207,12 +226,19 @@ class Benchmark(PyFoamApplication):
             
             workDir=path.realpath(path.curdir)
 
-            orig=SolutionDirectory(path.join(casesDirectory,solver,case),archive=None)
+            orig=SolutionDirectory(path.join(casesDirectory,solver,case),
+                                   archive=None,
+                                   paraviewLink=False)
             for a in additional+utilities:
                 orig.addToClone(a)
             orig.cloneCase(path.join(workDir,caseDir))
 
-            run=BasicRunner(silent=True,argv=[solver,workDir,caseDir],logname="BenchRunning",lam=lam)
+            if oldApp():
+                argv=[solver,workDir,caseDir]
+            else:
+                argv=[solver,"-case",path.join(workDir,caseDir)]
+                
+            run=BasicRunner(silent=True,argv=argv,logname="BenchRunning",lam=lam)
             runDir=run.getSolutionDirectory()
             controlFile=ParameterFile(runDir.controlDict())
 
@@ -251,7 +277,10 @@ class Benchmark(PyFoamApplication):
             for pre,post in prepare:
                 print "Doing ",pre," ...."
                 post=post.replace("%case%",caseDir)
-                args=string.split("%s %s %s %s" % (pre,workDir,caseDir,post))
+                if oldApp():
+                    args=string.split("%s %s %s %s" % (pre,workDir,caseDir,post))
+                else:
+                    args=string.split("%s -case %s %s" % (pre,path.join(workDir,caseDir),post))
                 util=BasicRunner(silent=True,argv=args,logname="BenchPrepare_"+pre)
                 util.start()
 
@@ -311,8 +340,11 @@ class Benchmark(PyFoamApplication):
             csv["cputimesystem"]=run.run.cpuSystemTime()
             csv["maxmemory"]=run.run.usedMemory()
             csv["cpuusage"]=cpuUsage
-            csv["speedup"]=speedup
-            
+            if speedup!=None:
+                csv["speedup"]=speedup
+            else:
+                csv["speedup"]="##"
+                
             csv.write()
             
             resultFile.write("Case %s WallTime %g CPUTime %g UserTime %g SystemTime %g Memory %g MB  Speedup %g\n" %(caseName,run.run.wallTime(),run.run.cpuTime(),run.run.cpuUserTime(),run.run.cpuSystemTime(),run.run.usedMemory(),speedupOut))

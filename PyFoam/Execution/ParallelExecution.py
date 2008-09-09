@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/ParallelExecution.py 2789 2008-02-15T15:35:58.159689Z bgschaid  $ 
+#  ICE Revision: $Id: ParallelExecution.py 8948 2008-06-05 15:23:51Z bgschaid $ 
 """Things that are needed for convenient parallel Execution"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -8,6 +8,7 @@ from PyFoam import configuration as config
 
 from os import path
 from string import strip
+import commands
 
 class LAMMachine(Utilities):
     """Wrapper class for starting an stopping a LAM-Machine"""
@@ -98,9 +99,10 @@ class LAMMachine(Utilities):
             else:
                 error("Can't determine Nr of CPUs without machinefile")
                 
-    def buildMPIrun(self,argv):
+    def buildMPIrun(self,argv,expandApplication=True):
         """Builds a list with a working mpirun command (for that MPI-Implementation)
         @param argv: the original arguments that are to be wrapped
+        @param expandApplication: Expand the 
         @return: list with the correct mpirun-command"""
 
         nr=str(self.cpuNr())
@@ -123,7 +125,14 @@ class LAMMachine(Utilities):
 
         mpirun+=eval(config().get("MPI","options_"+foamMPI()+"_post",default="[]"))
 
-        mpirun+=argv[0:3]+["-parallel"]+argv[3:]
+        progname=argv[0]
+        if expandApplication:
+            stat,progname=commands.getstatusoutput('which '+progname)
+            if stat:
+                progname=argv[0]
+                warning("which can not find a match for",progname,". Hoping for the best")
+
+        mpirun+=[progname]+argv[1:3]+["-parallel"]+argv[3:]
 
         if config().getdebug("ParallelExecution"):
             debug("Arguments:",mpirun)

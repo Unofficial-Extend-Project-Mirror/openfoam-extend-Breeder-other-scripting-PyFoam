@@ -41,8 +41,25 @@ equivalent place in the destination case
                                type="int",
                                default=None,
                                dest="longlist",
-                               help="Fields that are longer than this won't be parsed, but read into memory (nad compared as strings)")
+                               help="Fields that are longer than this won't be parsed, but read into memory (and compared as strings)")
 
+        self.parser.add_option("--no-header",
+                               action="store_true",
+                               default=False,
+                               dest="noHeader",
+                               help="Don't expect a header while parsing")
+        
+        self.parser.add_option("--boundary",
+                               action="store_true",
+                               default=False,
+                               dest="boundaryDict",
+                               help="Expect that this file is a boundary dictionary")
+        self.parser.add_option("--list",
+                               action="store_true",
+                               default=False,
+                               dest="listDict",
+                               help="Expect that this file only contains a list")
+        
 
     
     def run(self):
@@ -50,7 +67,7 @@ equivalent place in the destination case
         dName=path.abspath(self.parser.getArgs()[1])
 
         try:
-            source=ParsedParameterFile(sName,backup=False,listLengthUnparsed=self.opts.longlist)
+            source=ParsedParameterFile(sName,backup=False,listLengthUnparsed=self.opts.longlist,noHeader=self.opts.noHeader,boundaryDict=self.opts.boundaryDict,listDict=self.opts.listDict)
         except IOError,e:
             self.error("Problem with file",sName,":",e)
 
@@ -77,13 +94,16 @@ equivalent place in the destination case
             error("Source",sName,"and destination",dName,"are the same")
         
         try:
-            dest=ParsedParameterFile(dName,backup=False,listLengthUnparsed=self.opts.longlist)
+            dest=ParsedParameterFile(dName,backup=False,listLengthUnparsed=self.opts.longlist,noHeader=self.opts.noHeader,boundaryDict=self.opts.boundaryDict,listDict=self.opts.listDict)
         except IOError,e:
             self.error("Problem with file",dName,":",e)
 
         self.pling=False
-        
-        self.compareDict(source.content,dest.content,1,path.basename(sName))
+
+        if not self.opts.boundaryDict and not self.opts.listDict:
+            self.compareDict(source.content,dest.content,1,path.basename(sName))
+        else:
+            self.compareIterable(source.content,dest.content,1,path.basename(sName))
 
         if not self.pling:
             print "\nNo differences found"

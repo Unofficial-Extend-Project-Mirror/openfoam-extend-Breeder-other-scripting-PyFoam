@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/GeneralLineAnalyzer.py 2494 2007-12-14T14:37:46.025021Z bgschaid  $ 
+#  ICE Revision: $Id: GeneralLineAnalyzer.py 8292 2007-12-12 15:22:00Z bgschaid $ 
 """Line analyzer with output and the capability to store lines"""
 
 from LogLineAnalyzer import LogLineAnalyzer

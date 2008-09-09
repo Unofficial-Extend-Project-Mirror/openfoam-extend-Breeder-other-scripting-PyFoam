@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/FileBasis.py 2931 2008-03-24T19:03:43.670798Z bgschaid  $ 
+#  ICE Revision: $Id: FileBasis.py 9003 2008-06-17 08:23:04Z bgschaid $ 
 """Basis for the handling of OpenFOAM-files
 
 Transparently accepts gnuzipped files"""
@@ -27,7 +27,10 @@ class FileBasis(Utilities):
         """@param name: Name of the file. If the field is zipped the .gz is
         appended"""
         self.name = path.abspath(name)
+        self.exists = False
+        
         if path.exists(self.name):
+            self.exists = True
             self.zipped=False
             if path.splitext(self.name)[1]==".gz":
                 self.zipped=True
@@ -35,6 +38,7 @@ class FileBasis(Utilities):
                 warning(self.name+".gz","and",self.name,"existing - using the unzipped")
         elif path.exists(self.name+".gz"):
             self.zipped=True
+            self.exists = True
         else:
             self.zipped=True
 
@@ -219,4 +223,7 @@ class FileBasisBackup(FileBasis):
         if self.backupName!=None:
             self.execute("cp "+self.backupName+" "+self.name)
             self.execute("rm "+self.backupName)
-    
+        
+def exists(name):
+    f=FileBasis(name)
+    return f.exists
