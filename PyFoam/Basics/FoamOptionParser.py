@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamOptionParser.py 9161 2008-08-04 08:01:05Z bgschaid $ 
+#  ICE Revision: $Id: FoamOptionParser.py 9441 2008-09-22 20:51:21Z bgschaid $ 
 """Parse options for the PyFoam-Scripts"""
 
 from optparse import OptionParser,TitledHelpFormatter
@@ -105,6 +105,6 @@ class FoamOptionParser(OptionParser):
             return path.join(self.getArgs()[1],self.getArgs()[2])
         else:
             if "-case" in self.getArgs():
-                return self.getArgs()[self.getArgs().index("-case")+1]
+                return path.normpath(self.getArgs()[self.getArgs().index("-case")+1])
             else:
-                return path.curdir
+                return path.abspath(path.curdir)

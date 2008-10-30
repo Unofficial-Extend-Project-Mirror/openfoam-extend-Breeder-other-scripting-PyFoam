@@ -3,6 +3,7 @@ Class that implements common functionality for collecting plot-lines
 """
 
 from os import path
+from optparse import OptionGroup
 
 from PyFoam.Error import error,warning
 from PyFoam.LogAnalysis.RegExpLineAnalyzer import RegExpLineAnalyzer
@@ -56,24 +57,29 @@ class CommonPlotLines(object):
         f.close()
 
     def addOptions(self):
-        self.parser.add_option("--custom-regexp",
-                               action="append",
-                               default=None,
-                               dest="customRegex",
-                               help="Add a custom regular expression to be plotted (can be used more than once)")
-
-        self.parser.add_option("--regexp-file",
-                               action="append",
-                               default=None,
-                               dest="regexpFile",
-                               help="A file with regulare expressions that are treated like the expressions given with --custom-regexp")
+        grp=OptionGroup(self.parser,
+                        "Regular expression",
+                        "Where regular expressions for custom plots are found")
         
-        self.parser.add_option("--no-auto-customRegexp",
-                               action="store_false",
-                               default=True,
-                               dest="autoCustom",
-                               help="Do not automatically load the expressions from the file customRegexp")
+        grp.add_option("--custom-regexp",
+                       action="append",
+                       default=None,
+                       dest="customRegex",
+                       help="Add a custom regular expression to be plotted (can be used more than once)")
 
+        grp.add_option("--regexp-file",
+                       action="append",
+                       default=None,
+                       dest="regexpFile",
+                       help="A file with regulare expressions that are treated like the expressions given with --custom-regexp")
+        
+        grp.add_option("--no-auto-customRegexp",
+                       action="store_false",
+                       default=True,
+                       dest="autoCustom",
+                       help="Do not automatically load the expressions from the file customRegexp")
+        self.parser.add_option_group(grp)
+        
     def processPlotLineOptions(self,autoPath=None):
         """Process the options that have to do with plot-lines"""
 

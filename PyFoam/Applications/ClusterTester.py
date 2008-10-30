@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ClusterTester.py 9161 2008-08-04 08:01:05Z bgschaid $ 
+#  ICE Revision: $Id: ClusterTester.py 9593 2008-10-29 14:13:24Z bgschaid $ 
 """
 Application class that implements pyFoamClusterTester
 """
@@ -10,16 +10,17 @@ else:
     import subprocess
 
 import os,string
-
 from os import mkdir,path
+from optparse import OptionGroup
 
 from PyFoamApplication import PyFoamApplication
-
 from PyFoam.FoamInformation import changeFoamVersion
-
 from PyFoam import configuration as config
 
-class ClusterTester(PyFoamApplication):
+from CommonParallel import CommonParallel
+
+class ClusterTester(PyFoamApplication,
+                    CommonParallel):
     def __init__(self,args=None):
         description="""
         Is used to test Cluster-Scripts before they are submitted to the
@@ -30,45 +31,48 @@ this context means the Sun Grid Engine
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
-                                   usage="%prog [options] <cluster-script>",
+                                   usage="%prog [options] <cluster-script> <script options>",
                                    changeVersion=False,
                                    nr=1,
+                                   exactNr=False,
                                    interspersed=1)
         
     def addOptions(self):
-        self.parser.add_option("--procnr",
-                               type="int",
-                               dest="procnr",
-                               default=None,
-                               help="The number of processors the script should be started on")
-        self.parser.add_option("--machinefile",
-                               dest="machinefile",
-                               default=None,
-                               help="The machinefile that specifies the parallel machine")
-        self.parser.add_option("--no-clear",
-                               action="store_false",
-                               default=True,
-                               dest="clear",
-                               help="Do not clear the Environment from OpenFOAM-specific variables")        
-        self.parser.add_option("--restart",
-                               action="store_true",
-                               default=False,
-                               dest="restart",
-                               help="Do not clear the Environment from OpenFOAM-specific variables")        
-        self.parser.add_option("--taskid",
-                               type="int",
-                               dest="taskid",
-                               default=None,
-                               help="The task-ID of a multitask job")
-        self.parser.add_option("--job-id",
-                               type="int",
-                               dest="jobid",
-                               default=666,
-                               help="The job-ID")
-        self.parser.add_option("--jobname",
-                               dest="jobname",
-                               default=None,
-                               help="The job-Name")
+        general=OptionGroup(self.parser,
+                        "Cluster General",
+                        "Stuff that is similar for all queueing implementations")
+        general.add_option("--no-clear",
+                           action="store_false",
+                           default=True,
+                           dest="clear",
+                           help="Do not clear the Environment from OpenFOAM-specific variables")        
+        general.add_option("--restart",
+                           action="store_true",
+                           default=False,
+                           dest="restart",
+                           help="Treat the case as being restarted")
+        self.parser.add_option_group(general)
+        
+        sge=OptionGroup(self.parser,
+                        "SGE",
+                        "Stuff that is specific to a SunGridEngine-environment")
+        sge.add_option("--taskid",
+                       type="int",
+                       dest="taskid",
+                       default=None,
+                       help="The task-ID of a multitask job")
+        sge.add_option("--job-id",
+                       type="int",
+                       dest="jobid",
+                       default=666,
+                       help="The job-ID")
+        sge.add_option("--jobname",
+                       dest="jobname",
+                       default=None,
+                       help="The job-Name")
+        self.parser.add_option_group(sge)
+
+        CommonParallel.addOptions(self)
         
     def run(self):
         scriptName=self.parser.getArgs()[0]
@@ -119,11 +123,16 @@ this context means the Sun Grid Engine
         os.environ["JOB_NAME"]=self.opts.jobname
 
         os.environ["SHELL"]=config().get("Paths","python")
-        
-        print "Executing",scriptName
+
+        callString=scriptName
+        if len(self.parser.getArgs())>1:
+            for a in self.parser.getArgs()[1:]:
+                callString+=" "+a
+                
+        print "Executing",callString
         if sys.version_info<(2,4):
-            ret=system(config().get("Paths","python")+" "+scriptName)
+            ret=system(config().get("Paths","python")+" "+callString)
         else:
-            ret=subprocess.call([config().get("Paths","python"),scriptName])
+            ret=subprocess.call([config().get("Paths","python")]+self.parser.getArgs())
         print "Result=",ret
         

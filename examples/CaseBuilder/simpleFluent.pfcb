@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+<!DOCTYPE casebuilder 
+  SYSTEM  "casebuilder.dtd" 
+>
+<casebuilder name="simpleFluent" 
+  description="simpleFoam-case with a FLUENT-mesh" 
+  template="$FOAM_TUTORIALS/simpleFoam/pitzDaily">
+  <arguments>
+    <arg name="mshfile" description="The FLUENT-mesh file"
+      default="test.msh">
+      <verify>
+from os import path
+if not path.exists(arg):
+    msg="File "+arg+" does not exist"
+</verify>
+ </arg>
+    <arg name="vInlet" description="Velocity at the inlet" default="(1 0 0)"></arg>
+    <arg name="dVisc" description="The dynamic viscosity" default="1e-5">
+      <verify>
+try:
+    if float(arg)&lt; 0:
+         msg="Must be positive"
+except ValueError:
+    msg="Not a float-number"
+</verify>
+    </arg>
+    <arg name="density" description="The fluid density" default="1.2">
+      <verify>
+try:
+    if float(arg)&lt; 0:
+         msg="Must be positive"
+except ValueError:
+    msg="Not a float-number"
+</verify>
+    </arg>
+  </arguments>
+  <variables>
+    <var name="kVisc" description="The kinematic viscositiy">
+kVisc=float(dVisc)/float(density)
+</var>
+  </variables>
+  <meshpreparation mode="utility">
+    <utility application="fluentMeshToFoam" arguments="%(mshfile)s -scale 0.001"/>
+    <copy template="test.template"/>
+  </meshpreparation>
+  <files>
+    <boundaries>
+      <boundary name="inlet" description="Velocity inlet"
+	pattern="in.+"/>
+      <boundary name="outlet" description="Pressure outlet"
+	pattern="out.+"/>
+      <boundary name="wall" description="Walls" pattern="wall.+"/>
+    </boundaries>
+    <parameterfiles>
+      <directory name="constant">
+	<file name="RASProperties">
+	</file>
+	<file name="transportProperties">
+	  <parameter name="['nu'][2]" value="%(kVisc)s"/>
+	</file>
+      </directory>
+      <directory name="system">
+	<file name="controlDict">
+	</file>
+	<file name="fvSolution">
+	</file>
+	<file name="fvSchemes">
+	</file>
+      </directory>
+    </parameterfiles>
+    <fieldfiles>
+      <field name="p">
+	<ic value="0"/>
+	<bc name="wall" type="zeroGradient"/>
+	<bc name="inlet" type="zeroGradient"/>
+	<bc name="outlet" type="fixedValue"
+	  parameters="'value':'uniform 0'"/>
+	<defaultbc type="zeroGradient"/>
+      </field>
+      <field name="U">
+	<ic value="(0 0 0)"/>
+	<bc name="wall" type="fixedValue" parameters="'value':'uniform (0 0 0)'"/>
+	<bc name="inlet" type="fixedValue"
+	  parameters="'value':'uniform %(vInlet)s'"/>
+	<bc name="outlet" type="zeroGradient"/>
+	<defaultbc type="fixedValue" parameters="'value':'uniform (0 0 0)'"/>
+      </field>
+      <field name="k">
+	<ic value="0.25"/>
+	<bc name="inlet" type="fixedValue"
+	  parameters="'value':'$internalField'"/>
+	<defaultbc type="zeroGradient"/>
+      </field>
+      <field name="epsilon">
+	<bc name="inlet" type="fixedValue"
+	  parameters="'value':'$internalField'"/>
+	<ic value="15"/>
+	<defaultbc type="zeroGradient"/>
+      </field>
+    </fieldfiles>
+  </files>
+</casebuilder>
+
+<!-- Local Variables: -->
+<!-- mode:xml -->
+<!-- End: -->

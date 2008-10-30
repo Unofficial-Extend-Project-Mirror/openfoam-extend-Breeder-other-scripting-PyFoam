@@ -7,11 +7,12 @@ class CommonClearCase(object):
     """
 
     def addOptions(self):
-        self.parser.add_option("--clear-case",
-                               action="store_true",
-                               default=False,
-                               dest="clearCase",
-                               help="Clear all timesteps except for the first before running")
+        self.ensureGeneralOptions()
+        self.generalOpts.add_option("--clear-case",
+                                    action="store_true",
+                                    default=False,
+                                    dest="clearCase",
+                                    help="Clear all timesteps except for the first before running")
         
     def clearCase(self,sol):
         if self.opts.clearCase:

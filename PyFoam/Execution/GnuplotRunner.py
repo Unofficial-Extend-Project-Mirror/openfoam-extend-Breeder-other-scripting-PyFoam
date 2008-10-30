@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GnuplotRunner.py 9327 2008-09-05 12:26:01Z bgschaid $ 
+#  ICE Revision: $Id: GnuplotRunner.py 9416 2008-09-22 08:00:13Z bgschaid $ 
 """Runner that outputs the residuals of the linear solver with Gnuplot"""
 
 from StepAnalyzedCommon import StepAnalyzedCommon
@@ -194,7 +194,8 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                  raiseit=False,
                  steady=False,
                  progress=False,
-                 restart=False):
+                 restart=False,
+                 logname=None):
         """@param smallestFreq: smallest Frequency of output
         @param persist: Gnuplot window persistst after run
         @param steady: Is it a steady run? Then stop it after convergence"""
@@ -203,7 +204,8 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                              silent=progress,
                              server=server,
                              lam=lam,
-                             restart=restart)
+                             restart=restart,
+                             logname=logname)
         GnuplotCommon.__init__(self,
                                "Gnuplotting",
                                smallestFreq=smallestFreq,

@@ -3,6 +3,7 @@ Steady runs"""
 
 import re
 from os import path
+from optparse import OptionGroup
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Error import warning
 
@@ -11,17 +12,21 @@ class CommonSafeTrigger(object):
     """
 
     def addOptions(self):
-        self.parser.add_option("--safe-until",
-                               type="float",
-                               dest="safeUntil",
-                               default=None,
-                               help="Sets lower under-relaxation and lower-order convection-schemes for the start of the simulation")
-        self.parser.add_option("--safe-relaxation-factor",
+        grp=OptionGroup(self.parser,
+                        "Safe settings",
+                        "Set safer settings for steady runs")
+        grp.add_option("--safe-until",
+                       type="float",
+                       dest="safeUntil",
+                       default=None,
+                       help="Sets lower under-relaxation and lower-order convection-schemes for the start of the simulation")
+        grp.add_option("--safe-relaxation-factor",
                                type="float",
                                dest="safeRelaxation",
                                default=0.5,
                                help="The factor by which the relaxation-factors should be scaled down (when calculating safe). Default: %default")
-
+        self.parser.add_option_group(grp)
+        
     def addSafeTrigger(self,run,sol,steady=True):
         if self.opts.safeUntil:
             if not steady:

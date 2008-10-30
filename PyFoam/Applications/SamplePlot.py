@@ -1,9 +1,10 @@
-#  ICE Revision: $Id: SamplePlot.py 9323 2008-09-04 21:26:43Z bgschaid $ 
+#  ICE Revision: $Id: SamplePlot.py 9424 2008-09-22 08:00:35Z bgschaid $ 
 """
 Application class that implements pyFoamSamplePlot.py
 """
 
 import sys,string
+from optparse import OptionGroup
 
 from PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.SampleDirectory import SampleDirectory
@@ -28,65 +29,82 @@ gnuplot-commands
     modeChoices=["separate","timesInOne","fieldsInOne","complete"]    
 
     def addOptions(self):
-        self.parser.add_option("--line",
-                               action="append",
-                               default=None,
-                               dest="line",
-                               help="Thesample line from which data is plotted (can be used more than once)")
-        self.parser.add_option("--field",
-                               action="append",
-                               default=None,
-                               dest="field",
-                               help="The fields that are plotted (can be used more than once). If none are specified all found fields are used")
-        self.parser.add_option("--time",
-                               action="append",
-                               default=None,
-                               dest="time",
-                               help="The times that are plotted (can be used more than once). If none are specified all found times are used")
-        self.parser.add_option("--min-time",
-                               action="store",
-                               type="float",
-                               default=None,
-                               dest="minTime",
-                               help="The smallest time that should be used")
-        self.parser.add_option("--max-time",
-                               action="store",
-                               type="float",
-                               default=None,
-                               dest="maxTime",
-                               help="The biggest time that should be used")
-        self.parser.add_option("--mode",
-                               type="choice",
-                               default="separate",
-                               dest="mode",
-                               action="store",
-                               choices=self.modeChoices,
-                               help="What kind of plots are generated: a) separate for every time and field b) all times of a field in one plot c) all fields of a time in one plot d) all lines in one plot. (Names: "+string.join(self.modeChoices,", ")+") Default: %default")
-        self.parser.add_option("--directory-name",
-                               action="store",
-                               default="samples",
-                               dest="dirName",
-                               help="Alternate name for the directory with the samples (Default: %default)")
-        self.parser.add_option("--unscaled",
-                               action="store_false",
-                               dest="scaled",
-                               default=True,
-                               help="Don't scale a value to the same range for all plots")
-        self.parser.add_option("--scale-all",
-                               action="store_true",
-                               dest="scaleAll",
-                               default=False,
-                               help="Use the same scale for all fields (else use one scale for each field)")
-        self.parser.add_option("--info",
-                               action="store_true",
-                               dest="info",
-                               default=False,
-                               help="Print info about the sampled data and exit")
-        self.parser.add_option("--style",
-                               action="store",
-                               default="lines",
-                               dest="style",
-                               help="Gnuplot-style for the data (Default: %default)")
+        data=OptionGroup(self.parser,
+                          "Data",
+                          "Select the data to plot")
+        self.parser.add_option_group(data)
+        
+        data.add_option("--line",
+                        action="append",
+                        default=None,
+                        dest="line",
+                        help="Thesample line from which data is plotted (can be used more than once)")
+        data.add_option("--field",
+                        action="append",
+                        default=None,
+                        dest="field",
+                        help="The fields that are plotted (can be used more than once). If none are specified all found fields are used")
+        data.add_option("--directory-name",
+                        action="store",
+                        default="samples",
+                        dest="dirName",
+                        help="Alternate name for the directory with the samples (Default: %default)")
+        
+        time=OptionGroup(self.parser,
+                         "Time",
+                         "Select the times to plot")
+        self.parser.add_option_group(time)
+        
+        time.add_option("--time",
+                        action="append",
+                        default=None,
+                        dest="time",
+                        help="The times that are plotted (can be used more than once). If none are specified all found times are used")
+        time.add_option("--min-time",
+                        action="store",
+                        type="float",
+                        default=None,
+                        dest="minTime",
+                        help="The smallest time that should be used")
+        time.add_option("--max-time",
+                        action="store",
+                        type="float",
+                        default=None,
+                        dest="maxTime",
+                        help="The biggest time that should be used")
+
+        output=OptionGroup(self.parser,
+                           "Appearance",
+                           "How it should be plotted")
+        self.parser.add_option_group(output)
+        
+        output.add_option("--mode",
+                          type="choice",
+                          default="separate",
+                          dest="mode",
+                          action="store",
+                          choices=self.modeChoices,
+                          help="What kind of plots are generated: a) separate for every time and field b) all times of a field in one plot c) all fields of a time in one plot d) all lines in one plot. (Names: "+string.join(self.modeChoices,", ")+") Default: %default")
+        output.add_option("--unscaled",
+                          action="store_false",
+                          dest="scaled",
+                          default=True,
+                          help="Don't scale a value to the same range for all plots")
+        output.add_option("--scale-all",
+                          action="store_true",
+                          dest="scaleAll",
+                          default=False,
+                          help="Use the same scale for all fields (else use one scale for each field)")
+        data.add_option("--info",
+                        action="store_true",
+                        dest="info",
+                        default=False,
+                        help="Print info about the sampled data and exit")
+        output.add_option("--style",
+                          action="store",
+                          default="lines",
+                          dest="style",
+                          help="Gnuplot-style for the data (Default: %default)")
         
     def run(self):
         samples=SampleDirectory(self.parser.getArgs()[0],dirName=self.opts.dirName)

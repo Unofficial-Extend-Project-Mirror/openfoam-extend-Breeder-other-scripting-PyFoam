@@ -2,6 +2,8 @@
 Application-class that implements pyFoamCloneCase.py
 """
 
+from optparse import OptionGroup
+
 from PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
@@ -23,26 +25,35 @@ Clones a case by copying the system, constant and 0-directories
                                    nr=2)
 
     def addOptions(self):
-        self.parser.add_option("--chemkin",
-                         action="store_true",
-                         dest="chemkin",
-                         default=False,
-                         help="Also copy the Chemkin-directory")
-        self.parser.add_option("--add-item",
-                         action="append",
-                         dest="additional",
-                         default=[],
-                         help="Add a subdirectory to the list of cloned items (can be used more often than once)")
-        self.parser.add_option("--no-pyfoam",
-                         action="store_false",
-                         dest="dopyfoam",
-                         default=True,
-                         help="Don't copy PyFoam-specific stuff")
-        self.parser.add_option("--force",
-                         action="store_true",
-                         dest="force",
-                         default=False,
-                         help="Overwrite destination if it exists")
+        what=OptionGroup(self.parser,
+                         "What",
+                         "Define what should be cloned")
+        self.parser.add_option_group(what)
+
+        what.add_option("--chemkin",
+                        action="store_true",
+                        dest="chemkin",
+                        default=False,
+                        help="Also copy the Chemkin-directory")
+        what.add_option("--add-item",
+                        action="append",
+                        dest="additional",
+                        default=[],
+                        help="Add a subdirectory to the list of cloned items (can be used more often than once)")
+        what.add_option("--no-pyfoam",
+                        action="store_false",
+                        dest="dopyfoam",
+                        default=True,
+                        help="Don't copy PyFoam-specific stuff")
+        
+        behave=OptionGroup(self.parser,
+                           "Behaviour")
+        self.parser.add_option_group(behave)
+        behave.add_option("--force",
+                          action="store_true",
+                          dest="force",
+                          default=False,
+                          help="Overwrite destination if it exists")
 
     def run(self):
         if len(self.parser.getArgs())>2:

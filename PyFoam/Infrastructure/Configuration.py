@@ -1,11 +1,13 @@
-#  ICE Revision: $Id: Configuration.py 8948 2008-06-05 15:23:51Z bgschaid $ 
+#  ICE Revision: $Id: Configuration.py 9535 2008-10-20 08:12:41Z bgschaid $ 
 """Reads configuration-files that define defaults for various PyFoam-Settings
 
 Also hardcodes defaults for the settings"""
 
 from ConfigParser import ConfigParser,NoOptionError
 
-from Hardcoded import globalConfigFile,userConfigFile
+from Hardcoded import globalConfigFile,userConfigFile,globalDirectory,userDirectory
+
+from os import path
 
 _defaults={
     "Network": {
@@ -51,6 +53,9 @@ _defaults={
     },
     "Execution":{
     "controlDictRestoreWait":"60.",
+    },
+    "CaseBuilder":{
+    "descriptionPath": eval('["'+path.curdir+'","'+path.join(userDirectory(),"caseBuilderDescriptions")+'","'+path.join(globalDirectory(),"caseBuilderDescriptions")+'"]'),
     },
     }
 

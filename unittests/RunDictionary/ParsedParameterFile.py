@@ -51,6 +51,18 @@ class FoamStringParserTest(unittest.TestCase):
         p1=FoamStringParser('test  div((phi&nix),U);')
         self.assertEqual(p1["test"],"div((phi&nix),U)")
     
+    def testParseStrangeNames(self):
+        p1=FoamStringParser('test%1 1;')
+        self.assertEqual(p1["test%1"],1)
+    
+    def testParseStrangeNames2(self):
+        p1=FoamStringParser('test+1 1;')
+        self.assertEqual(p1["test+1"],1)
+    
+    def testParseStrangeNames3(self):
+        p1=FoamStringParser('test:1 1;')
+        self.assertEqual(p1["test:1"],1)
+    
     def testParseError(self):
         try:
             p1=FoamStringParser('test  name')
@@ -182,6 +194,35 @@ nix
         self.assertEqual(p1["nix"],2)
         del p1["nix"]
         self.assert_("nix" not in p1)
+
+    def testSubstitute1(self):
+        p1=FoamStringParser("nix $da;")
+        self.assertEqual(p1["nix"],"$da")
+        
+    def testSubstitute2(self):
+        p1=FoamStringParser("nix 2 $da;")
+        self.assertEqual(p1["nix"],[2,"$da"])
+        
+    def testInclude(self):
+        p1=FoamStringParser('#include "nixda"')
+        
+    def testRemove(self):
+        p1=FoamStringParser('#remove da')
+        
+    def testRemoveList(self):
+        p1=FoamStringParser('#remove (nix da)')
+        
+    def testInputMode(self):
+        p1=FoamStringParser('#inputMode merge')
+        
+    def testInputMode2(self):
+        p1=FoamStringParser('#inputMode overwrite')
+        
+    def testInputMode3(self):
+        p1=FoamStringParser('#inputMode error')
+        
+    def testInputMode4(self):
+        p1=FoamStringParser('#inputMode default')
         
 theSuite.addTest(unittest.makeSuite(FoamStringParserTest,"test"))
 

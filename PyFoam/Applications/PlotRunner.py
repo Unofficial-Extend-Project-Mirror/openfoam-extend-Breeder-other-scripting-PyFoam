@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotRunner.py 9325 2008-09-05 12:01:56Z bgschaid $ 
+#  ICE Revision: $Id: PlotRunner.py 9421 2008-09-22 08:00:27Z bgschaid $ 
 """
 Class that implements pyFoamPlotRunner
 """
@@ -7,15 +7,17 @@ from PyFoamApplication import PyFoamApplication
 
 from PyFoam.Execution.GnuplotRunner import GnuplotRunner
 
-from PyFoam.Execution.ParallelExecution import LAMMachine
-
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 from PyFoam.Error import warning
 
+from CommonStandardOutput import CommonStandardOutput
 from CommonPlotLines import CommonPlotLines
+from CommonParallel import CommonParallel
+from CommonRestart import CommonRestart
 from CommonPlotOptions import CommonPlotOptions
 from CommonClearCase import CommonClearCase
+from CommonReportUsage import CommonReportUsage
 from CommonSafeTrigger import CommonSafeTrigger
 from CommonWriteAllTrigger import CommonWriteAllTrigger
 from CommonLibFunctionTrigger import CommonLibFunctionTrigger
@@ -28,7 +30,11 @@ class PlotRunner(PyFoamApplication,
                  CommonSafeTrigger,
                  CommonWriteAllTrigger,
                  CommonLibFunctionTrigger,
-                 CommonClearCase):
+                 CommonClearCase,
+                 CommonReportUsage,
+                 CommonParallel,
+                 CommonRestart,
+                 CommonStandardOutput):
     def __init__(self,args=None):
         description="""
         runs an OpenFoam solver needs the usual 3 arguments (<solver>
@@ -48,18 +54,9 @@ class PlotRunner(PyFoamApplication,
                                    description=description)
         
     def addOptions(self):
+        CommonClearCase.addOptions(self)
+
         CommonPlotOptions.addOptions(self)
-        
-        self.parser.add_option("--procnr",
-                               type="int",
-                               dest="procnr",
-                               default=None,
-                               help="The number of processors the run should be started on")
-        
-        self.parser.add_option("--machinefile",
-                               dest="machinefile",
-                               default=None,
-                               help="The machinefile that specifies the parallel machine")
         
         self.parser.add_option("--steady-run",
                                action="store_true",
@@ -67,26 +64,11 @@ class PlotRunner(PyFoamApplication,
                                dest="steady",
                                help="This is a steady run. Stop it after convergence")
         
-        self.parser.add_option("--restart",
-                               action="store_true",
-                               default=False,
-                               dest="restart",
-                               help="Restart the simulation from the last time-step")
-        
-        self.parser.add_option("--progress",
-                               action="store_true",
-                               default=False,
-                               dest="progress",
-                               help="Only prints the progress of the simulation, but swallows all the other output")
-        
-        self.parser.add_option("--report-usage",
-                               action="store_true",
-                               default=False,
-                               dest="reportUsage",
-                               help="After the execution the maximum memory usage is printed to the screen")
-
+        CommonReportUsage.addOptions(self)
+        CommonStandardOutput.addOptions(self)
+        CommonParallel.addOptions(self)
+        CommonRestart.addOptions(self)
         CommonPlotLines.addOptions(self)
-        CommonClearCase.addOptions(self)
         CommonSafeTrigger.addOptions(self)
         CommonWriteAllTrigger.addOptions(self)
         CommonLibFunctionTrigger.addOptions(self)
@@ -103,9 +85,9 @@ class PlotRunner(PyFoamApplication,
         
         self.clearCase(sol)
 
-        lam=None
-        if self.opts.procnr!=None or self.opts.machinefile!=None:
-            lam=LAMMachine(machines=self.opts.machinefile,nr=self.opts.procnr)
+        lam=self.getParallel()
+        
+        self.setLogname()
         
         run=GnuplotRunner(argv=self.parser.getArgs(),
                           smallestFreq=self.opts.frequency,
@@ -125,7 +107,8 @@ class PlotRunner(PyFoamApplication,
                           raiseit=self.opts.raiseit,
                           steady=self.opts.steady,
                           progress=self.opts.progress,
-                          restart=self.opts.restart)
+                          restart=self.opts.restart,
+                          logname=self.opts.logname)
 
         self.addSafeTrigger(run,sol,steady=self.opts.steady)
         self.addWriteAllTrigger(run,sol)
@@ -133,6 +116,5 @@ class PlotRunner(PyFoamApplication,
         
         run.start()
 
-        if self.opts.reportUsage:
-            print "\n  Used Memory: ",run.run.usedMemory(),"MB"
+        self.reportUsage(run)
 

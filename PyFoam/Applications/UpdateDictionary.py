@@ -13,7 +13,10 @@ from PyFoam.Basics.DataStructures import DictProxy,TupleProxy
 
 from PyFoam.Error import error,warning
 
-class UpdateDictionary(PyFoamApplication):
+from CommonParserOptions import CommonParserOptions
+
+class UpdateDictionary(PyFoamApplication,
+                       CommonParserOptions):
     def __init__(self,args=None):
         description="""
 Takes two dictionary and modifies the second one after the example of
@@ -33,9 +36,15 @@ case
     def addOptions(self):
         self.parser.add_option("--interactive",
                                action="store_true",
-                               default=False,
+                               default=True,
                                dest="interactive",
                                help="Asks the user before applying changes")
+
+        self.parser.add_option("--batch",
+                               action="store_false",
+                               default=True,
+                               dest="interactive",
+                               help="Don't ask the user before applying changes")
 
         self.parser.add_option("--clear-unused",
                                action="store_true",
@@ -99,22 +108,7 @@ case
                                dest="max",
                                help="Maximum depth of the recursive decent into dictionaries (default: %default)")
 
-        self.parser.add_option("--no-header",
-                               action="store_true",
-                               default=False,
-                               dest="noHeader",
-                               help="Don't expect a header while parsing")
-        
-        self.parser.add_option("--boundary",
-                               action="store_true",
-                               default=False,
-                               dest="boundaryDict",
-                               help="Expect that this file is a boundary dictionary")
-        self.parser.add_option("--list",
-                               action="store_true",
-                               default=False,
-                               dest="listDict",
-                               help="Expect that this file only contains a list")
+        CommonParserOptions.addOptions(self)
         
     def ask(self,*question):
         if not self.opts.interactive:
@@ -227,7 +221,13 @@ case
             self.opts.clear=True
             
         try:
-            source=ParsedParameterFile(sName,backup=False,noHeader=self.opts.noHeader,boundaryDict=self.opts.boundaryDict,listDict=self.opts.listDict)
+            source=ParsedParameterFile(sName,
+                                       backup=False,
+                                       debug=self.opts.debugParser,
+                                       noBody=self.opts.noBody,
+                                       noHeader=self.opts.noHeader,
+                                       boundaryDict=self.opts.boundaryDict,
+                                       listDict=self.opts.listDict)
         except IOError,e:
             self.error("Problem with file",sName,":",e)
 
@@ -250,7 +250,13 @@ case
             error("Source",sName,"and destination",dName,"are the same")
         
         try:
-            dest=ParsedParameterFile(dName,backup=False,noHeader=self.opts.noHeader,boundaryDict=self.opts.boundaryDict,listDict=self.opts.listDict)
+            dest=ParsedParameterFile(dName,
+                                     backup=False,
+                                     debug=self.opts.debugParser,
+                                     noBody=self.opts.noBody,
+                                     noHeader=self.opts.noHeader,
+                                     boundaryDict=self.opts.boundaryDict,
+                                     listDict=self.opts.listDict)
         except IOError,e:
             self.error("Problem with file",dName,":",e)
 

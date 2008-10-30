@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotWatcher.py 9161 2008-08-04 08:01:05Z bgschaid $ 
+#  ICE Revision: $Id: PlotWatcher.py 9424 2008-09-22 08:00:35Z bgschaid $ 
 """
 Class that implements pyFoamPlotWatcher
 """
@@ -11,6 +11,7 @@ from CommonPlotLines import CommonPlotLines
 from CommonPlotOptions import CommonPlotOptions
 
 from os import path
+from optparse import OptionGroup
 
 class PlotWatcher(PyFoamApplication,
                   CommonPlotOptions,
@@ -35,35 +36,46 @@ class PlotWatcher(PyFoamApplication,
 
     def addOptions(self):
         CommonPlotOptions.addOptions(self)
-        
-        self.parser.add_option("--tail",
-                               type="long",
-                               dest="tail",
-                               default=5000L,
-                               help="The length at the end of the file that should be output (in bytes)")
-        self.parser.add_option("--silent",
-                               action="store_true",
-                               dest="silent",
-                               default=False,
-                               help="Logfile is not copied to the terminal")
-        self.parser.add_option("--progress",
-                               action="store_true",
-                               default=False,
-                               dest="progress",
-                               help="Only prints the progress of the simulation, but swallows all the other output")
-        self.parser.add_option("--start",
-                               action="store",
-                               type="float",
-                               default=None,
-                               dest="start",
-                               help="Start time starting from which the data should be plotted. If undefined the initial time is used")
 
-        self.parser.add_option("--end",
-                               action="store",
-                               type="float",
-                               default=None,
-                               dest="end",
-                               help="End time until which the data should be plotted. If undefined it is plotted till the end")
+        output=OptionGroup(self.parser,
+                           "Output",
+                           "What should be output to the terminal")
+        self.parser.add_option_group(output)
+        
+        output.add_option("--tail",
+                          type="long",
+                          dest="tail",
+                          default=5000L,
+                          help="The length at the end of the file that should be output (in bytes. Default: %default)")
+        output.add_option("--silent",
+                          action="store_true",
+                          dest="silent",
+                          default=False,
+                          help="Logfile is not copied to the terminal")
+        output.add_option("--progress",
+                          action="store_true",
+                          default=False,
+                          dest="progress",
+                          help="Only prints the progress of the simulation, but swallows all the other output")
+
+        limit=OptionGroup(self.parser,
+                          "Limits",
+                          "Where the plots should start and end")
+        self.parser.add_option_group(limit)
+        
+        limit.add_option("--start",
+                         action="store",
+                         type="float",
+                         default=None,
+                         dest="start",
+                         help="Start time starting from which the data should be plotted. If undefined the initial time is used")
+
+        limit.add_option("--end",
+                         action="store",
+                         type="float",
+                         default=None,
+                         dest="end",
+                         help="End time until which the data should be plotted. If undefined it is plotted till the end")
 
         CommonPlotLines.addOptions(self)
                 

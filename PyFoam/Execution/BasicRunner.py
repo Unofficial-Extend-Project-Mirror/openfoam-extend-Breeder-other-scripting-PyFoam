@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BasicRunner.py 9166 2008-08-04 12:21:49Z bgschaid $ 
+#  ICE Revision: $Id: BasicRunner.py 9416 2008-09-22 08:00:13Z bgschaid $ 
 """Run a OpenFOAM command"""
 
 import sys
@@ -43,7 +43,13 @@ class BasicRunner(object):
     Provides some handle-methods that are to be overloaded for
     additional functionality"""
     
-    def __init__(self,argv=None,silent=False,logname=None,lam=None,server=False,restart=False):
+    def __init__(self,
+                 argv=None,
+                 silent=False,
+                 logname=None,
+                 lam=None,
+                 server=False,
+                 restart=False):
         """@param argv: list with the tokens that are the command line
         if not set the standard command line is used
         @param silent: if True no output is sent to stdout

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Comparator.py 8318 2007-12-21 14:46:02Z bgschaid $ 
+#  ICE Revision: $Id: Comparator.py 9422 2008-09-22 08:00:29Z bgschaid $ 
 """
 Application class that implements pyFoamComparator
 """
@@ -9,6 +9,7 @@ import string
 from xml.dom.minidom import parse
 import xml.dom
 from os import path,environ
+from optparse import OptionGroup
 
 from PyFoam.Error import error
 from PyFoam.Basics.Utilities import execute
@@ -34,60 +35,68 @@ Reads an XML-file that specifies a base case and a parameter-variation
 and executes all the variations of that case
         """
         
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <xmlfile>",nr=1,interspersed=True)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <xmlfile>",nr=1,interspersed=True)
         
     def addOptions(self):
-        self.parser.add_option("--test",
-                               action="store_true",
-                               default=False,
-                               dest="test",
-                               help="Only does the preparation steps but does not execute the actual solver an the end")
+        solver=OptionGroup(self.parser,
+                           "Solver",
+                           "Controls the behaviour of the solver")
+        self.parser.add_option_group(solver)
+        result=OptionGroup(self.parser,
+                           "Results",
+                           "What should be done with the solver results")
+        self.parser.add_option_group(solver)
+        behave=OptionGroup(self.parser,
+                           "Behaviour",
+                           "What should be done and output")
+        self.parser.add_option_group(behave)
         
-        self.parser.add_option("--removeOld",
-                               action="store_true",
-                               default=False,
-                               dest="removeOld",
-                               help="Remove the directories from an old run without asking")
+        behave.add_option("--test",
+                          action="store_true",
+                          default=False,
+                          dest="test",
+                          help="Only does the preparation steps but does not execute the actual solver an the end")
         
-        self.parser.add_option("--purge",
-                               action="store_true",
-                               default=False,
-                               dest="purge",
-                               help="Remove the case directories after evaluating")
+        result.add_option("--removeOld",
+                          action="store_true",
+                          default=False,
+                          dest="removeOld",
+                          help="Remove the directories from an old run without asking")
         
-        self.parser.add_option("--no-purge",
-                               action="store_true",
-                               default=False,
-                               dest="nopurge",
-                               help="Don't remove the case directories after evaluating")
+        result.add_option("--purge",
+                          action="store_true",
+                          default=False,
+                          dest="purge",
+                          help="Remove the case directories after evaluating")
         
-        self.parser.add_option("--steady",
-                               action="store_true",
-                               default=False,
-                               dest="steady",
-                               help="Only runs the solver until convergence")
+        result.add_option("--no-purge",
+                          action="store_true",
+                          default=False,
+                          dest="nopurge",
+                          help="Don't remove the case directories after evaluating")
         
-        self.parser.add_option("--showDictionary",
-                               action="store_true",
-                               default=False,
-                               dest="showDict"
-                               ,help="Shows the parameter-dictionary after the running of the solver")
+        solver.add_option("--steady",
+                          action="store_true",
+                          default=False,
+                          dest="steady",
+                          help="Only runs the solver until convergence")
         
-        self.parser.add_option("--foamVersion",
-                               dest="foamVersion",
-                               default=None,
-                               help="Change the OpenFOAM-version that is to be used")
+        behave.add_option("--showDictionary",
+                          action="store_true",
+                          default=False,
+                          dest="showDict"
+                          ,help="Shows the parameter-dictionary after the running of the solver")
         
-        self.parser.add_option("--no-server",
-                               dest="server",
-                               default=True,
-                               action="store_false",
-                               help="Don't start the process-control-server")
+        solver.add_option("--no-server",
+                          dest="server",
+                          default=True,
+                          action="store_false",
+                          help="Don't start the process-control-server")
         
     def run(self):
-        if self.opts.foamVersion!=None:
-            changeFoamVersion(self.opts.foamVersion)
-        
         fName=self.parser.getArgs()[0]
 
         dom=parse(fName)

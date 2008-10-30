@@ -7,6 +7,7 @@ from PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 from os import path
+from optparse import OptionGroup
 
 class PackCase(PyFoamApplication):
     def __init__(self,args=None):
@@ -23,27 +24,32 @@ Excludes all .svn-direcotries and all files ending with ~
                                    nr=1)
 
     def addOptions(self):
-        self.parser.add_option("--last",
-                         action="store_true",
-                         dest="last",
-                         default=False,
-                         help="Also add the last time-step")
-        self.parser.add_option("--pyfoam",
-                         action="store_true",
-                         dest="pyfoam",
-                         default=False,
-                         help="Add all files starting with PyFoam to the tarfile")
-        self.parser.add_option("--chemkin",
-                         action="store_true",
-                         dest="chemkin",
-                         default=False,
-                         help="Also add the Chemkin-directory")
-        self.parser.add_option("--add",
-                         action="append",
-                         dest="additional",
-                         default=[],
-                         help="Add all files and directories in the case directory that fit a glob-pattern to the tar (can be used more than once)")
-        self.parser.add_option("--exclude",
+        what=OptionGroup(self.parser,
+                         "What",
+                         "Define what should be packed")
+        self.parser.add_option_group(what)
+        
+        what.add_option("--last",
+                        action="store_true",
+                        dest="last",
+                        default=False,
+                        help="Also add the last time-step")
+        what.add_option("--pyfoam",
+                        action="store_true",
+                        dest="pyfoam",
+                        default=False,
+                        help="Add all files starting with PyFoam to the tarfile")
+        what.add_option("--chemkin",
+                        action="store_true",
+                        dest="chemkin",
+                        default=False,
+                        help="Also add the Chemkin-directory")
+        what.add_option("--add",
+                        action="append",
+                        dest="additional",
+                        default=[],
+                        help="Add all files and directories in the case directory that fit a glob-pattern to the tar (can be used more than once)")
+        what.add_option("--exclude",
                          action="append",
                          dest="exclude",
                          default=[],

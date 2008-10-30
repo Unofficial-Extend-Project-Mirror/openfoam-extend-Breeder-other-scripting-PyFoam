@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: RegionCases.py 7963 2007-09-20 08:33:19Z bgschaid $ 
+#  ICE Revision: $Id: RegionCases.py 9441 2008-09-22 20:51:21Z bgschaid $ 
 """Pseudo-Cases for Regions, built from symlinks"""
 
 from SolutionDirectory import SolutionDirectory
@@ -17,7 +17,6 @@ class RegionCases:
         regions=self.master.getRegions()
         if len(regions)<=0:
             error("No regions in",self.master.name)
-
         if clean:
             self.cleanAll()
         else:

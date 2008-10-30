@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SolutionDirectory.py 9241 2008-08-18 10:44:52Z bgschaid $ 
+#  ICE Revision: $Id: SolutionDirectory.py 9441 2008-09-22 20:51:21Z bgschaid $ 
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -26,7 +26,7 @@ class SolutionDirectory(Utilities):
         @param paraviewLink: Create a symbolic link controlDict.foam for paraview
         @param region: Mesh region for multi-region cases"""
 
-        self.name=name
+        self.name=path.abspath(name)
         self.archive=None
         if archive!=None:
             self.archive=path.join(name,archive)

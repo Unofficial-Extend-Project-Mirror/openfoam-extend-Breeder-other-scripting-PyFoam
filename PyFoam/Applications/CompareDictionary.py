@@ -14,7 +14,10 @@ from PyFoam.Basics.FoamFileGenerator import makeString
 
 from PyFoam.Error import error,warning
 
-class CompareDictionary(PyFoamApplication):
+from CommonParserOptions import CommonParserOptions
+
+class CompareDictionary(PyFoamApplication,
+                        CommonParserOptions):
     def __init__(self,args=None):
         description="""
 Takes two dictionary and compares them semantically (by looking at the
@@ -43,22 +46,7 @@ equivalent place in the destination case
                                dest="longlist",
                                help="Fields that are longer than this won't be parsed, but read into memory (and compared as strings)")
 
-        self.parser.add_option("--no-header",
-                               action="store_true",
-                               default=False,
-                               dest="noHeader",
-                               help="Don't expect a header while parsing")
-        
-        self.parser.add_option("--boundary",
-                               action="store_true",
-                               default=False,
-                               dest="boundaryDict",
-                               help="Expect that this file is a boundary dictionary")
-        self.parser.add_option("--list",
-                               action="store_true",
-                               default=False,
-                               dest="listDict",
-                               help="Expect that this file only contains a list")
+        CommonParserOptions.addOptions(self)
         
 
     
@@ -67,7 +55,14 @@ equivalent place in the destination case
         dName=path.abspath(self.parser.getArgs()[1])
 
         try:
-            source=ParsedParameterFile(sName,backup=False,listLengthUnparsed=self.opts.longlist,noHeader=self.opts.noHeader,boundaryDict=self.opts.boundaryDict,listDict=self.opts.listDict)
+            source=ParsedParameterFile(sName,
+                                       backup=False,
+                                       debug=self.opts.debugParser,
+                                       listLengthUnparsed=self.opts.longlist,
+                                       noBody=self.opts.noBody,
+                                       noHeader=self.opts.noHeader,
+                                       boundaryDict=self.opts.boundaryDict,
+                                       listDict=self.opts.listDict)
         except IOError,e:
             self.error("Problem with file",sName,":",e)
 
@@ -94,7 +89,14 @@ equivalent place in the destination case
             error("Source",sName,"and destination",dName,"are the same")
         
         try:
-            dest=ParsedParameterFile(dName,backup=False,listLengthUnparsed=self.opts.longlist,noHeader=self.opts.noHeader,boundaryDict=self.opts.boundaryDict,listDict=self.opts.listDict)
+            dest=ParsedParameterFile(dName,
+                                     backup=False,
+                                     debug=self.opts.debugParser,
+                                     listLengthUnparsed=self.opts.longlist,
+                                     noBody=self.opts.noBody,
+                                     noHeader=self.opts.noHeader,
+                                     boundaryDict=self.opts.boundaryDict,
+                                     listDict=self.opts.listDict)
         except IOError,e:
             self.error("Problem with file",dName,":",e)
 

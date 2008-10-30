@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamFileGenerator.py 9163 2008-08-04 08:01:10Z bgschaid $ 
+#  ICE Revision: $Id: FoamFileGenerator.py 9464 2008-09-29 08:07:17Z bgschaid $ 
 """Transform a Python data-structure into a OpenFOAM-File-Representation"""
 
 from PyFoam.Error import error,PyFoamException
@@ -63,6 +63,11 @@ class FoamFileGenerator(object):
             
         for k in order:
             v=dic[k]
+
+            if type(k)==int:
+                s+=v
+                continue
+            
             if k.find("anonymValue")==0:
                 k=""
                 

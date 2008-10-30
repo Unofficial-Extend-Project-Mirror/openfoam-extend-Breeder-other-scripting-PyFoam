@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!ELEMENT casebuilder (helptext?,arguments,variables?,meshpreparation,files)>
+<!ATTLIST casebuilder name CDATA #REQUIRED>
+<!ATTLIST casebuilder description CDATA #REQUIRED>
+<!ATTLIST casebuilder template CDATA #REQUIRED>
+<!ATTLIST casebuilder initialdir CDATA #IMPLIED>
+<!ELEMENT helptext (#PCDATA)>
+<!ELEMENT arguments (arg*)>
+<!ELEMENT arg (verify?)>
+<!ATTLIST arg name CDATA #REQUIRED>
+<!ATTLIST arg description CDATA #REQUIRED>
+<!ATTLIST arg default CDATA #IMPLIED>
+<!ELEMENT verify (#PCDATA)>
+<!ELEMENT variables (var*)>
+<!ELEMENT var (#PCDATA)>
+<!ATTLIST var name CDATA #REQUIRED>
+<!ATTLIST var description CDATA #IMPLIED>
+<!ELEMENT meshpreparation (utility?,copy?)>
+<!ATTLIST meshpreparation mode (copy|utility) #REQUIRED>
+<!ELEMENT copy EMPTY>
+<!ATTLIST copy template CDATA #REQUIRED>
+<!ATTLIST copy time CDATA #IMPLIED>
+<!ELEMENT utility EMPTY>
+<!ATTLIST utility application CDATA #REQUIRED>
+<!ATTLIST utility arguments CDATA #REQUIRED>
+<!ELEMENT files (boundaries,parameterfiles,fieldfiles)>
+<!ELEMENT parameterfiles (directory*)>
+<!ELEMENT directory (file*)>
+<!ATTLIST directory name CDATA #REQUIRED>
+<!ELEMENT file (parameter*)>
+<!ATTLIST file name CDATA #REQUIRED>
+<!ATTLIST file source CDATA #IMPLIED>
+<!ELEMENT parameter EMPTY>
+<!ATTLIST parameter name CDATA #REQUIRED>
+<!ATTLIST parameter value CDATA #REQUIRED>
+<!ELEMENT fieldfiles (field*)>
+<!ELEMENT field (ic,bc*,defaultbc)>
+<!ATTLIST field name CDATA #REQUIRED>
+<!ELEMENT ic EMPTY>
+<!ATTLIST ic value CDATA #REQUIRED>
+<!ELEMENT bc EMPTY>
+<!ATTLIST bc name CDATA #REQUIRED>
+<!ATTLIST bc type CDATA #REQUIRED>
+<!ATTLIST bc parameters CDATA #IMPLIED>
+<!ELEMENT defaultbc EMPTY>
+<!ATTLIST defaultbc type CDATA #REQUIRED>
+<!ATTLIST defaultbc parameters CDATA #IMPLIED>
+<!ELEMENT boundaries (boundary*)>
+<!ELEMENT boundary EMPTY>
+<!ATTLIST boundary name CDATA #REQUIRED>
+<!ATTLIST boundary description CDATA #REQUIRED>
+<!ATTLIST boundary pattern CDATA #REQUIRED>

@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<!DOCTYPE casebuilder 
+  SYSTEM  "casebuilder.dtd" 
+>
+<casebuilder name="lesSnappy" 
+  description="oodles-case with a snappy-mesh (assumes the motorbike-case)" 
+  template="$FOAM_TUTORIALS/oodles/pitzDaily">
+  <helptext>
+Assumes an existing snappyHexMesh-case that has been successfully run and where the time directory 3 contains the finished mesh.
+It also assumes that the containing box is named according to the conventions in the motorBike-tutorial case.
+Generates a case that is ready to be run with oodles.
+</helptext>
+  <arguments>
+    <arg name="original" description="The original snappy-case"
+      default="motorBike">
+      <verify>
+from os import path
+if not path.isdir(arg):
+    msg="Snappy case "+arg+" does not exist"
+</verify>
+    </arg>
+    <arg name="vInlet" description="Velocity at the inlet (absolut)"
+      default="10">
+      <verify>
+try:
+    tmp=float(arg)
+except ValueError:
+    msg="Not a float-number"
+</verify>
+</arg>
+    <arg name="deltaT" description="Timestep to use" default="1e-6">
+      <verify>
+try:
+    if float(arg)&lt; 0:
+         msg="Must be positive"
+except ValueError:
+    msg="Not a float-number"
+</verify>
+</arg>
+    <arg name="visc" description="Viscosity" default="1e-5">
+      <verify>
+try:
+    if float(arg)&lt; 0:
+         msg="Must be positive"
+except ValueError:
+    msg="Not a float-number"
+</verify>
+</arg>
+  </arguments>
+  <meshpreparation mode="copy">
+    <copy template="%(original)s" time="3"/>
+    <utility application="fluentMeshToFoam" arguments="%(mshfile)s -scale 0.001"/>
+  </meshpreparation>
+  <files>
+    <boundaries>
+      <boundary name="inlet" description="Velocity inlet"
+	pattern="minX"/>
+      <boundary name="outlet" description="Pressure outlet"
+	pattern="maxX"/>
+      <boundary name="wall" description="Walls" pattern="(min|max)(Y|Z)"/>
+      <boundary name="bike" description="The motorbike from the STL" pattern="motorBike.+"/>
+    </boundaries>
+    <parameterfiles>
+      <directory name="constant">
+	<file name="LESProperties">
+	</file>
+	<file name="transportProperties">
+ 	  <parameter name="['nu'][2]" value="%(visc)s"/> 
+	</file>
+      </directory>
+      <directory name="system">
+	<file name="controlDict">
+	  <parameter name="['deltaT']" value="%(deltaT)s"/>
+	</file>
+	<file name="fvSolution">
+	</file>
+	<file name="fvSchemes">
+	</file>
+      </directory>
+    </parameterfiles>
+    <fieldfiles>
+      <field name="p">
+	<ic value="0"/>
+	<bc name="wall" type="zeroGradient"/>
+	<bc name="bike" type="zeroGradient"/>
+	<bc name="inlet" type="zeroGradient"/>
+	<bc name="outlet" type="fixedValue"
+	  parameters="'value':'uniform 0'"/>
+	<defaultbc type="zeroGradient"/>
+      </field>
+      <field name="U">
+	<ic value="(%(vInlet)s 0 0)"/>
+	<bc name="wall" type="slip"/>
+	<bc name="bike" type="fixedValue" parameters="'value':'uniform (0 0 0)'"/>
+	<bc name="inlet" type="fixedValue"
+	  parameters="'value':'uniform (%(vInlet)s 0 0)'"/>
+	<bc name="outlet" type="zeroGradient"/>
+	<defaultbc type="fixedValue" parameters="'value':'uniform (0 0 0)'"/>
+      </field>
+      <field name="k">
+	<ic value="0.25"/>
+	<bc name="inlet" type="fixedValue"
+	  parameters="'value':'$internalField'"/>
+	<defaultbc type="zeroGradient"/>
+      </field>
+      <field name="nuSgs">
+	<ic value="0"/>
+	<defaultbc type="zeroGradient"/>
+      </field>
+    </fieldfiles>
+  </files>
+</casebuilder>
+
+<!-- Local Variables: -->
+<!-- mode:xml -->
+<!-- End: -->

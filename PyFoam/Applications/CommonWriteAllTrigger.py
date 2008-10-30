@@ -11,11 +11,12 @@ class CommonWriteAllTrigger(object):
     """
 
     def addOptions(self):
-        self.parser.add_option("--write-all-timesteps",
-                               action="store_true",
-                               dest="writeAll",
-                               default=False,
-                               help="Write all the timesteps to disk")
+        self.ensureGeneralOptions()
+        self.generalOpts.add_option("--write-all-timesteps",
+                                    action="store_true",
+                                    dest="writeAll",
+                                    default=False,
+                                    help="Write all the timesteps to disk")
 
     def addWriteAllTrigger(self,run,sol):
         if self.opts.writeAll:

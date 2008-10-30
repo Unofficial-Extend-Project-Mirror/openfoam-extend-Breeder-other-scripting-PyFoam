@@ -1,7 +1,9 @@
-#  ICE Revision: $Id: Decomposer.py 9161 2008-08-04 08:01:05Z bgschaid $ 
+#  ICE Revision: $Id: Decomposer.py 9441 2008-09-22 20:51:21Z bgschaid $ 
 """
 Class that implements pyFoamDecompose
 """
+
+from optparse import OptionGroup
 
 from PyFoamApplication import PyFoamApplication
 from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator
@@ -12,10 +14,15 @@ from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.RegionCases import RegionCases
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 
+from CommonMultiRegion import CommonMultiRegion
+from CommonStandardOutput import CommonStandardOutput
+
 from os import path,system
 import sys
 
-class Decomposer(PyFoamApplication):
+class Decomposer(PyFoamApplication,
+                 CommonStandardOutput,
+                 CommonMultiRegion):
     def __init__(self,args=None):
         description="""
 Generates a decomposeParDict for a case and runs the decompose-Utility on that case
@@ -28,98 +35,80 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                                    nr=2)
 
     def addOptions(self):
-        self.parser.add_option("--method",
-                               type="choice",
-                               default="metis",
-                               dest="method",
-                               action="store",
-                               choices=["metis","simple","hierarchical","manual"],
-                               help="The method used for decomposing")
+        spec=OptionGroup(self.parser,
+                         "Decomposition Specification",
+                         "How the case should be decomposed")
+        spec.add_option("--method",
+                        type="choice",
+                        default="metis",
+                        dest="method",
+                        action="store",
+                        choices=["metis","simple","hierarchical","manual"],
+                        help="The method used for decomposing")
         
-        self.parser.add_option("--test",
-                               dest="test",
-                               action="store_true",
-                               default=False,
-                               help="Just print the resulting dictionary")
+        spec.add_option("--n",
+                        dest="n",
+                        action="store",
+                        default=None,
+                        help="Number of subdivisions in coordinate directions. A python list or tuple (for simple and hierarchical)")
+        
+        spec.add_option("--delta",
+                        dest="delta",
+                        action="store",
+                        type="float",
+                        default=None,
+                        help="Cell skew factor (for simple and hierarchical)")
+        
+        spec.add_option("--order",
+                        dest="order",
+                        action="store",
+                        default=None,
+                        help="Order of decomposition (for hierarchical)")
+        
+        spec.add_option("--processorWeights",
+                        dest="processorWeights",
+                        action="store",
+                        default=None,
+                        help="The weights of the processors. A python list. Used for metis")
+        
+        spec.add_option("--dataFile",
+                        dest="dataFile",
+                        action="store",
+                        default=None,
+                        help="File with the allocations. (for manual)")
+        self.parser.add_option_group(spec)
 
-        self.parser.add_option("--n",
-                               dest="n",
-                               action="store",
-                               default=None,
-                               help="Number of subdivisions in coordinate directions. A python list or tuple (for simple and hierarchical)")
+        behave=OptionGroup(self.parser,
+                           "Decomposition behaviour",
+                           "How the program should behave during decomposition")
+        behave.add_option("--test",
+                          dest="test",
+                          action="store_true",
+                          default=False,
+                          help="Just print the resulting dictionary")
+
+        behave.add_option("--clear",
+                          dest="clear",
+                          action="store_true",
+                          default=False,
+                          help="Clear the case of previous processor directories")
         
-        self.parser.add_option("--delta",
-                               dest="delta",
-                               action="store",
-                               type="float",
-                               default=None,
-                               help="Cell skew factor (for simple and hierarchical)")
+        behave.add_option("--no-decompose",
+                          dest="doDecompose",
+                          action="store_false",
+                          default=True,
+                          help="Don't run the decomposer (only writes the dictionary")
         
-        self.parser.add_option("--order",
-                               dest="order",
-                               action="store",
-                               default=None,
-                               help="Order of decomposition (for hierarchical)")
-        
-        self.parser.add_option("--processorWeights",
-                               dest="processorWeights",
-                               action="store",
-                               default=None,
-                               help="The weights of the processors. A python list. Used for metis")
-        
-        self.parser.add_option("--dataFile",
-                               dest="dataFile",
-                               action="store",
-                               default=None,
-                               help="File with the allocations. (for manual)")
-        
-        self.parser.add_option("--clear",
-                               dest="clear",
-                               action="store_true",
-                               default=False,
-                               help="Clear the case of previous processor directories")
-        
-        self.parser.add_option("--silent",
-                               dest="silent",
-                               action="store_true",
-                               default=False,
-                               help="Don't print the output to the screen")
-        
-        self.parser.add_option("--logname",
-                               dest="log",
-                               action="store",
-                               default="Decomposer",
-                               help="Filename for the output of the decompose-command")
-        
-        self.parser.add_option("--no-decompose",
-                               dest="doDecompose",
-                               action="store_false",
-                               default=True,
-                               help="Don't run the decomposer (only writes the dictionary")
-        
-        self.parser.add_option("--decomposer",
+        behave.add_option("--decomposer",
                                dest="decomposer",
                                action="store",
                                default="decomposePar",
                                help="The decompose Utility that should be used")
+        self.parser.add_option_group(behave)
         
-        self.parser.add_option("--all-regions",
-                               action="store_true",
-                               default=False,
-                               dest="regions",
-                               help="Executes the command for all available regions (builds a pseudo-case for each region)")
-
-        self.parser.add_option("--region",
-                               dest="region",
-                               default=None,
-                               help="Executes the command for a region (builds a pseudo-case for that region)")
-
-        self.parser.add_option("--keep-pseudocases",
-                               action="store_true",
-                               default=False,
-                               dest="keeppseudo",
-                               help="Keep the pseudo-cases that were built for a multi-region case")
-                               
+        CommonMultiRegion.addOptions(self)
+        CommonStandardOutput.addOptions(self)
+        
     def run(self):
         if self.opts.keeppseudo and (not self.opts.regions and self.opts.region==None):
             warning("Option --keep-pseudocases only makes sense for multi-region-cases")
@@ -196,7 +185,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                     regionNames=sol.getRegions()
                 
             for theRegion in regionNames:
-                theCase=case
+                theCase=path.normpath(case)
                 if theRegion!=None:
                     theCase+="."+theRegion
 
@@ -204,10 +193,12 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                     argv=[self.opts.decomposer,".",theCase]
                 else:
                     argv=[self.opts.decomposer,"-case",theCase]
-                    
+
+                self.setLogname(default="Decomposer",useApplication=False)
+                
                 run=UtilityRunner(argv=argv,
-                                  silent=self.opts.silent,
-                                  logname=self.opts.log,
+                                  silent=self.opts.progress,
+                                  logname=self.opts.logname,
                                   server=False)
                 run.start()
 

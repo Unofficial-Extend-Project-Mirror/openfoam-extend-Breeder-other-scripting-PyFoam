@@ -1,9 +1,10 @@
-#  ICE Revision: $Id: CaseReport.py 9241 2008-08-18 10:44:52Z bgschaid $ 
+#  ICE Revision: $Id: CaseReport.py 9422 2008-09-22 08:00:29Z bgschaid $ 
 """
 Application class that implements pyFoamCasedReport.py
 """
 
 import sys,string
+from optparse import OptionGroup
 
 from fnmatch import fnmatch
 
@@ -35,74 +36,87 @@ dictionary-files
                                    interspersed=True)
         
     def addOptions(self):
-        self.parser.add_option("--short-bc-report",
-                               action="store_true",
-                               default=False,
-                               dest="shortBCreport",
-                               help="Gives a short overview of the boundary-conditions in the case")
+        report=OptionGroup(self.parser,
+                           "Reports",
+                           "What kind of reports should be produced")
+        self.parser.add_option_group(report)
+        select=OptionGroup(self.parser,
+                           "Selection",
+                           "Which data should be used for the reports")
+        self.parser.add_option_group(select)
+        internal=OptionGroup(self.parser,
+                             "Internal",
+                             "Details of the parser")
+        self.parser.add_option_group(internal)
         
-        self.parser.add_option("--long-bc-report",
-                               action="store_true",
-                               default=False,
-                               dest="longBCreport",
-                               help="Gives a full overview of the boundary-conditions in the case")
+        report.add_option("--short-bc-report",
+                          action="store_true",
+                          default=False,
+                          dest="shortBCreport",
+                          help="Gives a short overview of the boundary-conditions in the case")
         
-        self.parser.add_option("--dimensions",
-                               action="store_true",
-                               default=False,
-                               dest="dimensions",
-                               help="Show the dimensions of the fields")
+        report.add_option("--long-bc-report",
+                          action="store_true",
+                          default=False,
+                          dest="longBCreport",
+                          help="Gives a full overview of the boundary-conditions in the case")
         
-        self.parser.add_option("--internal-field",
-                               action="store_true",
-                               default=False,
-                               dest="internal",
-                               help="Show the internal value of the fields (the initial conditions)")
+        report.add_option("--dimensions",
+                          action="store_true",
+                          default=False,
+                          dest="dimensions",
+                          help="Show the dimensions of the fields")
         
-        self.parser.add_option("--time",
-                               action="store",
-                               type="float",
-                               default=None,
-                               dest="time",
-                               help="Time to use as the basis for the reports")
+        report.add_option("--internal-field",
+                          action="store_true",
+                          default=False,
+                          dest="internal",
+                          help="Show the internal value of the fields (the initial conditions)")
         
-        self.parser.add_option("--region",
-                               dest="region",
-                               default=None,
-                               help="Do the report for a special region for multi-region cases")
+        select.add_option("--time",
+                          action="store",
+                          type="float",
+                          default=None,
+                          dest="time",
+                          help="Time to use as the basis for the reports")
         
-        self.parser.add_option("--long-field-threshold",
-                               action="store",
-                               type="int",
-                               default=100,
-                               dest="longlist",
-                               help="Fields that are longer than this won't be parsed, but read into memory (nad compared as strings)")
+        select.add_option("--region",
+                          dest="region",
+                          default=None,
+                          help="Do the report for a special region for multi-region cases")
+        
+        internal.add_option("--long-field-threshold",
+                            action="store",
+                            type="int",
+                            default=100,
+                            dest="longlist",
+                            help="Fields that are longer than this won't be parsed, but read into memory (nad compared as strings)")
 
-        self.parser.add_option("--patches",
-                               action="append",
-                               default=None,
-                               dest="patches",
-                               help="Patches which should be processed (pattern, can be used more than once)")
+        select.add_option("--patches",
+                          action="append",
+                          default=None,
+                          dest="patches",
+                          help="Patches which should be processed (pattern, can be used more than once)")
 
-        self.parser.add_option("--exclude-patches",
-                               action="append",
-                               default=None,
-                               dest="expatches",
-                               help="Patches which should not be processed (pattern, can be used more than once)")
+        select.add_option("--exclude-patches",
+                          action="append",
+                          default=None,
+                          dest="expatches",
+                          help="Patches which should not be processed (pattern, can be used more than once)")
 
-        self.parser.add_option("--processor-matrix",
-                               action="store_true",
-                               default=False,
-                               dest="processorMatrix",
-                               help="Prints the matrix how many faces from one processor interact with another")
+        report.add_option("--processor-matrix",
+                          action="store_true",
+                          default=False,
+                          dest="processorMatrix",
+                          help="Prints the matrix how many faces from one processor interact with another")
 
-        self.parser.add_option("--case-size",
-                               action="store_true",
-                               default=False,
-                               dest="caseSize",
-                               help="Report the number of cells, points and faces in the case")
+        report.add_option("--case-size",
+                          action="store_true",
+                          default=False,
+                          dest="caseSize",
+                          help="Report the number of cells, points and faces in the case")
 
-        self.parser.add_option("--decomposition",
+        report.add_option("--decomposition",
                                action="store_true",
                                default=False,
                                dest="decomposition",

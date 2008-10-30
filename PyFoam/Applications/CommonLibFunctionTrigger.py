@@ -3,6 +3,7 @@ entry from the controlDict"""
 
 import re
 from os import path
+from optparse import OptionGroup
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Error import warning
 
@@ -11,17 +12,22 @@ class CommonLibFunctionTrigger(object):
     """
 
     def addOptions(self):
-        self.parser.add_option("--remove-libs",
-                               action="store_true",
-                               dest="removeLibs",
-                               default=False,
-                               help="Remove the libs entry from the controlDict for the duration of the application run")
-        self.parser.add_option("--remove-functions",
-                               action="store_true",
-                               dest="removeFunctions",
-                               default=False,
-                               help="Remove the functions entry from the controlDict for the duration of the application run")
-
+        grp=OptionGroup(self.parser,
+                        "Manipulating controlDict",
+                        "Temporarily remove entries from the controlDict that are incompatible with some applications")
+        
+        grp.add_option("--remove-libs",
+                       action="store_true",
+                       dest="removeLibs",
+                       default=False,
+                       help="Remove the libs entry from the controlDict for the duration of the application run")
+        grp.add_option("--remove-functions",
+                       action="store_true",
+                       dest="removeFunctions",
+                       default=False,
+                       help="Remove the functions entry from the controlDict for the duration of the application run")
+        self.parser.add_option_group(grp)
+        
     def addLibFunctionTrigger(self,run,sol):
         if self.opts.removeLibs or self.opts.removeFunctions:
             warning("Adding Trigger to reset lib/function at end")

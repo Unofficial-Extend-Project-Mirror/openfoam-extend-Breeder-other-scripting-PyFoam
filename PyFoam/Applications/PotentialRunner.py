@@ -1,21 +1,26 @@
-#  ICE Revision: $Id: PotentialRunner.py 9161 2008-08-04 08:01:05Z bgschaid $ 
+#  ICE Revision: $Id: PotentialRunner.py 9555 2008-10-21 08:22:51Z bgschaid $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
 
 from os import path,environ
+from optparse import OptionGroup
 
 from PyFoamApplication import PyFoamApplication
 
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
-from PyFoam.Execution.ParallelExecution import LAMMachine
 from PyFoam.Error import warning,error
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 
-class PotentialRunner(PyFoamApplication):
+from CommonParallel import CommonParallel
+from CommonStandardOutput import CommonStandardOutput
+
+class PotentialRunner(PyFoamApplication,
+                      CommonStandardOutput,
+                      CommonParallel):
     def __init__(self,args=None):
         description="""
 Runs the potentialFoam solver on a case to get a decent initial condition.
@@ -31,46 +36,45 @@ Copies the current fields for U and p to backup-files.
                                    nr=1)
 
     def addOptions(self):
-        self.parser.add_option("--procnr",
-                               type="int",
-                               dest="procnr",
-                               default=None,
-                               help="The number of processors the run should be started on")
-        self.parser.add_option("--machinefile",
-                               dest="machinefile",
-                               default=None,
-                               help="The machinefile that specifies the parallel machine")
-        self.parser.add_option("--non-orthogonal-correctors",
-                               type="int",
-                               dest="noCorr",
-                               default=None,
-                               help="The number of non-orthogonal corrections")
-        self.parser.add_option("--tolerance",
-                               type="float",
-                               dest="tolerance",
-                               default=None,
-                               help="Overwrite the tolerance of the linear solver")
-        self.parser.add_option("--relTol",
-                               type="float",
-                               dest="relTol",
-                               default=None,
-                               help="Overwrite the relative tolerance of the linear solver")
-        self.parser.add_option("--no-write-p",
-                               action="store_false",
-                               dest="writep",
-                               default=True,
-                               help="Don't write pressure p")
-        self.parser.add_option("--pRefCell",
-                               type="int",
-                               dest="pRefCell",
-                               default=None,
-                               help="Sets the number of the reference cell for closed cases")
-        self.parser.add_option("--pRefValue",
+        pot=OptionGroup(self.parser,
+                        "Solver settings",
+                        "Basic settings for the potentialFoam-solver")
+        
+        pot.add_option("--non-orthogonal-correctors",
+                       type="int",
+                       dest="noCorr",
+                       default=None,
+                       help="The number of non-orthogonal corrections")
+        pot.add_option("--tolerance",
+                       type="float",
+                       dest="tolerance",
+                       default=None,
+                       help="Overwrite the tolerance of the linear solver")
+        pot.add_option("--relTol",
+                       type="float",
+                       dest="relTol",
+                       default=None,
+                       help="Overwrite the relative tolerance of the linear solver")
+        pot.add_option("--no-write-p",
+                       action="store_false",
+                       dest="writep",
+                       default=True,
+                       help="Don't write pressure p")
+        pot.add_option("--pRefCell",
+                       type="int",
+                       dest="pRefCell",
+                       default=None,
+                       help="Sets the number of the reference cell for closed cases")
+        pot.add_option("--pRefValue",
                                type="int",
                                dest="pRefValue",
                                default=None,
                                help="Sets the pressure reference value for closed cases")
-
+        self.parser.add_option_group(pot)
+        
+        CommonParallel.addOptions(self)
+        CommonStandardOutput.addOptions(self)
+        
     def run(self):
         cName=self.parser.getArgs()[0]
         sol=SolutionDirectory(cName,archive=None)
@@ -81,9 +85,7 @@ Copies the current fields for U and p to backup-files.
             initial["p.prepotential"]=initial["p"]
         initial["U.prepotential"]=initial["U"]
         
-        lam=None
-        if self.opts.procnr!=None or self.opts.machinefile!=None:
-            lam=LAMMachine(machines=self.opts.machinefile,nr=self.opts.procnr)
+        lam=self.getParallel()
 
         if self.opts.writep:
             writep=["-writep"]
@@ -96,9 +98,12 @@ Copies the current fields for U and p to backup-files.
         else:
             argv+=["-case",cName]
         
+        self.setLogname(default="Potential",useApplication=False)
+            
         run=BasicRunner(argv=argv+writep,
                         server=False,
-                        logname="PotentialFoam",
+                        logname=self.opts.logname,
+                        silent=self.opts.progress,
                         lam=lam)
 
         print "Setting system-directory for potentialFoam"

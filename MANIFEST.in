@@ -1,5 +1,6 @@
 recursive-include doc *
 recursive-include examples *.py 
+recursive-include examples *.pfcb 
 recursive-include examples/data *.cfg
 recursive-include test *.py 
 recursive-include unittests *.py 
