@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ReadDictionary.py 9161 2008-08-04 08:01:05Z bgschaid $ 
+#  ICE Revision: $Id: ReadDictionary.py 9861 2009-01-05 16:22:37Z bgschaid $ 
 """
 Application class that implements pyFoamReadDictionary
 """
@@ -41,7 +41,11 @@ Example of usage:
     def run(self):
         fName=self.parser.getArgs()[0]
         all=self.parser.getArgs()[1]
-
+        if all[0]=='"':
+            all=all[1:]
+        if all[-1]=='"':
+            all=all[:-1]
+        
         match=re.compile("([a-zA-Z_][a-zA-Z0-9_]*)(.*)").match(all)
         if match==None:
             self.error("Expression",all,"not usable as an expression")
