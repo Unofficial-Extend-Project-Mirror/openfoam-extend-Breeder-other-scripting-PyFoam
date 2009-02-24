@@ -14,7 +14,7 @@ class GnuplotTimelines(Gnuplot):
                  timelines,
                  persist=None,
                  raiseit=True,
-                 with="lines",
+                 with_="lines",
                  alternateAxis=[],
                  forbidden=[],
                  start=None,
@@ -26,7 +26,7 @@ class GnuplotTimelines(Gnuplot):
         @type timelines: TimeLineCollection
         @param persist: Gnuplot window persistst after run
         @param raiseit: Raise the window at every plot
-        @param with: how to plot the data (lines, points, steps)
+        @param with_: how to plot the data (lines, points, steps)
         @param alternateAxis: list with names that ought to appear on the alternate y-axis
         @param forbidden: A list with strings. If one of those strings is found in a name, it is not plotted
         @param start: First time that should be plotted. If undefined everything from the start is plotted
@@ -74,7 +74,7 @@ class GnuplotTimelines(Gnuplot):
             self.set_string("terminal x11"+x11addition)
             
         self.data=timelines
-        self.with=with
+        self.with_=with_
         
         self.redo()
         
@@ -97,7 +97,7 @@ class GnuplotTimelines(Gnuplot):
                 
         self.itemlist=[]
         for n in names:
-            it=Data(times,self.data.getValues(n),title=n,with=self.with)
+            it=Data(times,self.data.getValues(n),title=n,with_=self.with_)
             if n in self.alternate:
                 it.set_option(axes="x1y2")
                 

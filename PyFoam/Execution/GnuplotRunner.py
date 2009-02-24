@@ -83,7 +83,7 @@ class GnuplotCommon(StepAnalyzedCommon):
         if plotIterations:
             self.plots["iter"]=GnuplotTimelines(self.getAnalyzer("Iterations").lines,
                                                 persist=persist,
-                                                with="steps",
+                                                with_="steps",
                                                 raiseit=raiseit,
                                                 start=start,
                                                 end=end)
@@ -115,7 +115,7 @@ class GnuplotCommon(StepAnalyzedCommon):
         if plotExecution:
             self.plots["execution"]=GnuplotTimelines(self.getAnalyzer("Execution").lines,
                                                      persist=persist,
-                                                     with="steps",
+                                                     with_="steps",
                                                      raiseit=raiseit,
                                                      start=start,
                                                      end=end)
