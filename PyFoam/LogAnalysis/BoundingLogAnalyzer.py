@@ -23,7 +23,7 @@ class BoundingLogAnalyzer(StandardLogAnalyzer):
         if foamVersionNumber()<(1,4):
             courantExpression="^Mean and max Courant Numbers = (.+) (.+)$"
         else:
-            courantExpression="^Courant Number mean: (.+) max: (.+)$"
+            courantExpression="^Courant Number mean: (.+) max: (\S+).*$"
             
         self.addAnalyzer("Courant",GeneralSimpleLineAnalyzer("courant",courantExpression,titles=["mean","max"],doTimelines=doTimelines,doFiles=doFiles))
 
