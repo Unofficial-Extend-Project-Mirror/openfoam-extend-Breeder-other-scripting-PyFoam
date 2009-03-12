@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PotentialRunner.py 9555 2008-10-21 08:22:51Z bgschaid $ 
+#  ICE Revision: $Id: PotentialRunner.py 9973 2009-02-05 12:47:31Z bgschaid $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -17,9 +17,11 @@ from PyFoam.FoamInformation import oldAppConvention as oldApp
 
 from CommonParallel import CommonParallel
 from CommonStandardOutput import CommonStandardOutput
+from CommonServer import CommonServer
 
 class PotentialRunner(PyFoamApplication,
                       CommonStandardOutput,
+                      CommonServer,
                       CommonParallel):
     def __init__(self,args=None):
         description="""
@@ -74,6 +76,7 @@ Copies the current fields for U and p to backup-files.
         
         CommonParallel.addOptions(self)
         CommonStandardOutput.addOptions(self)
+        CommonServer.addOptions(self,False)
         
     def run(self):
         cName=self.parser.getArgs()[0]
@@ -101,10 +104,11 @@ Copies the current fields for U and p to backup-files.
         self.setLogname(default="Potential",useApplication=False)
             
         run=BasicRunner(argv=argv+writep,
-                        server=False,
+                        server=self.opts.server,
                         logname=self.opts.logname,
                         silent=self.opts.progress,
-                        lam=lam)
+                        lam=lam,
+                        noLog=self.opts.noLog)
 
         print "Setting system-directory for potentialFoam"
         trig=PotentialTrigger(sol,

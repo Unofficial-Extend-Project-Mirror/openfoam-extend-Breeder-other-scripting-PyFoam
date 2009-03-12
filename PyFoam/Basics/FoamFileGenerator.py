@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamFileGenerator.py 9464 2008-09-29 08:07:17Z bgschaid $ 
+#  ICE Revision: $Id: FoamFileGenerator.py 10078 2009-03-02 18:34:41Z bgschaid $ 
 """Transform a Python data-structure into a OpenFOAM-File-Representation"""
 
 from PyFoam.Error import error,PyFoamException
@@ -22,13 +22,16 @@ class FoamFileGenerator(object):
         self.header=header
         
     def __str__(self):
+        return self.makeString()
+
+    def makeString(self,firstLevel=False):
         """turns the data into a string"""
         result=""
         if self.header:
             result+="FoamFile\n{\n"+self.strDict(self.header,indent=1)+"}\n\n"
 
         if type(self.data) in [dict,DictProxy]:
-            result+=self.strDict(self.data)
+            result+=self.strDict(self.data,firstLevel=firstLevel)
         elif type(self.data) in [tuple,TupleProxy]:
             result+=self.strTuple(self.data)
         elif type(self.data) in [list,UnparsedList]:
@@ -53,7 +56,7 @@ class FoamFileGenerator(object):
         else:
             error("List, Dict or valid primitve expected,",type(pri),"found in",pri)
             
-    def strDict(self,dic,indent=0):
+    def strDict(self,dic,indent=0,firstLevel=False):
         s=""
         if type(dic)==DictProxy:
             order=dic._order
@@ -63,7 +66,13 @@ class FoamFileGenerator(object):
             
         for k in order:
             v=dic[k]
+            end="\n"
+            if type(dic)==DictProxy:
+                end=dic.getDecoration(k)+"\n"
 
+            if firstLevel:
+                end+="\n"
+                
             if type(k)==int:
                 s+=v
                 continue
@@ -73,25 +82,25 @@ class FoamFileGenerator(object):
                 
             s+=(" "*indent)+k
             if type(v)in [unicode,str]:
-                s+=" "+v+";\n"
+                s+=" "+v+";"+end
             elif type(v) in [dict,DictProxy]:
                 s+="\n"+(" "*indent)+"{\n"
                 s+=self.strDict(v,indent+2)
-                s+=(" "*indent)+"}\n"
+                s+=(" "*indent)+"}"+end
             elif type(v) in [list,UnparsedList]:
                 s+="\n"
                 s+=self.strList(v,indent+2)
                 if s[-1]=="\n":
                     s=s[:-1]
-                s+=";\n"
+                s+=";"+end
             elif type(v) in [tuple,TupleProxy]:
-                s+=" "+self.strTuple(v,indent+2)+";\n"
+                s+=" "+self.strTuple(v,indent+2)+";"+end
             elif type(v) in [int,float,long]:
-                s+=" "+str(v)+";\n"
+                s+=" "+str(v)+";"+end
             elif v.__class__ in self.primitiveTypes:
-                s+=" "+str(v)+";\n"
+                s+=" "+str(v)+";"+end
             elif v==None:
-                s+=" /* empty */ ;\n"
+                s+=" /* empty */ ;"+end
             else:
                 error("Unhandled type",type(v)," for",v)
         return s
@@ -118,7 +127,7 @@ class FoamFileGenerator(object):
             isFixedType=True
             for l in lst:
                 try:
-                    val=float(l)
+                    float(l)
                 except (ValueError,TypeError):
                     isFixedType=False
                     

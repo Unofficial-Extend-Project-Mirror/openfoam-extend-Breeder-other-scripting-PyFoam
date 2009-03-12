@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: UtilityRunner.py 7858 2007-09-03 09:47:29Z bgschaid $ 
+#  ICE Revision: $Id: UtilityRunner.py 9667 2008-11-12 18:20:16Z bgschaid $ 
 """Run a non-solver utility"""
 
 from AnalyzedRunner import AnalyzedRunner
@@ -13,9 +13,21 @@ class UtilityRunner(AnalyzedRunner):
 
     For each pattern group in the RegEx one data value is stored"""
     
-    def __init__(self,argv=None,silent=False,logname="PyFoamUtility",server=False,restart=False):
+    def __init__(self,
+                 argv=None,
+                 silent=False,
+                 logname="PyFoamUtility",
+                 server=False,
+                 restart=False,
+                 noLog=False):
         """see BasicRunner"""
-        AnalyzedRunner.__init__(self,UtilityAnalyzer(),argv=argv,silent=silent,logname=logname,server=server,restart=restart)
+        AnalyzedRunner.__init__(self,UtilityAnalyzer(),
+                                argv=argv,
+                                silent=silent,
+                                logname=logname,
+                                server=server,
+                                restart=restart,
+                                noLog=noLog)
         
     def add(self,name,exp,idNr=None):
         """adds a regular expression

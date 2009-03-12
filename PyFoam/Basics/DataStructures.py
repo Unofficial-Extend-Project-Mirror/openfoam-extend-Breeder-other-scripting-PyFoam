@@ -2,7 +2,7 @@
 
 import FoamFileGenerator
 from copy import deepcopy
-import string
+import string,math
 
 class FoamDataType(object):
     def __repr__(self):
@@ -99,10 +99,88 @@ class FixedLength(FoamDataType):
 
     def __len__(self):
         return len(self.vals)
-    
+
 class Vector(FixedLength):
     def __init__(self,x,y,z):
         FixedLength.__init__(self,[x,y,z])
+
+    def __add__(self,y):
+        x=self
+        if type(y)==Vector:
+            return Vector(x[0]+y[0],x[1]+y[1],x[2]+y[2])
+        elif type(y) in [int,float,long]:
+            return Vector(x[0]+y,x[1]+y,x[2]+y)            
+        else:
+            return NotImplemented
+        
+    def __radd__(self,y):
+        x=self
+        if type(y) in [int,float,long]:
+            return Vector(x[0]+y,x[1]+y,x[2]+y)            
+        else:
+            return NotImplemented
+        
+    def __sub__(self,y):
+        x=self
+        if type(y)==Vector:
+            return Vector(x[0]-y[0],x[1]-y[1],x[2]-y[2])
+        elif type(y) in [int,float,long]:
+            return Vector(x[0]-y,x[1]-y,x[2]-y)            
+        else:
+            return NotImplemented
+        
+    def __rsub__(self,y):
+        x=self
+        if type(y) in [int,float,long]:
+            return Vector(y-x[0],y-x[1],y-x[2])            
+        else:
+            return NotImplemented
+        
+    def __mul__(self,y):
+        x=self
+        if type(y)==Vector:
+            return Vector(x[0]*y[0],x[1]*y[1],x[2]*y[2])
+        elif type(y) in [int,float,long]:
+            return Vector(x[0]*y,x[1]*y,x[2]*y)            
+        else:
+            return NotImplemented
+        
+    def __rmul__(self,y):
+        x=self
+        if type(y) in [int,float,long]:
+            return Vector(y*x[0],y*x[1],y*x[2])            
+        else:
+            return NotImplemented
+
+    def __div__(self,y):
+        x=self
+        if type(y)==Vector:
+            return Vector(x[0]/y[0],x[1]/y[1],x[2]/y[2])
+        elif type(y) in [int,float,long]:
+            return Vector(x[0]/y,x[1]/y,x[2]/y)            
+        else:
+            return NotImplemented
+
+    def __xor__(self,y):
+        x=self
+        if type(y)==Vector:
+            return Vector(x[1]*y[2]-x[2]*y[1],
+                          x[2]*y[0]-x[0]*y[2],
+                          x[0]*y[1]-x[1]*y[0])
+        else:
+            return NotImplemented
+
+    def __abs__(self):
+        x=self
+        return math.sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])
+
+    def __neg__(self):
+        x=self
+        return Vector(-x[0],-x[1],-x[2])
+
+    def __pos__(self):
+        x=self
+        return Vector( x[0], x[1], x[2])
 
 class Tensor(FixedLength):
     def __init__(self,v1,v2,v3,v4,v5,v6,v7,v8,v9):
@@ -119,7 +197,8 @@ class DictProxy(dict):
     def __init__(self):
         dict.__init__(self)
         self._order=[]
-
+        self._decoration={}
+        
     def __setitem__(self,key,value):
         dict.__setitem__(self,key,value)
         if key not in self._order:
@@ -128,13 +207,25 @@ class DictProxy(dict):
     def __delitem__(self,key):
         dict.__delitem__(self,key)
         self._order.remove(key)
-
+        if key in self._decoration:
+            del self._decoration[key]
+            
     def __deepcopy__(self,memo):
         new=DictProxy()
         for k in self._order:
             new[k]=deepcopy(self[k],memo)
         return new
 
+    def addDecoration(self,key,text):
+        if key in self:
+            self._decoration[key]=text
+
+    def getDecoration(self,key):
+        if key in self._decoration:
+            return " \t"+self._decoration[key]
+        else:
+            return ""
+        
 class TupleProxy(list):
     """Enables Tuples to be manipulated"""
 

@@ -47,6 +47,11 @@ class NetList(PyFoamApplication):
                                dest="ip",
                                default=False,
                                help="Output the IP-number instead of the machine name")
+        self.parser.add_option("--user",
+                               action="store",
+                               dest="user",
+                               default=None,
+                               help="Only show runs that belong to a certain username")
         
     def run(self):
         try:
@@ -83,6 +88,10 @@ class NetList(PyFoamApplication):
         print header
         
         for name,info in data.iteritems():
+            if self.opts.user:
+                if self.opts.user!=info["user"]:
+                    continue
+                
             if self.opts.ip:
                 tmpHost=info["ip"]
             else:

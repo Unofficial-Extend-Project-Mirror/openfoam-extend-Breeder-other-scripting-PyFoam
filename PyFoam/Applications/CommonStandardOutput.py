@@ -24,6 +24,13 @@ class CommonStandardOutput(object):
                        help="Name of the logfile")
         self.parser.add_option_group(grp)
 
+        grp.add_option("--no-log",
+                       action="store_true",
+                       dest="noLog",
+                       default=False,
+                       help="Do not output a log-file")
+        self.parser.add_option_group(grp)
+
     def setLogname(self,
                    default="PyFoamRunner",
                    useApplication=True):

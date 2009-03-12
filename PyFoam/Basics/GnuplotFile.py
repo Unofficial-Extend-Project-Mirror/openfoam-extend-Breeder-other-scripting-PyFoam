@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GnuplotFile.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: GnuplotFile.py 10067 2009-03-02 09:39:42Z bgschaid $ 
 """Analyze a file with GNUPLOT-Data"""
 
 from string import strip,split
@@ -20,11 +20,13 @@ class GnuplotFile(object):
 
         There are two cases:
         
-        1. the first line is not a comment. In this case the column names are 'time' and 'value0x'
-        depending on how many values are in the first line
+          1. the first line is not a comment. In this case the column
+          names are 'time' and 'value0x'
+          depending on how many values are in the first line
 
-        2. the first line is a comment line (it starts with a #). In this case the rest of the line
-        is analyzed and used as names
+          2. the first line is a comment line (it starts with a #).
+          In this case the rest of the line
+          is analyzed and used as names
         """
         fh=open(self.fname)
         line=fh.readline()

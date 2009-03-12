@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BlockMesh.py 8535 2008-02-28 13:55:40Z bgschaid $ 
+#  ICE Revision: $Id: BlockMesh.py 10067 2009-03-02 09:39:42Z bgschaid $ 
 """Manipulate a C{blockMeshDict}"""
 
 import re,os
@@ -17,9 +17,9 @@ class BlockMesh(FileBasisBackup):
 
     def refineMesh(self,factors,offset=(0,0,0)):
         """Refine the Mesh by multiplying the number of cells in the blocks
-        @param: either a scalar to scale in all directions or a
+        @param factors: either a scalar to scale in all directions or a
         tuple with the value for each direction
-        @param offset : an optional tuple for an additionnal offset value
+        @param offset: an optional tuple for an additionnal offset value
         for each direction"""
 
         if type(factors)!=tuple:

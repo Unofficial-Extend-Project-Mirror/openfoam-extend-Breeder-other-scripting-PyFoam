@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CaseReport.py 9422 2008-09-22 08:00:29Z bgschaid $ 
+#  ICE Revision: $Id: CaseReport.py 10095 2009-03-09 09:32:31Z bgschaid $ 
 """
 Application class that implements pyFoamCasedReport.py
 """
@@ -123,7 +123,10 @@ dictionary-files
                                help="Reports the size of the parallel decomposition")
         
     def run(self):
-        sol=SolutionDirectory(self.parser.getArgs()[0],archive=None,paraviewLink=False,region=self.opts.region)
+        sol=SolutionDirectory(self.parser.getArgs()[0],
+                              archive=None,
+                              paraviewLink=False,
+                              region=self.opts.region)
         
         needsPolyBoundaries=False
         needsInitialTime=False
@@ -177,16 +180,24 @@ dictionary-files
         if self.opts.time==None:
             procTime="constant"
         else:
-            procTime=sol.timeName(sol.timeIndex(self.opts.time,minTime=True))
+            try:
+                procTime=sol.timeName(sol.timeIndex(self.opts.time,minTime=True))
+            except IndexError:
+                error("The specified time",self.opts.time,"doesn't exist in the case")
             
         if needsInitialTime:
             fields={}
-            
-            if self.opts.time==None:
-                time=sol.timeName(0)
-            else:
-                time=sol.timeName(sol.timeIndex(self.opts.time,minTime=True))
 
+            if self.opts.time==None:
+                try:
+                    time=sol.timeName(0)
+                except IndexError:
+                    error("There is no timestep in the case")
+            else:
+                try:
+                    time=sol.timeName(sol.timeIndex(self.opts.time,minTime=True))
+                except IndexError:
+                    error("The specified time",self.opts.time,"doesn't exist in the case")
             #        print "Using time: ",time
 
             tDir=sol[time]

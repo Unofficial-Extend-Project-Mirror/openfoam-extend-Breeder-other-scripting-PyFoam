@@ -45,6 +45,11 @@ Clones a case by copying the system, constant and 0-directories
                         dest="dopyfoam",
                         default=True,
                         help="Don't copy PyFoam-specific stuff")
+        what.add_option("--latest-time",
+                        action="store_true",
+                        dest="latest",
+                        default=[],
+                        help="Add the latest time-step")
         
         behave=OptionGroup(self.parser,
                            "Behaviour")
@@ -54,6 +59,11 @@ Clones a case by copying the system, constant and 0-directories
                           dest="force",
                           default=False,
                           help="Overwrite destination if it exists")
+        behave.add_option("--follow-symlinks",
+                          action="store_true",
+                          dest="followSymlinks",
+                          default=False,
+                          help="Follow symlinks instead of just copying them")
 
     def run(self):
         if len(self.parser.getArgs())>2:
@@ -84,5 +94,11 @@ Clones a case by copying the system, constant and 0-directories
 
         for a in self.parser.getOptions().additional:
             sol.addToClone(a)
+
+        if self.parser.getOptions().latest:
+            sol.addToClone(sol.getLast())
             
-        sol.cloneCase(dName)
+        sol.cloneCase(
+            dName,
+            followSymlinks=self.parser.getOptions().followSymlinks
+            )

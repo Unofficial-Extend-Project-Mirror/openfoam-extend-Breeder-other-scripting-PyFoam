@@ -1,9 +1,11 @@
-#  ICE Revision: $Id: FoamServer.py 7964 2007-09-20 08:33:20Z bgschaid $ 
+#  ICE Revision: $Id: FoamServer.py 9676 2008-11-13 12:25:43Z bgschaid $ 
 """A XMLRPC-Server that answeres about the current state of a Foam-Run"""
 
 from ServerBase import ServerBase
 
 from xmlrpclib import ServerProxy
+from time import sleep
+from random import random
 
 from PyFoam import configuration as config
 from PyFoam import versionString
@@ -12,6 +14,7 @@ from PyFoam.Infrastructure.NetworkHelpers import freeServerPort
 from PyFoam.Infrastructure.Logging import foamLogger
 from PyFoam.FoamInformation import foamMPI
 from PyFoam.RunDictionary.ParameterFile import ParameterFile
+from PyFoam.Error import warning
 
 from Hardcoded import userName
 
@@ -266,28 +269,51 @@ class FoamServer(Thread):
 	@param lines: the number of lines the server should remember
 	"""
         Thread.__init__(self)
-        self._port=findFreePort()
 
-        self._running=False
+        tries=0
+        maxTries=length=config().getint("Network","socketRetries")
 
-        if self._port<0:
-            foamLogger().warning("Could not get a free port. Server not started")
-            return
+        ok=False
         
-        foamLogger().info("Serving on port %d" % self._port)
-	self._server=ServerBase(('',self._port),logRequests=False)
-        self._server.register_introspection_functions()
-        self._answerer=FoamAnswerer(run=run,master=master,lines=lines)
-        self._server.register_instance(self._answerer)
-        self._server.register_function(self.killServer)
-        self._server.register_function(self.kill)
-        if run:
-            self._server.register_function(run.cpuTime)
-            self._server.register_function(run.cpuUserTime)
-            self._server.register_function(run.cpuSystemTime)
-            self._server.register_function(run.wallTime)
-            self._server.register_function(run.usedMemory)
+        while not ok and tries<maxTries:
+            ok=True
+            tries+=1
+            
+            self._port=findFreePort()
 
+            self._running=False
+
+            if self._port<0:
+                foamLogger().warning("Could not get a free port. Server not started")
+                return
+
+            try:
+                foamLogger().info("Serving on port %d" % self._port)
+                self._server=ServerBase(('',self._port),logRequests=False)
+                self._server.register_introspection_functions()
+                self._answerer=FoamAnswerer(run=run,master=master,lines=lines)
+                self._server.register_instance(self._answerer)
+                self._server.register_function(self.killServer)
+                self._server.register_function(self.kill)
+                if run:
+                    self._server.register_function(run.cpuTime)
+                    self._server.register_function(run.cpuUserTime)
+                    self._server.register_function(run.cpuSystemTime)
+                    self._server.register_function(run.wallTime)
+                    self._server.register_function(run.usedMemory)
+            except socket.error,reason:
+                ok=False
+                warning("Could not start on port",self._port,"althoug it was promised. Try:",tries,"of",maxTries)
+                foamLogger().warning("Could not get port %d - SocketError: %s. Try %d of %d" % (self._port,str(reason),tries,maxTries))
+                sleep(2+20*random())
+
+        if not ok:
+            foamLogger().warning("Exceeded maximum number of tries for getting a port: %d" % maxTries)
+            warning("Did not get a port after %d tries" % tries)
+        else:
+            if tries>1:
+                warning("Got a port after %d tries" % tries)
+            
     def run(self):
         if self._port<0:
             return

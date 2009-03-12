@@ -69,6 +69,7 @@ class CaseBuilderTUI(object):
             ('alert', 'light gray', 'dark red', 'standout'),
             ('header', 'black', 'dark cyan', 'standout'),
             ('banner', 'black', 'dark green', ('standout', 'underline')),
+            ('group',  'dark red', 'dark green', ('standout', 'underline')),
             ('button', 'black', 'dark red', 'standout'),
             ('bgbutton', 'black', 'dark blue', 'standout'),
             ('editbox', 'dark gray','light gray'),
@@ -193,11 +194,18 @@ class CaseBuilderDialog(CaseBuilderTUI):
         aDesc=self.desc.argumentDescriptions()
         aDef=self.desc.argumentDefaults()
         self.argfields=[]
-        for a in args:
-            items.append(urwid.Text(aDesc[a]))
-            fld=urwid.Edit(('banner',a+" "*(mLen+1-len(a))),edit_text=aDef[a])
-            self.argfields.append(fld)
-            items.append(urwid.AttrWrap(fld,'editbox'))
+
+        groups=[None]+self.desc.argumentGroups()
+        gDesc=self.desc.argumentGroupDescription()
+        
+        for g in groups:
+            if g!=None:
+                items.append(urwid.AttrWrap(urwid.Text("\n"+g+" - "+gDesc[g]),"group"))
+            for a in self.desc.groupArguments(g):
+                items.append(urwid.Text(aDesc[a]))
+                fld=urwid.Edit(('banner',a+" "*(mLen+1-len(a))),edit_text=aDef[a])
+                self.argfields.append(fld)
+                items.append(urwid.AttrWrap(fld,'editbox'))
 
         items.append(
             urwid.AttrWrap(

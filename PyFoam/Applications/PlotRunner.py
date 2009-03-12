@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotRunner.py 9421 2008-09-22 08:00:27Z bgschaid $ 
+#  ICE Revision: $Id: PlotRunner.py 10071 2009-03-02 09:39:46Z bgschaid $ 
 """
 Class that implements pyFoamPlotRunner
 """
@@ -21,6 +21,7 @@ from CommonReportUsage import CommonReportUsage
 from CommonSafeTrigger import CommonSafeTrigger
 from CommonWriteAllTrigger import CommonWriteAllTrigger
 from CommonLibFunctionTrigger import CommonLibFunctionTrigger
+from CommonServer import CommonServer
 
 from os import path
 
@@ -31,6 +32,7 @@ class PlotRunner(PyFoamApplication,
                  CommonWriteAllTrigger,
                  CommonLibFunctionTrigger,
                  CommonClearCase,
+                 CommonServer,
                  CommonReportUsage,
                  CommonParallel,
                  CommonRestart,
@@ -72,6 +74,7 @@ class PlotRunner(PyFoamApplication,
         CommonSafeTrigger.addOptions(self)
         CommonWriteAllTrigger.addOptions(self)
         CommonLibFunctionTrigger.addOptions(self)
+        CommonServer.addOptions(self)
         
     def run(self):
         self.processPlotOptions()
@@ -102,13 +105,15 @@ class PlotRunner(PyFoamApplication,
                           customRegexp=self.plotLines(),
                           writeFiles=self.opts.writeFiles,
                           hardcopy=self.opts.hardcopy,
-                          server=True,
+                          hardcopyFormat=self.opts.hardcopyformat,
+                          server=self.opts.server,
                           lam=lam,
                           raiseit=self.opts.raiseit,
                           steady=self.opts.steady,
                           progress=self.opts.progress,
                           restart=self.opts.restart,
-                          logname=self.opts.logname)
+                          logname=self.opts.logname,
+                          noLog=self.opts.noLog)
 
         self.addSafeTrigger(run,sol,steady=self.opts.steady)
         self.addWriteAllTrigger(run,sol)

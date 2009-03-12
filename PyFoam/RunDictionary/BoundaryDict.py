@@ -9,7 +9,11 @@ class BoundaryDict(ParsedBoundaryDict):
 
     def __init__(self,case,backup=False,region=None):
         """@param case: Path to the case-directory"""
-        ParsedBoundaryDict.__init__(self,SolutionDirectory(case).boundaryDict(region=region),backup=backup)
+        ParsedBoundaryDict.__init__(self,
+                                    SolutionDirectory(case,
+                                                      archive=None,
+                                                      paraviewLink=False).boundaryDict(region=region),
+                                    backup=backup)
 
     def __getitem__(self,key):
         return self.content[key]

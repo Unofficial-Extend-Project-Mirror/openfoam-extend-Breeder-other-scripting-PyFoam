@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SteadyRunner.py 9421 2008-09-22 08:00:27Z bgschaid $ 
+#  ICE Revision: $Id: SteadyRunner.py 9973 2009-02-05 12:47:31Z bgschaid $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -21,12 +21,14 @@ from CommonReportUsage import CommonReportUsage
 from CommonSafeTrigger import CommonSafeTrigger
 from CommonWriteAllTrigger import CommonWriteAllTrigger
 from CommonStandardOutput import CommonStandardOutput
+from CommonServer import CommonServer
 
 class SteadyRunner(PyFoamApplication,
                    CommonPlotLines,
                    CommonSafeTrigger,
                    CommonWriteAllTrigger,
                    CommonClearCase,
+                   CommonServer,
                    CommonReportUsage,
                    CommonParallel,
                    CommonRestart,
@@ -59,6 +61,7 @@ stopped and the last simulation state is written to disk
         CommonPlotLines.addOptions(self)
         CommonSafeTrigger.addOptions(self)
         CommonWriteAllTrigger.addOptions(self)
+        CommonServer.addOptions(self)
         
     def run(self):
         cName=self.parser.casePath()
@@ -78,9 +81,10 @@ stopped and the last simulation state is written to disk
                               silent=self.opts.progress,
                               argv=self.parser.getArgs(),
                               restart=self.opts.restart,
-                              server=True,
+                              server=self.opts.server,
                               logname=self.opts.logname,
-                              lam=lam)
+                              lam=lam,
+                              noLog=self.opts.noLog)
 
         self.addPlotLineAnalyzers(run)
 

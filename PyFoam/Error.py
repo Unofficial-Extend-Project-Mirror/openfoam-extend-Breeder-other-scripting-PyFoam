@@ -1,8 +1,14 @@
-#  ICE Revision: $Id: Error.py 9163 2008-08-04 08:01:10Z bgschaid $ 
+#  ICE Revision: $Id: Error.py 9616 2008-11-03 09:16:25Z bgschaid $ 
 """Standardized Error Messages"""
 
 import traceback
 import sys
+
+from PyFoam.Basics.TerminalFormatter import TerminalFormatter
+
+defaultFormat=TerminalFormatter()
+defaultFormat.getConfigFormat("error")
+defaultFormat.getConfigFormat("warning",shortName="warn")
 
 def getLine(up=0):
      try:  # just get a few frames
@@ -15,29 +21,31 @@ def getLine(up=0):
              pass
          return ('', 0, '', None)
 
-def __common(standard,*text):
+def __common(format,standard,*text):
     """Common function for errors and Warnings"""
     info=getLine(up=2)
+    if format:
+         print >>sys.stderr,format,
     print >>sys.stderr, "PyFoam",standard.upper(),"on line",info[1],"of file",info[0],":",
     for t in text:
          print >>sys.stderr,t,
-    print >>sys.stderr
+    print >>sys.stderr,defaultFormat.reset
     
 def warning(*text):
     """Prints a warning message with the occuring line number
     @param text: The error message"""
-    __common("Warning",*text)
+    __common(defaultFormat.warn,"Warning",*text)
     
 def error(*text):
     """Prints an error message with the occuring line number and aborts
     @param text: The error message"""
-    __common("Fatal Error",*text)
+    __common(defaultFormat.error,"Fatal Error",*text)
     sys.exit(-1)
     
 def debug(*text):
     """Prints a debug message with the occuring line number
     @param text: The error message"""
-    __common("Debug",*text)
+    __common(None,"Debug",*text)
     
 class PyFoamException(Exception):
      """The simplest exception for PyFoam"""

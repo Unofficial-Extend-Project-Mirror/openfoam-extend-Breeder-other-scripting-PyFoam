@@ -41,6 +41,11 @@ the value from a patch or using a user-specified value
                                default=None,
                                dest="test",
                                help="Does not write the file but only prints it to the screen")
+        self.parser.add_option("--source-key",
+                               action="store",
+                               default="value",
+                               dest="srckey",
+                               help="The key that should be read from the source patch: %default")
 
 
     def run(self):
@@ -58,7 +63,7 @@ the value from a patch or using a user-specified value
 
         value=""
         if self.opts.patch:
-            value=fieldFile["boundaryField"][self.opts.patch]["value"]
+            value=fieldFile["boundaryField"][self.opts.patch][self.opts.srckey]
         else:
             value="uniform "+self.opts.value
 

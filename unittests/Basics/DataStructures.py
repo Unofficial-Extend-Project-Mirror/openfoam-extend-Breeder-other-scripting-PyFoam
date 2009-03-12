@@ -1,5 +1,6 @@
 
 import unittest
+import math
 
 from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,TupleProxy,DictProxy,Tensor,SymmTensor
 
@@ -44,6 +45,10 @@ class VectorTest(unittest.TestCase):
         v=Vector(1,2,3)
         self.assertEqual(str(v),'(1 2 3)')
 
+    def testList(self):
+        v=Vector(1,2,3)
+        self.assertEqual([1,2,3],list(v))
+
     def testAccess(self):
         v=Vector(3,2,1)
         self.assertEqual(v[1],2)
@@ -52,6 +57,38 @@ class VectorTest(unittest.TestCase):
         self.assertEqual(v,Vector(-3,2,1))
         
 theSuite.addTest(unittest.makeSuite(VectorTest,"test"))
+
+class VectorOperatorTest(unittest.TestCase):
+    def testAdd(self):
+        self.assertEqual(Vector(1,-1,0),Vector(1,0,0)+Vector(0,-1,0))
+        self.assertEqual(Vector(1,2,0),Vector(0,1,-1)+1)
+        self.assertEqual(Vector(1,2,0),1+Vector(0,1,-1))
+    def testSub(self):
+        self.assertEqual(Vector(1,1,0),Vector(1,0,0)-Vector(0,-1,0))
+        self.assertEqual(Vector(-1,0,-2),Vector(0,1,-1)-1)
+        self.assertEqual(Vector(1,0,2),1-Vector(0,1,-1))
+    def testMul(self):
+        self.assertEqual(Vector(2,-1,0),Vector(1,1,1)*Vector(2,-1,0))
+        self.assertEqual(Vector(0,2,-2),Vector(0,1,-1)*2)
+        self.assertEqual(Vector(0,-2,2),-2*Vector(0,1,-1))
+    def testDiv(self):
+        self.assertEqual(Vector(0,0.5,1),Vector(1,1,1)/Vector(2,2.,1))
+        self.assertEqual(Vector(0.5,0,-0.5),Vector(1,0,-1)/2.)
+    def testCross(self):
+        self.assertEqual(Vector(0,0,1),Vector(1,0,0) ^ Vector(0,1,0))
+        self.assertEqual(Vector(0,0,-1),Vector(0,1,0) ^ Vector(1,0,0))
+        self.assertEqual(Vector(0,0,0),Vector(1,1,1) ^ Vector(1,1,1))
+        self.assertEqual(Vector(-6,-3,4),Vector(1,2,3) ^ Vector(-1,2,0))
+    def testAbs(self):
+        self.assertEqual(1,abs(Vector(1,0,0)))
+        self.assertEqual(5,abs(Vector(3,4,0)))
+        self.assertEqual(math.sqrt(3),abs(Vector(1,1,1)))
+    def testNeg(self):
+        self.assertEqual(Vector(1,-1,0),-Vector(-1,1,0))
+    def testPos(self):
+        self.assertEqual(Vector(1,-1,0),+Vector(1,-1,0))
+        
+theSuite.addTest(unittest.makeSuite(VectorOperatorTest,"test"))
 
 class TensorTest(unittest.TestCase):
     def testString(self):

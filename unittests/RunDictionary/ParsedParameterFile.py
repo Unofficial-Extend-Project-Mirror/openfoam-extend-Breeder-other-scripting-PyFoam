@@ -189,6 +189,12 @@ nix
         self.assertEqual(len(p1["things"]),2)
         self.assertEqual(p1["things"][0],"test")
 
+    def testStringWithAssignment(self):
+        p1=FoamStringParser('''
+nix "a=3+x;b=4;";
+''')
+        self.assertEqual(p1["nix"],'"a=3+x;b=4;"')
+        
     def testDeletionOfEntry(self):
         p1=FoamStringParser("nix 2; test  3;")
         self.assertEqual(p1["nix"],2)

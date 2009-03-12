@@ -48,7 +48,6 @@ class TemplateFile:
     def getString(self,vals):
         """In the template, replaces all the strings between $$
         with the evaluation of the expressions
-        @param input: the input string
         @param vals: dictionary with the values
         @returns: The string with the replaced expressions"""
 

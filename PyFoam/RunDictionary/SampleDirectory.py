@@ -78,7 +78,7 @@ class SampleDirectory(object):
         if unspecified
         @param value: name of the sampled value. All
         if unspecified
-        @param times: times for which the samples are to be got. All
+        @param time: times for which the samples are to be got. All
         if unspecified"""
         
         if line==None:

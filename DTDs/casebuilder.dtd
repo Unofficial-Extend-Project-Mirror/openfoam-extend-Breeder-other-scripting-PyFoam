@@ -1,28 +1,54 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!ELEMENT casebuilder (helptext?,arguments,variables?,meshpreparation,files)>
+
+<!ELEMENT casebuilder (helptext?, arguments, variables, meshpreparation, files)>
+<!ATTLIST casebuilder version CDATA #REQUIRED>
 <!ATTLIST casebuilder name CDATA #REQUIRED>
-<!ATTLIST casebuilder description CDATA #REQUIRED>
 <!ATTLIST casebuilder template CDATA #REQUIRED>
-<!ATTLIST casebuilder initialdir CDATA #IMPLIED>
-<!ELEMENT helptext (#PCDATA)>
-<!ELEMENT arguments (arg*)>
+<!ATTLIST casebuilder description CDATA #REQUIRED>
+<!ATTLIST casebuilder initialdir CDATA #IMPLIED>                    <!-- Need reason. -->
+
+<!ELEMENT helptext CDATA>
+
+<!ELEMENT arguments (argumentgroup*, arg*)>
+
+<!ELEMENT argumentgroup (argumentgroup*, arg+)>
+<!ATTLIST argumentgroup name CDATA #REQUIRED>
+<!ATTLIST argumentgroup description CDATA #REQUIRED>
+
 <!ELEMENT arg (verify?)>
 <!ATTLIST arg name CDATA #REQUIRED>
-<!ATTLIST arg description CDATA #REQUIRED>
 <!ATTLIST arg default CDATA #IMPLIED>
-<!ELEMENT verify (#PCDATA)>
+<!ATTLIST arg description CDATA #REQUIRED>
+
+<!ELEMENT verify (validator|script)>
+
 <!ELEMENT variables (var*)>
-<!ELEMENT var (#PCDATA)>
+
+<!ELEMENT var (script?)>                                             <!-- Constant or computation. -->
 <!ATTLIST var name CDATA #REQUIRED>
-<!ATTLIST var description CDATA #IMPLIED>
-<!ELEMENT meshpreparation (utility?,copy?)>
-<!ATTLIST meshpreparation mode (copy|utility) #REQUIRED>
+<!ATTLIST var description CDATA #REQUIRED>
+
+<!ELEMENT meshpreparation (utility | copy)>
+
 <!ELEMENT copy EMPTY>
 <!ATTLIST copy template CDATA #REQUIRED>
 <!ATTLIST copy time CDATA #IMPLIED>
+
 <!ELEMENT utility EMPTY>
-<!ATTLIST utility application CDATA #REQUIRED>
+<!ATTLIST utility command CDATA #REQUIRED>
 <!ATTLIST utility arguments CDATA #REQUIRED>
+
+<!ELEMENT validator EMPTY>
+<!ATTLIST validator type (integer|float|file) #REQUIRED>
+<!ATTLIST validator min CDATA #IMPLIED>
+<!ATTLIST validator max CDATA #IMPLIED>
+
+<!ELEMENT script CDATA>
+<!ATTLIST script plugin (python) #REQUIRED>
+<!ATTLIST script in CDATA #IMPLIED>                                  <!-- Decision in progress. -->
+<!ATTLIST script out CDATA #IMPLIED>                                 <!-- Decision in progress. -->
+
+
 <!ELEMENT files (boundaries,parameterfiles,fieldfiles)>
 <!ELEMENT parameterfiles (directory*)>
 <!ELEMENT directory (file*)>

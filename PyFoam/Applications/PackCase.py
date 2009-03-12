@@ -59,6 +59,11 @@ Excludes all .svn-direcotries and all files ending with ~
                          dest="tarname",
                          default=None,
                          help='Name of the tarfile. If unset the name of the case plus ".tgz" will be used')
+        self.parser.add_option("--base-name",
+                         action="store",
+                         dest="basename",
+                         default=None,
+                         help='Name of the case inside the tar-file. If not set the actual basename of the case is used')
         
     def run(self):
         sName=self.parser.getArgs()[0]
@@ -73,11 +78,14 @@ Excludes all .svn-direcotries and all files ending with ~
             self.parser.getOptions().additional.append("PyFoam*")
             
         sol=SolutionDirectory(sName,archive=None,paraviewLink=False)
-
+        if not sol.isValid():
+            self.error(sName,"does not look like real OpenFOAM-case because",sol.missingFiles(),"are missing or of the wrong type")
+            
         if self.parser.getOptions().chemkin:
             sol.addToClone("chemkin")
             
         sol.packCase(dName,
                      last=self.parser.getOptions().last,
                      additional=self.parser.getOptions().additional,
-                     exclude=self.parser.getOptions().exclude)
+                     exclude=self.parser.getOptions().exclude,
+                     base=self.parser.getOptions().basename)

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Decomposer.py 9441 2008-09-22 20:51:21Z bgschaid $ 
+#  ICE Revision: $Id: Decomposer.py 9973 2009-02-05 12:47:31Z bgschaid $ 
 """
 Class that implements pyFoamDecompose
 """
@@ -16,12 +16,14 @@ from PyFoam.FoamInformation import oldAppConvention as oldApp
 
 from CommonMultiRegion import CommonMultiRegion
 from CommonStandardOutput import CommonStandardOutput
+from CommonServer import CommonServer
 
 from os import path,system
-import sys
+import sys,string
 
 class Decomposer(PyFoamApplication,
                  CommonStandardOutput,
+                 CommonServer,
                  CommonMultiRegion):
     def __init__(self,args=None):
         description="""
@@ -34,6 +36,8 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                                    interspersed=True,
                                    nr=2)
 
+    decomposeChoices=["metis","simple","hierarchical","manual"]
+    
     def addOptions(self):
         spec=OptionGroup(self.parser,
                          "Decomposition Specification",
@@ -43,8 +47,8 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                         default="metis",
                         dest="method",
                         action="store",
-                        choices=["metis","simple","hierarchical","manual"],
-                        help="The method used for decomposing")
+                        choices=self.decomposeChoices,
+                        help="The method used for decomposing (Choices: "+string.join(self.decomposeChoices,", ")+") Default: %default")
         
         spec.add_option("--n",
                         dest="n",
@@ -108,6 +112,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
         
         CommonMultiRegion.addOptions(self)
         CommonStandardOutput.addOptions(self)
+        CommonServer.addOptions(self,False)
         
     def run(self):
         if self.opts.keeppseudo and (not self.opts.regions and self.opts.region==None):
@@ -199,7 +204,8 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                 run=UtilityRunner(argv=argv,
                                   silent=self.opts.progress,
                                   logname=self.opts.logname,
-                                  server=False)
+                                  server=self.opts.server,
+                                  noLog=self.opts.noLog)
                 run.start()
 
                 if theRegion!=None:

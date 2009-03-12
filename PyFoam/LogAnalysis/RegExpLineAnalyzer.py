@@ -1,10 +1,7 @@
-#  ICE Revision: $Id: RegExpLineAnalyzer.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: RegExpLineAnalyzer.py 10069 2009-03-02 09:39:44Z bgschaid $ 
 """Analyzes lines with regular expressions"""
 
 import re
-
-# from FileLineAnalyzer import FileLineAnalyzer
-# from TimeLineLineAnalyzer import TimeLineLineAnalyzer
 
 from GeneralLineAnalyzer import GeneralLineAnalyzer
 
@@ -23,15 +20,29 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
 
     floatRegExp="[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?"
     
-    def __init__(self,name,exp,idNr=None,titles=[],doTimelines=False,doFiles=True):
+    def __init__(self,
+                 name,
+                 exp,
+                 idNr=None,
+                 titles=[],
+                 doTimelines=False,
+                 doFiles=True,
+                 accumulation=None,
+                 singleFile=False):
         """
         @param name: name of the expression (needed for output
         @param exp: the regular expression, %f% will be replaced with the
         regular expression for a float
         @param idNr: number of the pattern group that is used as an identifier
         @param titles: titles of the columns
+        @param accumulation: How multiple values should be accumulated
         """
-        GeneralLineAnalyzer.__init__(self,titles=titles,doTimelines=doTimelines,doFiles=doFiles)
+        GeneralLineAnalyzer.__init__(self,
+                                     titles=titles,
+                                     doTimelines=doTimelines,
+                                     doFiles=doFiles,
+                                     accumulation=accumulation,
+                                     singleFile=singleFile)
 
         self.name=name
         self.idNr=idNr

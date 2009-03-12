@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PyFoamApplication.py 9442 2008-09-23 09:11:07Z bgschaid $ 
+#  ICE Revision: $Id: PyFoamApplication.py 10067 2009-03-02 09:39:42Z bgschaid $ 
 """Base class for pyFoam-applications
 
 Classes can also be called with a command-line string"""
@@ -7,6 +7,11 @@ from optparse import OptionGroup
 from PyFoam.Basics.FoamOptionParser import FoamOptionParser
 from PyFoam.Error import error,warning
 from PyFoam.FoamInformation import oldAppConvention as oldApp
+
+from PyFoam.Basics.TerminalFormatter import TerminalFormatter
+format=TerminalFormatter()
+format.getConfigFormat("error")
+format.getConfigFormat("warn")
 
 import sys
 from os import path
@@ -26,7 +31,7 @@ class PyFoamApplication(object):
         @param interspersed: Is the command line allowed to be interspersed (options after the arguments)
         @param args: Command line arguments when using the Application as a 'class' from a script
         @param nr: Number of required arguments
-        @param chaneVersion: May this application change the version of OF used?
+        @param changeVersion: May this application change the version of OF used?
         @param exactNr: Must not have more than the required number of arguments
         """
         self.parser=FoamOptionParser(args=args,
@@ -55,6 +60,11 @@ class PyFoamApplication(object):
                        default=False,
                        action="store_true",
                        help="Profile the python-script (not the OpenFOAM-program) - mostly of use for developers")
+        grp.add_option("--profile-cpython",
+                       dest="profileCPython",
+                       default=False,
+                       action="store_true",
+                       help="Profile the python-script (not the OpenFOAM-program) using the better cProfile library - mostly of use for developers")
         grp.add_option("--profile-hotshot",
                        dest="profileHotshot",
                        default=False,
@@ -74,16 +84,18 @@ class PyFoamApplication(object):
             except ImportError:
                 warning("No psyco installed. Continuing without acceleration")
 
-        if self.opts.profilePython or self.opts.profileHotshot:
-            if self.opts.profilePython and self.opts.profileHotshot:
+        if self.opts.profilePython or self.opts.profileCPython or self.opts.profileHotshot:
+            if sum([self.opts.profilePython,self.opts.profileCPython,self.opts.profileHotshot])>1:
                 self.error("Profiling with hotshot and regular profiling are mutual exclusive")
             print "Running profiled"
             if self.opts.profilePython:
                 import profile
+            elif self.opts.profileCPython:
+                import cProfile as profile
             else:
                 import hotshot
             profileData=path.basename(sys.argv[0])+".profile"
-            if self.opts.profilePython:            
+            if self.opts.profilePython or self.opts.profileCPython:            
                 profile.runctx('self.run()',None,{'self':self},profileData)
                 print "Reading python profile"
                 import pstats
@@ -127,22 +139,54 @@ class PyFoamApplication(object):
         Prints an error message and exits
         @param args: Arguments that are to be printed
         """
-        print "Error in",sys.argv[0],":",
+        print format.error+"Error in",sys.argv[0],":",
         for a in args:
             print a,
-        print
+        print format.reset
         sys.exit(-1)
         
-    def checkCase(self,name):
+    def warning(self,*args):
+        """
+        Prints a warning message
+        @param args: Arguments that are to be printed
+        """
+        print format.warn+"Warning in",sys.argv[0],":",
+        for a in args:
+            print a,
+        print format.reset
+        
+    def silent(self,*args):
+        """
+        Don't print a warning message
+        @param args: Arguments that are to be printed
+        """
+        pass
+    
+    def checkCase(self,name,fatal=True,verbose=True):
         """
         Check whether this is a valid OpenFOAM-case
         @param name: the directory-bame that is supposed to be the case
+        @param fatal: If this is not a case then the application ends
+        @param verbose: If this is not a case no warning is issued
         """
+        if fatal:
+            func=self.error
+        elif verbose:
+            func=self.warning
+        else:
+            func=self.silent
+                
         if not path.exists(name):
-            self.error("Case",name,"does not exist")
+            func("Case",name,"does not exist")
+            return False
         if not path.isdir(name):
-            self.error("Case",name,"is not a directory")
+            func("Case",name,"is not a directory")
+            return False
         if not path.exists(path.join(name,"system")):
-            self.error("Case",name,"does not have a 'system' directory")
+            func("Case",name,"does not have a 'system' directory")
+            return False
         if not path.exists(path.join(name,"constant")):
-            self.error("Case",name,"does not have a 'constant' directory")
+            func("Case",name,"does not have a 'constant' directory")
+            return False
+
+        return True

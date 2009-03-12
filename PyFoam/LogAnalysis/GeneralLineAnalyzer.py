@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GeneralLineAnalyzer.py 8292 2007-12-12 15:22:00Z bgschaid $ 
+#  ICE Revision: $Id: GeneralLineAnalyzer.py 10069 2009-03-02 09:39:44Z bgschaid $ 
 """Line analyzer with output and the capability to store lines"""
 
 from LogLineAnalyzer import LogLineAnalyzer
@@ -10,7 +10,12 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
 
     Combines the capabilities of TimeLineLineAnalyzer and FileLineAnalyzer"""
     
-    def __init__(self,doTimelines=False,doFiles=False,titles=[]):
+    def __init__(self,
+                 doTimelines=False,
+                 doFiles=False,
+                 titles=[],
+                 accumulation=None,
+                 singleFile=False):
         """
         @param titles: The titles of the data elements
         """
@@ -18,13 +23,18 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
 
         self.doTimelines=doTimelines
         self.doFiles=doFiles
+        self.singleFile=singleFile
         
         self.files=None
         self.titles=titles
         
         self.setTitles(titles)
+
+        accu="first"
+        if accumulation!=None:
+            accu=accumulation
         if self.doTimelines:
-            self.lines=TimeLineCollection()
+            self.lines=TimeLineCollection(accumulation=accu)
         else:
             self.lines=None
             
@@ -41,7 +51,9 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
     def setDirectory(self,oDir):
         """Creates the OutFileCollection-object"""
         if self.doFiles:
-            self.files=OutFileCollection(oDir,titles=self.titles)
+            self.files=OutFileCollection(oDir,
+                                         titles=self.titles,
+                                         singleFile=self.singleFile)
         else:
             self.files=None
 

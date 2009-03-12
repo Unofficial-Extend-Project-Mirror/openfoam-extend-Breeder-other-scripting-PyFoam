@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: TimeLineAnalyzer.py 8027 2007-10-07 18:18:21Z bgschaid $ 
+#  ICE Revision: $Id: TimeLineAnalyzer.py 9994 2009-02-10 21:26:57Z bgschaid $ 
 """Analyze Line for Time"""
 
 import re
@@ -12,7 +12,7 @@ class TimeLineAnalyzer(LogLineAnalyzer):
     children). This side-effect is important for all the other
     line-analyzers that need the time"""
 
-    timeRegExp="^Time = (.+)$"
+    timeRegExp="^(Time =|Iteration:) (.+)$"
     
     def __init__(self,progress=False):
         """
@@ -28,7 +28,7 @@ class TimeLineAnalyzer(LogLineAnalyzer):
         m=self.exp.match(line)
         if m!=None:
             try:
-                self.notify(float(m.group(1)))
+                self.notify(float(m.group(2)))
                 if self.progress:
                     print "\r t = %10g" % self.parent.time,
                     stdout.flush()

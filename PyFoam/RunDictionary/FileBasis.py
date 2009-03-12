@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FileBasis.py 9003 2008-06-17 08:23:04Z bgschaid $ 
+#  ICE Revision: $Id: FileBasis.py 10068 2009-03-02 09:39:43Z bgschaid $ 
 """Basis for the handling of OpenFOAM-files
 
 Transparently accepts gnuzipped files"""
@@ -140,7 +140,7 @@ class FileBasis(Utilities):
         @param stop: pattern that indicates that exp will never be found (only passed through to goMatch)
         @param echoLast: echo the line with the string"""
         exp=re.compile("( |^)"+s+"( |$)")
-        m=self.goMatch(l,exp,out=out,stop=stop)
+        self.goMatch(l,exp,out=out,stop=stop)
         if out!=None and echoLast:
             out.write(l.line+"\n")
             

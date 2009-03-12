@@ -3,6 +3,7 @@ Class that implements common functionality for plotting options
 """
 
 from optparse import OptionGroup
+import string
 
 class CommonPlotOptions(object):
     """ The class that adds plot options
@@ -48,7 +49,16 @@ class CommonPlotOptions(object):
                                action="store_true",
                                default=False,
                                dest="hardcopy",
-                               help="Writes postscript hardcopies of the plot at the end of the run")
+                               help="Writes hardcopies of the plot at the end of the run")
+        hcChoices=["postscript","png","pdf","svg","eps"]
+        writeDGroup.add_option("--format-of-hardcopy",
+                               type="choice",
+                               action="store",
+                               default="png",
+                               dest="hardcopyformat",
+                               choices=hcChoices,
+                               help="File-format the hardcopy should be written in (Formats: "+string.join(hcChoices,", ")+") Default: %default")
+        
         self.parser.add_option_group(writeDGroup)
         
         plotItGroup=OptionGroup(self.parser,

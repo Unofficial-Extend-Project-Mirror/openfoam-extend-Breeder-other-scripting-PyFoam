@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BasicRunner.py 9416 2008-09-22 08:00:13Z bgschaid $ 
+#  ICE Revision: $Id: BasicRunner.py 9667 2008-11-12 18:20:16Z bgschaid $ 
 """Run a OpenFOAM command"""
 
 import sys
@@ -49,14 +49,16 @@ class BasicRunner(object):
                  logname=None,
                  lam=None,
                  server=False,
-                 restart=False):
+                 restart=False,
+                 noLog=False):
         """@param argv: list with the tokens that are the command line
         if not set the standard command line is used
         @param silent: if True no output is sent to stdout
         @param logname: name of the logfile
         @param lam: Information about a parallel run
         @param server: Whether or not to start the network-server
-        @type lam: PyFoam.Execution.ParallelExecution.LAMMachine"""
+        @type lam: PyFoam.Execution.ParallelExecution.LAMMachine
+        @param noLog: Don't output a log file"""
 
         if sys.version_info < (2,3):
             # Python 2.2 does not have the capabilities for the Server-Thread
@@ -95,6 +97,7 @@ class BasicRunner(object):
         self.cmd=string.join(self.argv," ")
         foamLogger().info("Starting: "+self.cmd+" in "+path.abspath(path.curdir))
         self.logFile=path.join(self.dir,logname+".logfile")
+        self.noLog=noLog
         
         self.fatalError=False
         self.fatalFPE=False
@@ -139,7 +142,8 @@ class BasicRunner(object):
         """starts the command and stays with it till the end"""
         
         self.started=True
-        fh=open(self.logFile,"w")
+        if not self.noLog:
+            fh=open(self.logFile,"w")
 
         self.startHandle()
 
@@ -195,8 +199,10 @@ class BasicRunner(object):
                 
                 self.lineHandle(line)
 
-                fh.write(line+"\n")
-                fh.flush()
+                if not self.noLog:
+                    fh.write(line+"\n")
+                    fh.flush()
+                    
             except KeyboardInterrupt,e:
                 foamLogger().warning("Keyboard Interrupt")
                 self.run.interrupt()
@@ -205,8 +211,9 @@ class BasicRunner(object):
 
         for t in self.endTriggers:
             t()
-            
-        fh.close()
+
+        if not self.noLog:        
+            fh.close()
         
         if self.server!=None:
             self.server.deregister()

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Runner.py 9441 2008-09-22 20:51:21Z bgschaid $ 
+#  ICE Revision: $Id: Runner.py 9973 2009-02-05 12:47:31Z bgschaid $ 
 """
 Application class that implements pyFoamRunner
 """
@@ -21,6 +21,7 @@ from CommonLibFunctionTrigger import CommonLibFunctionTrigger
 from CommonStandardOutput import CommonStandardOutput
 from CommonParallel import CommonParallel
 from CommonRestart import CommonRestart
+from CommonServer import CommonServer
 
 from os import path
 
@@ -33,6 +34,7 @@ class Runner(PyFoamApplication,
              CommonReportUsage,
              CommonMultiRegion,
              CommonParallel,
+             CommonServer,
              CommonStandardOutput):
     def __init__(self,args=None):
         description="""
@@ -61,6 +63,7 @@ class Runner(PyFoamApplication,
         CommonWriteAllTrigger.addOptions(self)
         CommonLibFunctionTrigger.addOptions(self)
         CommonMultiRegion.addOptions(self)
+        CommonServer.addOptions(self)
         
     def run(self):
         if self.opts.keeppseudo and (not self.opts.regions and self.opts.region==None):
@@ -91,10 +94,11 @@ class Runner(PyFoamApplication,
             run=AnalyzedRunner(BoundingLogAnalyzer(progress=self.opts.progress),
                                silent=self.opts.progress,
                                argv=args,
-                               server=True,
+                               server=self.opts.server,
                                lam=lam,
                                restart=self.opts.restart,
-                               logname=self.opts.logname)
+                               logname=self.opts.logname,
+                               noLog=self.opts.noLog)
 
             self.addPlotLineAnalyzers(run)
             

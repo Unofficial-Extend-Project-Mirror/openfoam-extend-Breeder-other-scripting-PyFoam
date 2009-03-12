@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BoundingLogAnalyzer.py 7832 2007-08-28 13:07:26Z bgschaid $ 
+#  ICE Revision: $Id: BoundingLogAnalyzer.py 10053 2009-02-24 18:58:04Z bgschaid $ 
 """Basic log analyer with boundedness"""
 
 from StandardLogAnalyzer import StandardLogAnalyzer

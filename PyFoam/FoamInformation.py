@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamInformation.py 9158 2008-08-04 08:00:55Z bgschaid $ 
+#  ICE Revision: $Id: FoamInformation.py 10067 2009-03-02 09:39:42Z bgschaid $ 
 """Getting Information about the Foam-Installation (like the installation directory)"""
 
 from os import environ,path,listdir
@@ -28,7 +28,7 @@ def foamTutorials():
     return getPathFromEnviron("FOAM_TUTORIALS")
 
 def foamMPI():
-    """@return the used MPI-Implementation"""
+    """@return: the used MPI-Implementation"""
     if not environ.has_key("WM_MPLIB"):
         return ()
     else:

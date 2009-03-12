@@ -129,6 +129,22 @@ and gives information about the case and if asked to builds the actual case
             
         return bounds
 
+    def argumentGroups(self):
+        args=[]
+
+        for a in self.argTree().getElementsByTagName("argumentgroup"):
+            args.append(a.getAttribute("name"))
+            
+        return args
+
+    def argumentGroupDescription(self):
+        args={}
+
+        for a in self.argTree().getElementsByTagName("argumentgroup"):
+            args[a.getAttribute("name")]=a.getAttribute("description")
+            
+        return args
+
     def arguments(self):
         args=[]
 
@@ -137,6 +153,24 @@ and gives information about the case and if asked to builds the actual case
             
         return args
 
+    def groupArguments(self,name=None):
+        """Returns a list with the arguments belongin to a specific group
+        @param name: Name of the group. If none is given, then all the arguments
+        belonging to no group are returned"""
+
+        result=[]
+        
+        for c in self.argTree().childNodes:
+            if "tagName" in dir(c):
+                if c.tagName=="arg" and name==None:
+                    result.append(c.getAttribute("name"))
+                elif c.tagName=="argumentgroup":
+                    if c.getAttribute("name")==name:
+                        for e in c.getElementsByTagName("arg"):
+                            result.append(e.getAttribute("name"))
+
+        return result
+    
     def argumentDescriptions(self):
         args={}
 
@@ -177,18 +211,58 @@ and gives information about the case and if asked to builds the actual case
 
     def verifyArguments(self,args):
         """Validate the arguments with the provided code (if it exists)"""
-        msg=None
+        totalMsg=""
         for a in self.argTree().getElementsByTagName("arg"):
+            msg=None
             nm=a.getAttribute("name")
             verify=self.getSingleElement(a,"verify",optional=True)
             if verify:
-                code=verify.firstChild.nodeValue
-                arg=args[nm]
-                exec code
+                valid=self.getSingleElement(verify,"validator",optional=True)
+                script=self.getSingleElement(verify,"script",optional=True)
+                if valid and script:
+                    error("Variable",nm,"has script and validator. Only one of them supported")
+                elif valid:
+                    typ=valid.getAttribute("type")
+                    arg=args[nm]
+                    isNumeric=False
+                    if typ=="float":
+                        isNumeric=True
+                        try:
+                            tmp=float(arg)
+                        except ValueError:
+                            msg="Not a floating point number"
+                    elif typ=="integer":
+                        isNumeric=True
+                        try:
+                            tmp=int(arg)
+                        except ValueError:
+                            msg="Not an integer number"
+                    elif typ=="file":
+                        if not path.exists(arg):
+                            msg="File "+arg+" does not exist"
+                    else:
+                        error("No validator implemented for type",typ,"in variable",nm)
+                    if isNumeric and not msg:
+                        if valid.hasAttribute("min"):
+                            if float(arg)<float(valid.getAttribute("min")):
+                                msg="Must be bigger than "+valid.getAttribute("min")
+                        if valid.hasAttribute("max"):
+                            if float(arg)>float(valid.getAttribute("max")):
+                                msg="Must be smaller than "+valid.getAttribute("max")
+                                
+                elif script:
+                    if script.getAttribute("plugin")!="python":
+                        error("Only plugin-type 'python' is supported for variable",nm)
+                    code=script.firstChild.nodeValue
+                    arg=args[nm]
+                    exec code
                 if msg:
-                    msg=nm+": "+msg
-                    break
-        return msg
+                    totalMsg+=nm+": "+msg+"   "
+
+        if totalMsg=="":
+            totalMsg=None
+            
+        return totalMsg
 
     def calculateVariables(self,_args_):
         """Add derived variables to the argument dictionary"""
@@ -234,10 +308,13 @@ and gives information about the case and if asked to builds the actual case
                     pf.writeFile()
 
         prep=self.getSingleElement(self.doc,"meshpreparation")
-        mode=prep.getAttribute("mode")
-        if mode=="utility":
-            util=self.getSingleElement(prep,"utility")
-            app=util.getAttribute("application")
+        util=self.getSingleElement(prep,"utility",optional=True)
+        copy=self.getSingleElement(prep,"copy",optional=True)
+        
+        if util and copy:
+            error("Copy and utilitiy mesh preparation specified")
+        elif util:
+            app=util.getAttribute("command")
             arg=self.expandVars(util.getAttribute("arguments"),args)
             argv=[app,"-case",cName]+arg.split()
             if oldApp():
@@ -246,8 +323,7 @@ and gives information about the case and if asked to builds the actual case
             run.start()
             if not run.runOK():
                 error(app,"failed. Check the logs")
-        elif mode=="copy":
-            copy=self.getSingleElement(prep,"copy")
+        elif copy:
             source=self.expandVars(copy.getAttribute("template"),args)
             time=self.expandVars(copy.getAttribute("time"),args)
             if time=="":
@@ -255,7 +331,7 @@ and gives information about the case and if asked to builds the actual case
             shutil.copytree(path.join(source,time,"polyMesh"),
                              path.join(cName,"constant","polyMesh"))
         else:
-            error("Unknon mesh preparation mode:",mode)
+            error("Neither copy nor utilitiy mesh preparation specified")
             
         dName=path.join(cName,self.initialDir())
         if not path.isdir(dName):

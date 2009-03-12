@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotWatcher.py 9424 2008-09-22 08:00:35Z bgschaid $ 
+#  ICE Revision: $Id: PlotWatcher.py 10071 2009-03-02 09:39:46Z bgschaid $ 
 """
 Class that implements pyFoamPlotWatcher
 """
@@ -88,6 +88,8 @@ class PlotWatcher(PyFoamApplication,
                            persist=self.opts.persist,
                            tailLength=self.opts.tail,
                            silent=self.opts.silent,
+                           hardcopy=self.opts.hardcopy,
+                           hardcopyFormat=self.opts.hardcopyformat,
                            plotLinear=self.opts.linear,
                            plotCont=self.opts.cont,
                            plotBound=self.opts.bound,

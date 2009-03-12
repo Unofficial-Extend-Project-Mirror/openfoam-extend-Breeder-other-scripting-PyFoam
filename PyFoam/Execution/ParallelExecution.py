@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ParallelExecution.py 8948 2008-06-05 15:23:51Z bgschaid $ 
+#  ICE Revision: $Id: ParallelExecution.py 10020 2009-02-17 13:04:30Z bgschaid $ 
 """Things that are needed for convenient parallel Execution"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -6,7 +6,7 @@ from PyFoam.FoamInformation import foamMPI
 from PyFoam.Error import error,warning,debug
 from PyFoam import configuration as config
 
-from os import path
+from os import path,environ,system
 from string import strip
 import commands
 
@@ -133,10 +133,17 @@ class LAMMachine(Utilities):
                 warning("which can not find a match for",progname,". Hoping for the best")
 
         mpirun+=[progname]+argv[1:3]+["-parallel"]+argv[3:]
-
+        
         if config().getdebug("ParallelExecution"):
+            debug("MPI:",foamMPI())
             debug("Arguments:",mpirun)
-
+            system("which mpirun")
+            system("which rsh")
+            debug("Environment",environ)
+            for a in mpirun:
+                if a in environ:
+                    debug("Transfering variable",a,"with value",environ[a])
+            
         return mpirun
     
     def writeMetis(self,sDir):

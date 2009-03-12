@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ConvergenceRunner.py 7858 2007-09-03 09:47:29Z bgschaid $ 
+#  ICE Revision: $Id: ConvergenceRunner.py 9667 2008-11-12 18:20:16Z bgschaid $ 
 """Stop solver at convergence"""
 
 from AnalyzedRunner import AnalyzedRunner
@@ -15,9 +15,16 @@ class ConvergenceRunner(AnalyzedRunner):
 
     in the controlDict"""
     
-    def __init__(self,analyzer,argv=None,silent=False,logname="PyFoamSolve",server=False,lam=None,restart=False):
+    def __init__(self,analyzer,
+                 argv=None,
+                 silent=False,
+                 logname="PyFoamSolve",
+                 server=False,
+                 lam=None,
+                 restart=False,
+                 noLog=False):
         """See AnalyzedRunner"""
-        AnalyzedRunner.__init__(self,analyzer,argv,silent,logname,server=server,lam=lam,restart=restart)
+        AnalyzedRunner.__init__(self,analyzer,argv,silent,logname,server=server,lam=lam,restart=restart,noLog=noLog)
         
         self.analyzer.addAnalyzer("Convergence",SteadyConvergedLineAnalyzer())
         

@@ -1,7 +1,7 @@
 #  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Logging.py 1906 2007-08-28T16:16:19.392553Z bgschaid  $ 
 """Encapsulates all necessary things for a cluster-job, like setting up, running, restarting"""
 
-import os
+import os,sys
 from os import path,unlink
 from threading import Thread,Lock,Timer
 
@@ -37,7 +37,13 @@ class ClusterJob:
     There is a number of variables in this class that are used to
     'communicate' information between the various stages"""
 
-    def __init__(self,basename,arrayJob=False,hardRestart=False,autoParallel=True,foamVersion=None,multiRegion=False):
+    def __init__(self,basename,
+                 arrayJob=False,
+                 hardRestart=False,
+                 autoParallel=True,
+                 foamVersion=None,
+                 useFoamMPI=False,
+                 multiRegion=False):
         """Initializes the Job
         @param basename: Basis name of the job
         @param arrayJob: this job is a parameter variation. The tasks
@@ -45,6 +51,7 @@ class ClusterJob:
         @param hardRestart: treat the job as restarted
         @param autoParallel: Parallelization is handled by the base-class
         @param foamVersion: The foam-Version that is to be used
+        @param useFoamMPI: Use the OpenMPI supplied with OpenFOAM
         @param multiRegion: This job consists of multiple regions"""
 
         #        print os.environ
@@ -81,9 +88,12 @@ class ClusterJob:
 
         if os.environ.has_key("NSLOTS"):
             self.nproc=int(os.environ["NSLOTS"])
+            self.message("Running on",self.nproc,"CPUs")
             if self.nproc>1:
                 # self.hostfile=os.environ["PE_HOSTFILE"]
                 self.hostfile=path.join(os.environ["TMP"],"machines")
+                self.message("Using the machinefile",self.hostfile)
+                self.message("Contents of the machinefile:",open(self.hostfile).readlines())
                 
         self.ordinaryEnd=True
         self.listenToTimer=False
@@ -94,9 +104,11 @@ class ClusterJob:
         if self.arrayJob:
             self.taskID=int(os.environ["SGE_TASK_ID"])
 
+        if not useFoamMPI and not foamVersion in eval(config().get("ClusterJob","useFoamMPI",default='[]')):
         ## prepend special paths for the cluster
-        os.environ["PATH"]=config().get("ClusterJob","path")+":"+os.environ["PATH"]
-        os.environ["LD_LIBRARY_PATH"]=config().get("ClusterJob","ldpath")+":"+os.environ["LD_LIBRARY_PATH"]
+            self.message("Adding Cluster-specific paths")
+            os.environ["PATH"]=config().get("ClusterJob","path")+":"+os.environ["PATH"]
+            os.environ["LD_LIBRARY_PATH"]=config().get("ClusterJob","ldpath")+":"+os.environ["LD_LIBRARY_PATH"]
         
         self.isDecomposed=False
 
@@ -105,7 +117,8 @@ class ClusterJob:
         for t in txt:
             print t,
         print " ==="
-
+        sys.stdout.flush()
+        
     def setState(self,txt):
         self.message("Setting Job state to",txt)
         fName=path.join(self.casedir(),"ClusterJobState")
@@ -210,7 +223,13 @@ class ClusterJob:
         """Returns just the name of the case"""
         return path.basename(self.casedir())
     
-    def foamRun(self,application,args=[],foamArgs=[],steady=False,multiRegion=None):
+    def foamRun(self,application,
+                args=[],
+                foamArgs=[],
+                steady=False,
+                multiRegion=None,
+                progress=False,
+                noLog=False):
         """Runs a foam utility on the case.
         If it is a parallel job and the grid has
         already been decomposed (and not yet reconstructed) it is run in
@@ -220,13 +239,19 @@ class ClusterJob:
         Foam-Application
         @param args: A list with additional arguments for the Runner-object
         @param steady: Use the steady-runner
-        @param multiRegion: Run this on multiple regions (if None: I don't have an opinion on this)"""
+        @param multiRegion: Run this on multiple regions (if None: I don't have an opinion on this)
+        @param progress: Only output the time and nothing else
+        @param noLog: Do not generate a logfile"""
 
         arglist=args[:]
         if self.isDecomposed and self.nproc>1:
             arglist+=["--procnr=%d" % self.nproc,
                       "--machinefile=%s" % self.hostfile]
-
+        if progress:
+            arglist+=["--progress"]
+        if noLog:
+            arglist+=["--no-log"]
+            
         if self.multiRegion:
             if multiRegion==None or multiRegion==True:
                 arglist+=["--all-regions"]
@@ -354,21 +379,47 @@ class SolverJob(ClusterJob):
     """A Cluster-Job that executes a solver. It implements the run-function.
     If a template-case is specified, the case is copied"""
 
-    def __init__(self,basename,solver,template=None,cloneParameters=[],arrayJob=False,hardRestart=False,autoParallel=True,foamVersion=None,steady=False,multiRegion=False):
+    def __init__(self,basename,solver,
+                 template=None,
+                 cloneParameters=[],
+                 arrayJob=False,
+                 hardRestart=False,
+                 autoParallel=True,
+                 foamVersion=None,
+                 useFoamMPI=False,
+                 steady=False,
+                 multiRegion=False,
+                 progress=False,
+                 solverProgress=False,
+                 solverNoLog=False):
         """@param template: Name of the template-case. It is assumed that
         it resides in the same directory as the actual case
         @param cloneParameters: a list with additional parameters for the
-        CloneCase-object that copies the template"""
+        CloneCase-object that copies the template
+        @param solverProgress: Only writes the current time of the solver"""
 
-        ClusterJob.__init__(self,basename,arrayJob=arrayJob,hardRestart=hardRestart,autoParallel=autoParallel,foamVersion=foamVersion,multiRegion=multiRegion)
+        ClusterJob.__init__(self,basename,
+                            arrayJob=arrayJob,
+                            hardRestart=hardRestart,
+                            autoParallel=autoParallel,
+                            foamVersion=foamVersion,
+                            useFoamMPI=useFoamMPI,
+                            multiRegion=multiRegion)
         self.solver=solver
         self.steady=steady
         if template!=None and not self.restarted:
             template=path.join(path.dirname(self.casedir()),template)
             if path.abspath(basename)==path.abspath(template):
                 error("The basename",basename,"and the template",template,"are the same directory")
-            clone=CloneCase(args=cloneParameters+[template,self.casedir()])
+            clone=CloneCase(
+                args=cloneParameters+[template,self.casedir(),"--follow-symlinks"])
+        self.solverProgress=solverProgress
+        self.solverNoLog=solverNoLog
 
     def run(self,parameters):
-        self.foamRun(self.solver,steady=self.steady,multiRegion=False)
+        self.foamRun(self.solver,
+                     steady=self.steady,
+                     multiRegion=False,
+                     progress=self.solverProgress,
+                     noLog=self.solverNoLog)
         

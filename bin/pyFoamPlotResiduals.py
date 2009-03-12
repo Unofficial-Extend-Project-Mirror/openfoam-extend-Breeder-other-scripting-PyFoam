@@ -11,7 +11,7 @@ from PyFoam.Basics.FoamOptionParser import FoamOptionParser
 parse=FoamOptionParser(description=description,usage="%prog [options] <datadir>",interspersed=True)
 
 try:
-    import Gnuplot
+    import PyFoam.ThirdParty.Gnuplot as Gnuplot
 except ImportError,e:
     parse.error("Gnuplot module missing. Can't plot")
     

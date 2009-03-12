@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: MeshUtilityRunner.py 9161 2008-08-04 08:01:05Z bgschaid $ 
+#  ICE Revision: $Id: MeshUtilityRunner.py 9973 2009-02-05 12:47:31Z bgschaid $ 
 """
 Application class that implements pyFoamMeshUtilityRunner
 """
@@ -9,9 +9,12 @@ from PyFoamApplication import PyFoamApplication
 
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+
 from CommonLibFunctionTrigger import CommonLibFunctionTrigger
+from CommonServer import CommonServer
 
 class MeshUtilityRunner(PyFoamApplication,
+                        CommonServer,
                         CommonLibFunctionTrigger):
     def __init__(self,args=None):
         description="""
@@ -37,6 +40,7 @@ should therefor be used with care
         
     def addOptions(self):
         CommonLibFunctionTrigger.addOptions(self)
+        CommonServer.addOptions(self,False)
         
     def run(self):
         cName=self.parser.casePath()
@@ -50,7 +54,7 @@ should therefor be used with care
         sol.clearResults()
             
         run=BasicRunner(argv=self.parser.getArgs(),
-                        server=False,
+                        server=self.opts.server,
                         logname="PyFoamMeshUtility")
         
         self.addLibFunctionTrigger(run,sol)        

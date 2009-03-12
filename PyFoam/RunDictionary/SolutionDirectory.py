@@ -1,8 +1,10 @@
-#  ICE Revision: $Id: SolutionDirectory.py 9441 2008-09-22 20:51:21Z bgschaid $ 
+#  ICE Revision: $Id: SolutionDirectory.py 10067 2009-03-02 09:39:42Z bgschaid $ 
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
 from PyFoam.Basics.BasicFile import BasicFile
+from PyFoam.Error import warning
+
 from TimeDirectory import TimeDirectory
 
 from os import listdir,path,mkdir,symlink,stat
@@ -93,14 +95,16 @@ class SolutionDirectory(Utilities):
         for key in self.times:
             yield TimeDirectory(self.name,key,region=self.region)
             
-    def timeName(self,item):
+    def timeName(self,item,minTime=False):
         """Finds the name of a directory that corresponds with the given parameter
-        @param item: the time that should be found"""
+        @param item: the time that should be found
+        @param minTime: search for the time with the minimal difference.
+        Otherwise an exact match will be searched"""
 
         if type(item)==int:
             return self.times[item]
         else:
-            ind=self.timeIndex(item)
+            ind=self.timeIndex(item,minTime)
             if ind==None:
                 return None
             else:
@@ -135,44 +139,56 @@ class SolutionDirectory(Utilities):
     def isValid(self):
         """Checks whether this is a valid case directory by looking for
         the system- and constant-directories and the controlDict-file"""
+
+        return len(self.missingFiles())==0
+    
+    def missingFiles(self):
+        """Return a list of all the missing files and directories that
+        are needed for a valid case"""
+        missing=[]
         if not path.exists(self.systemDir()):
-            return False
+            missing.append(self.systemDir())
         elif not path.isdir(self.systemDir()):
-            return False
-        elif not path.exists(self.constantDir()):
-            return False
+            missing.append(self.systemDir())
+        if not path.exists(self.constantDir()):
+            missing.append(self.constantDir())
         elif not path.isdir(self.constantDir()):
-            return False
-        elif not path.exists(self.controlDict()):
-            return False
-        else:
-            return True
-        
+            missing.append(self.constantDir())
+        if not path.exists(self.controlDict()):
+            missing.append(self.controlDict())
+
+        return missing
+    
     def addToClone(self,name):
         """add directory to the list that is needed to clone this case
         @param name: name of the subdirectory (the case directory is prepended)"""
         self.essential.append(path.join(self.name,name))
 
-    def cloneCase(self,name,svnRemove=True):
+    def cloneCase(self,name,svnRemove=True,followSymlinks=False):
         """create a clone of this case directory. Remove the target directory, if it already exists
 
         @param name: Name of the new case directory
         @param svnRemove: Look for .svn-directories and remove them
+        @param followSymlinks: Follow symbolic links instead of just copying them
         @rtype: L{SolutionDirectory} or correct subclass
         @return: The target directory"""
 
+        cpOptions="-R"
+        if followSymlinks:
+            cpOptions+=" -L"
+            
         if path.exists(name):
             self.execute("rm -r "+name)
         mkdir(name)
         for d in self.essential:
-            self.execute("cp -r "+d+" "+name)
+            self.execute("cp "+cpOptions+" "+d+" "+name)
 
         if svnRemove:
             self.execute("find "+name+" -name .svn -exec rm -rf {} \\; -prune")
 
         return self.__class__(name,archive=self.archive)
 
-    def packCase(self,tarname,last=False,exclude=[],additional=[]):
+    def packCase(self,tarname,last=False,exclude=[],additional=[],base=None):
         """Packs all the important files into a compressed tarfile.
         Uses the essential-list and excludes the .svn-directories.
         Also excludes files ending with ~
@@ -180,7 +196,8 @@ class SolutionDirectory(Utilities):
         @param last: add the last directory to the list of directories to be added
         @param exclude: List with additional glob filename-patterns to be excluded
         @param additional: List with additional glob filename-patterns
-        that are to be added"""
+        that are to be added
+        @param base: Different name that is to be used as the baseName for the case inside the tar"""
 
         ex=["*~",".svn"]+exclude
         members=self.essential[:]
@@ -195,23 +212,42 @@ class SolutionDirectory(Utilities):
         tar=tarfile.open(tarname,"w:gz")
 
         for m in members:
-            self.addToTar(tar,m,exclude=ex)
+            self.addToTar(tar,m,exclude=ex,base=base)
             
         tar.close()
 
-    def addToTar(self,tar,name,exclude=[]):
+    def addToTar(self,tar,name,exclude=[],base=None):
         """The workhorse for the packCase-method"""
 
+        if base==None:
+            base=path.basename(self.name)
+            
         for e in exclude:
             if fnmatch.fnmatch(path.basename(name),e):
                 return
             
         if path.isdir(name):
             for m in listdir(name):
-                self.addToTar(tar,path.join(name,m),exclude=exclude)
+                self.addToTar(tar,path.join(name,m),exclude=exclude,base=base)
         else:
-            tar.add(name)
-            
+            arcname=path.join(base,name[len(self.name)+1:])
+            tar.add(name,arcname=arcname)
+
+    def getParallelTimes(self):
+        """Get a list of the times in the processor0-directory"""
+        result=[]
+
+        proc0=path.join(self.name,"processor0")
+        if path.exists(proc0):
+            for f in listdir(proc0):
+                try:
+                    val=float(f)
+                    result.append(f)
+                except ValueError:
+                    pass
+        result.sort(self.sorttimes)    
+        return result
+    
     def reread(self,force=False):
         """Rescan the directory for the time directories"""
 
@@ -303,7 +339,7 @@ class SolutionDirectory(Utilities):
         for f in self.backups:
             self.execute("cp -r "+f+" "+fname)
             
-    def clearResults(self,after=None,removeProcs=False,keepLast=False,vtk=True):
+    def clearResults(self,after=None,removeProcs=False,keepLast=False,vtk=True,keepRegular=False):
         """remove all time-directories after a certain time. If not time ist
         set the initial time is used
         @param after: time after which directories ar to be removed
@@ -311,20 +347,26 @@ class SolutionDirectory(Utilities):
         Otherwise the timesteps after last are removed from the
         processor-directories
         @param keepLast: Keep the data from the last timestep
-        @param vtk: Remove the VTK-directory if it exists"""
+        @param vtk: Remove the VTK-directory if it exists
+        @param keepRegular: keep all the times (only remove processor and other stuff)"""
 
         self.reread()
 
         last=self.getLast()
         
         if after==None:
-            time=float(self.first)
+            try:
+                time=float(self.first)
+            except TypeError:
+                warning("The first timestep in",self.name," is ",self.first,"not a number. Doing nothing")
+                return
         else:
             time=float(after)
-            
-        for f in self.times:
-            if float(f)>time and not (keepLast and f==last):
-                self.execute("rm -r "+path.join(self.name,f))
+
+        if not keepRegular:
+            for f in self.times:
+                if float(f)>time and not (keepLast and f==last):
+                    self.execute("rm -r "+path.join(self.name,f))
 
         if path.exists(path.join(self.name,"VTK")) and vtk:
             self.execute("rm -r "+path.join(self.name,"VTK"))
@@ -358,13 +400,13 @@ class SolutionDirectory(Utilities):
             self.clearPattern("PyFoam.?*")
             self.clearPattern("*?.analyzed")
             
-    def clear(self,after=None,processor=True,pyfoam=True,keepLast=False):
+    def clear(self,after=None,processor=True,pyfoam=True,keepLast=False,vtk=True,keepRegular=False):
         """One-stop-shop to remove data
         @param after: time after which directories ar to be removed
         @param processor: remove the processorXX directories
         @param pyfoam: rremove all directories typically created by PyFoam
         @param keepLast: Keep the last time-step"""
-        self.clearResults(after=after,removeProcs=processor,keepLast=keepLast)
+        self.clearResults(after=after,removeProcs=processor,keepLast=keepLast,vtk=vtk,keepRegular=keepRegular)
         self.clearOther(pyfoam=pyfoam)
         
     def initialDir(self):
@@ -379,8 +421,7 @@ class SolutionDirectory(Utilities):
             return None
         
     def latestDir(self):
-        """@param region: Specify the region for cases with more than 1 mesh
-        @return: the name of the first last-directory (==simulation
+        """@return: the name of the first last-directory (==simulation
         results)
         @rtype: str"""
         self.reread()
@@ -419,8 +460,7 @@ class SolutionDirectory(Utilities):
             return path.join(self.name,"system")
 
     def controlDict(self):
-        """@param region: Specify the region for cases with more than 1 mesh
-        @return: the name of the C{controlDict}
+        """@return: the name of the C{controlDict}
         @rtype: str"""
         return path.join(self.systemDir(),"controlDict")
 

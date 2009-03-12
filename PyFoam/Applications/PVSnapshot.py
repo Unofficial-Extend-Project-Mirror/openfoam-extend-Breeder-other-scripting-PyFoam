@@ -1,0 +1,217 @@
+#  ICE Revision: $Id: PVSnapshot.py 10079 2009-03-03 09:52:47Z bgschaid $ 
+"""
+Class that implements pyFoamPVSnapshot
+"""
+
+from optparse import OptionGroup
+
+from PyFoamApplication import PyFoamApplication
+
+from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+from PyFoam.Paraview.ServermanagerWrapper import ServermanagerWrapper as SM
+from PyFoam.Paraview.StateFile import StateFile
+
+from os import path,unlink
+import sys,string
+
+class PVSnapshot(PyFoamApplication):
+    def __init__(self,args=None):
+        description="""
+Generates snapshots of an OpenFOAM-case and a predefined paraview-State-File
+using the PV3FoamReader that comes with OpenFOAM.
+
+The state-file can be generated using a different case (the script adjusts
+it before using) but the original case has to have a similar structure to the
+current one. Also exactly one PV3Reader has to be used in the state-file (this
+requirement is fullfilled if the StateFile was generated using paraFoam)
+
+In TextSources the string "%(casename)s" gets replaced by the casename. Additional
+replacements can be specified
+"""
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <case>",
+                                   interspersed=True,
+                                   nr=1)
+
+    typeTable={"png":"vtkPNGWriter",
+               "jpg":"vtkJPEGWriter"}
+        
+    def addOptions(self):
+        time=OptionGroup(self.parser,
+                         "Time Specification",
+                         "Which times should be plotted")
+        time.add_option("--time",
+                        type="float",
+                        dest="time",
+                        default=[],
+                        action="append",
+                        help="Timestep that should be vizualized. Can be used more than once")
+        time.add_option("--latest-time",
+                          dest="latest",
+                          action="store_true",
+                          default=False,
+                          help="Make a picture of the latest time")
+        time.add_option("--all-times",
+                          dest="all",
+                          action="store_true",
+                          default=False,
+                          help="Make a picture of all times")
+        time.add_option("--unique-times",
+                          dest="unique",
+                          action="store_true",
+                          default=False,
+                          help="Use each time-directory only once")
+        
+        self.parser.add_option_group(time)
+
+        paraview=OptionGroup(self.parser,
+                           "Paraview specifications",
+                           "Options concerning paraview")
+        paraview.add_option("--state-file",
+                            dest="state",
+                            default=None,
+                            help="The pvsm-file that should be used. If none is specified the file 'default.pvsm' in the case-directory is used")
+        paraview.add_option("--maginfication",
+                            dest="magnification",
+                            default=1,
+                            type="int",
+                            help="Magnification factor of the picture (integer). Default: %default")
+        paraview.add_option("--type",
+                            dest="type",
+                            type="choice",
+                            choices=self.typeTable.keys(),
+                            default="png",
+                            help="The type of the bitmap-file. Possibilities are "+string.join(self.typeTable.keys(),", ")+". Default: %default")
+        paraview.add_option("--no-progress",
+                            dest="progress",
+                            action="store_false",
+                            default=True,
+                            help="Paraview will not print the progress of the filters")
+        self.parser.add_option_group(paraview)
+
+        filename=OptionGroup(self.parser,
+                             "Filename specifications",
+                             "The names of the resulting files")
+        filename.add_option("--file-prefix",
+                            dest="prefix",
+                            default="Snapshot",
+                            help="Start of the filename for the bitmap-files")
+        filename.add_option("--no-casename",
+                            dest="casename",
+                            action="store_false",
+                            default=True,
+                            help="Do not add the casename to the filename")
+        filename.add_option("--no-timename",
+                          dest="timename",
+                          action="store_false",
+                          default=True,
+                          help="Do not append the string 't=<time>' to the filename")
+        self.parser.add_option_group(filename)
+
+        replace=OptionGroup(self.parser,
+                            "Replacements etc",
+                            "Manipuations of the statefile")
+        replace.add_option("--replacements",
+                            dest="replacements",
+                            default="{}",
+                            help="Dictionary with replacement strings. Default: %default")
+        replace.add_option("--casename-key",
+                            dest="casenameKey",
+                            default="casename",
+                            help="Key with which the caename should be replaced. Default: %default")
+        
+    def run(self):
+        case=path.abspath(self.parser.getArgs()[0])
+        short=path.basename(case)
+        
+        if self.opts.state==None:
+            self.opts.state=path.join(case,"default.pvsm")
+
+        if not path.exists(self.opts.state):
+            self.error("The state file",self.opts.state,"does not exist")
+
+        timeString=""
+        
+        if self.opts.casename:
+            timeString+="_"+short
+        timeString+="_%(nr)05d"
+        if self.opts.timename:
+            timeString+="_t=%(t)s"
+        timeString+="."+self.opts.type
+
+        sol=SolutionDirectory(case,paraviewLink=False,archive=None)
+        if self.opts.latest:
+            self.opts.time.append(float(sol.getLast()))
+        if self.opts.all:
+            for t in sol.getTimes():
+                self.opts.time.append(float(t))
+                
+        self.opts.time.sort()
+        
+        times=[]
+
+        for s in self.opts.time:
+            times.append(sol.timeName(s,minTime=True))
+
+        if self.opts.unique:
+            tmp=[]
+            last=None
+            cnt=0
+            for s in times:
+                if last!=s:
+                    tmp.append(s)
+                else:
+                    cnt+=1
+                last=s
+            if cnt>0:
+                self.warning("Removed",cnt,"duplicate times")
+            times=tmp
+    
+        if len(times)==0:
+            self.warning("No valid times specified")
+            return
+
+        dataFile=path.join(case,short+".OpenFOAM")
+        createdDataFile=False
+        if not path.exists(dataFile):
+            createdDataFile=True
+            f=open(dataFile,"w")
+            f.close()
+            
+        sf=StateFile(self.opts.state)
+        sf.setCase(dataFile)
+        
+        values=eval(self.opts.replacements)
+        values[self.opts.casenameKey]=short
+        sf.rewriteTexts(values)
+        newState=sf.writeTemp()
+        
+        sm=SM()
+        if not self.opts.progress:
+            sm.ToggleProgressPrinting()
+
+        #        print dir(sm.module())
+        sm.LoadState(newState)
+        views=sm.GetRenderViews()
+
+        if len(views)>1:
+            self.warning("More than 1 view in state-file. Generating multiple series")
+            timeString="_View%(view)02d"+timeString
+        timeString=self.opts.prefix+timeString
+        
+        for view in views:
+            view.UseOffscreenRenderingForScreenshots=True
+        
+        for i,t in enumerate(times):
+            print "Snapshot ",i," for t=",t
+            for j,view in enumerate(views):
+                view.ViewTime=float(t)
+                fn = timeString % {'nr':i,'t':t,'view':j}
+                view.WriteImage(fn,self.typeTable[self.opts.type],self.opts.magnification)
+
+        if createdDataFile:
+            self.warning("Removing pseudo-data-file",dataFile)
+            unlink(dataFile)
+            

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Configuration.py 9535 2008-10-20 08:12:41Z bgschaid $ 
+#  ICE Revision: $Id: Configuration.py 10020 2009-02-17 13:04:30Z bgschaid $ 
 """Reads configuration-files that define defaults for various PyFoam-Settings
 
 Also hardcodes defaults for the settings"""
@@ -16,6 +16,7 @@ _defaults={
     "searchServers"    : "192.168.1.0/24,192.168.0.0/24",
     "portWait"         : "1.",
     "socketTimeout"    : "1.",
+    "socketRetries"    : "10",
     },
     "Metaserver": {
     "port"             : "17999",
@@ -37,19 +38,20 @@ _defaults={
     "MPI": {
 #    "run_OPENMPI":"mpirun",
 #    "run_LAM":"mpirun",
-    "options_OPENMPI_pre":'["--mca","pls_rsh_agent","rsh"]',
-    "options_OPENMPI_post":'["-x","PATH","-x","LD_LIBRARY_PATH","-x","WM_PROJECT_DIR","-x","FOAM_MPI_LIBBIN","-x","MPI_BUFFER_SIZE"]'
+    "options_OPENMPI_pre": '["--mca","pls","rsh","--mca","pls_rsh_agent","rsh"]',
+    "options_OPENMPI_post":'["-x","PATH","-x","LD_LIBRARY_PATH","-x","WM_PROJECT_DIR","-x","PYTHON_PATH","-x","FOAM_MPI_LIBBIN","-x","MPI_BUFFER_SIZE","-x","MPI_ARCH_PATH"]'
     },
     "Paths": {
     "python" : "/usr/bin/python",
     "bash" : "/bin/bash",
     },
     "ClusterJob": {
+    "useFoamMPI":'["1.5"]',
     "path":"/opt/openmpi/bin",
     "ldpath":"/opt/openmpi/lib",
     },
     "Debug": {
-#     "ParallelExecution":"True",
+#    "ParallelExecution":"True",
     },
     "Execution":{
     "controlDictRestoreWait":"60.",
@@ -57,6 +59,18 @@ _defaults={
     "CaseBuilder":{
     "descriptionPath": eval('["'+path.curdir+'","'+path.join(userDirectory(),"caseBuilderDescriptions")+'","'+path.join(globalDirectory(),"caseBuilderDescriptions")+'"]'),
     },
+    "Formats":{
+    "error"       : "bold,red,standout",
+    "warning"     : "under",
+    "source"      : "red,bold",
+    "destination" : "blue,bold",
+    "difference"  : "green,back_black,bold",
+    "question"    : "green,standout",
+    "input"       : "cyan,under",
+    },
+    "CommandOptionDefaults":{
+    "sortListCases":"mtime",
+    }
     }
 
 class Configuration(ConfigParser):

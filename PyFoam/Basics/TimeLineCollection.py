@@ -1,7 +1,8 @@
-#  ICE Revision: $Id: TimeLineCollection.py 8847 2008-05-18 19:30:54Z bgschaid $ 
+#  ICE Revision: $Id: TimeLineCollection.py 10098 2009-03-09 09:32:33Z bgschaid $ 
 """Collection of array of timelines"""
 
 from PyFoam.Error import error
+from math import ceil
 
 def mean(a,b):
     """Mean value of a and b"""
@@ -16,14 +17,21 @@ def signedMax(a,b):
 
 class TimeLineCollection(object):
 
-    possibleAccumulations=["first", "last", "min", "max", "average", "sum"]
+    possibleAccumulations=["first", "last", "min", "max", "average", "sum","count"]
     
-    def __init__(self,deflt=0.,extendCopy=False,splitThres=None,splitFun=None,accumulation="first"):
+    def __init__(self,
+                 deflt=0.,
+                 extendCopy=False,
+                 splitThres=None,
+                 splitFun=None,
+                 advancedSplit=False,
+                 accumulation="first"):
         """@param deflt: default value for timelines if none has been defined before
         @param extendCopy: Extends the timeline by cpying the last element
         @param splitThres: Threshold after which the number of points is halved
         @param splitFun: Function that is used for halving. If none is specified the mean function is used
-        @param accumulation: if more than one value is given at any time-step, how to accumulate them (possible values: "first", "last", "min", "max", "average", "sum")
+        @param advancedSplit: Use another split algorithm than one that condenses two values into one
+        @param accumulation: if more than one value is given at any time-step, how to accumulate them (possible values: "first", "last", "min", "max", "average", "sum","count")
         """
         
         self.cTime=None
@@ -39,8 +47,10 @@ class TimeLineCollection(object):
         self.accumulation=accumulation
         self.accumulations={}
         self.occured={}
-        
-        self.setSplitting(splitThres=splitThres,splitFun=splitFun)
+
+        self.setSplitting(splitThres=splitThres,
+                          splitFun=splitFun,
+                          advancedSplit=advancedSplit)
 
     def setAccumulator(self,name,accu):
         """Sets a special accumulator fopr a timeline
@@ -50,8 +60,11 @@ class TimeLineCollection(object):
             error("Value",accu,"not in list of possible values:",TimeLineCollection.possibleAccumulations,"When setting for",name)
         self.accumulations[name]=accu
         
-    def setSplitting(self,splitThres=None,splitFun=None):
+    def setSplitting(self,splitThres=None,splitFun=None,advancedSplit=False):
         """Sets the parameters for splitting"""
+        self.advancedSplit = advancedSplit
+        if self.advancedSplit:
+            self.splitLevels = []
         if splitThres:
             self.thres=splitThres
             if (self.thres % 2)==1:
@@ -90,10 +103,68 @@ class TimeLineCollection(object):
                     val=self.defaultValue
                 v.append(val)
             if self.thres:
-                if len(self.times)==self.thres:
-                    self.times=self.split(self.times,min)
-                    for k in self.values.keys():
-                        self.values[k]=self.split(self.values[k],self.fun)
+                if len(self.times)>=self.thres:
+                    if self.advancedSplit:
+                        # Clumsy algorithm where the maximum and the minimum of a 
+                        # data-window are preserved in that order
+                        if len(self.splitLevels)<len(self.times):
+                            self.splitLevels+=[0]*(len(self.times)-len(self.splitLevels))
+                        splitTill=int(len(self.times)*0.75)
+                        if self.splitLevels[splitTill]!=0:
+                            # Shouldn't happen. But just in case
+                            splitTill=self.splitLevels.index(0)
+                        splitFrom=0
+                        maxLevel=self.splitLevels[0]
+                        for l in range(maxLevel):
+                            li=self.splitLevels.index(l)
+                            if li>=0 and li<splitTill/2:
+                                splitFrom=li
+                                break
+                        window=4
+                        if ((splitTill-splitFrom)/window)!=0:
+                            splitTill=splitFrom+window*int(ceil((splitTill-splitFrom)/float(window)))
+
+                        # prepare data that will not be split
+                        times=self.times[:splitFrom]
+                        levels=self.splitLevels[:splitFrom]
+                        values={}
+                        for k in self.values:
+                            values[k]=self.values[k][:splitFrom]
+                            
+                        for start in range(splitFrom,splitTill,window):
+                            end=start+window-1
+                            sTime=self.times[start]
+                            eTime=self.times[end]
+                            times+=[sTime,(eTime-sTime)*(2./3)+sTime]
+                            levels+=[self.splitLevels[start]+1,self.splitLevels[end]+1]
+                            for k in self.values:
+                                minV=self.values[k][start]
+                                minI=0
+                                maxV=self.values[k][start]
+                                maxI=0
+                                for j in range(1,window):
+                                    val=self.values[k][start+j]
+                                    if val>maxV:
+                                        maxV=val
+                                        maxI=j
+                                    if val<minV:
+                                        minV=val
+                                        minI=j
+                                if minI<maxI:
+                                    values[k]+=[minV,maxV]
+                                else:
+                                    values[k]+=[maxV,minV]
+                        firstUnsplit=int(splitTill/window)*window
+                        self.times=times+self.times[firstUnsplit:]
+                        self.splitLevels=levels+self.splitLevels[firstUnsplit:]
+                        # print self.splitLevels
+                        for k in self.values:
+                            self.values[k]=values[k]+self.values[k][firstUnsplit:]
+                            assert len(self.times)==len(self.values[k])
+                    else:
+                        self.times=self.split(self.times,min)
+                        for k in self.values.keys():
+                            self.values[k]=self.split(self.values[k],self.fun)
             self.occured={}
 
     def split(self,array,func):
@@ -133,14 +204,17 @@ class TimeLineCollection(object):
         data=self.getValues(name)
         val=float(value)
         if len(data)>0:
+            accu=self.accumulation
             if not self.occured.has_key(name):
-                newValue=val
+                if accu=="count":
+                    newValue=1L
+                else:
+                    newValue=val
                 self.occured[name]=1
             else:
                 oldValue=data[-1]
                 n=self.occured[name]
                 self.occured[name]+=1
-                accu=self.accumulation
                 if name in self.accumulations:
                     accu=self.accumulations[name]
                 if accu=="first":
@@ -155,6 +229,8 @@ class TimeLineCollection(object):
                     newValue=val+oldValue
                 elif accu=="average":
                     newValue=(n*oldValue+val)/(n+1)
+                elif accu=="count":
+                    newValue=n+1
                 else:
                     error("Unimplemented accumulator",accu,"for",name)
                     

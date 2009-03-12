@@ -15,6 +15,15 @@ from PyFoam.Error import error,warning
 
 from CommonParserOptions import CommonParserOptions
 
+from PyFoam.Basics.TerminalFormatter import TerminalFormatter
+
+f=TerminalFormatter()
+f.getConfigFormat("source",shortName="src")
+f.getConfigFormat("destination",shortName="dst")
+f.getConfigFormat("difference",shortName="diff")
+f.getConfigFormat("question",shortName="ask")
+f.getConfigFormat("input")
+
 class UpdateDictionary(PyFoamApplication,
                        CommonParserOptions):
     def __init__(self,args=None):
@@ -114,13 +123,14 @@ case
         if not self.opts.interactive:
             return False
         else:
-            print "QUESTION:",
+            print f.ask,"QUESTION:",
             for q in question:
                 print q,
 
             answer=None
             while answer!="y" and answer!="n":
-                answer=raw_input("   [Y]es or [N]no ? ").strip()[0].lower()
+                answer=raw_input(f.reset+f.ask+"   [Y]es or [N]no ? "+f.input).strip()[0].lower()
+            print f.reset,
             return answer=="y"
         
     def workList(self,source,dest,depth):

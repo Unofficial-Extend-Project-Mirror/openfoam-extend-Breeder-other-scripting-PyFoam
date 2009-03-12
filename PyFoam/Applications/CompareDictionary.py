@@ -16,6 +16,13 @@ from PyFoam.Error import error,warning
 
 from CommonParserOptions import CommonParserOptions
 
+from PyFoam.Basics.TerminalFormatter import TerminalFormatter
+
+f=TerminalFormatter()
+f.getConfigFormat("source",shortName="src")
+f.getConfigFormat("destination",shortName="dst")
+f.getConfigFormat("difference",shortName="diff")
+
 class CompareDictionary(PyFoamApplication,
                         CommonParserOptions):
     def __init__(self,args=None):
@@ -118,7 +125,7 @@ equivalent place in the destination case
 
     def compare(self,src,dst,depth,name):
         if type(src)!=type(dst):
-            print ">><<",name,": Types differ\n>>Source:\n",makeString(src),"\n<<Destination:\n",makeString(dst)
+            print f.diff+">><<",name,": Types differ"+f.reset+"\n+"+f.src+">>Source:"+f.reset+"\n",makeString(src),"\n"+f.dst+"<<Destination:"+f.reset+"\n",makeString(dst)+f.reset
             self.pling=True
         elif type(src) in [tuple,list,TupleProxy]:
             self.compareIterable(src,dst,depth,name)
@@ -141,12 +148,12 @@ equivalent place in the destination case
     def compareField(self,src,dst,depth,name):
         if src!=dst:
             self.pling=True
-            print ">><< Field",name,": Differs\n>>Source:\n",
+            print f.diff+">><< Field",name,": Differs"+f.reset+"\n"+f.src+">>Source:"+f.reset+"\n",
             if src.uniform:
                 print src
             else:
                 print "nonuniform - field not printed"
-            print "<<Destination:\n",
+            print f.dst+"<<Destination:"+f.reset+"\n",
             if dst.uniform:
                 print dst
             else:
@@ -154,7 +161,7 @@ equivalent place in the destination case
             
     def comparePrimitive(self,src,dst,depth,name):
         if src!=dst:
-            print ">><<",name,": Differs\n>>Source:\n",src,"\n<<Destination:\n",dst
+            print f.diff+">><<",name,": Differs"+f.reset+"\n"+f.src+">>Source:"+f.reset+"\n",src,"\n"+f.dst+"<<Destination:"+f.reset+"\n",dst
             self.pling=True
             
     def compareIterable(self,src,dst,depth,name):
@@ -166,16 +173,16 @@ equivalent place in the destination case
             self.compare(src[i],dst[i],depth+1,self.iterString(name,i))
             
         if nr<len(src):
-            print ">>>>",self.iterString(name,nr),"to",self.iterString(name,len(src)-1),"missing from destination\n",makeString(src[nr:])
+            print f.src+">>>>",self.iterString(name,nr),"to",self.iterString(name,len(src)-1),"missing from destination\n"+f.reset,makeString(src[nr:])
             self.pling=True
         elif nr<len(dst):
-            print "<<<<",self.iterString(name,nr),"to",self.iterString(name,len(dst)-1),"missing from source\n",makeString(dst[nr:])
+            print f.dst+"<<<<",self.iterString(name,nr),"to",self.iterString(name,len(dst)-1),"missing from source\n"+f.reset,makeString(dst[nr:])
             self.pling=True
             
     def compareDict(self,src,dst,depth,name):
         for n in src:
             if not n in dst:
-                print ">>>>",self.dictString(name,n),": Missing from destination\n",makeString(src[n])
+                print f.src+">>>>",self.dictString(name,n),": Missing from destination\n"+f.reset,makeString(src[n])
                 self.pling=True
             else:
                 if self.opts.debug:
@@ -184,6 +191,6 @@ equivalent place in the destination case
                 
         for n in dst:
             if not n in src:
-                print "<<<<",self.dictString(name,n),": Missing from source\n",makeString(dst[n])
+                print f.dst+"<<<<",self.dictString(name,n),": Missing from source\n"+f.reset,makeString(dst[n])
                 self.pling=True
                 

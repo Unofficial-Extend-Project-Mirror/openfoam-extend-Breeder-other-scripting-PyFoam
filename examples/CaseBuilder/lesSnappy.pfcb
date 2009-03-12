@@ -3,6 +3,7 @@
   SYSTEM  "casebuilder.dtd" 
 >
 <casebuilder name="lesSnappy" 
+  version="1.5"
   description="oodles-case with a snappy-mesh (assumes the motorbike-case)" 
   template="$FOAM_TUTORIALS/oodles/pitzDaily">
   <helptext>
@@ -14,42 +15,32 @@ Generates a case that is ready to be run with oodles.
     <arg name="original" description="The original snappy-case"
       default="motorBike">
       <verify>
+	<script plugin="python">
 from os import path
 if not path.isdir(arg):
     msg="Snappy case "+arg+" does not exist"
-</verify>
+</script>
+      </verify>
     </arg>
     <arg name="vInlet" description="Velocity at the inlet (absolut)"
       default="10">
       <verify>
-try:
-    tmp=float(arg)
-except ValueError:
-    msg="Not a float-number"
-</verify>
-</arg>
+	<validator type="float" min="0"/>
+      </verify>
+    </arg>
     <arg name="deltaT" description="Timestep to use" default="1e-6">
       <verify>
-try:
-    if float(arg)&lt; 0:
-         msg="Must be positive"
-except ValueError:
-    msg="Not a float-number"
-</verify>
-</arg>
+	<validator type="float" min="0"/>
+      </verify>
+    </arg>
     <arg name="visc" description="Viscosity" default="1e-5">
       <verify>
-try:
-    if float(arg)&lt; 0:
-         msg="Must be positive"
-except ValueError:
-    msg="Not a float-number"
-</verify>
-</arg>
+	<validator type="float" min="0"/>
+      </verify>
+    </arg>
   </arguments>
-  <meshpreparation mode="copy">
+  <meshpreparation>
     <copy template="%(original)s" time="3"/>
-    <utility application="fluentMeshToFoam" arguments="%(mshfile)s -scale 0.001"/>
   </meshpreparation>
   <files>
     <boundaries>

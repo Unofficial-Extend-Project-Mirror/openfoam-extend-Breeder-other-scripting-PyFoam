@@ -5,43 +5,36 @@
 <casebuilder name="simpleFluent" 
   description="simpleFoam-case with a FLUENT-mesh" 
   template="$FOAM_TUTORIALS/simpleFoam/pitzDaily">
+  <helptext>Lange Hilfe</helptext>
   <arguments>
     <arg name="mshfile" description="The FLUENT-mesh file"
       default="test.msh">
       <verify>
-from os import path
-if not path.exists(arg):
-    msg="File "+arg+" does not exist"
-</verify>
- </arg>
+	<validator type="file"/>
+      </verify>
+    </arg>
     <arg name="vInlet" description="Velocity at the inlet" default="(1 0 0)"></arg>
-    <arg name="dVisc" description="The dynamic viscosity" default="1e-5">
-      <verify>
-try:
-    if float(arg)&lt; 0:
-         msg="Must be positive"
-except ValueError:
-    msg="Not a float-number"
-</verify>
-    </arg>
-    <arg name="density" description="The fluid density" default="1.2">
-      <verify>
-try:
-    if float(arg)&lt; 0:
-         msg="Must be positive"
-except ValueError:
-    msg="Not a float-number"
-</verify>
-    </arg>
+    <arg name="skalierung" description="Scaling of the dings" default="0.001"></arg>
+    <argumentgroup name="Fluid" description="Properties of the fluid">
+      <arg name="dVisc" description="The dynamic viscosity" default="1e-5">
+	<verify>
+	  <validator type="float" min="0"/>
+	</verify>
+      </arg>
+      <arg name="density" description="The fluid density" default="1.2">
+	<verify>
+	  <validator type="float" min="0"/>
+	</verify>
+      </arg>
+    </argumentgroup>
   </arguments>
   <variables>
     <var name="kVisc" description="The kinematic viscositiy">
 kVisc=float(dVisc)/float(density)
 </var>
   </variables>
-  <meshpreparation mode="utility">
-    <utility application="fluentMeshToFoam" arguments="%(mshfile)s -scale 0.001"/>
-    <copy template="test.template"/>
+  <meshpreparation> 
+    <utility command="fluentMeshToFoam" arguments="%(mshfile)s -scale %(skalierung)s"/>
   </meshpreparation>
   <files>
     <boundaries>

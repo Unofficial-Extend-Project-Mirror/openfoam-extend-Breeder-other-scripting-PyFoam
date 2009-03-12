@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: OutFileCollection.py 8292 2007-12-12 15:22:00Z bgschaid $ 
+#  ICE Revision: $Id: OutFileCollection.py 10069 2009-03-02 09:39:44Z bgschaid $ 
 """Collections of output files"""
 
 from os import path
@@ -15,17 +15,23 @@ class OutFileCollection(object):
     accessed a second time at the same simulation-time a file with the
     ending _2 is created (incrementing with each access)"""
     
-    def __init__(self,basename,titles=[]):
+    def __init__(self,
+                 basename,
+                 titles=[],
+                 singleFile=False):
         """
         @param basename: name of the base directory
         @param titles: names of the data columns
+        @param singleFile: don't split into multiple files if more than one
+        datum is insert per time-step
         """
         self.files={}
         self.lastTime=""
         self.called={}
         self.basename=basename
         self.setTitles(titles)
-
+        self.singleFile=singleFile
+        
 #    def __del__(self):
 #        print "\n  Deleting this OutputFile\n"
         
@@ -75,7 +81,7 @@ class OutFileCollection(object):
         fname=name
         self.incrementCalls(name)
         
-        if self.prevCalls(name)>1:
+        if self.prevCalls(name)>1 and not self.singleFile:
             fname+="_"+str(self.prevCalls(name))
 
         f=self.getFile(fname)
