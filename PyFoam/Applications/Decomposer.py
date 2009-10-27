@@ -75,6 +75,12 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                         default=None,
                         help="The weights of the processors. A python list. Used for metis")
         
+        spec.add_option("--globalFaceZones",
+                        dest="globalFaceZones",
+                        action="store",
+                        default=None,
+                        help="Global face zones. A python string. Used for the GGI interface. Ex: '(GGI_Z1 GGI_Z2)'")
+        
         spec.add_option("--dataFile",
                         dest="dataFile",
                         action="store",
@@ -131,6 +137,10 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
 
         coeff={}
         result[method+"Coeffs"]=coeff
+
+        if self.opts.globalFaceZones!=None:
+            fZones=eval(self.opts.globalFaceZones)
+            result["globalFaceZones"]=fZones
 
         if method=="metis":
             if self.opts.processorWeights!=None:
