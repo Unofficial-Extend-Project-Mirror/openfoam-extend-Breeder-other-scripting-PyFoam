@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotWatcher.py 10071 2009-03-02 09:39:46Z bgschaid $ 
+#  ICE Revision: $Id: PlotWatcher.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """
 Class that implements pyFoamPlotWatcher
 """
@@ -57,6 +57,12 @@ class PlotWatcher(PyFoamApplication,
                           default=False,
                           dest="progress",
                           help="Only prints the progress of the simulation, but swallows all the other output")
+        output.add_option("--replot-frequency",
+                          action="store",
+                          default=10,
+                          type="float",
+                          dest="replotFrequency",
+                          help="If the tail of the file is not yet reached, how often the data should be plotted: Default: %default")
 
         limit=OptionGroup(self.parser,
                           "Limits",
@@ -89,6 +95,7 @@ class PlotWatcher(PyFoamApplication,
                            tailLength=self.opts.tail,
                            silent=self.opts.silent,
                            hardcopy=self.opts.hardcopy,
+                           hardcopyPrefix=self.opts.hardcopyPrefix,
                            hardcopyFormat=self.opts.hardcopyformat,
                            plotLinear=self.opts.linear,
                            plotCont=self.opts.cont,
@@ -102,6 +109,9 @@ class PlotWatcher(PyFoamApplication,
                            raiseit=self.opts.raiseit,
                            progress=self.opts.progress,
                            start=self.opts.start,
-                           end=self.opts.end)
+                           end=self.opts.end,
+                           singleFile=self.opts.singleDataFilesOnly,
+                           replotFrequency=self.opts.replotFrequency,
+                           plottingImplementation=self.opts.implementation)
 
         run.start()

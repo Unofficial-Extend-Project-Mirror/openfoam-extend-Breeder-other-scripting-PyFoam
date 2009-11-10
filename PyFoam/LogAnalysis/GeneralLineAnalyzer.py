@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GeneralLineAnalyzer.py 10069 2009-03-02 09:39:44Z bgschaid $ 
+#  ICE Revision: $Id: GeneralLineAnalyzer.py 10767 2009-08-24 07:51:26Z bgschaid $ 
 """Line analyzer with output and the capability to store lines"""
 
 from LogLineAnalyzer import LogLineAnalyzer
@@ -15,7 +15,9 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
                  doFiles=False,
                  titles=[],
                  accumulation=None,
-                 singleFile=False):
+                 singleFile=False,
+                 startTime=None,
+                 endTime=None):
         """
         @param titles: The titles of the data elements
         """
@@ -37,6 +39,17 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
             self.lines=TimeLineCollection(accumulation=accu)
         else:
             self.lines=None
+
+        self.startTime=startTime
+        self.endTime=endTime
+        
+        self.master=None
+
+    def setMaster(self,master):
+        """Assign another line-analyzer that will do the actual data gathering"""
+        self.master=master
+        if self.lines and self.master.lines:
+            self.master.lines.addSlave(self.lines)
             
     def setTitles(self,titles):
         """
@@ -60,7 +73,12 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
     def timeChanged(self):
         """Sets the current time in the timelines"""
         if self.doTimelines:
-            self.lines.setTime(self.getTime())
+            try:
+                time=float(self.getTime())
+                if (self.startTime==None or time>=self.startTime) and (self.endTime==None or time<=self.endTime):
+                    self.lines.setTime(self.getTime())
+            except ValueError:
+                pass
 
     def getTimeline(self,name):
         """@param name: Name of the timeline to return
@@ -78,7 +96,12 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
             self.startAnalysis(m)
             
             if self.doTimelines:
-                self.addToTimelines(m)
+                try:
+                    time=float(self.getTime())
+                    if (self.startTime==None or time>=self.startTime) and (self.endTime==None or time<=self.endTime):
+                        self.addToTimelines(m)
+                except ValueError:
+                    pass
             if self.doFiles:
                 self.addToFiles(m)
 

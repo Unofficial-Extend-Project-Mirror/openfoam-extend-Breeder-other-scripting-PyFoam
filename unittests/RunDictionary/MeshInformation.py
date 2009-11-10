@@ -10,12 +10,14 @@ from PyFoam.FoamInformation import oldAppConvention as oldApp
 
 from os import path,environ,system
 
+from TimeDirectory import damBreakTutorial
+
 theSuite=unittest.TestSuite()
 
 class MeshInformationTest(unittest.TestCase):
     def setUp(self):
         self.dest="/tmp/TestDamBreak"
-        SolutionDirectory(path.join(environ["FOAM_TUTORIALS"],"interFoam","damBreak"),archive=None,paraviewLink=False).cloneCase(self.dest)
+        SolutionDirectory(damBreakTutorial(),archive=None,paraviewLink=False).cloneCase(self.dest)
 
         if oldApp():
             pathSpec=[path.dirname(self.dest),path.basename(self.dest)]

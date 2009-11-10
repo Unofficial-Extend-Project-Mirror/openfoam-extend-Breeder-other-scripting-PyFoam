@@ -73,4 +73,5 @@ the value from a patch or using a user-specified value
             print str(fieldFile)
         else:
             fieldFile.writeFile()
-                 
+            self.addToCaseLog(path.dirname(path.dirname(path.abspath(fName))))
+

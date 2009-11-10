@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ParsedParameterFile.py 10078 2009-03-02 18:34:41Z bgschaid $ 
+#  ICE Revision: $Id: ParsedParameterFile.py 10727 2009-08-17 07:49:18Z bgschaid $ 
 """Parameter file is read into memory and modified there"""
 
 from FileBasis import FileBasisBackup
@@ -27,7 +27,8 @@ class ParsedParameterFile(FileBasisBackup):
                  noHeader=False,
                  noBody=False,
                  doMacroExpansion=False,
-                 dontRead=False):
+                 dontRead=False,
+                 createZipped=True):
         """@param name: The name of the parameter file
         @param backup: create a backup-copy of the file
         @param boundaryDict: the file to parse is a boundary file
@@ -42,7 +43,10 @@ class ParsedParameterFile(FileBasisBackup):
 
         self.noHeader=noHeader
         self.noBody=noBody
-        FileBasisBackup.__init__(self,name,backup=backup)
+        FileBasisBackup.__init__(self,
+                                 name,
+                                 backup=backup,
+                                 createZipped=createZipped)
         self.debug=debug
         self.boundaryDict=boundaryDict
         self.listDict=listDict
@@ -109,11 +113,13 @@ class WriteParameterFile(ParsedParameterFile):
                  name,
                  backup=False,
                  className="dictionary",
-                 objectName=None):
+                 objectName=None,
+                 createZipped=False):
         ParsedParameterFile.__init__(self,
                                      name,
                                      backup=backup,
-                                     dontRead=True)
+                                     dontRead=True,
+                                     createZipped=createZipped)
 
         if objectName==None:
             objectName=path.basename(name)
@@ -123,6 +129,13 @@ class WriteParameterFile(ParsedParameterFile):
                      "format":"ascii",
                      "class":className,
                      "object":objectName}
+
+class Enumerate(object):
+    def __init__(self, names):
+        for number, name in enumerate(names):
+            setattr(self, name, number)
+
+inputModes=Enumerate(["merge","error","warn","protect","overwrite","default"])
         
 class FoamFileParser(PlyParser):
     """Class that parses a string that contains the contents of an
@@ -157,10 +170,13 @@ class FoamFileParser(PlyParser):
         self.preserveNewLines=preserveNewlines
 
         self.collectDecorations=False
+        self.inputMode=inputModes.merge
         
         self._decorationBuffer=""
         
         startCnt=0
+        
+        self.dictStack=[DictProxy()]
         
         if noBody:
             self.start='noBody'
@@ -173,6 +189,7 @@ class FoamFileParser(PlyParser):
         if listDict:
             self.start='pureList'
             startCnt+=1
+            self.dictStack=[]
 
         if listDictWithHeader:
             self.start='pureListWithHeader'
@@ -192,9 +209,6 @@ class FoamFileParser(PlyParser):
 
         self.emptyCnt=0
 
-        self.temp=None
-        self.rootDict=True
-        
         self.header,self.data=self.parse(content)
 
     def __contains__(self,key):
@@ -209,6 +223,10 @@ class FoamFileParser(PlyParser):
     def __delitem__(self,key):
         del self.data[key]
 
+    def __iter__(self):
+        for key in self.data:
+            yield key
+            
 ##    def __len__(self):
 ##        if self.data==None:
 ##            return 0
@@ -269,6 +287,25 @@ class FoamFileParser(PlyParser):
         self.printContext(c,ind)
         raise PyFoamParserError("Unspecified")
 
+    def condenseAllPreFixLists(self,orig):
+        """Checks whether this list is a list that consists only of prefix-Lists"""
+        isAllPreList=False
+        if (len(orig) % 2)==0:
+            isAllPreList=True
+            for i in range(0,len(orig),2):
+                if type(orig[i])==int and (type(orig[i+1]) in [list,Vector,Tensor,SymmTensor]):
+                    if len(orig[i+1])!=orig[i]:
+                        isAllPreList=False
+                        break
+                else:
+                    isAllPreList=False
+                    break
+        
+        if isAllPreList:
+            return orig[1::2]
+        else:
+            return orig
+        
     tokens = (
         'NAME',
         'ICONST',
@@ -283,8 +320,11 @@ class FoamFileParser(PlyParser):
         'MERGE',
         'OVERWRITE',
         'ERROR',
+        'WARN',
+        'PROTECT',
         'DEFAULT',
         'INCLUDE',
+        'INCLUDEIFPRESENT',
         'REMOVE',
         'INPUTMODE',
         'KANALGITTER',
@@ -295,11 +335,14 @@ class FoamFileParser(PlyParser):
         'uniform'    : 'UNIFORM',
         'nonuniform' : 'NONUNIFORM',
         'include'    : 'INCLUDE',
+        'includeIfPresent': 'INCLUDEIFPRESENT',
         'remove'     : 'REMOVE',
         'inputMode'  : 'INPUTMODE',
         'merge'      : 'MERGE',
         'overwrite'  : 'OVERWRITE',
         'error'      : 'ERROR',
+        'warn'       : 'WARN',
+        'protect'    : 'PROTECT',
         'default'    : 'DEFAULT',
         }
 
@@ -393,19 +436,13 @@ class FoamFileParser(PlyParser):
 
     # Error handling rule
     def t_error(self,t):
-        print "Illegal character '%s'" % t.value[0]
-        t.lexer.skip(1)
+        raise PyFoamParserError("Illegal character '%s'" % t.value[0])
+        #        t.lexer.skip(1) # the old days when illegal characters were accepted
 
     def p_global(self,p):
-        'global : header clearTemp dictbody'
-        p[0] = ( p[1] , p[3] )
+        'global : header dictbody'
+        p[0] = ( p[1] , p[2] )
 
-    def p_clearTemp(self,p):
-        'clearTemp :'
-        self.collectDecorations=True
-        self.rootDict=True
-        self.temp=None
-        
     def p_gotHeader(self,p):
         'gotHeader :'
         p.lexer.lexpos=len(p.lexer.lexdata)
@@ -446,23 +483,32 @@ class FoamFileParser(PlyParser):
             p[0]="// "+p[0]
             
     def p_include(self,p):
-        '''include : INCLUDE SCONST'''
+        '''include : INCLUDE SCONST
+                   | INCLUDEIFPRESENT SCONST'''
         if self.doMacros:
             fName=path.join(self.directory(),p[2][1:-1])
-            data=ParsedParameterFile(fName,noHeader=True)
-            if self.temp==None:
-                self.temp=DictProxy()
-            for k in data:
-                self.temp[k]=data[k]
+            read=True
+            if p[1]=="includeIfPresent" and not path.exists(fName):
+                read=False
+            if read and not path.exists(fName):
+                raise PyFoamParserError("The included file "+fName+" does not exist")
+            if read:
+                data=ParsedParameterFile(fName,noHeader=True)
+                into=self.dictStack[-1]
+                for k in data:
+                    into[k]=data[k]
             
         p[0] = p[1] + " " + p[2]
         
     def p_inputMode(self,p):
         '''inputMode : INPUTMODE ERROR
+                     | INPUTMODE WARN
+                     | INPUTMODE PROTECT
                      | INPUTMODE DEFAULT
                      | INPUTMODE MERGE
                      | INPUTMODE OVERWRITE'''
         p[0] = p[1] + " " + p[2]
+        self.inputMode=getattr(inputModes,p[2])
         
     def p_remove(self,p):
         '''remove : REMOVE word
@@ -483,12 +529,20 @@ class FoamFileParser(PlyParser):
     def p_float(self,p):
         '''integer : FCONST'''
         p[0] = float(p[1])
-        
+
+    def p_enter_dict(self,p):
+        '''enter_dict :'''
+        self.dictStack.append(DictProxy())
+    
+    def p_exit_dict(self,p):
+        '''exit_dict :'''
+        p[0]=self.dictStack.pop()
+    
     def p_dictionary(self,p):
-        '''dictionary : '{' dictbody '}'
+        '''dictionary : '{' enter_dict dictbody '}' exit_dict
                       | '{' '}' '''
-        if len(p)==4:
-            p[0] = p[2]
+        if len(p)==6:
+            p[0] = p[5]
         else:
             p[0] = DictProxy()
 
@@ -502,29 +556,15 @@ class FoamFileParser(PlyParser):
             p[0][p[2][0]]=p[2][1]
             p[0].addDecoration(p[2][0],self.getDecoration())
         else:
-            p[0]=DictProxy()
+            p[0]=self.dictStack[-1]
 
-            if self.temp==None:
-                self.temp=p[0]
-            elif self.rootDict:
-                for k,v in self.temp.iteritems():
-                    if type(k)!=int:
-                        p[0][k]=v
-                    else:
-                        p[0][self.emptyCnt]=v
-                        self.emptyCnt+=1
-                        
-                self.temp=p[0]
-
-            self.rootDict=False
-                    
             if p[1]:
                 p[0][p[1][0]]=p[1][1]
 
                     
     def p_list(self,p):
         '''list : '(' itemlist ')' '''
-        p[0] = p[2]
+        p[0] = self.condenseAllPreFixLists(p[2])
         if len(p[2])==3 or len(p[2])==9 or len(p[2])==6:
             isVector=True
             for i in p[2]:
@@ -539,7 +579,7 @@ class FoamFileParser(PlyParser):
                     p[0]=apply(Tensor,p[2])                    
                 else:
                     p[0]=apply(SymmTensor,p[2])                    
-
+                
     def p_wlist(self,p):
         '''wlist : '(' wordlist ')' '''
         p[0] = p[2]
@@ -570,7 +610,7 @@ class FoamFileParser(PlyParser):
         if type(p[4])==Unparsed:
             p[0] = UnparsedList(int(p[1]),p[4].data)
         else:
-            p[0] = p[4]
+            p[0] = self.condenseAllPreFixLists(p[4])
 
     def p_itemlist(self,p):
         '''itemlist : itemlist item
@@ -603,6 +643,8 @@ class FoamFileParser(PlyParser):
                 | MERGE
                 | OVERWRITE
                 | DEFAULT
+                | WARN
+                | PROTECT
                 | ERROR'''
         p[0]=p[1]
 
@@ -611,20 +653,23 @@ class FoamFileParser(PlyParser):
         if self.doMacros:
             nm=p[1][1:]
             p[0]="<Symbol '"+nm+"' not found>"
-            if self.temp==None:
-                return
-            if nm in self.temp:
-                p[0]=deepcopy(self.temp[nm])
+            if nm in self.dictStack[0]:
+                p[0]=deepcopy(self.dictStack[0][nm])
         else:
             p[0]=p[1]
+
+    def p_dictkey(self,p):
+        '''dictkey : word
+                   | SCONST'''
+        p[0]=p[1]
         
     def p_dictline(self,p):
-        '''dictline : word dictitem ';'
-                    | word list ';'
-                    | word prelist ';'
-                    | word fieldvalue ';'
+        '''dictline : dictkey dictitem ';'
+                    | dictkey list ';'
+                    | dictkey prelist ';'
+                    | dictkey fieldvalue ';'
                     | macro
-                    | word dictionary'''
+                    | dictkey dictionary'''
         if len(p)==4 and type(p[2])==list:
             # remove the prefix from long lists (if present)
             doAgain=True

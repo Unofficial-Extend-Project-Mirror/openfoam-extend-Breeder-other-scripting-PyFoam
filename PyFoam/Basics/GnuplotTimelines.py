@@ -1,67 +1,69 @@
-#  ICE Revision: $Id: GnuplotTimelines.py 9691 2008-11-17 09:55:35Z bgschaid $ 
+#  ICE Revision: $Id: GnuplotTimelines.py 10972 2009-10-26 17:18:02Z bgschaid $ 
 """Plots a collection of timelines"""
 
 from PyFoam.ThirdParty.Gnuplot import Gnuplot,Data
     
+from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo,CustomPlotInfo
+
+from PyFoam.Error import warning
+
+from GeneralPlotTimelines import GeneralPlotTimelines
+
 from os import uname
 
-class GnuplotTimelines(Gnuplot):
+class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
     """This class opens a gnuplot window and plots a timelines-collection in it"""
     
     terminalNr=1
     
     def __init__(self,
                  timelines,
-                 persist=None,
-                 raiseit=True,
-                 with_="lines",
-                 alternateAxis=[],
-                 forbidden=[],
-                 start=None,
-                 end=None,
-                 logscale=False,
-                 ylabel=None,
-                 y2label=None):
+                 custom,
+                 showWindow=True,
+                 registry=None):
         """@param timelines: The timelines object
         @type timelines: TimeLineCollection
-        @param persist: Gnuplot window persistst after run
-        @param raiseit: Raise the window at every plot
-        @param with_: how to plot the data (lines, points, steps)
-        @param alternateAxis: list with names that ought to appear on the alternate y-axis
-        @param forbidden: A list with strings. If one of those strings is found in a name, it is not plotted
-        @param start: First time that should be plotted. If undefined everything from the start is plotted
-        @param end: Last time that should be plotted. If undefined data is plotted indefinitly
-        @param logscale: Scale the y-axis logarithmic
-        @param ylabel: Label of the y-axis        
-        @param y2label: Label of the alternate y-axis        
+        @param custom: A CustomplotInfo-object. Values in this object usually override the
+        other options
         """
 
-        Gnuplot.__init__(self,persist=persist)
-        self.alternate=alternateAxis
-        self.forbidden=forbidden
+        GeneralPlotTimelines.__init__(self,timelines,custom,showWindow=showWindow,registry=registry)
+        Gnuplot.__init__(self,persist=self.spec.persist)
 
-        if start or end:
+        self.itemlist=[]
+            
+        if self.spec.start or self.spec.end:
             rng="["
-            if start:
-                rng+=str(start)
+            if self.spec.start:
+                rng+=str(self.spec.start)
             rng+=":"
-            if end:
-                rng+=str(end)
+            if self.spec.end:
+                rng+=str(self.spec.end)
             rng+="]"
             self.set_string("xrange "+rng)
             
         if len(self.alternate)>0:
             self.set_string("y2tics")
 
-        if logscale:
-            self.set_string("logscale y")
+        try:
+            if self.spec.logscale:
+                self.set_string("logscale y")
+        except AttributeError:
+            pass
 
-        if ylabel:
-            self.set_string('ylabel "'+ylabel+'"')
-        if y2label:
-            self.set_string('y2label  "'+y2label+'"')
+        try:
+            if self.spec.ylabel:
+                self.set_string('ylabel "'+self.spec.ylabel+'"')
+        except AttributeError:
+            pass
+        
+        try:
+            if self.spec.y2label:
+                self.set_string('y2label  "'+self.spec.y2label+'"')
+        except AttributeError:
+            pass
             
-        if raiseit:
+        if self.spec.raiseit:
             x11addition=" raise"
         else:
             x11addition=" noraise"
@@ -73,36 +75,69 @@ class GnuplotTimelines(Gnuplot):
         else:
             self.set_string("terminal x11"+x11addition)
             
-        self.data=timelines
-        self.with_=with_
+        self.with_=self.spec.with_
         
         self.redo()
-        
-    def redo(self):
-        """Replot the timelines"""
-        times=self.data.getTimes()
-        if len(times)<=0:
-            return
-        
-        tmp=self.data.getValueNames()
-        names=[]
-        for n in tmp:
-            addIt=True
-            for f in self.forbidden:
-                if n.find(f)>=0:
-                    addIt=False
-                    break
-            if addIt:
-                names.append(n)
-                
-        self.itemlist=[]
-        for n in names:
-            it=Data(times,self.data.getValues(n),title=n,with_=self.with_)
-            if n in self.alternate:
+
+    def buildData(self,times,name,title,lastValid):
+        """Build the implementation specific data
+        @param times: The vector of times for which data exists
+        @param name: the name under which the data is stored in the timeline
+        @param title: the title under which this will be displayed"""
+
+        tm=times
+        dt=self.data.getValues(name)
+        if len(tm)>0 and not lastValid:
+            tm=tm[:-1]
+            dt=dt[:-1]
+
+        if len(dt)>0:
+            it=Data(tm,dt,title=title,with_=self.with_)
+
+            if name in self.alternate:
                 it.set_option(axes="x1y2")
-                
+
             self.itemlist.append(it)
 
-        if len(names)>0 and len(times)>0:
-            self.replot()
-       
+    def preparePlot(self):
+        """Prepare the plotting window"""
+        self.itemlist=[]
+        
+    def doReplot(self):
+        """Replot the whole data"""
+
+        self.replot()
+        
+    def actualSetTitle(self,title):
+        """Sets the title"""
+
+        self.title(title)
+
+    def setYLabel(self,title):
+        """Sets the label on the first Y-Axis"""
+
+        self.set_string('ylabel "%s"' % title)
+
+    def setYLabel2(self,title):
+        """Sets the label on the second Y-Axis"""
+
+        self.set_string('y2label "%s"' % title)
+
+    def doHardcopy(self,filename,form):
+        """Write the contents of the plot to disk
+        @param filename: Name of the file without type extension
+        @param form: String describing the format"""
+
+        if form=="png":
+            self.hardcopy(terminal="png",filename=filename+".png",color=True,small=True)
+        elif form=="pdf":
+            self.hardcopy(terminal="pdf",filename=filename+".pdf",color=True)
+        elif form=="svg":
+            self.hardcopy(terminal="svg",filename=filename+".svg")
+        elif form=="postscript":
+            self.hardcopy(terminal="postscript",filename=filename+".ps",color=True)
+        elif form=="eps":
+            self.hardcopy(terminal="postscript",filename=filename+".eps",color=True,eps=True)
+        else:
+            warning("Hardcopy format",form,"unknown. Falling back to postscript")
+            self.hardcopy(filename=filename+".ps",color=True)

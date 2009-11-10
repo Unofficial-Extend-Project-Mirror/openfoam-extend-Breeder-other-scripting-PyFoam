@@ -1,61 +1,45 @@
+
 """
 Class that implements common functionality for collecting plot-lines
 """
 
+import sys
 from os import path
 from optparse import OptionGroup
 
 from PyFoam.Error import error,warning
 from PyFoam.LogAnalysis.RegExpLineAnalyzer import RegExpLineAnalyzer
 
+from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo
+
 class CommonPlotLines(object):
     """ This class collects the lines that should be plotted
     """
 
     def __init__(self):
-        self.lines_=None
+        self.lines_=[]
         
     def plotLines(self):
         return self.lines_
     
     def addPlotLine(self,line):
         """Add a single line"""
-        
-        if self.lines_==None:
-            self.lines_=[line]
-        else:
-            if type(line)==str:
-                self.lines_.append(line)
-            else:
-                error(line,"is not a string, but",type(line))
-                
+        self.lines_+=readCustomPlotInfo(line)
+
     def addPlotLines(self,lines):
         """Adds a list of lines"""
-        
-        if type(lines)!=list:
-            if type(lines==None):
-                return
-            else:
-                error(lines,"is not a list, but",type(lines))
-        for l in lines:
-            self.addPlotLine(l)
+        if lines:
+            for l in lines:
+                self.lines_+=readCustomPlotInfo(l)
 
     def addFileRegexps(self,fName):
         """Adds the lines from a file to the custom regular expressions
         @param fName: The name of the file"""
         f=open(fName)
-
-        for l in f.readlines():
-            l=l.strip()
-            if len(l)==0:
-                continue
-            if l[0]=='"' and l[-1]=='"':
-                l=l[1:-1]
-            if len(l)>0:
-                self.addPlotLine(l)
-                
+        txt=f.read()
         f.close()
-
+        self.lines_+=readCustomPlotInfo(txt)
+                
     def addOptions(self):
         grp=OptionGroup(self.parser,
                         "Regular expression",
@@ -78,8 +62,25 @@ class CommonPlotLines(object):
                        default=True,
                        dest="autoCustom",
                        help="Do not automatically load the expressions from the file customRegexp")
+
+        grp.add_option("--dump-custom-regegexp",
+                       action="store_true",
+                       default=False,
+                       dest="dumpCustomRegexp",
+                       help="Dump the used regular expressions in a format suitable to put into a customRegexp-file and finish the program")
         self.parser.add_option_group(grp)
         
+        grp2=OptionGroup(self.parser,
+                        "Data files",
+                        "How data files are written")
+        grp2.add_option("--single-data-files-only",
+                       action="store_true",
+                       default=False,
+                       dest="singleDataFilesOnly",
+                       help="Don't create consecutive data files 'value', 'value_2', 'value_3' etc but put all the data into a single file")
+
+        self.parser.add_option_group(grp2)
+
     def processPlotLineOptions(self,autoPath=None):
         """Process the options that have to do with plot-lines"""
 
@@ -96,11 +97,11 @@ class CommonPlotLines(object):
             if path.exists(autoFile):
                 print " Reading regular expressions from",autoFile
                 self.addFileRegexps(autoFile)
-        
-    def addPlotLineAnalyzers(self,runner):
-        if self.lines_!=None:
-            for i in range(len(self.lines_)):
-                name="Custom%02d" % i
-                runner.addAnalyzer(name,RegExpLineAnalyzer(name.lower(),self.lines_[i],doTimelines=False,doFiles=True))
-                    
+
+        if self.opts.dumpCustomRegexp:
+            print "\nDumping customRegexp:\n"
+            for l in self.lines_:
+                print l
+            sys.exit(-1)
+            
         

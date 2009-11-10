@@ -1,9 +1,11 @@
-#  ICE Revision: $Id: OutFileCollection.py 10069 2009-03-02 09:39:44Z bgschaid $ 
+#  ICE Revision: $Id: OutFileCollection.py 11002 2009-11-05 13:31:35Z bgschaid $ 
 """Collections of output files"""
 
 from os import path
 
 from OutputFile import OutputFile
+
+from PyFoam import configuration as conf
 
 class OutFileCollection(object):
     """Collection of output files
@@ -14,6 +16,8 @@ class OutFileCollection(object):
     Each file can be identified by a unique name. If a file is
     accessed a second time at the same simulation-time a file with the
     ending _2 is created (incrementing with each access)"""
+    
+    maxOpenFiles=10
     
     def __init__(self,
                  basename,
@@ -31,10 +35,11 @@ class OutFileCollection(object):
         self.basename=basename
         self.setTitles(titles)
         self.singleFile=singleFile
+        self.openList=[]
         
 #    def __del__(self):
 #        print "\n  Deleting this OutputFile\n"
-        
+
     def setTitles(self,titles):
         """
         Sets the titles anew
@@ -53,12 +58,39 @@ class OutFileCollection(object):
 
     def getFile(self,name):
         """get a OutputFile-object"""
+
         if not self.files.has_key(name):
             fullname=path.join(self.basename,name)
-            self.files[name]=OutputFile(fullname,titles=self.titles)
-            
+            self.files[name]=OutputFile(fullname,titles=self.titles,parent=self)
+
         return self.files[name]
-                               
+
+    def addToOpenList(self,name):
+        """Adds a file to the list of open files. Closes another
+        file if limit is reached"""
+        try:
+            ind=self.openList.index(name)
+            self.openList=self.openList[:ind]+self.openList[ind+1:]
+        except ValueError:
+            if len(self.openList)>=OutFileCollection.maxOpenFiles:
+                old=self.files[self.openList[0]]
+                self.openList=self.openList[1:]
+                #                print "Closing",old.name
+                #                assert old.handle!=None
+                old.close(temporary=True)
+                #                assert old.handle==None
+
+        self.openList.append(name)
+        
+    def removeFromOpenList(self,name):
+        """Adds a file to the list of open files. Closes another
+        file if limit is reached"""
+        try:
+            ind=self.openList.index(name)
+            self.openList=self.openList[:ind]+self.openList[ind+1:]            
+        except ValueError:
+            pass
+        
     def prevCalls(self,name):
         """checks whether the name was used previously at that time-step"""
         if self.called.has_key(name):
@@ -86,7 +118,21 @@ class OutFileCollection(object):
 
         f=self.getFile(fname)
 
-        f.write(time,data)
+        try:
+            f.write(time,data)
+        except IOError,e:
+            print self.openList
+            print len(self.files)
+            print self.files
+            print "Open:",
+            cnt=0
+            for f in self.files:
+                if self.files[f].handle!=None:
+                    print f,
+                    cnt+=1
+            print
+            print "Actually open",cnt,"of",len(self.files)
+            raise e
         
     def close(self):
         """Force all files to be closed"""
@@ -94,3 +140,5 @@ class OutFileCollection(object):
         for f in self.files:
             self.files[f].close()
             
+OutFileCollection.maxOpenFiles=int(conf().get("OutfileCollection","maximumOpenFiles"))
+

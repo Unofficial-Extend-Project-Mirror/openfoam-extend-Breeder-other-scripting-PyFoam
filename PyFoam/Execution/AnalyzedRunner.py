@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: AnalyzedRunner.py 9667 2008-11-12 18:20:16Z bgschaid $ 
+#  ICE Revision: $Id: AnalyzedRunner.py 10900 2009-09-28 13:04:35Z bgschaid $ 
 """Command is run and output is analyzed"""
 
 from BasicRunner import BasicRunner
@@ -15,15 +15,21 @@ class AnalyzedRunner(AnalyzedCommon,BasicRunner):
                  logname="PyFoamSolve",
                  server=False,
                  lam=None,
+                 compressLog=False,
                  restart=False,
-                 noLog=False):
+                 noLog=False,
+                 remark=None,
+                 jobId=None):
         """ @param analyzer: the analyzer for the output
         argv, silent, logname, server, lam, noLog - see BasicRunner"""
         BasicRunner.__init__(self,argv,silent,logname,
                              server=server,
                              lam=lam,
                              restart=restart,
-                             noLog=noLog)
+                             compressLog=compressLog,
+                             noLog=noLog,
+                             remark=remark,
+                             jobId=jobId)
         AnalyzedCommon.__init__(self,logname,analyzer)
 
     def lineHandle(self,line):

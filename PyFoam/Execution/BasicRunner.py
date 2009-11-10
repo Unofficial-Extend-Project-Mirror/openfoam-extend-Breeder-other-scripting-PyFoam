@@ -1,10 +1,12 @@
-#  ICE Revision: $Id: BasicRunner.py 9667 2008-11-12 18:20:16Z bgschaid $ 
+#  ICE Revision: $Id: BasicRunner.py 10967 2009-10-19 16:02:07Z fpoll $ 
 """Run a OpenFOAM command"""
 
 import sys
 import string
+import gzip
 from os import path
 from threading import Timer
+from time import time
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 
@@ -21,10 +23,11 @@ from PyFoam.RunDictionary.ParameterFile import ParameterFile
 from PyFoam.Error import warning,error
 from PyFoam import configuration as config
 
-def restoreControlDict(ctrl):
+def restoreControlDict(ctrl,runner):
     """Timed function to avoid time-stamp-problems"""
     warning("Restoring the controlDict")
     ctrl.restore()
+    runner.controlDict=None
     
 class BasicRunner(object):
     """Base class for the running of commands
@@ -47,18 +50,24 @@ class BasicRunner(object):
                  argv=None,
                  silent=False,
                  logname=None,
+                 compressLog=False,
                  lam=None,
                  server=False,
                  restart=False,
-                 noLog=False):
+                 noLog=False,
+                 remark=None,
+                 jobId=None):
         """@param argv: list with the tokens that are the command line
         if not set the standard command line is used
         @param silent: if True no output is sent to stdout
         @param logname: name of the logfile
+        @param compressLog: Compress the logfile into a gzip
         @param lam: Information about a parallel run
         @param server: Whether or not to start the network-server
         @type lam: PyFoam.Execution.ParallelExecution.LAMMachine
-        @param noLog: Don't output a log file"""
+        @param noLog: Don't output a log file
+        @param remark: User defined remark about the job
+        @param jobId: Job ID of the controlling system (Queueing system)"""
 
         if sys.version_info < (2,3):
             # Python 2.2 does not have the capabilities for the Server-Thread
@@ -82,7 +91,7 @@ class BasicRunner(object):
                 
         if logname==None:
             logname="PyFoam."+path.basename(argv[0])
-
+            
         try:
             sol=self.getSolutionDirectory()
         except OSError,e:
@@ -98,7 +107,10 @@ class BasicRunner(object):
         foamLogger().info("Starting: "+self.cmd+" in "+path.abspath(path.curdir))
         self.logFile=path.join(self.dir,logname+".logfile")
         self.noLog=noLog
-        
+        self.compressLog=compressLog
+        if self.compressLog:
+            self.logFile+=".gz"
+            
         self.fatalError=False
         self.fatalFPE=False
         self.fatalStackdump=False
@@ -132,18 +144,28 @@ class BasicRunner(object):
                 
         self.createTime=None
         self.nowTime=None
+        self.startTimestamp=time()
 
         self.stopMe=False
         self.writeRequested=False
 
         self.endTriggers=[]
+
+        self.lastLogLineSeen=None
+        self.lastTimeStepSeen=None
+
+        self.remark=remark
+        self.jobId=jobId
         
     def start(self):
         """starts the command and stays with it till the end"""
         
         self.started=True
         if not self.noLog:
-            fh=open(self.logFile,"w")
+            if self.compressLog:
+                fh=gzip.open(self.logFile,"w")
+            else:
+                fh=open(self.logFile,"w")
 
         self.startHandle()
 
@@ -158,6 +180,7 @@ class BasicRunner(object):
                     break
 
                 line=self.run.getLine()
+                self.lastLogLineSeen=time()
 
                 tmp=check.getTime(line)
                 if check.controlDictRead(line):
@@ -165,11 +188,12 @@ class BasicRunner(object):
                         warning("Preparing to reset controlDict to old glory")
                         Timer(config().getfloat("Execution","controlDictRestoreWait",default=30.),
                               restoreControlDict,
-                              args=[self.controlDict]).start()
+                              args=[self.controlDict,self]).start()
                         self.writeRequested=False
                         
                 if tmp!=None:
                     self.nowTime=tmp
+                    self.lastTimeStepSeen=time()
                     if self.createTime==None:
                         # necessary because interFoam reports no creation time
                         self.createTime=tmp
@@ -179,8 +203,15 @@ class BasicRunner(object):
                     self.createTime=tmp
                     
                 if not self.silent:
-                    print line
-                    
+                    try:
+                        print line
+                    except IOError,e:
+                        if e.errno!=32:
+                            raise e
+                        else:
+                            # Pipe was broken
+                            self.run.interrupt()
+                            
                 if line.find("FOAM FATAL ERROR")>=0 or line.find("FOAM FATAL IO ERROR")>=0:
                     self.fatalError=True
                 if line.find("Foam::sigFpe::sigFpeHandler")>=0:
@@ -224,7 +255,7 @@ class BasicRunner(object):
     def runOK(self):
         """checks whether the run was successful"""
         if self.started:
-            return not self.fatalError and not self.fatalFPE and not self.fatalStackdump
+            return not self.fatalError and not self.fatalFPE and not self.fatalStackdump # and self.run.getReturnCode()==0
         else:
             return False
         
@@ -237,6 +268,8 @@ class BasicRunner(object):
         if not self.stopMe:
             self.stopMe=True
             if not self.isRestarted:
+                if self.controlDict:
+                    warning("The controlDict has already been modified. Restoring will be problementic")
                 self.controlDict=ParameterFile(path.join(self.dir,"system","controlDict"),backup=True)
             self.controlDict.replaceParameter("stopAt","writeNow")
             warning("Stopping run at next write")
@@ -246,6 +279,8 @@ class BasicRunner(object):
         #        warning("writeResult is not yet implemented")
         if not self.writeRequested:
             if not self.isRestarted:
+                if self.controlDict:
+                    warning("The controlDict has already been modified. Restoring will be problementic")
                 self.controlDict=ParameterFile(path.join(self.dir,"system","controlDict"),backup=True)
             self.controlDict.replaceParameter("writeControl","timeStep")
             self.controlDict.replaceParameter("writeInterval","1")
@@ -269,7 +304,7 @@ class BasicRunner(object):
         @rtype: PyFoam.RunDictionary.SolutionDirectory
         @param archive: Name of the directory for archiving results"""
 
-        return SolutionDirectory(self.dir,archive=archive)
+        return SolutionDirectory(self.dir,archive=archive,parallel=True)
 
     def addEndTrigger(self,f):
         """@param f: A function that is to be executed at the end of the simulation"""
@@ -305,7 +340,7 @@ class BasicRunnerCheck(object):
         
     def controlDictRead(self,line):
         """Was the controlDict reread?"""
-        if line.find("Reading object controlDict from file"):
+        if line.find("Reading object controlDict from file")>=0:
             return True
         else:
             return False

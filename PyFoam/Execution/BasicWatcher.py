@@ -1,9 +1,10 @@
-#  ICE Revision: $Id: BasicWatcher.py 8195 2007-11-19 09:13:52Z bgschaid $ 
+#  ICE Revision: $Id: BasicWatcher.py 10428 2009-05-07 14:22:40Z bgschaid $ 
 """Watches the output of Foam-run"""
 
 from os import path
 import stat
 import os
+import gzip
 from time import sleep
 
 from PyFoam.Basics.LineReader import LineReader
@@ -40,32 +41,37 @@ class BasicWatcher(object):
         """Reads the file and does the processing"""
 
         currSize=self.getSize()
-        fh=open(self.filename)
-        
+
+        fn,ext=path.splitext(self.filename)
+        if ext=='.gz':
+            fh=gzip.open(self.filename)
+        else:
+            fh=open(self.filename)
+            
         self.startHandle()
         
         while 1:
-            status=self.reader.read(fh)
-            if status:
-                line=self.reader.line
-                if (currSize-self.reader.bytesRead())<=self.tail:
-                    if not self.isTailing:
-                        self.isTailing=True
-                        self.timeHandle()
-                        self.tailingHandle()
-                        
-                    if not self.silent:
-                        print line
-                        
-                self.lineHandle(line)
-            else:
-                if self.reader.userSaidStop():
-                    break
-                try:
+            try:
+                status=self.reader.read(fh)
+                if status:
+                    line=self.reader.line
+                    if (currSize-self.reader.bytesRead())<=self.tail:
+                        if not self.isTailing:
+                            self.isTailing=True
+                            self.timeHandle()
+                            self.tailingHandle()
+
+                        if not self.silent:
+                            print line
+
+                    self.lineHandle(line)
+                else:
+                    if self.reader.userSaidStop():
+                        break
                     sleep(self.sleep)
-                except KeyboardInterrupt,e:
-                    print "Keyboard interrupt"
-                    break
+            except KeyboardInterrupt,e:
+                print "Watcher: Keyboard interrupt"
+                break
                                 
         self.stopHandle()
 

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamLogAnalyzer.py 8292 2007-12-12 15:22:00Z bgschaid $ 
+#  ICE Revision: $Id: FoamLogAnalyzer.py 10893 2009-09-24 08:29:45Z bgschaid $ 
 """Analyze OpenFOAM logs"""
 
 from TimeLineAnalyzer import TimeLineAnalyzer
@@ -58,6 +58,10 @@ class FoamLogAnalyzer(object):
         """@returns: A list with the names of the Analyzers"""
         return self.analyzers.keys()
     
+    def hasAnalyzer(self,name):
+        """Is this LogLineAnalyzer name there"""
+        return self.analyzers.has_key(name)
+
     def getAnalyzer(self,name):
         """Get the LogLineAnalyzer name"""
         if self.analyzers.has_key(name):

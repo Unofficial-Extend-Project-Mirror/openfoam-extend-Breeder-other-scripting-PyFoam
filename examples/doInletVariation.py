@@ -34,20 +34,20 @@ for i in range(nr+1):
     sol.replaceBoundary("inlet","(%f 0 0)" %(val))
 
     # Run the solver
-    run=ConvergenceRunner(BoundingLogAnalyzer(),argv=[solver,".",case],silent=True)
+    run=ConvergenceRunner(BoundingLogAnalyzer(),argv=[solver,"-case",case],silent=True)
     run.start()
     
     print "Last Time = ",dire.getLast()
 
     # Get the pressure difference (Using an external utility)
-    pUtil=UtilityRunner(argv=[pCmd,".",case],silent=True,logname="Pressure")
+    pUtil=UtilityRunner(argv=[pCmd,"-case",case],silent=True,logname="Pressure")
     pUtil.add("deltaP","Pressure at .* Difference .*\] (.+)")
     pUtil.start()
 
     deltaP=pUtil.get("deltaP")[0]
 
     # Get the mass flow
-    mUtil=UtilityRunner(argv=[mCmd,".",case,"-latestTime"],silent=True,logname="MassFlow")
+    mUtil=UtilityRunner(argv=[mCmd,"-case",case,"-latestTime"],silent=True,logname="MassFlow")
     mUtil.add("mass","Flux at (.+?) .*\] (.+)",idNr=1)
     mUtil.start()
 

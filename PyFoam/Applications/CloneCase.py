@@ -102,3 +102,6 @@ Clones a case by copying the system, constant and 0-directories
             dName,
             followSymlinks=self.parser.getOptions().followSymlinks
             )
+
+        self.addToCaseLog(dName,"Cloned to",dName)
+        

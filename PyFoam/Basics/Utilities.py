@@ -1,9 +1,14 @@
-#  ICE Revision: $Id: Utilities.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: Utilities.py 10375 2009-04-27 10:35:16Z bgschaid $ 
 """ Utility functions
 
 Can be used via a class or as functions"""
 
-from os import popen4
+import sys
+
+if sys.version_info<(2,6):
+    from popen2 import popen4
+else:
+    from subprocess import Popen,PIPE,STDOUT
 from os import listdir
 
 import re
@@ -25,7 +30,12 @@ class Utilities(object):
         if debug:
             print cmd
         
-        rein,raus=popen4(cmd)
+        if sys.version_info<(2,6):
+            raus,rein = popen4(cmd)
+        else:
+            p = Popen(cmd, shell=True, 
+                      stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+            (rein,raus)=(p.stdin,p.stdout)
         tmp=raus.readlines()
         # line=raus.readline()
         # while line!="":

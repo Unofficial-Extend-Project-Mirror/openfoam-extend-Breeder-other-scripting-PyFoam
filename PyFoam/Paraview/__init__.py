@@ -1,9 +1,15 @@
-#  ICE Revision: $Id: __init__.py 10067 2009-03-02 09:39:42Z bgschaid $ 
+#  ICE Revision: $Id: __init__.py 10791 2009-09-01 07:47:51Z bgschaid $ 
 """ Paraview interaction
 
 Classes that help to interact with a Python-enabled paraFoam/paraview
 """
 
+hasSimpleModule=True
+try:
+    from paraview import simple
+except ImportError:
+    hasSimpleModule=False
+    
 # this import prevents python-source-tools that ude introspection from working
 # because it prevents import into a normal python
 from paraview import servermanager
@@ -17,6 +23,12 @@ from os import path
 from SourceBase import SourceBase
 
 proxyManager=servermanager.ProxyManager()
+
+def version():
+    """Tries to determine the paraview-version"""
+    return (proxyManager.GetVersionMajor(),
+            proxyManager.GetVersionMinor(),
+            proxyManager.GetVersionPatch())
 
 def paraFoamReader():
     """ Get the paraFoam reader.

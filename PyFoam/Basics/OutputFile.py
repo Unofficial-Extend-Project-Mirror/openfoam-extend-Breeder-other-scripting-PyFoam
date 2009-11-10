@@ -1,18 +1,22 @@
-#  ICE Revision: $Id: OutputFile.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: OutputFile.py 11002 2009-11-05 13:31:35Z bgschaid $ 
 """Output of time-dependent data"""
 
 from BasicFile import BasicFile
+from os import path
 
 class OutputFile(BasicFile):
     """output of time dependent data"""
     
-    def __init__(self,name,titles=[]):
+    def __init__(self,name,titles=[],parent=None):
         """
         @param name: name of the file
         @param titles: Titles of the columns
+        @param parent: A parent collection that knows about opened and
+        closed files
         """
         BasicFile.__init__(self,name)
-
+        
+        self.parent=parent
         self.setTitles(titles)
 
 #    def __del__(self):
@@ -44,3 +48,24 @@ class OutputFile(BasicFile):
         @param data: tuple with data"""
         self.writeLine( (time,)+data)
         
+    def callAtOpen(self):
+        """A hook that gets called when the file is opened"""
+        if self.parent:
+            self.parent.addToOpenList(path.basename(self.name))
+    
+    def callAtClose(self):
+        """A hook that gets called when the file is closed"""
+        if self.parent:
+            self.parent.removeFromOpenList(path.basename(self.name))
+    
+    def __repr__(self):
+        """Output for debugging"""
+        
+        result="Outfile:"+self.name
+        if self.isOpen:
+            result+=" OPEN"
+        if self.append:
+            result+=" APPEND"
+        if self.handle:
+            result+=" HANDLE"
+        return result

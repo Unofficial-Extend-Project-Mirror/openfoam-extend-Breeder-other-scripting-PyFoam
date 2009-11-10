@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FileBasis.py 10068 2009-03-02 09:39:43Z bgschaid $ 
+#  ICE Revision: $Id: FileBasis.py 10572 2009-07-08 14:41:54Z bgschaid $ 
 """Basis for the handling of OpenFOAM-files
 
 Transparently accepts gnuzipped files"""
@@ -23,9 +23,11 @@ class FileBasis(Utilities):
     addedString="//PyFoamAdded"
     """Comment for lines that were added by PyFoam-routines"""
     
-    def __init__(self,name):
+    def __init__(self,name,createZipped=True):
         """@param name: Name of the file. If the field is zipped the .gz is
-        appended"""
+        appended
+        @param createZipped: if the file doesnot exist: should it be created
+        as a zipped file?"""
         self.name = path.abspath(name)
         self.exists = False
         
@@ -40,7 +42,7 @@ class FileBasis(Utilities):
             self.zipped=True
             self.exists = True
         else:
-            self.zipped=True
+            self.zipped=createZipped
 
         if path.splitext(self.name)[1]==".gz":
             self.name=self.name[:-3]
@@ -201,16 +203,32 @@ class FileBasis(Utilities):
         fh.close()
         os.rename(fn,self.name)
 
+    def getCaseDir(self):
+        """Return the path to the case of this file (if any valid case is found).
+        Else return None"""
+
+        from SolutionDirectory import NoTouchSolutionDirectory
+
+        caseDir=None
+        comp=path.split(self.name)[0]
+        while len(comp)>1:
+            if NoTouchSolutionDirectory(comp).isValid():
+                caseDir=comp
+                break
+            comp=path.split(comp)[0]
+            
+        return caseDir
+    
 class FileBasisBackup(FileBasis):
     """A file with a backup-copy"""
 
-    def __init__(self,name,backup=False):
+    def __init__(self,name,backup=False,createZipped=True):
         """@param name: The name of the parameter file
         @type name: str
         @param backup: create a backup-copy of the file
         @type backup: boolean"""
         
-        FileBasis.__init__(self,name)
+        FileBasis.__init__(self,name,createZipped=createZipped)
 
         if backup:
             self.backupName=self.name+".backup"

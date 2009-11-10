@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Error.py 9616 2008-11-03 09:16:25Z bgschaid $ 
+#  ICE Revision: $Id: Error.py 10866 2009-09-21 08:41:45Z bgschaid $ 
 """Standardized Error Messages"""
 
 import traceback
@@ -46,7 +46,13 @@ def debug(*text):
     """Prints a debug message with the occuring line number
     @param text: The error message"""
     __common(None,"Debug",*text)
-    
+
+def notImplemented(obj,name):
+     """Prints a 'not implemented' message for abstract interfaces
+     @param obj: the object for which the method is not defined
+     @param name: name of the method"""
+     error("The method",name,"is not implemented in this object of type",obj.__class__)
+
 class PyFoamException(Exception):
      """The simplest exception for PyFoam"""
 

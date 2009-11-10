@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamOptionParser.py 9441 2008-09-22 20:51:21Z bgschaid $ 
+#  ICE Revision: $Id: FoamOptionParser.py 10943 2009-10-09 07:31:48Z bgschaid $ 
 """Parse options for the PyFoam-Scripts"""
 
 from optparse import OptionParser,TitledHelpFormatter
@@ -6,6 +6,8 @@ from PyFoam import versionString
 
 from PyFoam.FoamInformation import changeFoamVersion
 from PyFoam.FoamInformation import oldAppConvention as oldApp
+
+from PyFoam.Error import error,warning
 
 from os import path
 
@@ -59,8 +61,15 @@ class FoamOptionParser(OptionParser):
         
         if "foamVersion" in dir(self.options):
             if self.options.foamVersion!=None:
-                changeFoamVersion(self.options.foamVersion)
-            
+                if self.options.force32 and self.options.force64:
+                    error("A version can't be 32 and 64 bit at the same time")
+                changeFoamVersion(self.options.foamVersion,
+                                  force64=self.options.force64,
+                                  force32=self.options.force32,
+                                  compileOption=self.options.compileOption)
+            elif self.options.force32 or self.options.force64:
+                warning("Foring version to be 32 or 64 bit, but no version chosen. Doing nothing")
+                
         if nr==None:
             if oldApp():
                 nr=3
@@ -91,6 +100,13 @@ class FoamOptionParser(OptionParser):
             return self.args
         else:
             return []
+
+    def getApplication(self):
+        """Return the OpenFOAM-Application to be run"""
+        if self.args!=None:
+            return self.args[0]
+        else:
+            return None
 
     def getOptions(self):
         """Return the options"""

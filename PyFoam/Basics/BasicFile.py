@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BasicFile.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: BasicFile.py 11001 2009-11-05 12:48:47Z bgschaid $ 
 """Basic file output"""
 
 class BasicFile(object):
@@ -14,7 +14,8 @@ class BasicFile(object):
         self.name=name
         self.isOpen=False
         self.handle=None
-
+        self.append=False
+        
     def outputAtStart(self):
         """A hook for outputting stuff at the beginning of the file"""
         pass
@@ -30,14 +31,27 @@ class BasicFile(object):
     def outputAtLineStart(self):
         """A hook for outputting stuff at the start of each line"""
         pass
+
+    def callAtOpen(self):
+        """A hook that gets called when the file is opened"""
+        pass
+    
+    def callAtClose(self):
+        """A hook that gets called when the file is closed"""
+        pass
     
     def getHandle(self):
         """get the file-handle. File is created and opened if it
         wasn't opened before"""
         if not self.isOpen:
-            self.handle=open(self.name,"w")
+            mode="w"
+            if self.append:
+                mode="a"
+            self.handle=open(self.name,mode)
             self.isOpen=True
-            self.outputAtStart()
+            if not self.append:
+                self.outputAtStart()
+            self.callAtOpen()
             
         return self.handle
 
@@ -58,11 +72,17 @@ class BasicFile(object):
         fh.write("\n")
         fh.flush()
 
-    def close(self):
-        """close the file"""
+    def close(self,temporary=False):
+        """close the file
+        @param temporary: only close the file temporary (to be appended on later)"""
         #        print "Closing file\n"
         if self.handle!=None:
-            self.outputAtEnd()
+            self.callAtClose()
+            if not temporary:
+                self.outputAtEnd()
+            else:
+                self.append=True
             self.handle.close()
             self.handle=None
+            self.isOpen=False
             

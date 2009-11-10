@@ -88,54 +88,60 @@ doesn't honor the parallel data
 
     def run(self):
         dirs=self.parser.getArgs()
+        
         if len(dirs)==0:
             dirs=[path.curdir]
 
         cData=[]
+        totalDiskusage=0
         
         for d in dirs:
             for n in listdir(d):
                 cName=path.join(d,n)
                 if path.isdir(cName):
-                    sol=SolutionDirectory(cName,archive=None,paraviewLink=False)
-                    if sol.isValid():
-                        if self.opts.progress:
-                            print "Processing",cName
-                            
-                        data={}
+                    try:
+                        sol=SolutionDirectory(cName,archive=None,paraviewLink=False)
+                        if sol.isValid():
+                            if self.opts.progress:
+                                print "Processing",cName
 
-                        data["mtime"]=stat(cName)[ST_MTIME]
-                        times=sol.getTimes()
-                        try:
-                            data["first"]=times[0]
-                        except IndexError:
-                            data["first"]="None"                            
-                        try:
-                            data["last"]=times[-1]
-                        except IndexError:
-                            data["last"]="None"                            
-                        data["nrSteps"]=len(times)
-                        data["procs"]=sol.nrProcs()
-                        data["pFirst"]=-1
-                        data["pLast"]=-1
-                        data["nrParallel"]=-1
-                        if self.opts.parallel:
-                            pTimes=sol.getParallelTimes()
-                            data["nrParallel"]=len(pTimes)
-                            if len(pTimes)>0:
-                                data["pFirst"]=pTimes[0]
-                                data["pLast"]=pTimes[-1]                                
-                        data["name"]=cName
-                        data["diskusage"]=-1
-                        if self.opts.diskusage:
-                            data["diskusage"]=int(subprocess.Popen(["du","-sm",cName], stdout=subprocess.PIPE).communicate()[0].split()[0])
-                        if self.opts.parallel:
-                            for f in listdir(cName):
-                                if re.compile("processor[0-9]+").match(f):
-                                    data["mtime"]=max(stat(path.join(cName,f))[ST_MTIME],data["mtime"])
+                            data={}
 
-                        cData.append(data)
+                            data["mtime"]=stat(cName)[ST_MTIME]
+                            times=sol.getTimes()
+                            try:
+                                data["first"]=times[0]
+                            except IndexError:
+                                data["first"]="None"                            
+                            try:
+                                data["last"]=times[-1]
+                            except IndexError:
+                                data["last"]="None"                            
+                            data["nrSteps"]=len(times)
+                            data["procs"]=sol.nrProcs()
+                            data["pFirst"]=-1
+                            data["pLast"]=-1
+                            data["nrParallel"]=-1
+                            if self.opts.parallel:
+                                pTimes=sol.getParallelTimes()
+                                data["nrParallel"]=len(pTimes)
+                                if len(pTimes)>0:
+                                    data["pFirst"]=pTimes[0]
+                                    data["pLast"]=pTimes[-1]                                
+                            data["name"]=cName
+                            data["diskusage"]=-1
+                            if self.opts.diskusage:
+                                data["diskusage"]=int(subprocess.Popen(["du","-sm",cName], stdout=subprocess.PIPE).communicate()[0].split()[0])
+                                totalDiskusage+=data["diskusage"]
+                            if self.opts.parallel:
+                                for f in listdir(cName):
+                                    if re.compile("processor[0-9]+").match(f):
+                                        data["mtime"]=max(stat(path.join(cName,f))[ST_MTIME],data["mtime"])
 
+                            cData.append(data)
+                    except OSError:
+                        print cName,"is unreadable"
+                        
         if self.opts.progress:
             print "Sorting data"
             
@@ -188,3 +194,7 @@ doesn't honor the parallel data
             for k in d.keys():
                 d[k]=str(d[k])
             print format % d
+
+        if self.opts.diskusage:
+            print "Total disk-usage:",totalDiskusage,"MB"
+            

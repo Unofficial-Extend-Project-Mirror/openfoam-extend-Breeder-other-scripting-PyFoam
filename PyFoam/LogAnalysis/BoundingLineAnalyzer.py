@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BoundingLineAnalyzer.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: BoundingLineAnalyzer.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """Check lines for Boundedness"""
 
 import re
@@ -15,8 +15,19 @@ class GeneralBoundingLineAnalyzer(GeneralLineAnalyzer):
 
     Writes files of the form bounding_<var>"""
 
-    def __init__(self,doTimelines=True,doFiles=True):
-        GeneralLineAnalyzer.__init__(self,titles=['Minimum','Maximum','Average'],doTimelines=doTimelines,doFiles=doFiles)
+    def __init__(self,
+                 doTimelines=True,
+                 doFiles=True,
+                 singleFile=False,
+                 startTime=None,
+                 endTime=None):
+        GeneralLineAnalyzer.__init__(self,
+                                     titles=['Minimum','Maximum','Average'],
+                                     doTimelines=doTimelines,
+                                     doFiles=doFiles,
+                                     singleFile=singleFile,
+                                     startTime=startTime,
+                                     endTime=endTime)
         self.exp=re.compile(boundingRegExp)
 
     def addToFiles(self,match):

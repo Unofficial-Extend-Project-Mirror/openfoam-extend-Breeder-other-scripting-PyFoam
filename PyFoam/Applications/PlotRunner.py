@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotRunner.py 10071 2009-03-02 09:39:46Z bgschaid $ 
+#  ICE Revision: $Id: PlotRunner.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """
 Class that implements pyFoamPlotRunner
 """
@@ -105,6 +105,7 @@ class PlotRunner(PyFoamApplication,
                           customRegexp=self.plotLines(),
                           writeFiles=self.opts.writeFiles,
                           hardcopy=self.opts.hardcopy,
+                          hardcopyPrefix=self.opts.hardcopyPrefix,
                           hardcopyFormat=self.opts.hardcopyformat,
                           server=self.opts.server,
                           lam=lam,
@@ -113,13 +114,22 @@ class PlotRunner(PyFoamApplication,
                           progress=self.opts.progress,
                           restart=self.opts.restart,
                           logname=self.opts.logname,
-                          noLog=self.opts.noLog)
+                          compressLog=self.opts.compress,
+                          noLog=self.opts.noLog,
+                          plottingImplementation=self.opts.implementation,
+                          singleFile=self.opts.singleDataFilesOnly,
+                          remark=self.opts.remark,
+                          jobId=self.opts.jobId)
 
         self.addSafeTrigger(run,sol,steady=self.opts.steady)
         self.addWriteAllTrigger(run,sol)
         self.addLibFunctionTrigger(run,sol)        
         
+        self.addToCaseLog(cName,"Starting")
+        
         run.start()
+
+        self.addToCaseLog(cName,"Ending")
 
         self.reportUsage(run)
 

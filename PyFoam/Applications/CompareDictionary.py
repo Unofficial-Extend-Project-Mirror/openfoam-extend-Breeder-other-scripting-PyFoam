@@ -69,7 +69,8 @@ equivalent place in the destination case
                                        noBody=self.opts.noBody,
                                        noHeader=self.opts.noHeader,
                                        boundaryDict=self.opts.boundaryDict,
-                                       listDict=self.opts.listDict)
+                                       listDict=self.opts.listDict,
+                                       listDictWithHeader=self.opts.listDictWithHeader)
         except IOError,e:
             self.error("Problem with file",sName,":",e)
 
@@ -103,13 +104,14 @@ equivalent place in the destination case
                                      noBody=self.opts.noBody,
                                      noHeader=self.opts.noHeader,
                                      boundaryDict=self.opts.boundaryDict,
-                                     listDict=self.opts.listDict)
+                                     listDict=self.opts.listDict,
+                                     listDictWithHeader=self.opts.listDictWithHeader)
         except IOError,e:
             self.error("Problem with file",dName,":",e)
 
         self.pling=False
 
-        if not self.opts.boundaryDict and not self.opts.listDict:
+        if not self.opts.boundaryDict and not self.opts.listDict and not self.opts.listDictWithHeader:
             self.compareDict(source.content,dest.content,1,path.basename(sName))
         else:
             self.compareIterable(source.content,dest.content,1,path.basename(sName))

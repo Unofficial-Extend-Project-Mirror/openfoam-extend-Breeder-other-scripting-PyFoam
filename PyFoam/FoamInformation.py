@@ -1,8 +1,13 @@
-#  ICE Revision: $Id: FoamInformation.py 10067 2009-03-02 09:39:42Z bgschaid $ 
+#  ICE Revision: $Id: FoamInformation.py 10943 2009-10-09 07:31:48Z bgschaid $ 
 """Getting Information about the Foam-Installation (like the installation directory)"""
 
 from os import environ,path,listdir
-from popen2 import popen4
+import sys
+
+if sys.version_info<(2,6):
+    from popen2 import popen4
+else:
+    from subprocess import Popen,PIPE,STDOUT
 
 import re
 
@@ -76,6 +81,12 @@ def oldAppConvention():
     """
     return foamVersionNumber()<(1,5)
 
+def oldTutorialStructure():
+    """Returns true if the version of OpenFOAM is older than 1.6 and
+    it therefor uses the 'old' (flat) structure for the tutorials
+    """
+    return foamVersionNumber()<(1,6)
+
 def foamInstalledVersions():
     """@return: A list with the installed versions of OpenFOAM"""
 
@@ -103,10 +114,13 @@ def foamInstalledVersions():
             
     return versions
     
-def changeFoamVersion(new):
+def changeFoamVersion(new,force64=False,force32=False,compileOption=None):
     """Changes the used FoamVersion. Only valid during the runtime of
     the interpreter (the script or the Python session)
-    @param new: The new Version"""
+    @param new: The new Version
+    @param force64: Forces the 64-bit-version to be chosen
+    @param force32: Forces the 32-bit-version to be chosen
+    @param compileOption: Forces Debug or Opt"""
 
     if not new in foamInstalledVersions():
         error("Version",new,"is not an installed version: ",foamInstalledVersions())
@@ -114,7 +128,6 @@ def changeFoamVersion(new):
     if environ.has_key("WM_PROJECT_VERSION"):
         if new==environ["WM_PROJECT_VERSION"]:
             warning(new,"is already being used")
-            return
     else:
         warning("No OpenFOAM-Version installed")
         
@@ -127,16 +140,26 @@ def changeFoamVersion(new):
         script=path.join(basedir,"OpenFOAM-"+new,"etc","bashrc")
     else:
         script=path.join(basedir,"OpenFOAM-"+new,".OpenFOAM-"+new,"bashrc")
-    
-    injectVariables(script)
+
+    forceArchOption=None
+    if force64:
+       forceArchOption="64"
+    elif force32:
+       forceArchOption="32"
+       
+    injectVariables(script,
+                    forceArchOption=forceArchOption,
+                    compileOption=compileOption)
     
     if new!=environ["WM_PROJECT_VERSION"]:
         error("Problem while changing to version",new,"old version still used:",environ["WM_PROJECT_VERSION"])
 
-def injectVariables(script):
+def injectVariables(script,forceArchOption=None,compileOption=None):
     """Executes a script in a subshell and changes the current
     environment with the enivironment after the execution
-    @param script: the script that is executed"""
+    @param script: the script that is executed
+    @param forceArchOption: To which architecture Option should be forced
+    @param compileOption: to which value the WM_COMPILE_OPTION should be forced"""
 
     if not path.exists(script):
         error("Can not execute",script,"it does not exist")
@@ -149,15 +172,27 @@ def injectVariables(script):
             # this assumes that the 'shell' is a PyFoam-Script on a cluster
             shell=config().get("Paths","bash")
             environ["SHELL"]=shell
-            
-        if(path.basename(shell)!="bash"):
-            error("Currently only implemented for bash-shell, not for",shell)
 
-        cmd=". "+script+'; echo "Starting The Dump Of Variables"; export'
+        allowedShells = [ "bash", "zsh"]
+        if not path.basename(shell) in allowedShells:
+            error("Currently only implemented for the shells",allowedShells,", not for",shell)
+
+        cmd=""
+        if forceArchOption!=None:
+            cmd+="export WM_ARCH_OPTION="+forceArchOption+"; "
+        if compileOption!=None:
+            cmd+="export WM_COMPILE_OPTION="+compileOption+"; "
+        cmd+=". "+script+'; echo "Starting The Dump Of Variables"; export'
     except KeyError,name:
         error("Can't do it, because shell variable",name,"is undefined")
 
-    raus,rein = popen4(cmd)
+    if sys.version_info<(2,6):
+        raus,rein = popen4(cmd)
+    else:
+        p = Popen(cmd, shell=True,
+                  stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+        (rein,raus)=(p.stdin,p.stdout)
+        
     lines=raus.readlines()
     rein.close()
     raus.close()

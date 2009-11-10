@@ -36,11 +36,17 @@ class CommonParserOptions(object):
                           dest="boundaryDict",
                           help="Expect that this file is a boundary dictionary")
         
-        parser.add_option("--list",
+        parser.add_option("--list-only",
                           action="store_true",
                           default=False,
                           dest="listDict",
                           help="Expect that this file only contains a list")
+
+        parser.add_option("--list-with-header",
+                          action="store_true",
+                          default=False,
+                          dest="listDictWithHeader",
+                          help="Expect that this file only contains a list with a header")
 
         parser.add_option("--do-macro-expansion",
                           action="store_true",

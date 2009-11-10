@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PotentialRunner.py 9973 2009-02-05 12:47:31Z bgschaid $ 
+#  ICE Revision: $Id: PotentialRunner.py 10473 2009-05-25 08:00:21Z bgschaid $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -106,6 +106,7 @@ Copies the current fields for U and p to backup-files.
         run=BasicRunner(argv=argv+writep,
                         server=self.opts.server,
                         logname=self.opts.logname,
+                        compressLog=self.opts.compress,
                         silent=self.opts.progress,
                         lam=lam,
                         noLog=self.opts.noLog)
@@ -119,7 +120,11 @@ Copies the current fields for U and p to backup-files.
                               pRefValue=self.opts.pRefValue)
         run.addEndTrigger(trig.resetIt)
 
+        self.addToCaseLog(cName,"Starting")
+        
         run.start()
+
+        self.addToCaseLog(cName,"Ending")
 
 import re
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile

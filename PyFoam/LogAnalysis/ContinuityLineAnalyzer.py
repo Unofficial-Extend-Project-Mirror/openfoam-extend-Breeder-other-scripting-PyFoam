@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ContinuityLineAnalyzer.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: ContinuityLineAnalyzer.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """Check lines for continuity information"""
 
 import re
@@ -13,8 +13,19 @@ from GeneralLineAnalyzer import GeneralLineAnalyzer
 class GeneralContinuityLineAnalyzer(GeneralLineAnalyzer):
     """Parses line for continuity information"""
 
-    def __init__(self,doTimelines=True,doFiles=True):
-        GeneralLineAnalyzer.__init__(self,titles=["Local","Global","Cumulative"],doTimelines=doTimelines,doFiles=doFiles)
+    def __init__(self,
+                 doTimelines=True,
+                 doFiles=True,
+                 singleFile=False,
+                 startTime=None,
+                 endTime=None):
+        GeneralLineAnalyzer.__init__(self,
+                                     titles=["Local","Global","Cumulative"],
+                                     doTimelines=doTimelines,
+                                     doFiles=doFiles,
+                                     singleFile=singleFile,
+                                     startTime=startTime,
+                                     endTime=endTime)
         self.exp=re.compile(continutityRegExp)
 
     def addToFiles(self,match):

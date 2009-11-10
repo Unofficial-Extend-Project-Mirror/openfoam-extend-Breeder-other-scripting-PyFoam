@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: EchoDictionary.py 9490 2008-10-06 08:18:21Z bgschaid $ 
+#  ICE Revision: $Id: EchoDictionary.py 10485 2009-05-25 14:50:08Z bgschaid $ 
 """
 Application class that implements pyFoamEchoDictionary
 """
@@ -40,6 +40,7 @@ unformated dictionaries and debugging the parser
                                          noBody=self.opts.noBody,
                                          boundaryDict=self.opts.boundaryDict,
                                          listDict=self.opts.listDict,
+                                         listDictWithHeader=self.opts.listDictWithHeader,
                                          doMacroExpansion=self.opts.doMacros)
         except IOError,e:
             self.error("Problem with file",fName,":",e)

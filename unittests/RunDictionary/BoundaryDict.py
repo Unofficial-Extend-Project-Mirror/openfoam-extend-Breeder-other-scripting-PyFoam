@@ -7,12 +7,14 @@ from PyFoam.Error import PyFoamException
 
 from os import path,environ,system
 
+from TimeDirectory import damBreakTutorial
+
 theSuite=unittest.TestSuite()
 
 class BoundaryDictTest(unittest.TestCase):
     def setUp(self):
         self.dest="/tmp/TestDamBreak"
-        SolutionDirectory(path.join(environ["FOAM_TUTORIALS"],"interFoam","damBreak"),archive=None,paraviewLink=False).cloneCase(self.dest)
+        SolutionDirectory(damBreakTutorial(),archive=None,paraviewLink=False).cloneCase(self.dest)
 
     def tearDown(self):
         system("rm -rf "+self.dest)

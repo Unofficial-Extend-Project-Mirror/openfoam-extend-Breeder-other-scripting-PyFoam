@@ -54,6 +54,10 @@ Excludes all .svn-direcotries and all files ending with ~
                          dest="exclude",
                          default=[],
                          help="Exclude all files and directories that fit this glob pattern from being added, no matter at level (can be used more than once)")
+        what.add_option("--no-polyMesh",
+                         action="store_true",
+                         dest="noPloyMesh",
+                         help="Exclude the polyMesh-directory")
         self.parser.add_option("--tarname",
                          action="store",
                          dest="tarname",
@@ -83,6 +87,9 @@ Excludes all .svn-direcotries and all files ending with ~
             
         if self.parser.getOptions().chemkin:
             sol.addToClone("chemkin")
+
+        if self.opts.noPloyMesh:
+            self.parser.getOptions().exclude.append("polyMesh")
             
         sol.packCase(dName,
                      last=self.parser.getOptions().last,

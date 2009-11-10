@@ -35,6 +35,11 @@ class CommonPlotOptions(object):
                                action="store_true",
                                dest="raiseit",
                                help="Raise the Gnuplot windows after every replot")
+        behaveGroup.add_option("--implementation",
+                               default=None,
+                               dest="implementation",
+                               help="The implementation that should be used for plotting")
+        
         self.parser.add_option_group(behaveGroup)
 
         writeDGroup=OptionGroup(self.parser,
@@ -58,6 +63,11 @@ class CommonPlotOptions(object):
                                dest="hardcopyformat",
                                choices=hcChoices,
                                help="File-format the hardcopy should be written in (Formats: "+string.join(hcChoices,", ")+") Default: %default")
+        writeDGroup.add_option("--prefix-hardcopy",
+                               action="store",
+                               default=None,
+                               dest="hardcopyPrefix",
+                               help="Prefix for the hardcopy-files")
         
         self.parser.add_option_group(writeDGroup)
         

@@ -3,6 +3,7 @@
 import FoamFileGenerator
 from copy import deepcopy
 import string,math
+import re
 
 class FoamDataType(object):
     def __repr__(self):
@@ -198,12 +199,30 @@ class DictProxy(dict):
         dict.__init__(self)
         self._order=[]
         self._decoration={}
+        self._regex=[]
         
     def __setitem__(self,key,value):
-        dict.__setitem__(self,key,value)
-        if key not in self._order:
+        isRegex=False
+        if type(key)==str:
+            if key[0]=='"' and key[-1]=='"':
+                isRegex=True
+        if isRegex:
+            exp=re.compile(key[1:-1])
+            self._regex=[(key,exp,value)]+self._regex
+        else:
+            dict.__setitem__(self,key,value)
+        if key not in self._order or isRegex:
             self._order.append(key)
 
+    def __getitem__(self,key):
+        try:
+            return dict.__getitem__(self,key)
+        except KeyError:
+            for k,e,v in self._regex:
+                if e.match(key):
+                    return v
+            raise KeyError(key)
+        
     def __delitem__(self,key):
         dict.__delitem__(self,key)
         self._order.remove(key)
@@ -213,9 +232,22 @@ class DictProxy(dict):
     def __deepcopy__(self,memo):
         new=DictProxy()
         for k in self._order:
-            new[k]=deepcopy(self[k],memo)
+            try:
+                new[k]=deepcopy(self[k],memo)
+            except KeyError:
+                new[k]=deepcopy(self.getRegexpValue(k),memo)
+            
         return new
 
+    def __contains__(self,key):
+        if dict.__contains__(self,key):
+            return True
+        else:
+            for k,e,v in self._regex:
+                if e.match(key):
+                    return True
+            return False
+        
     def addDecoration(self,key,text):
         if key in self:
             self._decoration[key]=text
@@ -225,7 +257,13 @@ class DictProxy(dict):
             return " \t"+self._decoration[key]
         else:
             return ""
-        
+
+    def getRegexpValue(self,key):
+        for k,e,v in self._regex:
+            if k==key:
+                return v
+        raise KeyError(key)
+    
 class TupleProxy(list):
     """Enables Tuples to be manipulated"""
 

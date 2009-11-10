@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamFileGenerator.py 10078 2009-03-02 18:34:41Z bgschaid $ 
+#  ICE Revision: $Id: FoamFileGenerator.py 10750 2009-08-19 07:47:56Z bgschaid $ 
 """Transform a Python data-structure into a OpenFOAM-File-Representation"""
 
 from PyFoam.Error import error,PyFoamException
@@ -65,7 +65,11 @@ class FoamFileGenerator(object):
             order.sort()
             
         for k in order:
-            v=dic[k]
+            try:
+                v=dic[k]
+            except KeyError:
+                v=dic.getRegexpValue(k)
+                
             end="\n"
             if type(dic)==DictProxy:
                 end=dic.getDecoration(k)+"\n"
@@ -97,6 +101,11 @@ class FoamFileGenerator(object):
                 s+=" "+self.strTuple(v,indent+2)+";"+end
             elif type(v) in [int,float,long]:
                 s+=" "+str(v)+";"+end
+            elif type(v)==bool:
+                if v:
+                    s+=" yes;\n"
+                else:
+                    s+=" no;\n"
             elif v.__class__ in self.primitiveTypes:
                 s+=" "+str(v)+";"+end
             elif v==None:

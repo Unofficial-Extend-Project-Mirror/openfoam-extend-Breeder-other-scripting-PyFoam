@@ -9,7 +9,7 @@ class CommonStandardOutput(object):
     """ The class that defines options for standard output
     """
 
-    def addOptions(self):
+    def addOptions(self,logname=None):
         grp=OptionGroup(self.parser,
                         "Standard Output",
                         "Treatment of the standard output that is captured from the OpenFOAM-application")
@@ -20,16 +20,33 @@ class CommonStandardOutput(object):
                        help="Only prints the progress of the simulation, but swallows all the other output")
         grp.add_option("--logname",
                        dest="logname",
-                       default=None,
+                       default=logname,
                        help="Name of the logfile")
-        self.parser.add_option_group(grp)
-
+        grp.add_option("--compress",
+                       action="store_true",
+                       dest="compress",
+                       default=False,
+                       help="Compress the logfile into a gzip file. Possible loss of data if the run fails")
         grp.add_option("--no-log",
                        action="store_true",
                        dest="noLog",
                        default=False,
                        help="Do not output a log-file")
+
         self.parser.add_option_group(grp)
+
+        inf=OptionGroup(self.parser,
+                        "Run Info",
+                        "Additional information about the run")
+        inf.add_option("--remark",
+                       dest="remark",
+                       default=None,
+                       help="Text string with a remark about the run")
+        inf.add_option("--job-id",
+                       dest="jobId",
+                       default=None,
+                       help="Text string with the job-ID of the queuing system (usually unused)")
+        self.parser.add_option_group(inf)
 
     def setLogname(self,
                    default="PyFoamRunner",

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: LinearSolverLineAnalyzer.py 8144 2007-11-05 09:18:04Z bgschaid $ 
+#  ICE Revision: $Id: LinearSolverLineAnalyzer.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """Analyze information from the linear solver"""
 
 import re
@@ -16,8 +16,19 @@ class GeneralLinearSolverLineAnalyzer(GeneralLineAnalyzer):
     Files of the form linear_<var> are written, where <var> is the
     variable for which the solver was used"""
     
-    def __init__(self,doTimelines=True,doFiles=True):
-        GeneralLineAnalyzer.__init__(self,titles=["Initial","Final","Iterations"],doTimelines=doTimelines,doFiles=doFiles)
+    def __init__(self,
+                 doTimelines=True,
+                 doFiles=True,
+                 singleFile=False,
+                 startTime=None,
+                 endTime=None):
+        GeneralLineAnalyzer.__init__(self,
+                                     titles=["Initial","Final","Iterations"],
+                                     doTimelines=doTimelines,
+                                     doFiles=doFiles,
+                                     singleFile=singleFile,
+                                     startTime=startTime,
+                                     endTime=endTime)
         self.exp=re.compile(linearRegExp)
 
         if self.doTimelines:
@@ -47,8 +58,18 @@ class GeneralLinearSolverLineAnalyzer(GeneralLineAnalyzer):
 class GeneralLinearSolverIterationsLineAnalyzer(GeneralLinearSolverLineAnalyzer):
     """Parses information about the linear solver and collects the iterations"""
     
-    def __init__(self,doTimelines=True,doFiles=True):
-        GeneralLinearSolverLineAnalyzer.__init__(self,doTimelines=doTimelines,doFiles=doFiles)
+    def __init__(self,
+                 doTimelines=True,
+                 doFiles=True,
+                 singleFile=False,
+                 startTime=None,
+                 endTime=None):
+        GeneralLinearSolverLineAnalyzer.__init__(self,
+                                                 doTimelines=doTimelines,
+                                                 doFiles=doFiles,
+                                                 singleFile=singleFile,
+                                                 startTime=startTime,
+                                                 endTime=endTime)
 
     def addToFiles(self,match):
         pass

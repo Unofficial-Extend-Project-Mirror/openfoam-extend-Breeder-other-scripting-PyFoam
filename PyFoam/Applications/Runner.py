@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Runner.py 9973 2009-02-05 12:47:31Z bgschaid $ 
+#  ICE Revision: $Id: Runner.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """
 Application class that implements pyFoamRunner
 """
@@ -74,6 +74,8 @@ class Runner(PyFoamApplication,
         casePath=self.parser.casePath()
         self.checkCase(casePath)
         
+        self.addToCaseLog(casePath,"Starting")
+
         if self.opts.regions or self.opts.region!=None:
             print "Building Pseudocases"
             sol=SolutionDirectory(casePath,archive=None)
@@ -91,16 +93,21 @@ class Runner(PyFoamApplication,
         for theRegion in regionNames:
             args=self.buildRegionArgv(casePath,theRegion)
             self.setLogname()
-            run=AnalyzedRunner(BoundingLogAnalyzer(progress=self.opts.progress),
+            run=AnalyzedRunner(BoundingLogAnalyzer(progress=self.opts.progress,
+                                                   singleFile=self.opts.singleDataFilesOnly,
+                                                   doTimelines=True),
                                silent=self.opts.progress,
                                argv=args,
                                server=self.opts.server,
                                lam=lam,
                                restart=self.opts.restart,
                                logname=self.opts.logname,
-                               noLog=self.opts.noLog)
+                               compressLog=self.opts.compress,
+                               noLog=self.opts.noLog,
+                               remark=self.opts.remark,
+                               jobId=self.opts.jobId)
 
-            self.addPlotLineAnalyzers(run)
+            run.createPlots(customRegexp=self.lines_)
             
             self.addWriteAllTrigger(run,SolutionDirectory(casePath,archive=None))
             self.addLibFunctionTrigger(run,SolutionDirectory(casePath,archive=None))
@@ -122,3 +129,6 @@ class Runner(PyFoamApplication,
                 for r in sol.getRegions():
                     if r not in regionNames:
                         regions.clean(r)
+
+        self.addToCaseLog(casePath,"Ended")
+        

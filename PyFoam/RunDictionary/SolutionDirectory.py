@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SolutionDirectory.py 10067 2009-03-02 09:39:42Z bgschaid $ 
+#  ICE Revision: $Id: SolutionDirectory.py 10967 2009-10-19 16:02:07Z fpoll $ 
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -6,8 +6,10 @@ from PyFoam.Basics.BasicFile import BasicFile
 from PyFoam.Error import warning
 
 from TimeDirectory import TimeDirectory
+from ParsedParameterFile import ParsedParameterFile,WriteParameterFile
 
-from os import listdir,path,mkdir,symlink,stat
+from os import listdir,path,mkdir,symlink,stat,getlogin,uname,environ
+from time import asctime
 from stat import ST_CTIME
 import tarfile,fnmatch
 import re
@@ -21,11 +23,17 @@ class SolutionDirectory(Utilities):
     A sub-directory (called the Archive) is created to which solution
     data is copied"""
     
-    def __init__(self,name,archive="ArchiveDir",paraviewLink=True,region=None):
+    def __init__(self,
+                 name,
+                 archive="ArchiveDir",
+                 paraviewLink=True,
+                 parallel=False,
+                 region=None):
         """@param name: Name of the solution directory
         @param archive: name of the directory where the lastToArchive-method
         should copy files, if None no archive is created
         @param paraviewLink: Create a symbolic link controlDict.foam for paraview
+        @param parallel: use the first processor-subdirectory for the authorative information
         @param region: Mesh region for multi-region cases"""
 
         self.name=path.abspath(name)
@@ -38,10 +46,19 @@ class SolutionDirectory(Utilities):
         self.region=region
         self.backups=[]
 
+        self.parallel=parallel
+        
         self.lastReread=0L
         self.reread()
 
-        self.essential=[self.systemDir(),self.constantDir(),self.initialDir()]
+        self.dirPrefix=''
+        if self.processorDirs() and parallel:
+            self.dirPrefix = self.processorDirs()[0]
+
+        self.essential=[self.systemDir(),
+                        self.constantDir(),
+                        self.initialDir()]
+        self.addToClone("PyFoamHistory")
 
         if paraviewLink and not path.exists(self.controlDict()+".foam"):
             symlink(path.basename(self.controlDict()),self.controlDict()+".foam")
@@ -65,7 +82,7 @@ class SolutionDirectory(Utilities):
         if ind==None:
             raise KeyError(key)
         else:
-            return TimeDirectory(self.name,ind,region=self.region)
+            return TimeDirectory(self.name, self.fullPath(ind), region=self.region)
 
     def __setitem__(self,key,value):
         self.reread()
@@ -75,7 +92,7 @@ class SolutionDirectory(Utilities):
         if type(value)!=TimeDirectory:
             raise TypeError(type(value),"is not TimeDirectory")
 
-        dest=TimeDirectory(self.name,key,create=True,region=self.region)
+        dest=TimeDirectory(self.name, self.fullPath(key), create=True,region=self.region)
         dest.copy(value)
 
         self.reread(force=True)
@@ -86,21 +103,21 @@ class SolutionDirectory(Utilities):
         if nm==None:
             raise KeyError(key)
 
-        self.execute("rm -rf "+path.join(self.name,nm))
+        self.execute("rm -rf "+path.join(self.name, self.fullPath(nm)))
         
         self.reread(force=True)
         
     def __iter__(self):
         self.reread()
         for key in self.times:
-            yield TimeDirectory(self.name,key,region=self.region)
+            yield TimeDirectory(self.name, self.fullPath(key), region=self.region)
             
     def timeName(self,item,minTime=False):
         """Finds the name of a directory that corresponds with the given parameter
         @param item: the time that should be found
         @param minTime: search for the time with the minimal difference.
         Otherwise an exact match will be searched"""
-
+        
         if type(item)==int:
             return self.times[item]
         else:
@@ -136,6 +153,11 @@ class SolutionDirectory(Utilities):
                     
         return result
         
+    def fullPath(self,time):
+        if self.dirPrefix:
+            return path.join(self.dirPrefix, time)
+        return time
+        
     def isValid(self):
         """Checks whether this is a valid case directory by looking for
         the system- and constant-directories and the controlDict-file"""
@@ -162,7 +184,8 @@ class SolutionDirectory(Utilities):
     def addToClone(self,name):
         """add directory to the list that is needed to clone this case
         @param name: name of the subdirectory (the case directory is prepended)"""
-        self.essential.append(path.join(self.name,name))
+        if path.exists(path.join(self.name,name)):
+            self.essential.append(path.join(self.name,name))
 
     def cloneCase(self,name,svnRemove=True,followSymlinks=False):
         """create a clone of this case directory. Remove the target directory, if it already exists
@@ -181,7 +204,8 @@ class SolutionDirectory(Utilities):
             self.execute("rm -r "+name)
         mkdir(name)
         for d in self.essential:
-            self.execute("cp "+cpOptions+" "+d+" "+name)
+            if d!=None:
+                self.execute("cp "+cpOptions+" "+d+" "+name)
 
         if svnRemove:
             self.execute("find "+name+" -name .svn -exec rm -rf {} \\; -prune")
@@ -257,44 +281,45 @@ class SolutionDirectory(Utilities):
         self.times=[]
         self.first=None
         self.last=None
-        self.procDirs=0
+        procDirs = self.processorDirs()
+        self.procNr=len(procDirs)
         
-        for f in listdir(self.name):
+        if procDirs and self.parallel:
+            timesDir = path.join(self.name, procDirs[0])
+        else:
+            timesDir = self.name
+        
+        for f in listdir(timesDir):
             try:
                 val=float(f)
                 self.times.append(f)
-                if self.first==None:
-                    self.first=f
-                else:
-                    if float(f)<float(self.first):
-                        self.first=f
-                if self.last==None:
-                    self.last=f
-                else:
-                    if float(f)>float(self.last):
-                        self.last=f
-                        
             except ValueError:
-                if re.compile("processor[0-9]+").match(f):
-                    self.procDirs+=1
+                pass
 
         self.lastReread=stat(self.name)[ST_CTIME]
         
         self.times.sort(self.sorttimes)
+        if self.times:
+            self.first = self.times[0]
+            self.last = self.times[-1]
 
     def processorDirs(self):
         """List with the processor directories"""
-        dirs=[]
+        try:
+            return self.procDirs
+        except:
+            pass
+        self.procDirs=[]
         for f in listdir(self.name):
             if re.compile("processor[0-9]+").match(f):
-                dirs.append(f)
-                
-        return dirs
+                self.procDirs.append(f)
+        
+        return self.procDirs
             
     def nrProcs(self):
         """The number of directories with processor-data"""
         self.reread()
-        return self.procDirs
+        return self.procNr
     
     def sorttimes(self,x,y):
         """Sort function for the solution files"""
@@ -315,6 +340,12 @@ class SolutionDirectory(Utilities):
         archive"""
         self.backups.append(path.join(self.name,pth))
 
+    def getFirst(self):
+        """@return: the first time for which a solution exists
+        @rtype: str"""
+        self.reread()
+        return self.first
+    
     def getLast(self):
         """@return: the last time for which a solution exists
         @rtype: str"""
@@ -392,22 +423,38 @@ class SolutionDirectory(Utilities):
 
         self.execute("rm -rf "+path.join(self.name,glob))
         
-    def clearOther(self,pyfoam=True):
+    def clearOther(self,
+                   pyfoam=True,
+                   clearHistory=False):
         """Remove additional directories
         @param pyfoam: rremove all directories typically created by PyFoam"""
 
         if pyfoam:
             self.clearPattern("PyFoam.?*")
             self.clearPattern("*?.analyzed")
+        if clearHistory:
+            self.clearPattern("PyFoamHistory")
             
-    def clear(self,after=None,processor=True,pyfoam=True,keepLast=False,vtk=True,keepRegular=False):
+    def clear(self,
+              after=None,
+              processor=True,
+              pyfoam=True,
+              keepLast=False,
+              vtk=True,
+              keepRegular=False,
+              clearHistory=False):
         """One-stop-shop to remove data
         @param after: time after which directories ar to be removed
         @param processor: remove the processorXX directories
         @param pyfoam: rremove all directories typically created by PyFoam
         @param keepLast: Keep the last time-step"""
-        self.clearResults(after=after,removeProcs=processor,keepLast=keepLast,vtk=vtk,keepRegular=keepRegular)
-        self.clearOther(pyfoam=pyfoam)
+        self.clearResults(after=after,
+                          removeProcs=processor,
+                          keepLast=keepLast,
+                          vtk=vtk,
+                          keepRegular=keepRegular)
+        self.clearOther(pyfoam=pyfoam,
+                        clearHistory=clearHistory)
         
     def initialDir(self):
         """@return: the name of the first time-directory (==initial
@@ -513,6 +560,104 @@ class SolutionDirectory(Utilities):
                     lst.append(d)
         lst.sort()
         return lst
+
+    def addToHistory(self,*text):
+        """Adds a line with date and username to a file 'PyFoamHistory'
+        that resides in the local directory"""
+        hist=open(path.join(self.name,"PyFoamHistory"),"a")
+
+        try:
+            # this seems to fail when no stdin is available
+            username=getlogin()
+        except OSError:
+            username=environ["USER"]
+            
+        hist.write("%s by %s in %s :" % (asctime(),username,uname()[1]))
+        
+        for t in text:
+            hist.write(str(t)+" ")
+            
+        hist.write("\n")
+        hist.close()
+        
+    def listFiles(self,directory=None):
+        """List all the plain files (not directories) in a subdirectory
+        of the case
+        @param directory: the subdirectory. If unspecified the
+        case-directory itself is used
+        @return: List with the plain filenames"""
+
+        result=[]
+        theDir=self.name
+        if directory:
+            theDir=path.join(theDir,directory)
+
+        for f in listdir(theDir):
+            if f[0]!='.' and f[-1]!='~':
+                if path.isfile(path.join(theDir,f)):
+                    result.append(f)
+                
+        return result
+
+    def getDictionaryText(self,directory,name):
+        """@param directory: Sub-directory of the case
+        @param name: name of the dictionary file
+        @return: the contents of the file as a big string"""
+
+        result=None
+        theDir=self.name
+        if directory:
+            theDir=path.join(theDir,directory)
+
+        if path.exists(path.join(theDir,name)):
+            result=open(path.join(theDir,name)).read()
+        else:
+            warning("File",name,"does not exist in directory",directory,"of case",self.name)
+            
+        return result
+
+    def writeDictionaryContents(self,directory,name,contents):
+        """Writes the contents of a dictionary
+        @param directory: Sub-directory of the case
+        @param name: name of the dictionary file
+        @param contents: Python-dictionary with the dictionary contents"""
+        
+        theDir=self.name
+        if directory:
+            theDir=path.join(theDir,directory)
+
+        result=WriteParameterFile(path.join(theDir,name))
+        result.content=contents
+        result.writeFile()
+        
+    def writeDictionaryText(self,directory,name,text):
+        """Writes the contents of a dictionary
+        @param directory: Sub-directory of the case
+        @param name: name of the dictionary file
+        @param text: String with the dictionary contents"""
+
+        theDir=self.name
+        if directory:
+            theDir=path.join(theDir,directory)
+
+        result=open(path.join(theDir,name),"w").write(text)
+
+    def getDictionaryContents(self,directory,name):
+        """@param directory: Sub-directory of the case
+        @param name: name of the dictionary file
+        @return: the contents of the file as a python data-structure"""        
+
+        result={}
+        theDir=self.name
+        if directory:
+            theDir=path.join(theDir,directory)
+
+        if path.exists(path.join(theDir,name)):
+            result=ParsedParameterFile(path.join(theDir,name)).content
+        else:
+            warning("File",name,"does not exist in directory",directory,"of case",self.name)
+            
+        return result
     
 class ChemkinSolutionDirectory(SolutionDirectory):
     """Solution directory with a directory for the Chemkin-files"""
@@ -530,3 +675,14 @@ class ChemkinSolutionDirectory(SolutionDirectory):
 
         return path.join(self.name,self.chemkinName)
     
+class NoTouchSolutionDirectory(SolutionDirectory):
+    """Convenience class that makes sure that nothing new is created"""
+    
+    def __init__(self,
+                 name,
+                 region=None):
+        SolutionDirectory.__init__(self,
+                                  name,
+                                  archive=None,
+                                  paraviewLink=False,
+                                  region=region)

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PVSnapshot.py 10079 2009-03-03 09:52:47Z bgschaid $ 
+#  ICE Revision: $Id: PVSnapshot.py 10996 2009-11-04 08:52:12Z bgschaid $ 
 """
 Class that implements pyFoamPVSnapshot
 """
@@ -7,14 +7,19 @@ from optparse import OptionGroup
 
 from PyFoamApplication import PyFoamApplication
 
+from CommonSelectTimesteps import CommonSelectTimesteps
+
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.Paraview.ServermanagerWrapper import ServermanagerWrapper as SM
 from PyFoam.Paraview.StateFile import StateFile
 
+from PyFoam.FoamInformation import foamVersion
+
 from os import path,unlink
 import sys,string
 
-class PVSnapshot(PyFoamApplication):
+class PVSnapshot(PyFoamApplication,
+                 CommonSelectTimesteps ):
     def __init__(self,args=None):
         description="""
 Generates snapshots of an OpenFOAM-case and a predefined paraview-State-File
@@ -28,6 +33,8 @@ requirement is fullfilled if the StateFile was generated using paraFoam)
 In TextSources the string "%(casename)s" gets replaced by the casename. Additional
 replacements can be specified
 """
+        CommonSelectTimesteps.__init__(self)
+        
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -39,33 +46,8 @@ replacements can be specified
                "jpg":"vtkJPEGWriter"}
         
     def addOptions(self):
-        time=OptionGroup(self.parser,
-                         "Time Specification",
-                         "Which times should be plotted")
-        time.add_option("--time",
-                        type="float",
-                        dest="time",
-                        default=[],
-                        action="append",
-                        help="Timestep that should be vizualized. Can be used more than once")
-        time.add_option("--latest-time",
-                          dest="latest",
-                          action="store_true",
-                          default=False,
-                          help="Make a picture of the latest time")
-        time.add_option("--all-times",
-                          dest="all",
-                          action="store_true",
-                          default=False,
-                          help="Make a picture of all times")
-        time.add_option("--unique-times",
-                          dest="unique",
-                          action="store_true",
-                          default=False,
-                          help="Use each time-directory only once")
+        CommonSelectTimesteps.addOptions(self,defaultUnique=False)
         
-        self.parser.add_option_group(time)
-
         paraview=OptionGroup(self.parser,
                            "Paraview specifications",
                            "Options concerning paraview")
@@ -123,6 +105,9 @@ replacements can be specified
                             help="Key with which the caename should be replaced. Default: %default")
         
     def run(self):
+        if foamVersion()>=(1,6):
+            self.warning("This utilitiy currently does not work with OF>=1.6 because the API in Paraview>=3.6 has changed. But we'll try")
+            
         case=path.abspath(self.parser.getArgs()[0])
         short=path.basename(case)
         
@@ -142,37 +127,11 @@ replacements can be specified
         timeString+="."+self.opts.type
 
         sol=SolutionDirectory(case,paraviewLink=False,archive=None)
-        if self.opts.latest:
-            self.opts.time.append(float(sol.getLast()))
-        if self.opts.all:
-            for t in sol.getTimes():
-                self.opts.time.append(float(t))
-                
-        self.opts.time.sort()
-        
-        times=[]
-
-        for s in self.opts.time:
-            times.append(sol.timeName(s,minTime=True))
-
-        if self.opts.unique:
-            tmp=[]
-            last=None
-            cnt=0
-            for s in times:
-                if last!=s:
-                    tmp.append(s)
-                else:
-                    cnt+=1
-                last=s
-            if cnt>0:
-                self.warning("Removed",cnt,"duplicate times")
-            times=tmp
-    
-        if len(times)==0:
-            self.warning("No valid times specified")
+        times=self.processTimestepOptions(sol)
+        if len(times)<1:
+            self.warning("Can't continue without time-steps")
             return
-
+        
         dataFile=path.join(case,short+".OpenFOAM")
         createdDataFile=False
         if not path.exists(dataFile):

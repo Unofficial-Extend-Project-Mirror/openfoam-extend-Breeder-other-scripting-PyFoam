@@ -223,7 +223,7 @@ case
     def run(self):
         sName=path.abspath(self.parser.getArgs()[0])
         dName=path.abspath(self.parser.getArgs()[1])
-
+        
         if self.opts.all:
             self.opts.append=True
             self.opts.shorten=True
@@ -237,7 +237,8 @@ case
                                        noBody=self.opts.noBody,
                                        noHeader=self.opts.noHeader,
                                        boundaryDict=self.opts.boundaryDict,
-                                       listDict=self.opts.listDict)
+                                       listDict=self.opts.listDict,
+                                       listDictWithHeader=self.opts.listDictWithHeader)
         except IOError,e:
             self.error("Problem with file",sName,":",e)
 
@@ -266,14 +267,17 @@ case
                                      noBody=self.opts.noBody,
                                      noHeader=self.opts.noHeader,
                                      boundaryDict=self.opts.boundaryDict,
-                                     listDict=self.opts.listDict)
+                                     listDict=self.opts.listDict,
+                                     listDictWithHeader=self.opts.listDictWithHeader)
         except IOError,e:
             self.error("Problem with file",dName,":",e)
+
+        dCase=dest.getCaseDir()
 
         if self.opts.interactive:
             self.opts.verbose=True
 
-        if not self.opts.boundaryDict and not self.opts.listDict:
+        if not self.opts.boundaryDict and not self.opts.listDict and not self.opts.listDictWithHeader:
             self.workDict(source.content,dest.content,1)
         else:
             self.workList(source.content,dest.content,1)
@@ -283,4 +287,7 @@ case
 
         if not self.opts.test and self.ask("\n Write this file to disk"):
             dest.writeFile()
+            if dCase!=None:
+                self.addToCaseLog(dCase,"Source",sName,"Destination:",dName)
+        
                  

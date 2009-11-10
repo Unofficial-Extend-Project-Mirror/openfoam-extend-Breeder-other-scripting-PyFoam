@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: RegExpLineAnalyzer.py 10069 2009-03-02 09:39:44Z bgschaid $ 
+#  ICE Revision: $Id: RegExpLineAnalyzer.py 10770 2009-08-24 07:51:28Z bgschaid $ 
 """Analyzes lines with regular expressions"""
 
 import re
@@ -28,7 +28,9 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
                  doTimelines=False,
                  doFiles=True,
                  accumulation=None,
-                 singleFile=False):
+                 singleFile=False,
+                 startTime=None,
+                 endTime=None):
         """
         @param name: name of the expression (needed for output
         @param exp: the regular expression, %f% will be replaced with the
@@ -42,7 +44,9 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
                                      doTimelines=doTimelines,
                                      doFiles=doFiles,
                                      accumulation=accumulation,
-                                     singleFile=singleFile)
+                                     singleFile=singleFile,
+                                     startTime=startTime,
+                                     endTime=endTime)
 
         self.name=name
         self.idNr=idNr
@@ -53,7 +57,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
         self.exp=re.compile(self.strExp)
 
         self.data={}
-        
+
     def startAnalysis(self,match):
         self.tm=self.parent.getTime()
         if self.tm=="":
@@ -79,11 +83,20 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
         name=self.name
         fdata=match.groups()
 
+        prefix=""
+        if self.idNr!=None:
+            ID=match.group(self.idNr)
+            prefix=ID+"_"
+            fdata=fdata[:self.idNr-1]+fdata[self.idNr:]
+        
         for i in range(len(fdata)):
             val=float(fdata[i])
-            name="value %d" % i
+            name=prefix+"value %d" % i
             if i<len(self.titles):
-                name=self.titles[i]
+                if self.idNr!=None and self.titles[i].find("%s")>=0:
+                    name=self.titles[i] % ID
+                else:
+                    name=prefix+self.titles[i]
 
             self.lines.setValue(name,val)
         
@@ -134,12 +147,25 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
 class RegExpTimeLineLineAnalyzer(RegExpLineAnalyzer):
     """Class that stores results as timelines, too"""
     
-    def __init__(self,name,exp,titles=[]):
+    def __init__(self,
+                 name,
+                 exp,
+                 titles=[],
+                 startTime=None,
+                 endTime=None):
         """
         @param name: name of the expression (needed for output
         @param exp: the regular expression, %f% will be replaced with the
         regular expression for a float
         @param titles: titles of the columns
         """
-        RegExpLineAnalyzer.__init__(self,name,exp,idNr=None,titles=titles,doTimelines=True,doFiles=False)
+        RegExpLineAnalyzer.__init__(self,
+                                    name,
+                                    exp,
+                                    idNr=None,
+                                    titles=titles,
+                                    doTimelines=True,
+                                    doFiles=False,
+                                    startTime=startTime,
+                                    endTime=endTime)
 

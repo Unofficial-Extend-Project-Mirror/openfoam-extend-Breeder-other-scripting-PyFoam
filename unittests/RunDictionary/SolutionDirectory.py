@@ -5,12 +5,14 @@ from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
 
 from os import path,environ,system
 
+from TimeDirectory import damBreakTutorial
+
 theSuite=unittest.TestSuite()
 
 class SolutionDirectoryTest(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.damBreak"
-        system("cp -r "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak")+" "+self.theFile)
+        system("cp -r "+damBreakTutorial()+" "+self.theFile)
         
     def tearDown(self):
         system("rm -rf "+self.theFile)

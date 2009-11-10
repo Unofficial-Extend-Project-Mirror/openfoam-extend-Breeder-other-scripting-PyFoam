@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: DeltaTLineAnalyzer.py 8027 2007-10-07 18:18:21Z bgschaid $ 
+#  ICE Revision: $Id: DeltaTLineAnalyzer.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """Check lines for timestep information"""
 
 import re
@@ -13,8 +13,19 @@ from GeneralLineAnalyzer import GeneralLineAnalyzer
 class GeneralDeltaTLineAnalyzer(GeneralLineAnalyzer):
     """Parses line for continuity information"""
 
-    def __init__(self,doTimelines=True,doFiles=True):
-        GeneralLineAnalyzer.__init__(self,titles=["deltaT"],doTimelines=doTimelines,doFiles=doFiles)
+    def __init__(self,
+                 doTimelines=True,
+                 doFiles=True,
+                 singleFile=False,
+                 startTime=None,
+                 endTime=None):
+        GeneralLineAnalyzer.__init__(self,
+                                     titles=["deltaT"],
+                                     doTimelines=doTimelines,
+                                     doFiles=doFiles,
+                                     singleFile=singleFile,
+                                     startTime=startTime,
+                                     endTime=endTime)
         self.exp=re.compile(continutityRegExp)
 
     def addToFiles(self,match):

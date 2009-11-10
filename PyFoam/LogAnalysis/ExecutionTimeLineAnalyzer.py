@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ExecutionTimeLineAnalyzer.py 8285 2007-12-10 15:11:39Z bgschaid $ 
+#  ICE Revision: $Id: ExecutionTimeLineAnalyzer.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """Check for Execution-Time information"""
 
 import re
@@ -22,13 +22,25 @@ from PyFoam.FoamInformation import foamVersionNumber
 class GeneralExecutionLineAnalyzer(GeneralLineAnalyzer):
     """Parses lines for the execution time"""
 
-    def __init__(self,doTimelines=True,doFiles=True):
+    def __init__(self,
+                 doTimelines=True,
+                 doFiles=True,
+                 singleFile=False,
+                 startTime=None,
+                 endTime=None):
         self.hasClock=(foamVersionNumber()>=(1,3))
         titles=["cumulated"]
         if self.hasClock:
             titles.append("delta")
 
-        GeneralLineAnalyzer.__init__(self,titles=titles,doTimelines=doTimelines,doFiles=doFiles)
+        GeneralLineAnalyzer.__init__(self,
+                                     titles=titles,
+                                     doTimelines=doTimelines,
+                                     doFiles=doFiles,
+                                     singleFile=singleFile,
+                                     startTime=startTime,
+                                     endTime=endTime)
+        
         self.exp=re.compile(executionRegexp())
 
         self.exp=re.compile(executionRegexp())

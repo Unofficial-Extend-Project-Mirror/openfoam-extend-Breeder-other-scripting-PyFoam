@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Decomposer.py 9973 2009-02-05 12:47:31Z bgschaid $ 
+#  ICE Revision: $Id: Decomposer.py 10975 2009-10-27 16:44:36Z bgschaid $ 
 """
 Class that implements pyFoamDecompose
 """
@@ -13,6 +13,7 @@ from PyFoam.Execution.UtilityRunner import UtilityRunner
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.RegionCases import RegionCases
 from PyFoam.FoamInformation import oldAppConvention as oldApp
+from PyFoam.FoamInformation import foamVersion
 
 from CommonMultiRegion import CommonMultiRegion
 from CommonStandardOutput import CommonStandardOutput
@@ -37,14 +38,19 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                                    nr=2)
 
     decomposeChoices=["metis","simple","hierarchical","manual"]
-    
+    defaultMethod="metis"
+        
     def addOptions(self):
+        if foamVersion()>=(1,6):
+            self.defaultMethod="scotch"
+            self.decomposeChoices+=[self.defaultMethod]
+            
         spec=OptionGroup(self.parser,
                          "Decomposition Specification",
                          "How the case should be decomposed")
         spec.add_option("--method",
                         type="choice",
-                        default="metis",
+                        default=self.defaultMethod,
                         dest="method",
                         action="store",
                         choices=self.decomposeChoices,
@@ -142,7 +148,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
             fZones=eval(self.opts.globalFaceZones)
             result["globalFaceZones"]=fZones
 
-        if method=="metis":
+        if method=="metis" or method=="scotch":
             if self.opts.processorWeights!=None:
                 weigh=eval(self.opts.processorWeights)
                 if nr!=len(weigh):
@@ -214,8 +220,10 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                 run=UtilityRunner(argv=argv,
                                   silent=self.opts.progress,
                                   logname=self.opts.logname,
+                                  compressLog=self.opts.compress,
                                   server=self.opts.server,
-                                  noLog=self.opts.noLog)
+                                  noLog=self.opts.noLog,
+                                  jobId=self.opts.jobId)
                 run.start()
 
                 if theRegion!=None:
@@ -230,4 +238,6 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                     for r in sol.getRegions():
                         if r not in regionNames:
                             regions.clean(r)
+
+            self.addToCaseLog(case)
 

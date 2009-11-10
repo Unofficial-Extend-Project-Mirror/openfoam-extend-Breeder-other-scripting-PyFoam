@@ -112,6 +112,13 @@ class ClusterJob:
         
         self.isDecomposed=False
 
+    def fullJobId(self):
+        """Return a string with the full job-ID"""
+        result=str(self.jobID)
+        if self.arrayJob:
+            result+=":"+str(self.taskID)
+        return result
+    
     def message(self,*txt):
         print "=== CLUSTERJOB: ",
         for t in txt:
@@ -244,6 +251,8 @@ class ClusterJob:
         @param noLog: Do not generate a logfile"""
 
         arglist=args[:]
+        arglist+=["--job-id=%s" % self.fullJobId()]
+        
         if self.isDecomposed and self.nproc>1:
             arglist+=["--procnr=%d" % self.nproc,
                       "--machinefile=%s" % self.hostfile]
@@ -285,7 +294,8 @@ class ClusterJob:
         args=["--method=metis",
               "--clear",
               self.casename(),
-              self.nproc]
+              self.nproc,
+              "--job-id=%s" % self.fullJobId()]
 
         if self.multiRegion:
             args.append("--all-regions")

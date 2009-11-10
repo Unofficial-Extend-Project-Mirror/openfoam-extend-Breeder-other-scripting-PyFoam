@@ -1,7 +1,13 @@
-#  ICE Revision: $Id: AnalyzedCommon.py 8317 2007-12-21 14:45:09Z bgschaid $ 
+#  ICE Revision: $Id: AnalyzedCommon.py 10976 2009-10-28 10:25:32Z bgschaid $ 
 """Common stuff for classes that use analyzers"""
 
 from os import path,mkdir
+
+from PyFoam.Basics.PlotTimelinesFactory import createPlotTimelines,createPlotTimelinesDirect
+from PyFoam.Basics.TimeLineCollection import signedMax
+from PyFoam.LogAnalysis.RegExpLineAnalyzer import RegExpLineAnalyzer
+
+from PyFoam.Error import error
 
 class AnalyzedCommon(object):
     """This class collects information and methods that are needed for
@@ -34,6 +40,10 @@ class AnalyzedCommon(object):
         """@param name: name of the LineAnalyzer to get"""
         return self.analyzer.getAnalyzer(name)
     
+    def hasAnalyzer(self,name):
+        """@param name: name of the LineAnalyzer we ask for"""
+        return self.analyzer.hasAnalyzer(name)
+    
     def addAnalyzer(self,name,analyzer):
         """@param name: name of the LineAnalyzer to add
         @param analyzer: the analyzer to add"""
@@ -65,3 +75,183 @@ class AnalyzedCommon(object):
 
         self.analyzer.addTrigger(time,func,once=once,until=until)
         
+    def createPlots(self,
+                    persist=None,
+                    raiseit=False,
+                    splitThres=2048,
+                    plotLinear=True,
+                    plotCont=True,
+                    plotBound=True,
+                    plotIterations=True,
+                    plotCourant=True,
+                    plotExecution=True,
+                    plotDeltaT=True,
+                    start=None,
+                    end=None,
+                    writeFiles=False,
+                    customRegexp=None,
+                    plottingImplementation="dummy"):
+
+        plots={}
+        
+        if plotLinear and self.hasAnalyzer("Linear"):
+            plots["linear"]=createPlotTimelinesDirect("linear",
+                                                      self.getAnalyzer("Linear").lines,
+                                                      persist=persist,
+                                                      raiseit=raiseit,
+                                                      forbidden=["final","iterations"],
+                                                      start=start,
+                                                      end=end,
+                                                      logscale=True,
+                                                      implementation=plottingImplementation)
+            self.getAnalyzer("Linear").lines.setSplitting(splitThres=splitThres,
+                                                          splitFun=max,
+                                                          advancedSplit=True)
+            
+            plots["linear"].setTitle("Residuals")
+            
+        if plotCont and self.hasAnalyzer("Continuity"):
+            plots["cont"]=createPlotTimelinesDirect("continuity",
+                                                    self.getAnalyzer("Continuity").lines,
+                                                    persist=persist,
+                                                    alternateAxis=["Global"],
+                                                    raiseit=raiseit,
+                                                    start=start,
+                                                    end=end,
+                                                    implementation=plottingImplementation)
+            plots["cont"].setYLabel("Cumulative")
+            plots["cont"].setYLabel2("Global")
+            self.getAnalyzer("Continuity").lines.setSplitting(splitThres=splitThres,
+                                                              advancedSplit=True)
+            
+            plots["cont"].setTitle("Continuity")
+ 
+        if plotBound and self.hasAnalyzer("Bounding"):
+            plots["bound"]=createPlotTimelinesDirect("bounding",
+                                                     self.getAnalyzer("Bounding").lines,
+                                                     persist=persist,
+                                                     raiseit=raiseit,
+                                                     start=start,
+                                                     end=end,
+                                                     implementation=plottingImplementation)
+            self.getAnalyzer("Bounding").lines.setSplitting(splitThres=splitThres,
+                                                            splitFun=signedMax,
+                                                            advancedSplit=True)
+            plots["bound"].setTitle("Bounded variables")
+
+        if plotIterations and self.hasAnalyzer("Iterations"):
+            plots["iter"]=createPlotTimelinesDirect("iterations",
+                                                    self.getAnalyzer("Iterations").lines,
+                                                    persist=persist,
+                                                    with_="steps",
+                                                    raiseit=raiseit,
+                                                    start=start,
+                                                    end=end,
+                                                    implementation=plottingImplementation)
+            self.getAnalyzer("Iterations").lines.setSplitting(splitThres=splitThres,
+                                                              advancedSplit=True)
+
+            plots["iter"].setTitle("Iterations")
+
+        if plotCourant and self.hasAnalyzer("Courant"):
+            plots["courant"]=createPlotTimelinesDirect("courant",
+                                                       self.getAnalyzer("Courant").lines,
+                                                       persist=persist,
+                                                       raiseit=raiseit,
+                                                       start=start,
+                                                       end=end,
+                                                       implementation=plottingImplementation)
+            self.getAnalyzer("Courant").lines.setSplitting(splitThres=splitThres,
+                                                           advancedSplit=True)
+
+            plots["courant"].setTitle("Courant")
+ 
+        if plotDeltaT and self.hasAnalyzer("DeltaT"):
+            plots["deltaT"]=createPlotTimelinesDirect("timestep",
+                                                      self.getAnalyzer("DeltaT").lines,
+                                                      persist=persist,
+                                                      raiseit=raiseit,
+                                                      start=start,
+                                                      end=end,
+                                                      logscale=True,
+                                                      implementation=plottingImplementation)
+            self.getAnalyzer("DeltaT").lines.setSplitting(splitThres=splitThres,
+                                                          advancedSplit=True)
+
+            plots["deltaT"].setTitle("DeltaT")
+ 
+        if plotExecution and self.hasAnalyzer("Execution"):
+            plots["execution"]=createPlotTimelinesDirect("execution",
+                                                         self.getAnalyzer("Execution").lines,
+                                                         persist=persist,
+                                                         with_="steps",
+                                                         raiseit=raiseit,
+                                                         start=start,
+                                                         end=end,
+                                                         implementation=plottingImplementation)
+            self.getAnalyzer("Execution").lines.setSplitting(splitThres=splitThres,
+                                                             advancedSplit=True)
+
+            plots["execution"].setTitle("Execution Time")
+            
+        if customRegexp:
+            self.plotCustom=[]
+            masters={}
+            slaves=[]
+            for i,custom in enumerate(customRegexp):
+                if persist!=None:
+                    custom.persist=persist
+                if start!=None:
+                    custom.start=start
+                if end!=None:
+                    custom.end=end
+                custom.raiseit=raiseit
+
+                if custom.type=="dynamic":
+                    self.addAnalyzer(custom.name,
+                                     RegExpLineAnalyzer(custom.name.lower(),
+                                                        custom.expr,
+                                                        titles=custom.titles,
+                                                        doTimelines=True,
+                                                        doFiles=writeFiles,
+                                                        accumulation=custom.accumulation,
+                                                        singleFile=True,
+                                                        idNr=custom.idNr,
+                                                        startTime=custom.start,
+                                                        endTime=custom.end))
+                    
+                else:
+                    self.addAnalyzer(custom.name,
+                                     RegExpLineAnalyzer(custom.name.lower(),
+                                                        custom.expr,
+                                                        titles=custom.titles,
+                                                        doTimelines=True,
+                                                        doFiles=writeFiles,
+                                                        accumulation=custom.accumulation,
+                                                        singleFile=True,
+                                                        startTime=custom.start,
+                                                        endTime=custom.end))
+
+                if custom.master==None:
+                    masters[custom.id]=custom
+                    plotCustom=createPlotTimelines(self.getAnalyzer(custom.name).lines,
+                                                   custom=custom,
+                                                   implementation=plottingImplementation)
+                    self.getAnalyzer(custom.name).lines.setSplitting(splitThres=splitThres,
+                                                                 advancedSplit=True)
+                    plotCustom.setTitle(custom.theTitle)
+                    plots["custom%04d" % i]=plotCustom
+                else:
+                    slaves.append(custom)
+
+            for s in slaves:
+                if s.master not in masters:
+                    error("The custom plot",s.id,"wants the master plot",s.master,"but it is not found in the list of masters",masters.keys())
+                else:
+                    slave=self.getAnalyzer(s.name)
+                    master=self.getAnalyzer(masters[s.master].name)
+                    slave.setMaster(master)
+                    
+            self.reset()
+            
+        return plots

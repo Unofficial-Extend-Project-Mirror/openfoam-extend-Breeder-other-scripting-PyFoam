@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ChangeBoundaryType.py 9161 2008-08-04 08:01:05Z bgschaid $
+#  ICE Revision: $Id: ChangeBoundaryType.py 10473 2009-05-25 08:00:21Z bgschaid $
 """
 Application class that implements pyFoamChangeBoundaryType.py
 """
@@ -59,4 +59,4 @@ Changes the type of a boundary in the boundary-file
             print boundary
         else:
             boundary.writeFile()
-
+            self.addToCaseLog(fName)

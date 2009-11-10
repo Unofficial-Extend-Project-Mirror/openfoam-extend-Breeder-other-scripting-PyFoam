@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamMetaServer.py 7833 2007-08-28 15:28:57Z bgschaid $ 
+#  ICE Revision: $Id: FoamMetaServer.py 10967 2009-10-19 16:02:07Z fpoll $ 
 """A XMLRPC-Server that knows all PyFoam-Runs in its subnet"""
 
 from ServerBase import ServerBase
@@ -12,6 +12,10 @@ from PyFoam.ThirdParty.IPy import IP
 
 import sys,time,copy,os
 from traceback import extract_tb
+
+DO_WEBSYNC = config().getboolean('Metaserver','doWebsync')
+WEBSERVER_RPCURL = "http://%(host)s/metaserver/xmlrpc/" % {"host":config().get('Metaserver','webhost')}
+WEBSYNC_INTERVAL = config().getfloat('Metaserver','websyncInterval')
 
 class FoamMetaServer(object):
     """The Metaserver.
@@ -27,6 +31,7 @@ class FoamMetaServer(object):
         foamLogger("server").info("Starting Server up")
         self.pid=os.getpid()
         try:
+            self.webserver = xmlrpclib.ServerProxy(WEBSERVER_RPCURL)
             self.servers={}
             self.dataLock=Lock()
             self.startupLock=Lock()
@@ -90,20 +95,22 @@ class FoamMetaServer(object):
         """The server kills itself"""
         os.kill(self.pid,1)
         
-    def registerServer(self,ip,pid,port,external=False):
+    def registerServer(self,ip,pid,port,sync=True,external=False):
         """Registers a new server via XMLRPC
         @param ip: IP of the server
         @param pid: Die PID at the server
         @param port: the port at which the server is listening
+        @param sync: (optional) if to sync with the webserver or not
         """
-        return self._registerServer(ip,pid,port,external=True)
+        return self._registerServer(ip,pid,port,sync=sync,external=True)
     
-    def _registerServer(self,ip,pid,port,external=False):
+    def _registerServer(self,ip,pid,port,sync=True,external=False):
         """Registers a new server
         @param ip: IP of the server
         @param pid: Die PID at the server
         @param port: the port at which the server is listening
         @param external: was called via XMLRPC
+        @param sync: (optional) if to sync with the webserver or not
         """
         self.dataLock.acquire()
         serverID="%s:%d" % (ip,port)
@@ -141,13 +148,21 @@ class FoamMetaServer(object):
             foamLogger("server").error("Trace:"+str(extract_tb(sys.exc_info()[2])))
             
         self.dataLock.release()
+        
+        if DO_WEBSYNC and insertServer and sync:
+            foamLogger("server").info("Registering %s for webserver: %s" % (serverID,'new/%(ip)s/%(port)s/' % {'ip':ip, 'port':port}))
+            try:
+                self.webserver.new_process(ip, port)
+            except:
+                foamLogger("server").warning("Registering %s for webserver failed!" % (serverID))
         return True
     
-    def deregisterServer(self,ip,pid,port):
+    def deregisterServer(self,ip,pid,port,sync=True):
         """Deregisters a server
         @param ip: IP of the server
         @param pid: Die PID at the server
         @param port: the port at which the server is listening
+        @param sync: (optional) if to sync with the webserver or not
         """
         self.dataLock.acquire()
         serverID="%s:%d" % (ip,port)
@@ -156,15 +171,22 @@ class FoamMetaServer(object):
         try:
             if self.servers.has_key(serverID):
                 self.servers.pop(serverID)
+                
+                if DO_WEBSYNC and sync:
+                    foamLogger("server").info("Deregistering %s from webserver: %s" % (serverID,'end/%(ip)s/%(port)s/' % {'ip':ip, 'port':port}))
+                    try:
+                        self.webserver.end_process(ip, port)
+                    except:
+                        foamLogger("server").warning("Deregistering %s from webserver failed" % (serverID))
             else:
                 foamLogger("server").warning("Server "+serverID+" not registered")                
         except:
-            foamLogger("server").error("Registering Server "+serverID+" failed:"+str(sys.exc_info()[0]))
+            foamLogger("server").error("Deregistering Server "+serverID+" failed:"+str(sys.exc_info()[0]))
             foamLogger("server").error("Reason:"+str(sys.exc_info()[1]))
             foamLogger("server").error("Trace:"+str(extract_tb(sys.exc_info()[2])))
 
         self.dataLock.release()
-
+        
         return True
 
     def forwardCommand(self,ip,port,cmd):
@@ -192,7 +214,7 @@ class FoamMetaServer(object):
             result=""
 
         return result
-    
+
 class ServerInfo(object):
     """Contains the information about a server"""
     def __init__(self,ip,pid,port):
@@ -234,7 +256,7 @@ class ServerInfo(object):
         for name in ["commandLine","cwd","foamVersion","isParallel","mpi","pyFoamVersion","scriptName","user","hostname"]:
             result=eval("server."+name+"()")
             self[name]=result
-            
+    
     def __getitem__(self,key):
         return self._info[key]
 
@@ -248,6 +270,7 @@ class MetaChecker(Thread):
         Thread.__init__(self)
         self.parent=parent
         self.sleepTime=config().getfloat("Metaserver","checkerSleeping")
+        self.syncTimes={}
         
     def run(self):
         foamLogger("server").info("Checker starting")
@@ -264,6 +287,21 @@ class MetaChecker(Thread):
                 if not isOK:
                     foamLogger("server").info("Server "+key+" not OK. Deregistering")
                     self.parent.deregisterServer(obj["ip"],obj["pid"],obj["port"])
+                elif DO_WEBSYNC:
+                    if not self.syncTimes.has_key(key):
+                        self.syncTimes[key]=self.sleepTime
+                    
+                    if self.syncTimes[key] >= WEBSYNC_INTERVAL:
+                        self.syncTimes[key]=self.sleepTime
+                        foamLogger("server").debug("Refreshing "+key+" on Webserver")
+                        try:
+                            self.parent.webserver.refresh(obj['ip'], obj['port'])
+                        except socket.timeout, e:
+                            pass
+                        except:
+                            foamLogger("server").warning("Unknown exception "+str(sys.exc_info()[0])+" while syncing with webserver %s" % (WEBSERVER_RPCURL))
+                    else:
+                        self.syncTimes[key] += self.sleepTime
                     
             foamLogger("server").debug("Stop Checking - sleeping")
             self.parent.startupLock.release()
@@ -282,10 +320,27 @@ class MetaCollector(Thread):
         self.parent.startupLock.acquire()
         foamLogger("server").info("Collector starting")
         
+        if DO_WEBSYNC:
+            foamLogger("server").info("Get Processes from Webserver")
+            try:
+                webserver = xmlrpclib.ServerProxy(WEBSERVER_RPCURL)
+                for ip,port,pid in webserver.running_processes():
+                    port = int(port)
+                    try:
+                        server=xmlrpclib.ServerProxy("http://%s:%d" % (ip,port))
+                        pid=server.pid()
+                        self.parent._registerServer(ip,pid,port,sync=False)
+                    except:
+                        foamLogger("server").error("Unknown exception "+str(sys.exc_info()[0])+" while registering %s:%s" % (ip, port))
+                        foamLogger("server").error("Reason:"+str(sys.exc_info()[1]))
+                        foamLogger("server").error("Trace:"+str(extract_tb(sys.exc_info()[2])))
+            except:
+                foamLogger("server").warning("Unknown exception "+str(sys.exc_info()[0])+" while syncing with webserver %s" % (WEBSERVER_RPCURL))
+        
         port=config().getint("Network","startServerPort")
         length=config().getint("Network","nrServerPorts")
 
-        machines=config().get("Network","searchservers")
+        machines=config().get("Metaserver","searchservers")
 
         addreses=machines.split(',')
         if self.additional!=None:
@@ -310,7 +365,7 @@ class MetaCollector(Thread):
                             server=xmlrpclib.ServerProxy("http://%s:%d" % (str(host),p))
                             ip=server.ip()
                             pid=server.pid()
-                            self.parent._registerServer(ip,pid,port)
+                            self.parent._registerServer(ip,pid,p)
                         except:
                             foamLogger("server").error("Unknown exception "+str(sys.exc_info()[0])+" while registering "+name)
                             foamLogger("server").error("Reason:"+str(sys.exc_info()[1]))
@@ -321,4 +376,5 @@ class MetaCollector(Thread):
         self.parent.startupLock.release()
 
         foamLogger("server").info("Collector finished")
-        
+
+

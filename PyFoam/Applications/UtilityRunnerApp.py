@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: UtilityRunnerApp.py 9973 2009-02-05 12:47:31Z bgschaid $ 
+#  ICE Revision: $Id: UtilityRunnerApp.py 10473 2009-05-25 08:00:21Z bgschaid $ 
 """
 Application class that implements pyFoamUtilityRunner
 """
@@ -57,13 +57,19 @@ class UtilityRunnerApp(PyFoamApplication):
         if self.opts.regexp==None:
             self.parser.error("Regular expression needed")
     
+        cName=self.parser.casePath()
+
         run=UtilityRunner(argv=self.parser.getArgs(),
                           silent=self.opts.silent,
                           server=True)
 
         run.add(self.opts.name,self.opts.regexp)
 
+        self.addToCaseLog(cName,"Starting")
+        
         run.start()
+
+        self.addToCaseLog(cName,"Ending")
 
         fn=path.join(run.getDirname(),self.opts.name)
 

@@ -8,6 +8,7 @@ instance for all the tutorials"""
 import sys
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+from PyFoam.Basics.DataStructures import TupleProxy
 
 if len(sys.argv)<2:
     print "I need at least one fvSolution-file to work with"
@@ -19,7 +20,7 @@ for fName in sys.argv[1:]:
         f=ParsedParameterFile(fName)
         sol=f["solvers"]
         for name,val in sol.iteritems():
-            if type(name)!=str or type(val)!=tuple or len(val)<3:
+            if type(name)!=str or type(val)!=TupleProxy or len(val)<3:
                 # this is not an old-school entry
                 continue
             solver=val[0]

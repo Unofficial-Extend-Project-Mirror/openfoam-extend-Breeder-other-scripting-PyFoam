@@ -1,6 +1,7 @@
 
 import unittest
 
+from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
 from os import path,environ,system
 
 from PyFoam.RunDictionary.ParsedParameterFile import FoamStringParser,ParsedParameterFile,ParsedBoundaryDict,DictProxy,TupleProxy,PyFoamParserError
@@ -8,8 +9,54 @@ from PyFoam.RunDictionary.ParsedParameterFile import FoamStringParser,ParsedPara
 from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,Tensor,SymmTensor
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
-from PyFoam.FoamInformation import foamVersionNumber
 
+from TimeDirectory import damBreakTutorial,gammaName
+
+from PyFoam.Error import error
+
+def simpleBikeTutorial():
+    prefix=foamTutorials()
+    if not oldTutorialStructure():
+        prefix=path.join(prefix,"incompressible")
+    else:
+        error("The simpleFoam-motorBike-case does not exist before 1.6")
+        
+    return path.join(prefix,"simpleFoam","motorBike")
+
+def simplePitzTutorial():
+    prefix=foamTutorials()
+    if not oldTutorialStructure():
+        prefix=path.join(prefix,"incompressible")            
+    return path.join(prefix,"simpleFoam","pitzDaily")
+
+def buoyHotRoomTutorial():
+    prefix=foamTutorials()
+    if not oldTutorialStructure():
+        prefix=path.join(prefix,"heatTransfer")            
+    return path.join(prefix,"buoyantSimpleFoam","hotRoom")
+
+def XoodlesPitzTutorial():
+    prefix=foamTutorials()
+    if oldTutorialStructure():
+        prefix=path.join(prefix,"Xoodles")            
+    else:
+        prefix=path.join(prefix,"combustion","XiFoam","les")            
+    return path.join(prefix,"pitzDaily3D")
+
+def dieselAachenTutorial():
+    prefix=foamTutorials()
+    if not oldTutorialStructure():
+        prefix=path.join(prefix,"combustion")            
+    return path.join(prefix,"dieselFoam","aachenBomb")
+
+def turbCavityTutorial():
+    prefix=foamTutorials()
+    if oldTutorialStructure():
+        prefix=path.join(prefix,"turbFoam")            
+    else:
+        prefix=path.join(prefix,"incompressible","pisoFoam","ras")            
+    return path.join(prefix,"cavity")
+        
 theSuite=unittest.TestSuite()
     
 class FoamStringParserTest(unittest.TestCase):
@@ -165,6 +212,12 @@ nix // Hepp
         self.assertEqual(type(p["test"][1]),Vector)
         self.assertEqual(p["test"][1][0],3.3)
 
+    def testListAllPreList(self):
+        p=FoamStringParser("test (3(1.1 -1 1) 3(2.2 -2 2) 3(3.3 -3 3));")
+        self.assertEqual(len(p["test"]),3)
+        self.assertEqual(type(p["test"][1]),Vector)
+        self.assertEqual(p["test"][1][0],2.2)
+
     def testReactionList(self):
         p=FoamStringParser("""test (
 someReaction
@@ -235,7 +288,7 @@ theSuite.addTest(unittest.makeSuite(FoamStringParserTest,"test"))
 class ParsedBoundaryDictTest(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.boundaryFile"
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"simpleFoam/pitzDaily/constant/polyMesh/boundary")+" "+self.theFile)
+        system("cp "+path.join(simplePitzTutorial(),"constant","polyMesh","boundary")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -250,13 +303,13 @@ theSuite.addTest(unittest.makeSuite(ParsedBoundaryDict,"test"))
 class ParsedParameterFileTest(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.turbulence"
-        turb=path.join("simpleFoam","pitzDaily","constant")
+        turb=path.join(simplePitzTutorial(),"constant")
         if oldApp():
             turb=path.join(turb,"turbulenceProperties")
         else:
             turb=path.join(turb,"RASProperties")
 
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],turb)+" "+self.theFile)
+        system("cp "+turb+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -267,7 +320,11 @@ class ParsedParameterFileTest(unittest.TestCase):
             nrTurbModels=17
             model="turbulenceModel"
         else:
-            nrTurbModels=19
+            if foamVersionNumber()<(1,6):            
+                nrTurbModels=19
+            else:
+                nrTurbModels=3
+                
             model="RASModel"
             
         self.assertEqual(len(test.content),nrTurbModels)
@@ -277,8 +334,8 @@ theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest,"test"))
                  
 class ParsedParameterFileTest2(unittest.TestCase):
     def setUp(self):
-        self.theFile="/tmp/test.gamma"
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak/0/gamma")+" "+self.theFile)
+        self.theFile="/tmp/test."+gammaName()
+        system("cp "+path.join(damBreakTutorial(),"0",gammaName())+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -292,7 +349,7 @@ theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest2,"test"))
 class ParsedParameterFileTest3(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.Thotroom"
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"buoyantSimpleFoam/hotRoom/0/T.org")+" "+self.theFile)
+        system("cp "+path.join(buoyHotRoomTutorial(),"0","T.org")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -307,22 +364,27 @@ theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest3,"test"))
 class ParsedParameterFileTest4(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.Xoodles.schems"
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"Xoodles/pitzDaily3D/system/fvSchemes")+" "+self.theFile)
+        system("cp "+path.join(XoodlesPitzTutorial(),"system","fvSchemes")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
         
     def testReadTutorial(self):
         test=ParsedParameterFile(self.theFile)
-        self.assertEqual(len(test["gradSchemes"]),2)
-        self.assertEqual(len(test["divSchemes"]["div(phi,ft_b_h_hu)"][2]),5)
+        gradSchemes=1
+        divSchemes=4
+        if foamVersionNumber()<(1,6):
+            gradSchemes=2
+            divSchemes=5
+        self.assertEqual(len(test["gradSchemes"]),gradSchemes)
+        self.assertEqual(len(test["divSchemes"]["div(phi,ft_b_h_hu)"][2]),divSchemes)
     
 theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest4,"test"))
                  
 class ParsedParameterFileTest5(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.Rfile"
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"turbFoam/cavity/0/R")+" "+self.theFile)
+        system("cp "+path.join(turbCavityTutorial(),"0","R")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -340,8 +402,8 @@ theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest5,"test"))
                  
 class ParsedParameterFileTest6(unittest.TestCase):
     def setUp(self):
-        self.theFile="/tmp/test.Xoodles.schems"
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"dieselFoam/aachenBomb/0/spray")+" "+self.theFile)
+        self.theFile="/tmp/test.diesleSpray"
+        system("cp "+path.join(dieselAachenTutorial(),"0","spray")+" "+self.theFile)
         
     def tearDown(self):
         system("rm "+self.theFile)
@@ -352,5 +414,22 @@ class ParsedParameterFileTest6(unittest.TestCase):
         except PyFoamParserError:
             pass
     
-theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest6,"test"))
+if foamVersionNumber()<(1,5):
+    theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest6,"test"))
                  
+class ParsedParameterFileIncludeTest(unittest.TestCase):
+    def setUp(self):
+        self.fileName=path.join(simpleBikeTutorial(),"0","U")
+
+    def tearDown(self):
+        pass
+
+    def testBasicInclude(self):
+        test=ParsedParameterFile(self.fileName,doMacroExpansion=True)
+        self.assertEqual(test["pressure"],0)
+        self.assertEqual("upperWall" in test["boundaryField"],True)
+        self.assertEqual(test["boundaryField"]["upperWall"]["type"],"slip")
+        
+if foamVersionNumber()>=(1,6):
+    theSuite.addTest(unittest.makeSuite(ParsedParameterFileIncludeTest,"test"))
+    

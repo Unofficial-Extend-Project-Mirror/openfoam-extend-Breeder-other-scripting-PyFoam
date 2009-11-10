@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GnuplotRunner.py 10098 2009-03-09 09:32:33Z bgschaid $ 
+#  ICE Revision: $Id: GnuplotRunner.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """Runner that outputs the residuals of the linear solver with Gnuplot"""
 
 from StepAnalyzedCommon import StepAnalyzedCommon
@@ -6,10 +6,8 @@ from BasicRunner import BasicRunner
 from BasicWatcher import BasicWatcher
 
 from PyFoam.LogAnalysis.BoundingLogAnalyzer import BoundingLogAnalyzer
-from PyFoam.LogAnalysis.RegExpLineAnalyzer import RegExpLineAnalyzer
 from PyFoam.LogAnalysis.SteadyConvergedLineAnalyzer import SteadyConvergedLineAnalyzer
-from PyFoam.Basics.GnuplotTimelines import GnuplotTimelines
-from PyFoam.Basics.TimeLineCollection import signedMax,TimeLineCollection
+from PyFoam.Basics.TimeLineCollection import TimeLineCollection
 from PyFoam.Error import error
 
 from os import path
@@ -30,12 +28,15 @@ class GnuplotCommon(StepAnalyzedCommon):
                  plotDeltaT=False,
                  hardcopy=False,
                  hardcopyFormat="png",
+                 hardcopyPrefix=None,         
                  customRegexp=None,
                  writeFiles=False,
                  raiseit=False,
                  progress=False,
                  start=None,
-                 end=None):
+                 end=None,
+                 singleFile=False,
+                 plottingImplementation=None):
         """
         TODO: Docu
         """
@@ -43,151 +44,34 @@ class GnuplotCommon(StepAnalyzedCommon):
                                     fname,
                                     BoundingLogAnalyzer(doTimelines=True,
                                                         doFiles=writeFiles,
-                                                        progress=progress),
+                                                        progress=progress,
+                                                        singleFile=singleFile,
+                                                        startTime=start,
+                                                        endTime=end),
                                     smallestFreq=smallestFreq)
         
-        self.plots={}
+        self.startTime=start
+        self.endTime=end
         
-        if plotLinear:
-            self.plots["linear"]=GnuplotTimelines(self.getAnalyzer("Linear").lines,
-                                                  persist=persist,
-                                                  raiseit=raiseit,
-                                                  forbidden=["final","iterations"],
-                                                  start=start,
-                                                  end=end,
-                                                  logscale=True)
-            self.getAnalyzer("Linear").lines.setSplitting(splitThres=splitThres,
-                                                          splitFun=max,
-                                                          advancedSplit=True)
-        
-            self.plots["linear"].title("Residuals")
-
-        if plotCont:
-            self.plots["cont"]=GnuplotTimelines(self.getAnalyzer("Continuity").lines,
-                                                persist=persist,
-                                                alternateAxis=["Global"],
-                                                raiseit=raiseit,
-                                                start=start,
-                                                end=end)
-            self.plots["cont"].set_string("ylabel \"Cumulative\"")
-            self.plots["cont"].set_string("y2label \"Global\"")
-            self.getAnalyzer("Continuity").lines.setSplitting(splitThres=splitThres,
-                                                              advancedSplit=True)
-
-            self.plots["cont"].title("Continuity")
- 
-        if plotBound:
-            self.plots["bound"]=GnuplotTimelines(self.getAnalyzer("Bounding").lines,
-                                                 persist=persist,
-                                                 raiseit=raiseit,
-                                                 start=start,
-                                                 end=end)
-            self.getAnalyzer("Bounding").lines.setSplitting(splitThres=splitThres,
-                                                            splitFun=signedMax,
-                                                            advancedSplit=True)
-            self.plots["bound"].title("Bounded variables")
-
-        if plotIterations:
-            self.plots["iter"]=GnuplotTimelines(self.getAnalyzer("Iterations").lines,
-                                                persist=persist,
-                                                with_="steps",
-                                                raiseit=raiseit,
-                                                start=start,
-                                                end=end)
-            self.getAnalyzer("Iterations").lines.setSplitting(splitThres=splitThres,
-                                                              advancedSplit=True)
-
-            self.plots["iter"].title("Iterations")
-
-        if plotCourant:
-            self.plots["courant"]=GnuplotTimelines(self.getAnalyzer("Courant").lines,
-                                                   persist=persist,
-                                                   raiseit=raiseit,
-                                                   start=start,
-                                                   end=end)
-            self.getAnalyzer("Courant").lines.setSplitting(splitThres=splitThres,
-                                                           advancedSplit=True)
-
-            self.plots["courant"].title("Courant")
- 
-        if plotDeltaT:
-            self.plots["deltaT"]=GnuplotTimelines(self.getAnalyzer("DeltaT").lines,
-                                                  persist=persist,
-                                                  raiseit=raiseit,
-                                                  start=start,
-                                                  end=end,
-                                                  logscale=True)
-            self.getAnalyzer("DeltaT").lines.setSplitting(splitThres=splitThres,
-                                                          advancedSplit=True)
-
-            self.plots["deltaT"].title("DeltaT")
- 
-        if plotExecution:
-            self.plots["execution"]=GnuplotTimelines(self.getAnalyzer("Execution").lines,
-                                                     persist=persist,
-                                                     with_="steps",
-                                                     raiseit=raiseit,
-                                                     start=start,
-                                                     end=end)
-            self.getAnalyzer("Execution").lines.setSplitting(splitThres=splitThres,
-                                                             advancedSplit=True)
-
-            self.plots["execution"].title("Execution Time")
-
-        if customRegexp:
-            self.plotCustom=[]
-            for i in range(len(customRegexp)):
-                name="Custom%02d" % i
-                expr=customRegexp[i]
-                titles=[]
-                accumulation="first"
-                theTitle="Custom %d" % i
-                options = { "persist" : persist,
-                            "raiseit" : raiseit,
-                            "start"   : start,
-                            "end"     : end }
-
-                if expr[0]=="{":
-                    data=eval(expr)
-                    expr=data["expr"]
-                    if "name" in data:
-                        name+="_"+data["name"]
-                        name=name.replace(" ","_").replace(path.sep,"Slash")
-                        theTitle+=" - "+data["name"]
-                    if "titles" in data:
-                        titles=data["titles"]
-                    for o in ["alternateAxis","logscale","with","ylabel","y2label"]:
-                        if o=="with":
-                            use="with_"
-                        else:
-                            use=o
-                        if o in data:
-                            options[use]=data[o]
-                    if "accumulation" in data:
-                        accumulation=data["accumulation"]
-
-                    if accumulation not in TimeLineCollection.possibleAccumulations:
-                        error("Accumulation",accumulation,"not in the possible values",TimeLineCollection.possibleAccumulations)
-                        
-                self.addAnalyzer(name,
-                                 RegExpLineAnalyzer(name.lower(),
-                                                    expr,titles=titles,
-                                                    doTimelines=True,
-                                                    doFiles=writeFiles,
-                                                    accumulation=accumulation,
-                                                    singleFile=True))
-                plotCustom=GnuplotTimelines(*[self.getAnalyzer(name).lines],
-                                            **options)
-                self.getAnalyzer(name).lines.setSplitting(splitThres=splitThres,
-                                                          advancedSplit=True)
-                plotCustom.title(theTitle)
-                self.plots["custom%04d" % i]=plotCustom
-
-            
-            self.reset()
-            
+        self.plots=self.createPlots(persist=persist,
+                                    raiseit=raiseit,
+                                    start=start,
+                                    end=end,
+                                    writeFiles=writeFiles,
+                                    splitThres=splitThres,
+                                    plotLinear=plotLinear,
+                                    plotCont=plotCont,
+                                    plotBound=plotBound,
+                                    plotIterations=plotIterations,
+                                    plotCourant=plotCourant,
+                                    plotExecution=plotExecution,
+                                    plotDeltaT=plotDeltaT,
+                                    customRegexp=customRegexp,
+                                    plottingImplementation=plottingImplementation)
+    
         self.hardcopy=hardcopy
         self.hardcopyFormat=hardcopyFormat
+        self.hardcopyPrefix=hardcopyPrefix
         
     def timeHandle(self):
         for p in self.plots:
@@ -196,19 +80,15 @@ class GnuplotCommon(StepAnalyzedCommon):
     def stopHandle(self):
         self.timeHandle()
         if self.hardcopy:
+            if self.hardcopyPrefix:
+                prefix=self.hardcopyPrefix+"."
+            else:
+                prefix=""
+                
             for p in self.plots:
-                if self.hardcopyFormat=="png":
-                    self.plots[p].hardcopy(terminal="png",filename=p+".png",color=True,small=True)
-                elif self.hardcopyFormat=="pdf":
-                    self.plots[p].hardcopy(terminal="pdf",filename=p+".pdf",color=True)
-                elif self.hardcopyFormat=="svg":
-                    self.plots[p].hardcopy(terminal="svg",filename=p+".svg")
-                elif self.hardcopyFormat=="postscript":
-                    self.plots[p].hardcopy(terminal="postscript",filename=p+".ps",color=True)
-                elif self.hardcopyFormat=="eps":
-                    self.plots[p].hardcopy(terminal="postscript",filename=p+".eps",color=True,eps=True)
-                else:
-                    self.plots[p].hardcopy(filename=p+".ps",color=True)
+                if not self.plots[p].hasData():
+                    continue
+                self.plots[p].doHardcopy(prefix+p,self.hardcopyFormat)
             
 class GnuplotRunner(GnuplotCommon,BasicRunner):
     def __init__(self,
@@ -225,6 +105,7 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                  customRegexp=None,
                  hardcopy=False,
                  hardcopyFormat="png",
+                 hardcopyPrefix=None,         
                  writeFiles=False,
                  server=False,
                  lam=None,
@@ -233,7 +114,12 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                  progress=False,
                  restart=False,
                  logname=None,
-                 noLog=False):
+                 compressLog=False,
+                 noLog=False,
+                 singleFile=False,
+                 plottingImplementation=None,
+                 remark=None,
+                 jobId=None):
         """@param smallestFreq: smallest Frequency of output
         @param persist: Gnuplot window persistst after run
         @param steady: Is it a steady run? Then stop it after convergence"""
@@ -244,7 +130,10 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                              lam=lam,
                              restart=restart,
                              logname=logname,
-                             noLog=noLog)
+                             compressLog=compressLog,
+                             noLog=noLog,
+                             remark=remark,
+                             jobId=jobId)
         GnuplotCommon.__init__(self,
                                "Gnuplotting",
                                smallestFreq=smallestFreq,
@@ -259,9 +148,12 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                                customRegexp=customRegexp,
                                hardcopy=hardcopy,
                                hardcopyFormat=hardcopyFormat,
+                               hardcopyPrefix=hardcopyPrefix,
                                writeFiles=writeFiles,
                                raiseit=raiseit,
-                               progress=progress)
+                               progress=progress,
+                               singleFile=singleFile,
+                               plottingImplementation=plottingImplementation)
         self.steady=steady
         if self.steady:
             self.steadyAnalyzer=SteadyConvergedLineAnalyzer()
@@ -288,6 +180,7 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
                  silent=False,
                  tailLength=1000,
                  sleep=0.1,
+                 replotFrequency=3600,
                  plotLinear=True,
                  plotCont=True,
                  plotBound=True,
@@ -299,10 +192,13 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
                  writeFiles=False,
                  hardcopy=False,
                  hardcopyFormat="png",
+                 hardcopyPrefix=None,
                  raiseit=False,
                  progress=False,
                  start=None,
-                 end=None):
+                 end=None,
+                 singleFile=False,
+                 plottingImplementation=None):
         """@param smallestFreq: smallest Frequency of output
         @param persist: Gnuplot window persistst after run"""
         BasicWatcher.__init__(self,
@@ -324,18 +220,41 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
                                customRegexp=customRegexp,
                                hardcopy=hardcopy,
                                hardcopyFormat=hardcopyFormat,
+                               hardcopyPrefix=hardcopyPrefix,
                                writeFiles=writeFiles,
                                raiseit=raiseit,
                                progress=progress,
                                start=start,
-                               end=end)
+                               end=end,
+                               singleFile=singleFile,
+                               plottingImplementation=plottingImplementation)
+
+        self.hasPlotted=False
+        self.replotFrequency=replotFrequency
         
     def startHandle(self):
         self.bakFreq=self.freq
-        self.freq=3600
+        if self.endTime!=None:
+            self.freq=1
+        else:
+            self.freq=self.replotFrequency
         
     def tailingHandle(self):
         self.freq=self.bakFreq
         self.oldtime=0
         
+    def timeHandle(self):
+        plotNow=True
+        if not self.hasPlotted and self.endTime!=None:
+            try:
+                if float(self.getTime())>self.endTime:
+                    self.hasPlotted=True
+            except ValueError:
+                pass
+        elif self.hasPlotted:
+            plotNow=False
+        if plotNow:
+            for p in self.plots:
+                self.plots[p].redo()
+            
         

@@ -5,14 +5,29 @@ from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
 from PyFoam.RunDictionary.SolutionFile import SolutionFile
 from PyFoam.RunDictionary.FileBasis import FileBasis
 
+from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
 from os import path,environ,system
 
 theSuite=unittest.TestSuite()
 
+def damBreakTutorial():
+    prefix=foamTutorials()
+    if oldTutorialStructure():
+        prefix=path.join(prefix,"interFoam")
+    else:
+        prefix=path.join(prefix,"multiphase","interFoam","laminar")            
+    return path.join(prefix,"damBreak")
+
+def gammaName():
+    if foamVersionNumber()<(1,6):
+        return "gamma"
+    else:
+        return "alpha1"
+    
 class TimeDirectoryTest(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.damBreak"
-        system("cp -r "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak")+" "+self.theFile)
+        system("cp -r "+damBreakTutorial()+" "+self.theFile)
         
     def tearDown(self):
         system("rm -rf "+self.theFile)
@@ -20,7 +35,7 @@ class TimeDirectoryTest(unittest.TestCase):
     def testTimeDirectoryBasicContainerStuff(self):
         test=SolutionDirectory(self.theFile)["0"]
         self.assertEqual(len(test),4)
-        self.assert_("gamma" in test)
+        self.assert_(gammaName() in test)
         self.assert_("nix" not in test)
         tf=test["U"]
         self.assertEqual(type(tf),SolutionFile)
@@ -30,7 +45,7 @@ class TimeDirectoryTest(unittest.TestCase):
         lst=[]
         for v in test:
             lst.append(v.baseName())
-        self.assert_("gamma" in lst)
+        self.assert_(gammaName() in lst)
         self.assertEqual(len(lst),len(test))
         
     def testTimeDirectoryAdding(self):
@@ -56,8 +71,8 @@ theSuite.addTest(unittest.makeSuite(TimeDirectoryTest,"test"))
 class TimeDirectoryTestZipped(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.damBreak"
-        system("cp -r "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak")+" "+self.theFile)
-        system("gzip "+path.join(self.theFile,"0","gamma"))
+        system("cp -r "+damBreakTutorial()+" "+self.theFile)
+        system("gzip "+path.join(self.theFile,"0",gammaName()))
         
     def tearDown(self):
         system("rm -rf "+self.theFile)
@@ -65,7 +80,7 @@ class TimeDirectoryTestZipped(unittest.TestCase):
     def testTimeReplacingZippedFile(self):
         test=SolutionDirectory(self.theFile)["0"]
         self.assertEqual(len(test),4)
-        test["gamma"]=test["gamma.org"]
+        test[gammaName()]=test[gammaName()+".org"]
         self.assertEqual(len(test),4)
 
 theSuite.addTest(unittest.makeSuite(TimeDirectoryTestZipped,"test"))
@@ -73,7 +88,7 @@ theSuite.addTest(unittest.makeSuite(TimeDirectoryTestZipped,"test"))
 class TimeDirectoryTestCopy(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.damBreak"
-        system("cp -r "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak")+" "+self.theFile)
+        system("cp -r "+damBreakTutorial()+" "+self.theFile)
         
     def tearDown(self):
         system("rm -rf "+self.theFile)
@@ -88,7 +103,7 @@ class TimeDirectoryTestCopy(unittest.TestCase):
         test2=sol["13"]
         test3=sol["42"]
         self.assertEqual(len(test3),4)
-        del test3["gamma"]
+        del test3[gammaName()]
         self.assertEqual(len(test3),3)
         res=test1.copy(test3)
         self.assertEqual(len(test1),4)
@@ -112,7 +127,7 @@ class TimeDirectoryTestCopy(unittest.TestCase):
         self.assertEqual(len(test3),3)
         self.assertEqual(len(res),3)
         test1.clear()
-        res=test1.copy(test2,include=["gamma*"])
+        res=test1.copy(test2,include=[gammaName()+"*"])
         self.assertEqual(len(test1),2)
         self.assertEqual(len(res),2)
         res=test1.copy(test2,exclude=["U"],overwrite=False)

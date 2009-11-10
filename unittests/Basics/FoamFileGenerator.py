@@ -5,6 +5,7 @@ from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator,makeString,FoamFil
 from PyFoam.Basics.DataStructures import DictProxy,TupleProxy,Unparsed,UnparsedList
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
+from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
 from os import tmpnam,system,environ,path
 from copy import deepcopy
 import warnings
@@ -14,6 +15,43 @@ warnings.filterwarnings(action='ignore',
                         category=RuntimeWarning)
 
 theSuite=unittest.TestSuite()
+
+def damBreakTutorial():
+    prefix=foamTutorials()
+    if oldTutorialStructure():
+        prefix=path.join(prefix,"interFoam")
+    else:
+        prefix=path.join(prefix,"multiphase","interFoam","laminar")            
+    return path.join(prefix,"damBreak")
+
+def bubbleColumnTutorial():
+    prefix=foamTutorials()
+    if not oldTutorialStructure():
+        prefix=path.join(prefix,"multiphase")            
+    return path.join(prefix,"twoPhaseEulerFoam","bubbleColumn")
+
+def buoyHotRoomTutorial():
+    prefix=foamTutorials()
+    if not oldTutorialStructure():
+        prefix=path.join(prefix,"heatTransfer")            
+    return path.join(prefix,"buoyantSimpleFoam","hotRoom")
+
+def turbCavityTutorial():
+    prefix=foamTutorials()
+    if oldTutorialStructure():
+        prefix=path.join(prefix,"turbFoam")            
+    else:
+        prefix=path.join(prefix,"incompressible","pisoFoam","ras")            
+    return path.join(prefix,"cavity")
+        
+def simpleBikeTutorial():
+    prefix=foamTutorials()
+    if not oldTutorialStructure():
+        prefix=path.join(prefix,"incompressible")
+    else:
+        error("The simpleFoam-motorBike-case does not exist before 1.6")
+        
+    return path.join(prefix,"simpleFoam","motorBike")
 
 class FoamFileGeneratorTest(unittest.TestCase):
     def testMakePrimitives(self):
@@ -64,6 +102,13 @@ class FoamFileGeneratorTest(unittest.TestCase):
         d["b"]=u"2"
         g=FoamFileGenerator(d)
         self.assertEqual(str(g),"a 1;\nb 2;\n")
+
+    def testMakeDictionaryProxyBool(self):
+        d=DictProxy()
+        d["b"]=True
+        d["a"]=False
+        g=FoamFileGenerator(d)
+        self.assertEqual(str(g),"b yes;\na no;\n")
 
     def testMakeDictionary(self):
         g=FoamFileGenerator({'a':1,'b':2})
@@ -120,7 +165,7 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorUnparsedList,"test"))
 class FoamFileGeneratorRoundtrip(unittest.TestCase):
     def setUp(self):
         self.theFile=tmpnam()
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak/system/fvSolution")+" "+self.theFile)
+        system("cp "+path.join(damBreakTutorial(),"system","fvSolution")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -138,7 +183,7 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorRoundtrip,"test"))
 class FoamFileGeneratorRoundtrip2(unittest.TestCase):
     def setUp(self):
         self.theFile=tmpnam()
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak/system/fvSchemes")+" "+self.theFile)
+        system("cp "+path.join(damBreakTutorial(),"system","fvSchemes")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -156,7 +201,7 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorRoundtrip2,"test"))
 class FoamFileGeneratorRoundtripZipped(unittest.TestCase):
     def setUp(self):
         self.theFile=tmpnam()
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak/system/fvSolution")+" "+self.theFile)
+        system("cp "+path.join(damBreakTutorial(),"system","fvSolution")+" "+self.theFile)
         system("gzip -f "+self.theFile)
         
     def tearDown(self):
@@ -177,7 +222,7 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorRoundtripZipped,"test"))
 class FoamFileGeneratorRoundtrip2(unittest.TestCase):
     def setUp(self):
         self.theFile=tmpnam()
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"buoyantSimpleFoam/hotRoom/0/T.org")+" "+self.theFile)
+        system("cp "+path.join(buoyHotRoomTutorial(),"0","T.org")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -196,7 +241,11 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorRoundtrip2,"test"))
 class FoamFileGeneratorRoundtrip3(unittest.TestCase):
     def setUp(self):
         self.theFile=tmpnam()
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"interFoam/damBreak/constant/environmentalProperties")+" "+self.theFile)
+        if foamVersionNumber()<(1,6):
+            envProp="environmentalProperties"
+        else:
+            envProp="g"
+        system("cp "+path.join(damBreakTutorial(),"constant",envProp)+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -215,7 +264,7 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorRoundtrip3,"test"))
 class FoamFileGeneratorRoundtrip4(unittest.TestCase):
     def setUp(self):
         self.theFile=tmpnam()
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"buoyantSimpleFoam/hotRoom/0/U")+" "+self.theFile)
+        system("cp "+path.join(buoyHotRoomTutorial(),"0","U")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -234,7 +283,7 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorRoundtrip4,"test"))
 class FoamFileGeneratorRoundtrip5(unittest.TestCase):
     def setUp(self):
         self.theFile=tmpnam()
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"turbFoam/cavity/0/R")+" "+self.theFile)
+        system("cp "+path.join(turbCavityTutorial(),"0","R")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -253,7 +302,7 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorRoundtrip5,"test"))
 class FoamFileGeneratorRoundtripLongList(unittest.TestCase):
     def setUp(self):
         self.theFile=tmpnam()
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"twoPhaseEulerFoam","bubbleColumn","0","alpha")+" "+self.theFile)
+        system("cp "+path.join(bubbleColumnTutorial(),"0","alpha")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -271,7 +320,7 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorRoundtripLongList,"test"))
 class FoamFileGeneratorRoundtripLongList2(unittest.TestCase):
     def setUp(self):
         self.theFile=tmpnam()
-        system("cp "+path.join(environ["FOAM_TUTORIALS"],"twoPhaseEulerFoam","bubbleColumn","0","Ua")+" "+self.theFile)
+        system("cp "+path.join(bubbleColumnTutorial(),"0","Ua")+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -299,3 +348,22 @@ class MakeStringFunction(unittest.TestCase):
         
 theSuite.addTest(unittest.makeSuite(MakeStringFunction,"test"))
 
+class IncludeFilesRoundTrip(unittest.TestCase):
+    def setUp(self):
+        self.theDir=tmpnam()
+        system("cp -r "+path.join(simpleBikeTutorial(),"0")+" "+self.theDir)
+        self.theFile=path.join(self.theDir,"U")
+        
+    def tearDown(self):
+        system("rm -r "+self.theDir)
+            
+    def testReadTutorial(self):
+        test=ParsedParameterFile(self.theFile,listLengthUnparsed=100)
+        data1=deepcopy(test.content)
+        open(self.theFile,"w").write(str(FoamFileGenerator(data1,header=test.header)))
+        del test
+        test2=ParsedParameterFile(self.theFile,listLengthUnparsed=100)
+        self.assertEqual(data1,test2.content)
+
+if foamVersionNumber()>=(1,6):
+    theSuite.addTest(unittest.makeSuite(IncludeFilesRoundTrip,"test"))

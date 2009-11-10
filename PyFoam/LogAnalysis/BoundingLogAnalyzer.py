@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BoundingLogAnalyzer.py 10053 2009-02-24 18:58:04Z bgschaid $ 
+#  ICE Revision: $Id: BoundingLogAnalyzer.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """Basic log analyer with boundedness"""
 
 from StandardLogAnalyzer import StandardLogAnalyzer
@@ -12,27 +12,55 @@ class BoundingLogAnalyzer(StandardLogAnalyzer):
     """
     This analyzer also checks for bounded solutions
     """
-    def __init__(self,progress=False,doTimelines=False,doFiles=True):
+    def __init__(self,
+                 progress=False,
+                 doTimelines=False,
+                 doFiles=True,
+                 singleFile=False,
+                 startTime=None,
+                 endTime=None):
         """
         @param progress: Print time progress on console?
         """
-        StandardLogAnalyzer.__init__(self,progress=progress,doTimelines=doTimelines,doFiles=doFiles)
+        StandardLogAnalyzer.__init__(self,
+                                     progress=progress,
+                                     doTimelines=doTimelines,
+                                     doFiles=doFiles,
+                                     singleFile=singleFile,
+                                     startTime=startTime,
+                                     endTime=endTime)
 
-        self.addAnalyzer("Bounding",GeneralBoundingLineAnalyzer(doTimelines=doTimelines,doFiles=doFiles))
+        self.addAnalyzer("Bounding",
+                         GeneralBoundingLineAnalyzer(doTimelines=doTimelines,
+                                                     doFiles=doFiles,
+                                                     singleFile=singleFile,
+                                                     startTime=startTime,
+                                                     endTime=endTime))
         
         if foamVersionNumber()<(1,4):
             courantExpression="^Mean and max Courant Numbers = (.+) (.+)$"
         else:
             courantExpression="^Courant Number mean: (.+) max: (\S+).*$"
             
-        self.addAnalyzer("Courant",GeneralSimpleLineAnalyzer("courant",courantExpression,titles=["mean","max"],doTimelines=doTimelines,doFiles=doFiles))
+        self.addAnalyzer("Courant",
+                         GeneralSimpleLineAnalyzer("courant",
+                                                   courantExpression,
+                                                   titles=["mean","max"],
+                                                   doTimelines=doTimelines,
+                                                   doFiles=doFiles,
+                                                   singleFile=singleFile,
+                                                   startTime=startTime,
+                                                   endTime=endTime))
 
 class BoundingPlotLogAnalyzer(BoundingLogAnalyzer):
     """
     This analyzer also checks for bounded solutions
     """
     def __init__(self):
-        BoundingLogAnalyzer.__init__(self,progress=True,doTimelines=True,doFiles=False)
+        BoundingLogAnalyzer.__init__(self,
+                                     progress=True,
+                                     doTimelines=True,
+                                     doFiles=False)
 
 ##        self.addAnalyzer("Bounding",GeneralBoundingLineAnalyzer())
 ##        self.addAnalyzer("Courant",TimeLineSimpleLineAnalyzer("courant","^Mean and max Courant Numbers = (.+) (.+)$",titles=["mean","max"]))

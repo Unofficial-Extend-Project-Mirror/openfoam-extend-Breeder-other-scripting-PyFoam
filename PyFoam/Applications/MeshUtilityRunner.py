@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: MeshUtilityRunner.py 9973 2009-02-05 12:47:31Z bgschaid $ 
+#  ICE Revision: $Id: MeshUtilityRunner.py 10473 2009-05-25 08:00:21Z bgschaid $ 
 """
 Application class that implements pyFoamMeshUtilityRunner
 """
@@ -59,10 +59,14 @@ should therefor be used with care
         
         self.addLibFunctionTrigger(run,sol)        
 
+        self.addToCaseLog(cName,"Starting")
+        
         run.start()
 
         sol.reread(force=True)
         
+        self.addToCaseLog(cName,"Ending")
+
         if sol.latestDir()!=sol.initialDir():
             for f in listdir(path.join(sol.latestDir(),"polyMesh")):
                 system("mv -f "+path.join(sol.latestDir(),"polyMesh",f)+" "+sol.polyMeshDir())

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PyFoamApplication.py 10067 2009-03-02 09:39:42Z bgschaid $ 
+#  ICE Revision: $Id: PyFoamApplication.py 10947 2009-10-09 07:31:51Z bgschaid $ 
 """Base class for pyFoam-applications
 
 Classes can also be called with a command-line string"""
@@ -7,6 +7,7 @@ from optparse import OptionGroup
 from PyFoam.Basics.FoamOptionParser import FoamOptionParser
 from PyFoam.Error import error,warning
 from PyFoam.FoamInformation import oldAppConvention as oldApp
+from PyFoam.RunDictionary.SolutionDirectory import NoTouchSolutionDirectory
 
 from PyFoam.Basics.TerminalFormatter import TerminalFormatter
 format=TerminalFormatter()
@@ -14,7 +15,7 @@ format.getConfigFormat("error")
 format.getConfigFormat("warn")
 
 import sys
-from os import path
+from os import path,getcwd
 
 class PyFoamApplication(object):
     def __init__(self,
@@ -49,6 +50,28 @@ class PyFoamApplication(object):
                            dest="foamVersion",
                            default=None,
                            help="Change the OpenFOAM-version that is to be used")
+            grp.add_option("--force-32bit",
+                           dest="force32",
+                           default=False,
+                           action="store_true",
+                           help="Forces the usage of a 32-bit-version if that version exists as 32 and 64 bit. Only used when --foamVersion is used")
+            grp.add_option("--force-64bit",
+                           dest="force64",
+                           default=False,
+                           action="store_true",
+                           help="Forces the usage of a 64-bit-version if that version exists as 32 and 64 bit. Only used when --foamVersion is used")
+            grp.add_option("--force-debug",
+                           dest="compileOption",
+                           const="Debug",
+                           default=None,
+                           action="store_const",
+                           help="Forces the value Debug for the WM_COMPILE_OPTION. Only used when --foamVersion is used")
+            grp.add_option("--force-opt",
+                           dest="compileOption",
+                           const="Opt",
+                           default=None,
+                           action="store_const",
+                           help="Forces the value Opt for the WM_COMPILE_OPTION. Only used when --foamVersion is used")
 
         grp.add_option("--psyco-accelerated",
                        dest="psyco",
@@ -79,7 +102,7 @@ class PyFoamApplication(object):
 
         if self.opts.psyco:
             try:
-                import psco
+                import psyco
                 psyco.full()
             except ImportError:
                 warning("No psyco installed. Continuing without acceleration")
@@ -190,3 +213,16 @@ class PyFoamApplication(object):
             return False
 
         return True
+
+    def addToCaseLog(self,name,*text):
+        """
+        Add information about the application that was run to the case-log
+        """
+        
+        logline=[NoTouchSolutionDirectory(name)]
+        logline+=["Application:",path.basename(sys.argv[0])]+sys.argv[1:]
+        logline+=[" | with cwd",getcwd()," | "]
+        logline+=text
+        apply(NoTouchSolutionDirectory.addToHistory,logline)
+        
+        

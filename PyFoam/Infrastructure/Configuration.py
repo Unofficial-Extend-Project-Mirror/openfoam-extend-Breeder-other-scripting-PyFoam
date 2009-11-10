@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Configuration.py 10020 2009-02-17 13:04:30Z bgschaid $ 
+#  ICE Revision: $Id: Configuration.py 11001 2009-11-05 12:48:47Z bgschaid $ 
 """Reads configuration-files that define defaults for various PyFoam-Settings
 
 Also hardcodes defaults for the settings"""
@@ -13,7 +13,6 @@ _defaults={
     "Network": {
     "startServerPort"  : "18000",
     "nrServerPorts"    : "100",
-    "searchServers"    : "192.168.1.0/24,192.168.0.0/24",
     "portWait"         : "1.",
     "socketTimeout"    : "1.",
     "socketRetries"    : "10",
@@ -22,6 +21,10 @@ _defaults={
     "port"             : "17999",
     "ip"               : "192.168.1.11",
     "checkerSleeping"  : "30.",
+    "searchServers"    : "192.168.1.0/24,192.168.0.0/24",
+    "webhost"          : "127.0.0.1:9000",
+    "doWebsync"        : "True",
+    "websyncInterval"  : "300.",
     },
     "IsAlive": {
     "maxTimeStart"     : "30.",
@@ -39,7 +42,7 @@ _defaults={
 #    "run_OPENMPI":"mpirun",
 #    "run_LAM":"mpirun",
     "options_OPENMPI_pre": '["--mca","pls","rsh","--mca","pls_rsh_agent","rsh"]',
-    "options_OPENMPI_post":'["-x","PATH","-x","LD_LIBRARY_PATH","-x","WM_PROJECT_DIR","-x","PYTHON_PATH","-x","FOAM_MPI_LIBBIN","-x","MPI_BUFFER_SIZE","-x","MPI_ARCH_PATH"]'
+    "options_OPENMPI_post":'["-x","PATH","-x","LD_LIBRARY_PATH","-x","WM_PROJECT_DIR","-x","PYTHONPATH","-x","FOAM_MPI_LIBBIN","-x","MPI_BUFFER_SIZE","-x","MPI_ARCH_PATH"]'
     },
     "Paths": {
     "python" : "/usr/bin/python",
@@ -70,7 +73,13 @@ _defaults={
     },
     "CommandOptionDefaults":{
     "sortListCases":"mtime",
-    }
+    },
+    "Plotting":{
+    "preferredImplementation":"gnuplot",
+    },
+    "OutfileCollection": {
+    "maximumOpenFiles":"100",
+    },
     }
 
 class Configuration(ConfigParser):

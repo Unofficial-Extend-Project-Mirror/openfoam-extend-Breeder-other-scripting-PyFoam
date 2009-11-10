@@ -149,4 +149,5 @@ zeroGradient for all patches and walls
             print str(dictFile)
         else:
             dictFile.writeFile()
-                 
+            self.addToCaseLog(case)
+    

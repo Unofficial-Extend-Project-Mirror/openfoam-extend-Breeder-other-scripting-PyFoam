@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CaseReport.py 10095 2009-03-09 09:32:31Z bgschaid $ 
+#  ICE Revision: $Id: CaseReport.py 10621 2009-07-21 18:46:20Z bgschaid $ 
 """
 Application class that implements pyFoamCasedReport.py
 """
@@ -90,7 +90,7 @@ dictionary-files
                             type="int",
                             default=100,
                             dest="longlist",
-                            help="Fields that are longer than this won't be parsed, but read into memory (nad compared as strings)")
+                            help="Fields that are longer than this won't be parsed, but read into memory (and compared as strings)")
 
         select.add_option("--patches",
                           action="append",
@@ -408,9 +408,12 @@ dictionary-files
             for i,p in enumerate(sol.processorDirs()):
                 bound=ParsedBoundaryDict(path.join(sol.name,p,procTime,"polyMesh","boundary"))
                 for j in range(sol.nrProcs()):
-                    name="procBoundary%dto%d" %(i,j)
+                    name="procBoundary%dto%d" %(j,i)
+                    name2="procBoundary%dto%d" %(i,j)
                     if name in bound:
                         matrix[i][j]=bound[name]["nFaces"]
+                    if name2 in bound:
+                        matrix[i][j]=bound[name2]["nFaces"]
                         
             print "Matrix of processor interactions (faces)"
             print

@@ -1,4 +1,4 @@
 #!/bin/sh
 
-pythonw `which pyFoamDisplayBlockMesh.py` $*
+/usr/bin/pythonw `which pyFoamDisplayBlockMesh.py` $*
 

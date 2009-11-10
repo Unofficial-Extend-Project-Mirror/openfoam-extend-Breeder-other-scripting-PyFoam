@@ -1,8 +1,12 @@
-#  ICE Revision: $Id: TimeLineCollection.py 10098 2009-03-09 09:32:33Z bgschaid $ 
+#  ICE Revision: $Id: TimeLineCollection.py 10977 2009-10-28 13:21:44Z bgschaid $ 
 """Collection of array of timelines"""
 
 from PyFoam.Error import error
 from math import ceil
+from copy import deepcopy
+from threading import Lock
+
+transmissionLock=Lock()
 
 def mean(a,b):
     """Mean value of a and b"""
@@ -15,6 +19,74 @@ def signedMax(a,b):
     else:
         return max(a,b)
 
+class TimeLinesRegistry(object):
+    """Collects references to TimeLineCollection objects"""
+
+    nr=1
+    
+    def __init__(self):
+        self.lines={}
+
+    def add(self,line,nr=None):
+        if nr:
+            if nr in self.lines:
+                error("Number",nr,"already existing")
+            TimeLinesRegistry.nr=max(nr+1,TimeLinesRegistry)    
+        else:
+            nr=TimeLinesRegistry.nr
+            TimeLinesRegistry.nr+=1
+        self.lines[nr]=line
+
+        return nr
+
+    def get(self,nr):
+        try:
+            return self.lines[nr]
+        except KeyError:
+            error(nr,"not a known data set:",self.lines.keys())
+        
+    def prepareForTransfer(self):
+        """Makes sure that the data about the timelines is to be transfered via XMLRPC"""
+        
+        transmissionLock.acquire()
+
+        lst={}
+        for i,p in self.lines.iteritems():
+            slaves=[]
+            for s in p.slaves:
+                slaves.append(s.lineNr)
+                
+            lst[str(i)]={ "nr"    : i,
+                     "times" : deepcopy(p.times),
+                     "values": deepcopy(p.values),
+                     "lastValid" : deepcopy(p.lastValid),
+                     "slaves": slaves }
+
+        transmissionLock.release()
+
+        return lst
+
+    def resolveSlaves(self):
+        """Looks through all the registered lines and replaces integers with
+        the actual registered line"""
+        for i,p in self.lines.iteritems():
+            if len(p.slaves)>0:
+                slaves=[]
+                for s in p.slaves:
+                    if type(s)==int:
+                        try:
+                            slaves.append(self.lines[s])
+                        except KeyError:
+                            error(s,"not a known data set:",self.lines.keys())
+                    else:
+                        slaves.append(s)
+                p.slaves=slaves
+                
+_allLines=TimeLinesRegistry()
+
+def allLines():
+    return _allLines
+
 class TimeLineCollection(object):
 
     possibleAccumulations=["first", "last", "min", "max", "average", "sum","count"]
@@ -24,19 +96,25 @@ class TimeLineCollection(object):
                  extendCopy=False,
                  splitThres=None,
                  splitFun=None,
+                 noEmptyTime=True,
                  advancedSplit=False,
-                 accumulation="first"):
+                 preloadData=None,
+                 accumulation="first",
+                 registry=None):
         """@param deflt: default value for timelines if none has been defined before
         @param extendCopy: Extends the timeline by cpying the last element
         @param splitThres: Threshold after which the number of points is halved
         @param splitFun: Function that is used for halving. If none is specified the mean function is used
+        @param noEmptyTime: if there is no valid entry no data is stored for this time
         @param advancedSplit: Use another split algorithm than one that condenses two values into one
+        @param preloadData: a dictionary with a dictionary to initialize the values
         @param accumulation: if more than one value is given at any time-step, how to accumulate them (possible values: "first", "last", "min", "max", "average", "sum","count")
         """
         
         self.cTime=None
         self.times=[]
         self.values={}
+        self.lastValid={}
         self.setDefault(deflt)
         self.setExtend(extendCopy)
         self.thres=None
@@ -48,10 +126,51 @@ class TimeLineCollection(object):
         self.accumulations={}
         self.occured={}
 
+        self.slaves=[]
+
         self.setSplitting(splitThres=splitThres,
                           splitFun=splitFun,
-                          advancedSplit=advancedSplit)
+                          advancedSplit=advancedSplit,
+                          noEmptyTime=noEmptyTime)
 
+        self.lineNr=None
+        if preloadData:
+            self.times=preloadData["times"]
+            self.values=preloadData["values"]
+            self.slaves=preloadData["slaves"]
+            self.lineNr=int(preloadData["nr"])
+            if "lastValid" in preloadData:
+                self.lastValid=preloadData["lastValid"]
+            else:
+                self.resetValid(val=True)
+                
+        if registry==None:
+            registry=allLines()
+        self.lineNr=registry.add(self,self.lineNr)
+
+    def resetValid(self,val=False):
+        """Helper function that resets the information whether the last entry is valid"""
+        self.lastValid={}
+        for n in self.values:
+            self.lastValid[n]=val
+        for s in self.slaves:
+            s.resetValid(val=val)
+
+    def nrValid(self):
+        """Helper function that gets the number of valid values"""
+        nr=self.lastValid.values().count(True)
+        for s in self.slaves:
+            nr+=s.nrValid()
+        return nr
+    
+    def addSlave(self,slave):
+        """Adds a slave time-line-collection"""
+        self.slaves.append(slave)
+        slave.setSplitting(splitThres=self.thres,
+                           splitFun=self.fun,
+                           advancedSplit=self.advancedSplit,
+                           noEmptyTime=self.noEmptyTime)
+        
     def setAccumulator(self,name,accu):
         """Sets a special accumulator fopr a timeline
         @param name: Name of the timeline
@@ -60,8 +179,9 @@ class TimeLineCollection(object):
             error("Value",accu,"not in list of possible values:",TimeLineCollection.possibleAccumulations,"When setting for",name)
         self.accumulations[name]=accu
         
-    def setSplitting(self,splitThres=None,splitFun=None,advancedSplit=False):
+    def setSplitting(self,splitThres=None,splitFun=None,advancedSplit=False,noEmptyTime=True):
         """Sets the parameters for splitting"""
+        
         self.advancedSplit = advancedSplit
         if self.advancedSplit:
             self.splitLevels = []
@@ -74,7 +194,12 @@ class TimeLineCollection(object):
             self.fun=splitFun
         elif not self.fun:
             self.fun=mean
-            
+
+        for s in self.slaves:
+            s.setSplitting(splitThres=splitThres,splitFun=splitFun,advancedSplit=advancedSplit,noEmptyTime=noEmptyTime)
+
+        self.noEmptyTime=noEmptyTime
+
     def setDefault(self,deflt):
         """@param deflt: default value to be used"""
         self.defaultValue=float(deflt)
@@ -86,23 +211,38 @@ class TimeLineCollection(object):
     def nr(self):
         """Number of elements in timelines"""
         return len(self.times)
-    
-    def setTime(self,time):
+
+    def setTime(self,time,noLock=False,forceAppend=False):
         """Sets the time. If time is new all the timelines are extended
-        @param time: the new current time"""
+        @param time: the new current time
+        @param noLock: do not acquire the lock that ensures consistent data transmission"""
         
+        if not noLock:
+            transmissionLock.acquire()
+
         dTime=float(time)
         
         if dTime!=self.cTime:
             self.cTime=dTime
-            self.times.append(self.cTime)
-            for v in self.values.values():
-                if len(v)>0 and self.extendCopy:
-                    val=v[-1]
-                else:
-                    val=self.defaultValue
-                v.append(val)
-            if self.thres:
+            append=True
+            if self.noEmptyTime and not forceAppend:
+                if self.nrValid()==0:
+                    append=False
+            if append:
+                self.times.append(self.cTime)
+                for v in self.values.values():
+                    if len(v)>0 and self.extendCopy:
+                        val=v[-1]
+                    else:
+                        val=self.defaultValue
+                    v.append(val)
+            else:
+                if len(self.times)>0:
+                    self.times[-1]=self.cTime
+                
+            self.resetValid()
+            
+            if self.thres and append:
                 if len(self.times)>=self.thres:
                     if self.advancedSplit:
                         # Clumsy algorithm where the maximum and the minimum of a 
@@ -166,6 +306,12 @@ class TimeLineCollection(object):
                         for k in self.values.keys():
                             self.values[k]=self.split(self.values[k],self.fun)
             self.occured={}
+            
+        for s in self.slaves:
+            s.setTime(time,noLock=True,forceAppend=append)
+
+        if not noLock:
+            transmissionLock.release()
 
     def split(self,array,func):
         """Makes the array smaller by joining every two points
@@ -180,13 +326,25 @@ class TimeLineCollection(object):
 
         return newArray
     
-    def getTimes(self):
+    def getTimes(self,name=None):
         """@return: A list of the time values"""
-        return self.times
+        tm=None
+        if name in self.values or name==None:
+            tm=self.times
+        else:
+            for s in self.slaves:
+                if name in s.values:
+                    tm=s.times
+                    break
+        return tm
     
     def getValueNames(self):
         """@return: A list with the names of the safed values"""
-        return self.values.keys()
+        names=self.values.keys()
+        for i,s in enumerate(self.slaves):
+            for n in s.getValueNames():
+                names.append("%s_slave%02d" % (n,i))
+        return names
     
     def getValues(self,name):
         """Gets a timeline
@@ -194,6 +352,11 @@ class TimeLineCollection(object):
         @return: List with the values"""
         
         if not self.values.has_key(name):
+            if len(self.slaves)>0:
+                if name.find("_slave")>0:
+                    nr=int(name[-2:])
+                    nm=name[:name.find("_slave")]
+                    return self.slaves[nr].getValues(nm)
             self.values[name]=self.nr()*[self.defaultValue]
         return self.values[name]
             
@@ -201,6 +364,9 @@ class TimeLineCollection(object):
         """Sets the value of the last element in a timeline
         @param name: name of the timeline
         @param value: the last element"""
+
+        transmissionLock.acquire()
+
         data=self.getValues(name)
         val=float(value)
         if len(data)>0:
@@ -235,3 +401,8 @@ class TimeLineCollection(object):
                     error("Unimplemented accumulator",accu,"for",name)
                     
             data[-1]=newValue
+
+        self.lastValid[name]=True
+        
+        transmissionLock.release()
+

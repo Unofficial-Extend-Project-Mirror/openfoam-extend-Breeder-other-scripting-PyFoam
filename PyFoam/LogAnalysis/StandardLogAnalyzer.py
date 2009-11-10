@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: StandardLogAnalyzer.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: StandardLogAnalyzer.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """Analyze standard solver"""
 
 from FoamLogAnalyzer import FoamLogAnalyzer
@@ -17,7 +17,13 @@ class StandardLogAnalyzer(FoamLogAnalyzer):
      - the Linear solvers
      - Execution time
     """
-    def __init__(self,progress=False,doTimelines=False,doFiles=True):
+    def __init__(self,
+                 progress=False,
+                 doTimelines=False,
+                 doFiles=True,
+                 singleFile=False,
+                 startTime=None,
+                 endTime=None):
         """
         @param progress: Print time progress on console?
         @param doTimelines: generate timelines?
@@ -25,11 +31,36 @@ class StandardLogAnalyzer(FoamLogAnalyzer):
         """
         FoamLogAnalyzer.__init__(self,progress=progress)
 
-        self.addAnalyzer("Continuity",GeneralContinuityLineAnalyzer(doTimelines=doTimelines,doFiles=doFiles))
-        self.addAnalyzer("Linear",GeneralLinearSolverLineAnalyzer(doTimelines=doTimelines,doFiles=doFiles))
-        self.addAnalyzer("Iterations",GeneralLinearSolverIterationsLineAnalyzer(doTimelines=doTimelines,doFiles=doFiles))
-        self.addAnalyzer("Execution",GeneralExecutionLineAnalyzer(doTimelines=doTimelines,doFiles=doFiles))
-        self.addAnalyzer("DeltaT",GeneralDeltaTLineAnalyzer(doTimelines=doTimelines,doFiles=doFiles))
+        self.addAnalyzer("Continuity",
+                         GeneralContinuityLineAnalyzer(doTimelines=doTimelines,
+                                                       doFiles=doFiles,
+                                                       singleFile=singleFile,
+                                                       startTime=startTime,
+                                                       endTime=endTime))
+        self.addAnalyzer("Linear",
+                         GeneralLinearSolverLineAnalyzer(doTimelines=doTimelines,
+                                                         doFiles=doFiles,
+                                                         singleFile=singleFile,
+                                                         startTime=startTime,
+                                                         endTime=endTime))
+        self.addAnalyzer("Iterations",
+                         GeneralLinearSolverIterationsLineAnalyzer(doTimelines=doTimelines,
+                                                                   doFiles=doFiles,
+                                                                   singleFile=singleFile,
+                                                                   startTime=startTime,
+                                                                   endTime=endTime))
+        self.addAnalyzer("Execution",
+                         GeneralExecutionLineAnalyzer(doTimelines=doTimelines,
+                                                      doFiles=doFiles,
+                                                      singleFile=singleFile,
+                                                      startTime=startTime,
+                                                      endTime=endTime))
+        self.addAnalyzer("DeltaT",
+                         GeneralDeltaTLineAnalyzer(doTimelines=doTimelines,
+                                                   doFiles=doFiles,
+                                                   singleFile=singleFile,
+                                                   startTime=startTime,
+                                                   endTime=endTime))
 
 class StandardPlotLogAnalyzer(StandardLogAnalyzer):
     """This analyzer checks the current residuals and generates timelines"""

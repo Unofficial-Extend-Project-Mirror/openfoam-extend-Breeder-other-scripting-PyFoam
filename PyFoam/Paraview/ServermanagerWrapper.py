@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ServermanagerWrapper.py 9908 2009-01-19 19:42:27Z bgschaid $ 
+#  ICE Revision: $Id: ServermanagerWrapper.py 10792 2009-09-01 14:01:48Z bgschaid $ 
 """ Wrapper class for the paraview servermanager
 
 Sets up the servermanager to be used with OpenFOAM-Data. Especially makes sure that
@@ -6,7 +6,10 @@ the plugins for the OpenFOAM-Data are loaded"""
 
 from math import sqrt
 from paraview import servermanager
-
+from PyFoam.Paraview import version
+if version()>=(3,6):
+    from paraview import simple
+    
 from os import environ,path,uname
 
 from PyFoam.Error import error
@@ -18,7 +21,7 @@ class ServermanagerWrapper(object):
 
     def __init__(self):
         """Sets up the Servermanager in such a way that it is usable
-        with OpenFoAM-data."""
+        with OpenFOAM-data."""
         
         self.con=servermanager.Connect()
 
@@ -30,7 +33,7 @@ class ServermanagerWrapper(object):
                 import ctypes
                 lib=ctypes.CDLL(path.join(environ["FOAM_LIBBIN"],"libPV3FoamReader.so"),mode=ctypes.RTLD_GLOBAL)
             except ImportError:
-                error("The Workaround for Linux-Systems won'T work because there is no ctypes library")
+                error("The Workaround for Linux-Systems won't work because there is no ctypes library")
                 
         plug1="libPV3FoamReader."+dyExt
         plug2="libPV3FoamReader_SM."+dyExt
@@ -38,8 +41,16 @@ class ServermanagerWrapper(object):
         loaded=False
         for p in environ["PV_PLUGIN_PATH"].split(":"):
             if path.exists(path.join(p,plug1)):
-                servermanager.LoadPlugin(path.join(p,plug1))
-                servermanager.LoadPlugin(path.join(p,plug2))
+                if version()>=(3,6):
+                    simple.LoadPlugin(path.join(p,plug1),ns=globals())
+                    try:
+                        simple.LoadPlugin(path.join(p,plug2),ns=globals())
+                    except NameError:
+                        print dir(self.module())
+                        pass
+                else:
+                    servermanager.LoadPlugin(path.join(p,plug1))
+                    servermanager.LoadPlugin(path.join(p,plug2))
                 loaded=True
                 break
 

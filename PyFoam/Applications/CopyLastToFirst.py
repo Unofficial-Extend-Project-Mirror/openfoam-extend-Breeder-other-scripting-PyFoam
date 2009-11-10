@@ -98,4 +98,6 @@ of this script"""
                 print
             else:
                 print "  Nothing copied"
-                
+
+        self.addToCaseLog(dest.name,"From",sDir.name,"to",dDir.name)
+

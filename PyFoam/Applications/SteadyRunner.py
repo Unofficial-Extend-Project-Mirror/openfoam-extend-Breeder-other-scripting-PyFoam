@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SteadyRunner.py 9973 2009-02-05 12:47:31Z bgschaid $ 
+#  ICE Revision: $Id: SteadyRunner.py 10948 2009-10-13 08:37:46Z bgschaid $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -77,21 +77,30 @@ stopped and the last simulation state is written to disk
 
         self.setLogname()
         
-        run=ConvergenceRunner(BoundingLogAnalyzer(progress=self.opts.progress),
+        run=ConvergenceRunner(BoundingLogAnalyzer(progress=self.opts.progress,
+                                                  singleFile=self.opts.singleDataFilesOnly,
+                                                  doTimelines=True),
                               silent=self.opts.progress,
                               argv=self.parser.getArgs(),
                               restart=self.opts.restart,
                               server=self.opts.server,
                               logname=self.opts.logname,
+                              compressLog=self.opts.compress,
                               lam=lam,
-                              noLog=self.opts.noLog)
+                              noLog=self.opts.noLog,
+                              remark=self.opts.remark,
+                              jobId=self.opts.jobId)
 
-        self.addPlotLineAnalyzers(run)
-
+        run.createPlots(customRegexp=self.lines_)
+            
         self.addSafeTrigger(run,sol)
         self.addWriteAllTrigger(run,sol)
         
+        self.addToCaseLog(cName,"Starting")
+        
         run.start()
+
+        self.addToCaseLog(cName,"Ending")
 
         self.reportUsage(run)
 

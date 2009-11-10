@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamThread.py 8275 2007-12-10 09:40:38Z bgschaid $ 
+#  ICE Revision: $Id: FoamThread.py 10627 2009-07-23 16:59:54Z bgschaid $ 
 """Thread wrappers for OpenFOAM"""
 
 import sys
@@ -122,7 +122,8 @@ class FoamThread(Thread):
         self.setState(False)
 
         self.status=None
-
+        self.returncode=None
+        
         self.lineLock=Lock()
         self.line=""
 
@@ -142,6 +143,7 @@ class FoamThread(Thread):
                       stdin=subprocess.PIPE,stdout=subprocess.PIPE,
                       stderr=subprocess.STDOUT,close_fds=True)
             self.output=run.stdout
+        self.run=run
         self.threadPid=run.pid
         foamLogger().info("Started with PID %d" % self.threadPid)
         if self.isLinux:
@@ -180,6 +182,16 @@ class FoamThread(Thread):
         #        print "End:",self.timeEnd
         # print "Returned",self.status
 
+        self.getReturnCode()
+        
+    def getReturnCode(self):
+        if sys.version_info<(2,4):
+            # Don't know how to get the returncode from a Popen4-object
+            self.returncode=0
+        else:
+            self.returncode=self.run.returncode
+        return self.returncode
+    
     def stopTimer(self):
         if self.isLinux:
             self.timer.cancel()

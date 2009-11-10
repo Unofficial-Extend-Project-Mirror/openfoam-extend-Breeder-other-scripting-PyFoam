@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ConvergenceRunner.py 9667 2008-11-12 18:20:16Z bgschaid $ 
+#  ICE Revision: $Id: ConvergenceRunner.py 10900 2009-09-28 13:04:35Z bgschaid $ 
 """Stop solver at convergence"""
 
 from AnalyzedRunner import AnalyzedRunner
@@ -22,9 +22,23 @@ class ConvergenceRunner(AnalyzedRunner):
                  server=False,
                  lam=None,
                  restart=False,
-                 noLog=False):
+                 compressLog=False,
+                 noLog=False,
+                 remark=None,
+                 jobId=None):
         """See AnalyzedRunner"""
-        AnalyzedRunner.__init__(self,analyzer,argv,silent,logname,server=server,lam=lam,restart=restart,noLog=noLog)
+        AnalyzedRunner.__init__(self,
+                                analyzer,
+                                argv,
+                                silent,
+                                logname,
+                                server=server,
+                                lam=lam,
+                                compressLog=compressLog,
+                                restart=restart,
+                                noLog=noLog,
+                                remark=remark,
+                                jobId=jobId)
         
         self.analyzer.addAnalyzer("Convergence",SteadyConvergedLineAnalyzer())
         

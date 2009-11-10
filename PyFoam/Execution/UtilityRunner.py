@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: UtilityRunner.py 9667 2008-11-12 18:20:16Z bgschaid $ 
+#  ICE Revision: $Id: UtilityRunner.py 10900 2009-09-28 13:04:35Z bgschaid $ 
 """Run a non-solver utility"""
 
 from AnalyzedRunner import AnalyzedRunner
@@ -19,7 +19,10 @@ class UtilityRunner(AnalyzedRunner):
                  logname="PyFoamUtility",
                  server=False,
                  restart=False,
-                 noLog=False):
+                 compressLog=False,
+                 noLog=False,
+                 remark=None,
+                 jobId=None):
         """see BasicRunner"""
         AnalyzedRunner.__init__(self,UtilityAnalyzer(),
                                 argv=argv,
@@ -27,7 +30,10 @@ class UtilityRunner(AnalyzedRunner):
                                 logname=logname,
                                 server=server,
                                 restart=restart,
-                                noLog=noLog)
+                                compressLog=compressLog,
+                                noLog=noLog,
+                                remark=remark,
+                                jobId=jobId)
         
     def add(self,name,exp,idNr=None):
         """adds a regular expression

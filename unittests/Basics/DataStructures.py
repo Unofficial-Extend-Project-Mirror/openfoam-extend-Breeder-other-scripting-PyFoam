@@ -27,6 +27,19 @@ class DictProxyTest(unittest.TestCase):
             cnt+=1
         self.assertEqual(len(d),cnt)
         self.assertEqual(str(d),"{'a': 5, 'b': 'nix'}")
+
+    def testRegExp(self):
+        d=DictProxy()
+        d["foo"]="direct"
+        self.assertEqual(d["foo"],"direct")
+        d['"f.+"']="regex1"
+        self.assertEqual(d["fo"],"regex1")
+        self.assertEqual(d["foobar"],"regex1")
+        self.assertEqual(d["foo"],"direct")
+
+        self.assertEqual("foo" in d,True)
+        self.assertEqual("bar" in d,False)
+        self.assertEqual("foobar" in d,True)
         
 theSuite.addTest(unittest.makeSuite(DictProxyTest,"test"))
 
