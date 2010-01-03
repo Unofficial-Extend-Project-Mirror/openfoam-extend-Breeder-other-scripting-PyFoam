@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: WriteDictionary.py 9861 2009-01-05 16:22:37Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/WriteDictionary.py 5999 2010-01-03T16:37:51.687182Z bgschaid  $ 
 """
 Application class that implements pyFoamWriteDictionary
 """
@@ -31,8 +31,23 @@ Example of usage:
                                    interspersed=True)
         
     def addOptions(self):
-        self.parser.add_option("--test",action="store_true",dest="test",default=False,help="Doesn't write to the file, but outputs the result on stdout")
-        self.parser.add_option("--evaluate",action="store_false",dest="verbatim",default=True,help="Interpret the string as a python expression before assigning it")
+        self.parser.add_option("--test",
+                               action="store_true",
+                               dest="test",
+                               default=False,
+                               help="Doesn't write to the file, but outputs the result on stdout")
+        
+        self.parser.add_option("--strip-quotes-from-value",
+                               action="store_true",
+                               dest="stripQuotes",
+                               default=False,
+                               help="Strip the quotes from the value if they had to be defined")
+
+        self.parser.add_option("--evaluate",
+                               action="store_false",
+                               dest="verbatim",
+                               default=True,
+                               help="Interpret the string as a python expression before assigning it")
         
     
     def run(self):
@@ -42,8 +57,15 @@ Example of usage:
             all=all[1:]
         if all[-1]=='"':
             all=all[:-1]
-        val=self.parser.getArgs()[2]
 
+        val=self.parser.getArgs()[2]
+        if self.opts.stripQuotes:
+            if val[0]=='"':
+                val=val[1:]
+            if val[-1]=='"':
+                val=val[:-1]
+    
+        
         match=re.compile("([a-zA-Z_][a-zA-Z0-9_]*)(.*)").match(all)
         if match==None:
             self.error("Expression",all,"not usable as an expression")
