@@ -7,12 +7,12 @@ from PyFoam.Error import PyFoamException
 class BoundaryDict(ParsedBoundaryDict):
     """Handles data in a boundary-File"""
 
-    def __init__(self,case,backup=False,region=None):
+    def __init__(self,case,backup=False,region=None,time=None):
         """@param case: Path to the case-directory"""
         ParsedBoundaryDict.__init__(self,
                                     SolutionDirectory(case,
                                                       archive=None,
-                                                      paraviewLink=False).boundaryDict(region=region),
+                                                      paraviewLink=False).boundaryDict(time=time,region=region),
                                     backup=backup)
 
     def __getitem__(self,key):

@@ -127,7 +127,13 @@ dictionary-files
                               archive=None,
                               paraviewLink=False,
                               region=self.opts.region)
-        
+        if self.opts.time:
+            try:
+                self.opts.time=sol.timeName(sol.timeIndex(self.opts.time,minTime=True))
+            except IndexError:
+                error("The specified time",self.opts.time,"doesn't exist in the case")
+            print "Using time t="+self.opts.time+"\n"
+            
         needsPolyBoundaries=False
         needsInitialTime=False
         
@@ -145,7 +151,9 @@ dictionary-files
             needsPolyBoundaries=True
             
         if needsPolyBoundaries:
-            boundary=BoundaryDict(sol.name,region=self.opts.region)
+            boundary=BoundaryDict(sol.name,
+                                  region=self.opts.region,
+                                  time=self.opts.time)
 
             boundMaxLen=0
             boundaryNames=[]
@@ -180,10 +188,7 @@ dictionary-files
         if self.opts.time==None:
             procTime="constant"
         else:
-            try:
-                procTime=sol.timeName(sol.timeIndex(self.opts.time,minTime=True))
-            except IndexError:
-                error("The specified time",self.opts.time,"doesn't exist in the case")
+            procTime=self.opts.time
             
         if needsInitialTime:
             fields={}
@@ -194,11 +199,7 @@ dictionary-files
                 except IndexError:
                     error("There is no timestep in the case")
             else:
-                try:
-                    time=sol.timeName(sol.timeIndex(self.opts.time,minTime=True))
-                except IndexError:
-                    error("The specified time",self.opts.time,"doesn't exist in the case")
-            #        print "Using time: ",time
+                time=self.opts.time
 
             tDir=sol[time]
 

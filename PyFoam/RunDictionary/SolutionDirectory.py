@@ -511,7 +511,7 @@ class SolutionDirectory(Utilities):
         @rtype: str"""
         return path.join(self.systemDir(),"controlDict")
 
-    def polyMeshDir(self,region=None,time="constant",processor=None):
+    def polyMeshDir(self,region=None,time=None,processor=None):
         """@param region: Specify the region for cases with more than 1 mesh
         @return: the name of the C{polyMesh}
         @param time: Time for which the  mesh should be looked at
@@ -519,9 +519,21 @@ class SolutionDirectory(Utilities):
         @rtype: str"""
         if region==None and self.region!=None:
             region=self.region
-        return path.join(self.constantDir(region=region,processor=processor),"polyMesh")
-
-    def boundaryDict(self,region=None,time="constant",processor=None):
+        if time==None:
+            return path.join(
+                self.constantDir(
+                    region=region,
+                    processor=processor),
+                "polyMesh")
+        else:
+            return path.join(
+                TimeDirectory(self.name,
+                              time,
+                              region=region,
+                              processor=processor).name,
+                "polyMesh")
+                
+    def boundaryDict(self,region=None,time=None,processor=None):
         """@param region: Specify the region for cases with more than 1 mesh
         @return: name of the C{boundary}-file
         @rtype: str"""

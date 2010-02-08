@@ -12,13 +12,16 @@ from fnmatch import fnmatch
 class TimeDirectory(object):
     """Represents a directory for a timestep"""
 
-    def __init__(self,name,time,create=False,region=None):
+    def __init__(self,name,time,create=False,region=None,processor=None):
         """@param name: name of the case directory
         @param time: time in the directory
         @param create: Create the directory if it does not exist
         @param region: The mesh region for multi-region cases"""
 
-        self.name=path.join(name,time)
+        self.name=name
+        if processor!=None:
+            self.name=path.join(self.name,processor)
+        self.name=path.join(self.name,time)
         if region!=None:
             self.name=path.join(self.name,region)
             
