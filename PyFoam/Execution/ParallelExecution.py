@@ -57,7 +57,7 @@ class LAMMachine(Utilities):
             warning("LAM is untested. Any Feedback most welcome")
             self.execute("lamboot -s -v "+self.mFile)
             self.running=True
-        elif(foamMPI()=="OPENMPI"):
+        elif(foamMPI()=="OPENMPI" or foamMPI()=="SYSTEMOPENMPI"):
             self.running=True
         else:
             error(" Unknown or missing MPI-Implementation: "+foamMPI())
@@ -74,7 +74,7 @@ class LAMMachine(Utilities):
                 return nr
             else:
                 return -1
-        elif(foamMPI()=="OPENMPI"):
+        elif(foamMPI()=="OPENMPI" or foamMPI()=="SYSTEMOPENMPI"):
             if self.mFile:
                 f=open(self.mFile)
                 l=map(strip,f.readlines())
@@ -112,7 +112,7 @@ class LAMMachine(Utilities):
         
         if(foamMPI()=="LAM"):
             mpirun+=["-np",nr]
-        elif(foamMPI()=="OPENMPI"):
+        elif(foamMPI()=="OPENMPI" or foamMPI()=="SYSTEMOPENMPI"):
             nr=[]
             if self.procNr!=None:
                 nr=["-np",str(self.procNr)]
