@@ -60,9 +60,14 @@ class SolutionDirectory(Utilities):
                         self.initialDir()]
         self.addToClone("PyFoamHistory")
 
+        # Old-school Paraview-reader (this can be removed eventually)
         if paraviewLink and not path.exists(self.controlDict()+".foam"):
             symlink(path.basename(self.controlDict()),self.controlDict()+".foam")
 
+        emptyFoamFile=path.join(self.name,path.basename(self.name)+".foam")
+        if paraviewLink and not path.exists(emptyFoamFile):
+            dummy=open(emptyFoamFile,"w") # equivalent to touch 
+        
     def __len__(self):
         self.reread()
         return len(self.times)
