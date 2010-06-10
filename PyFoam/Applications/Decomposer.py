@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Decomposer.py 10975 2009-10-27 16:44:36Z bgschaid $ 
+#  ICE Revision: $Id: Decomposer.py 11635 2010-05-27 23:02:16Z bgschaid $ 
 """
 Class that implements pyFoamDecompose
 """
@@ -19,7 +19,7 @@ from CommonMultiRegion import CommonMultiRegion
 from CommonStandardOutput import CommonStandardOutput
 from CommonServer import CommonServer
 
-from os import path,system
+from os import path,system,listdir,symlink
 import sys,string
 
 class Decomposer(PyFoamApplication,
@@ -121,6 +121,16 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                                default="decomposePar",
                                help="The decompose Utility that should be used")
         self.parser.add_option_group(behave)
+
+        work=OptionGroup(self.parser,
+                           "Additional work",
+                           "What else should be done in addition to decomposing")
+        work.add_option("--constant-link",
+                        dest="doConstantLinks",
+                        action="store_true",
+                        default=False,
+                        help="Add links to the contents of the constant directory to the constant directories of the processor-directories")        
+        self.parser.add_option_group(work)
         
         CommonMultiRegion.addOptions(self)
         CommonStandardOutput.addOptions(self)
@@ -134,7 +144,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
         if nr<2:
             error("Number of processors",nr,"too small (at least 2)")
             
-        case=self.parser.getArgs()[0]
+        case=path.abspath(self.parser.getArgs()[0])
         method=self.opts.method
 
         result={}
@@ -200,7 +210,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
             if self.opts.regions or self.opts.region!=None:
                 print "Building Pseudocases"
                 sol=SolutionDirectory(case)
-                regions=RegionCases(sol,clean=True)
+                regions=RegionCases(sol,clean=True,processorDirs=False)
 
                 if self.opts.regions:
                     regionNames=sol.getRegions()
@@ -239,5 +249,15 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                         if r not in regionNames:
                             regions.clean(r)
 
+            if self.opts.doConstantLinks:
+                print "Adding symlinks in the constant directories"
+                constPath=path.join(case,"constant")
+                for f in listdir(constPath):
+                    srcExpr=path.join(path.pardir,path.pardir,"constant",f)
+                    for p in range(nr):
+                        dest=path.join(case,"processor%d"%p,"constant",f)
+                        if not path.exists(dest):
+                            symlink(srcExpr,dest)
+                            
             self.addToCaseLog(case)
 

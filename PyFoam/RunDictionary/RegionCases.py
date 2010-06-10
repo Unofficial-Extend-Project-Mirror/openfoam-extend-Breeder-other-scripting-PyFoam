@@ -1,15 +1,16 @@
-#  ICE Revision: $Id: RegionCases.py 9441 2008-09-22 20:51:21Z bgschaid $ 
+#  ICE Revision: $Id: RegionCases.py 11635 2010-05-27 23:02:16Z bgschaid $ 
 """Pseudo-Cases for Regions, built from symlinks"""
 
 from SolutionDirectory import SolutionDirectory
 from PyFoam.Error import error
+from glob import glob
 
 from os import path,mkdir,symlink,unlink,listdir,system,renames
 
 class RegionCases:
     """Builds pseudocases for the regions"""
     
-    def __init__(self,sol,clean=False):
+    def __init__(self,sol,clean=False,processorDirs=True):
         """@param sol: solution directory
         @param clean: Remove old pseudo-cases"""
 
@@ -40,13 +41,14 @@ class RegionCases:
             self._mklink(self.master.name,r,"constant")
             for t in self.master.getTimes():
                 self._mklink(self.master.name,r,t)
-            for p in self.master.processorDirs():
-                pDir=path.join(self.master.name,p)
-                sDir=path.join(self.master.name+"."+r,p)
-                if not path.exists(sDir):
-                    mkdir(sDir)
-                for f in listdir(pDir):
-                    self._mklink(self.master.name,r,path.join(p,f),prefix=path.pardir)
+            if processorDirs:
+                for p in self.master.processorDirs():
+                    pDir=path.join(self.master.name,p)
+                    sDir=path.join(self.master.name+"."+r,p)
+                    if not path.exists(sDir):
+                        mkdir(sDir)
+                    for f in listdir(pDir):
+                        self._mklink(self.master.name,r,path.join(p,f),prefix=path.pardir)
 
     def resyncAll(self):
         """Update the master Case from all the region-cases"""
@@ -99,6 +101,8 @@ class RegionCases:
         
         symlink(srcname,destname)
 
+        return path.exists(srcname)
+    
     def _rename(self,master,region,name,prefix="",processor=""):
         """Moves a directory from 
         @param master: Name of the master directory

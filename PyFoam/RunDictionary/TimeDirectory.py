@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: TimeDirectory.py 8589 2008-03-17 09:09:04Z bgschaid $ 
+#  ICE Revision: $Id: TimeDirectory.py 11348 2010-03-11 11:01:33Z bgschaid $ 
 """Working with direcotries from a time-step"""
 
 from SolutionFile import SolutionFile
@@ -20,6 +20,8 @@ class TimeDirectory(object):
 
         self.name=name
         if processor!=None:
+            if type(processor)==int:
+                processor="processor%d" % processor
             self.name=path.join(self.name,processor)
         self.name=path.join(self.name,time)
         if region!=None:

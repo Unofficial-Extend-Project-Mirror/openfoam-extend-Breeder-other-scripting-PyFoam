@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GnuplotRunner.py 10948 2009-10-13 08:37:46Z bgschaid $ 
+#  ICE Revision: $Id: GnuplotRunner.py 11665 2010-06-07 07:56:05Z bgschaid $ 
 """Runner that outputs the residuals of the linear solver with Gnuplot"""
 
 from StepAnalyzedCommon import StepAnalyzedCommon
@@ -74,10 +74,13 @@ class GnuplotCommon(StepAnalyzedCommon):
         self.hardcopyPrefix=hardcopyPrefix
         
     def timeHandle(self):
+        StepAnalyzedCommon.timeHandle(self)
+        
         for p in self.plots:
             self.plots[p].redo()
             
     def stopHandle(self):
+        StepAnalyzedCommon.stopHandle(self)
         self.timeHandle()
         if self.hardcopy:
             if self.hardcopyPrefix:
@@ -198,14 +201,16 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
                  start=None,
                  end=None,
                  singleFile=False,
-                 plottingImplementation=None):
+                 plottingImplementation=None,
+                 solverNotRunning=False):
         """@param smallestFreq: smallest Frequency of output
         @param persist: Gnuplot window persistst after run"""
         BasicWatcher.__init__(self,
                               logfile,
                               silent=(silent or progress),
                               tailLength=tailLength,
-                              sleep=sleep)
+                              sleep=sleep,
+                              follow=not solverNotRunning)
         GnuplotCommon.__init__(self,
                                logfile,
                                smallestFreq=smallestFreq,

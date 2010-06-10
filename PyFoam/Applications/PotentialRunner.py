@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PotentialRunner.py 10473 2009-05-25 08:00:21Z bgschaid $ 
+#  ICE Revision: $Id: PotentialRunner.py 11365 2010-03-16 17:32:37Z bgschaid $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -18,6 +18,8 @@ from PyFoam.FoamInformation import oldAppConvention as oldApp
 from CommonParallel import CommonParallel
 from CommonStandardOutput import CommonStandardOutput
 from CommonServer import CommonServer
+
+from PyFoam.FoamInformation import oldTutorialStructure
 
 class PotentialRunner(PyFoamApplication,
                       CommonStandardOutput,
@@ -134,7 +136,10 @@ class PotentialTrigger:
         self.solution=ParsedParameterFile(path.join(sol.systemDir(),"fvSolution"),backup=True)
         self.schemes=ParsedParameterFile(path.join(sol.systemDir(),"fvSchemes"),backup=True)
         self.control=ParsedParameterFile(path.join(sol.systemDir(),"controlDict"),backup=True)
-        pot=SolutionDirectory(path.join(environ["FOAM_TUTORIALS"],"potentialFoam","cylinder"),archive=None,paraviewLink=False)
+        pre=environ["FOAM_TUTORIALS"]
+        if not oldTutorialStructure():
+            pre=path.join(pre,"basic")
+        pot=SolutionDirectory(path.join(pre,"potentialFoam","cylinder"),archive=None,paraviewLink=False)
         
         self.fresh=True
         
@@ -154,10 +159,19 @@ class PotentialTrigger:
                 self.solution["SIMPLE"]["pRefValue"]=pRefValue
                 
             if tolerance!=None:
-                self.solution["solvers"]["p"][1]["tolerance"]=tolerance
+                try:
+                    self.solution["solvers"]["p"][1]["tolerance"]=tolerance
+                except KeyError:
+                    # 1.6 format
+                    self.solution["solvers"]["p"]["tolerance"]=tolerance
+                    
             if relTol!=None:
-                self.solution["solvers"]["p"][1]["relTol"]=relTol
-                
+                try:
+                    self.solution["solvers"]["p"][1]["relTol"]=relTol
+                except KeyError:
+                    # 1.6 format
+                    self.solution["solvers"]["p"]["relTol"]=relTol
+                    
             self.schemes.content=ParsedParameterFile(path.join(pot.systemDir(),"fvSchemes"),backup=False).content
             self.control.content=ParsedParameterFile(path.join(pot.systemDir(),"controlDict"),backup=False).content
             

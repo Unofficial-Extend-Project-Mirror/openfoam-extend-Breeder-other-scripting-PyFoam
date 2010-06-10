@@ -3,6 +3,7 @@
 
 from os import path,listdir
 from PyFoam.Error import error
+import math
 
 class SampleDirectory(object):
     """A directory of sampled times"""
@@ -225,7 +226,12 @@ class SampleData(object):
         self.index=index
 
     def __repr__(self):
-        return "SampleData  of %s on %s at t=%s " % (self.name,self.line(),self.time())
+        if self.isVector():
+            vect=" (vector)"
+        else:
+            vect=""
+            
+        return "SampleData of %s%s on %s at t=%s " % (self.name,vect,self.line(),self.time())
 
     def line(self):
         """Get the line of the sample"""
@@ -237,16 +243,36 @@ class SampleData(object):
     
     def isVector(self):
         """Is this vector or scalar data?"""
-        if type(self.data[0]==tuple):
+        if type(self.data[0])==tuple:
             return True
         else:
             return False
 
-    def range(self):
+    def range(self,component=None):
         """Range of the data"""
-        return (min(self.data),max(self.data))
+        data=self.component(component)
+        
+        return (min(data),max(data))
 
     def domain(self):
         """Range of the data domain"""
         return (min(self.col0),max(self.col0))
     
+    def component(self,component=None):
+        """Return the data as a number of single scalars.
+        @param component: If None for vectors the absolute value is taken.
+        else the number of the component"""
+
+        if self.isVector():
+            data=[]
+            if component==None:
+                for d in self.data:
+                    data.append(math.sqrt(d[0]*d[0]+d[1]*d[1]+d[2]*d[2]))
+            else:
+                if component<0 or component>=len(self.data[0]):
+                    error("Requested component",component,"does not fit the size of the data",len(self.data[0]))
+                for d in self.data:
+                    data.append(d[component])                    
+            return data
+        else:
+            return self.data

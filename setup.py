@@ -28,12 +28,12 @@ setup(name='PyFoam',
       )
 
 try:
-    import Numeric
+    import numpy
 except ImportError,e:
     try:
-        import numpy
+        import Numeric
         print "\n\n"
-        print "Numeric python-package not installed. Using numpy instead"
+        print "numpy python-package not installed. Using Numeric instead"
         print "\n\n"
     except ImportError,e:
         print "\n\n"

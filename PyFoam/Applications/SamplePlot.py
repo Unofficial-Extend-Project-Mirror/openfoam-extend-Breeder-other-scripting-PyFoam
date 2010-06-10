@@ -1,15 +1,18 @@
-#  ICE Revision: $Id: SamplePlot.py 9424 2008-09-22 08:00:35Z bgschaid $ 
+#  ICE Revision: $Id: SamplePlot.py 11121 2009-12-21 17:05:33Z bgschaid $ 
 """
 Application class that implements pyFoamSamplePlot.py
 """
 
 import sys,string
+from os import path
 from optparse import OptionGroup
 
 from PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.SampleDirectory import SampleDirectory
 
 from PyFoam.Error import error,warning
+
+from PlotHelpers import cleanFilename
 
 class SamplePlot(PyFoamApplication):
     def __init__(self,args=None):
@@ -49,6 +52,12 @@ gnuplot-commands
                         default="samples",
                         dest="dirName",
                         help="Alternate name for the directory with the samples (Default: %default)")
+        data.add_option("--preferred-component",
+                        action="store",
+                        type="int",
+                        default=None,
+                        dest="component",
+                        help="The component that should be used for vectors. Otherwise the absolute value is used")
         
         time=OptionGroup(self.parser,
                          "Time",
@@ -72,6 +81,11 @@ gnuplot-commands
                         default=None,
                         dest="maxTime",
                         help="The biggest time that should be used")
+        time.add_option("--fuzzy-time",
+                        action="store_true",
+                        default=False,
+                        dest="fuzzyTime",
+                        help="Try to find the next timestep if the time doesn't match exactly")
 
         output=OptionGroup(self.parser,
                            "Appearance",
@@ -95,6 +109,22 @@ gnuplot-commands
                           dest="scaleAll",
                           default=False,
                           help="Use the same scale for all fields (else use one scale for each field)")
+        output.add_option("--gnuplot-file",
+                          action="store",
+                          dest="gnuplotFile",
+                          default=None,
+                          help="Write the necessary gnuplot commands to this file. Else they are written to the standard output")
+        output.add_option("--picture-destination",
+                          action="store",
+                          dest="pictureDest",
+                          default=None,
+                          help="Directory the pictures should be stored to")
+        output.add_option("--name-prefix",
+                          action="store",
+                          dest="namePrefix",
+                          default=None,
+                          help="Prefix to the picture-name")
+        
         data.add_option("--info",
                         action="store_true",
                         dest="info",
@@ -105,6 +135,11 @@ gnuplot-commands
                           default="lines",
                           dest="style",
                           help="Gnuplot-style for the data (Default: %default)")
+        output.add_option("--clean-filename",
+                          action="store_true",
+                          dest="cleanFilename",
+                          default=False,
+                          help="Clean filenames so that they can be used in HTML or Latex-documents")
         
     def run(self):
         samples=SampleDirectory(self.parser.getArgs()[0],dirName=self.opts.dirName)
@@ -120,9 +155,9 @@ gnuplot-commands
             sys.exit(0)
             
         if self.opts.line==None:
-            error("At least one line has to be specified. Found were",samples.lines())
+            #            error("At least one line has to be specified. Found were",samples.lines())
+            self.opts.line=lines
         else:
-            
             for l in self.opts.line:
                 if l not in lines:
                     error("The line",l,"does not exist in",lines)
@@ -142,6 +177,25 @@ gnuplot-commands
 
             if len(self.opts.time)==0:
                 error("No times in range [",self.opts.minTime,",",self.opts.maxTime,"] found: ",times)
+        elif self.opts.time:
+            iTimes=self.opts.time
+            self.opts.time=[]
+            for t in iTimes:
+                if t in samples.times:
+                    self.opts.time.append(t)
+                elif self.opts.fuzzyTime:
+                    tf=float(t)
+                    use=None
+                    dist=1e20
+                    for ts in samples.times:
+                        if abs(tf-float(ts))<dist:
+                            use=ts
+                            dist=abs(tf-float(ts))
+                    if use and use not in self.opts.time:
+                        self.opts.time.append(use)
+                else:
+                    pass
+                #                    self.warning("Time",t,"not found in the sample-times. Use option --fuzzy")
                 
         plots=[]
 
@@ -190,7 +244,7 @@ gnuplot-commands
                 
             for p in plots:
                 for d in p:
-                    mi,ma=d.range()
+                    mi,ma=d.range(component=self.opts.component)
                     nm=d.name
                     if not self.opts.scaleAll:
                         if nm in vRanges:
@@ -204,14 +258,17 @@ gnuplot-commands
                         vRange=min(vRange[0],mi),max(vRange[1],ma)
                     if not self.opts.scaleAll:
                         vRanges[nm]=vRange
-                        
+            
         result="set term png\n"
 
         for p in plots:
             if len(p)<1:
                 continue
 
-            name=self.opts.dirName
+            name=""
+            if self.opts.namePrefix:
+                name+=self.opts.namePrefix+"_"
+            name+=self.opts.dirName
             title=None
             tIndex=times.index(p[0].time())
             
@@ -234,6 +291,12 @@ gnuplot-commands
                 pass
             
             name+=".png"
+            if self.opts.pictureDest:
+                name=path.join(self.opts.pictureDest,name)
+
+            if self.opts.cleanFilename:
+                name=cleanFilename(name)
+                
             result+='set output "%s"\n' % name
             if title!=None:
                 result+='set title "%s"\n' % title
@@ -255,7 +318,14 @@ gnuplot-commands
                 else:
                     result+=", "
 
-                result+='"%s" using 1:%d ' % (d.file,d.index+1)
+                colSpec="%s" % (d.index+1)
+                if d.isVector():
+                    if self.opts.component:
+                        colSpec="%d" % (d.index+1+self.opts.component)
+                    else:
+                        colSpec="(sqrt($%d**2+$%d**2+$%d**2))" % (d.index+1,d.index+2,d.index+3)
+                    
+                result+='"%s" using 1:%s ' % (d.file,colSpec)
                 
                 title=None
                 if self.opts.mode=="separate":
@@ -279,5 +349,9 @@ gnuplot-commands
 
             result+="\n"
 
-        print result
+        dest=sys.stdout
+        if self.opts.gnuplotFile:
+            dest=open(self.opts.gnuplotFile,"w")
+            
+        dest.write(result)
         

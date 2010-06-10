@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamMetaServer.py 10967 2009-10-19 16:02:07Z fpoll $ 
+#  ICE Revision: $Id: FoamMetaServer.py 11427 2010-04-06 15:14:19Z bgschaid $ 
 """A XMLRPC-Server that knows all PyFoam-Runs in its subnet"""
 
 from ServerBase import ServerBase
@@ -45,7 +45,7 @@ class FoamMetaServer(object):
             self._server=ServerBase(('',port),logRequests=False)
             self._server.register_instance(self)
             self._server.register_introspection_functions()
-            self._server.serve_forever()
+            self._server.serve_forever() # occasional errors with "Broken pipe"
         except KeyboardInterrupt:
             foamLogger("server").warning("Keyboard interrupt")
         except socket.error,reason:
@@ -139,7 +139,7 @@ class FoamMetaServer(object):
                     doIt=new.checkValid()
                     
                 if doIt:
-                    new.queryData()
+                    new.queryData() # occasional errors with 'Connection refused'
                     self.servers[serverID]=new
                     foamLogger("server").debug("Inserted "+serverID)
         except:
@@ -328,7 +328,7 @@ class MetaCollector(Thread):
                     port = int(port)
                     try:
                         server=xmlrpclib.ServerProxy("http://%s:%d" % (ip,port))
-                        pid=server.pid()
+                        pid=server.pid()  # occasional errors with 'Connection refused'
                         self.parent._registerServer(ip,pid,port,sync=False)
                     except:
                         foamLogger("server").error("Unknown exception "+str(sys.exc_info()[0])+" while registering %s:%s" % (ip, port))

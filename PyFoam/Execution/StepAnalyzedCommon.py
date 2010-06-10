@@ -1,14 +1,13 @@
-#  ICE Revision: $Id: StepAnalyzedCommon.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: StepAnalyzedCommon.py 11537 2010-05-04 14:34:40Z bgschaid $ 
 """Common stuff for classes that do something at every timestep"""
 
 from AnalyzedCommon import AnalyzedCommon
 from time import time
 
-
 class StepAnalyzedCommon(AnalyzedCommon):
     """Stuff is performed forevery timestep in the file"""
     
-    def __init__(self,filename,analyzer,smallestFreq=0.):
+    def __init__(self,filename,analyzer,smallestFreq=0):
         """@param smallestFreq: the smallest intervall of real time (in seconds) that the time change is honored"""
         AnalyzedCommon.__init__(self,filename,analyzer)
 
@@ -19,11 +18,16 @@ class StepAnalyzedCommon(AnalyzedCommon):
     def timeChanged(self):
         """React to a change of the simulation time in the log"""
         now=time()
-        if (now-self.oldtime)>self.freq:
+        if self.freq>0 and (now-self.oldtime)>self.freq:
             self.oldtime=now
             self.timeHandle()
+            if self.doPickling:
+                self.picklePlots()
             
     def timeHandle(self):
         """Handler that reacts to the change of time. To be overridden be sub-classes"""
         pass
         
+    def stopHandle(self):
+        if self.doPickling:
+            self.picklePlots(wait=True)

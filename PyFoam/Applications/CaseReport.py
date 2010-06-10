@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CaseReport.py 10621 2009-07-21 18:46:20Z bgschaid $ 
+#  ICE Revision: $Id: CaseReport.py 11364 2010-03-16 17:32:12Z bgschaid $ 
 """
 Application class that implements pyFoamCasedReport.py
 """
@@ -12,7 +12,7 @@ from PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.BoundaryDict import BoundaryDict
 from PyFoam.RunDictionary.MeshInformation import MeshInformation
-from PyFoam.RunDictionary.ParsedParameterFile import PyFoamParserError,ParsedBoundaryDict
+from PyFoam.RunDictionary.ParsedParameterFile import PyFoamParserError,ParsedBoundaryDict,ParsedParameterFile
 
 from PyFoam.Error import error,warning
 
@@ -48,6 +48,16 @@ dictionary-files
                              "Internal",
                              "Details of the parser")
         self.parser.add_option_group(internal)
+        output=OptionGroup(self.parser,
+                             "Output",
+                             "How Output should be generated")
+        self.parser.add_option_group(output)
+        
+        output.add_option("--file",
+                          action="store",
+                          default=None,
+                          dest="file",
+                          help="Write the output to a file instead of the console")
         
         report.add_option("--short-bc-report",
                           action="store_true",
@@ -73,6 +83,18 @@ dictionary-files
                           dest="internal",
                           help="Show the internal value of the fields (the initial conditions)")
         
+        report.add_option("--linear-solvers",
+                          action="store_true",
+                          default=False,
+                          dest="linearSolvers",
+                          help="Print the linear solvers and their tolerance")
+        
+        report.add_option("--relaxation-factors",
+                          action="store_true",
+                          default=False,
+                          dest="relaxationFactors",
+                          help="Print the relaxation factors (if there are any)")
+        
         select.add_option("--time",
                           action="store",
                           type="float",
@@ -84,6 +106,12 @@ dictionary-files
                           dest="region",
                           default=None,
                           help="Do the report for a special region for multi-region cases")
+        
+        select.add_option("--parallel",
+                          action="store_true",
+                          default=False,
+                          dest="parallel",
+                          help="Print the relaxation factors (if there are any)")
         
         internal.add_option("--long-field-threshold",
                             action="store",
@@ -123,8 +151,12 @@ dictionary-files
                                help="Reports the size of the parallel decomposition")
         
     def run(self):
+        if self.opts.file:
+            sys.stdout=open(self.opts.file,"w")
+            
         sol=SolutionDirectory(self.parser.getArgs()[0],
                               archive=None,
+                              parallel=self.opts.parallel,
                               paraviewLink=False,
                               region=self.opts.region)
         if self.opts.time:
@@ -150,16 +182,22 @@ dictionary-files
         if self.opts.decomposition:
             needsPolyBoundaries=True
             
+        defaultProc=None
+        if self.opts.parallel:
+            defaultProc=0
+            
         if needsPolyBoundaries:
+            proc=None
             boundary=BoundaryDict(sol.name,
                                   region=self.opts.region,
-                                  time=self.opts.time)
+                                  time=self.opts.time,
+                                  processor=defaultProc)
 
             boundMaxLen=0
             boundaryNames=[]
             for b in boundary:
-                boundaryNames.append(b)
-
+                if b.find("procBoundary")!=0:
+                    boundaryNames.append(b)
             if self.opts.patches!=None:
                 tmp=boundaryNames
                 boundaryNames=[]
@@ -217,25 +255,44 @@ dictionary-files
 
         if self.opts.caseSize:
             print "Size of the case"
+            nFaces=0
+            nPoints=0
+            nCells=0
+            if self.opts.parallel:
+                procs=range(sol.nrProcs())
+                print "Accumulated from",sol.nrProcs(),"processors"
+            else:
+                procs=[None]
             print
-            info=MeshInformation(sol.name)
-            print "Faces:  \t",info.nrOfFaces()
-            print "Points: \t",info.nrOfPoints()
-            try:
-                print "Cells:  \t",info.nrOfCells()
-            except:
-                print "Not available"
+
+            for p in procs:
+                info=MeshInformation(sol.name,
+                                     processor=p,
+                                     time=self.opts.time)
+                nFaces+=info.nrOfFaces()
+                nPoints+=info.nrOfPoints()
+                try:
+                    nCells+=info.nrOfCells()
+                except:
+                    nCells="Not available"
+            print "Faces:  \t",nFaces
+            print "Points: \t",nPoints
+            print "Cells:  \t",nCells
             
         if self.opts.decomposition:
             if sol.nrProcs()<2:
-                error("The case is not decomposed")
+                print "This case is not decomposed"
+                return
+            
             print "Case is decomposed for",sol.nrProcs(),"processors"
 
             nCells=[]
             nFaces=[]
             nPoints=[]
             for p in sol.processorDirs():
-                info=MeshInformation(sol.name,processor=p)
+                info=MeshInformation(sol.name,
+                                     processor=p,
+                                     time=self.opts.time)
                 nPoints.append(info.nrOfPoints())
                 nFaces.append(info.nrOfFaces())
                 nCells.append(info.nrOfCells())
@@ -275,7 +332,14 @@ dictionary-files
             for b in boundaryNames:
                 print nameFormat % b,"|",
                 for p in sol.processorDirs():
-                    print nrFormat % ParsedBoundaryDict(sol.boundaryDict(processor=p))[b]["nFaces"],
+                    try:
+                        nFaces= ParsedBoundaryDict(sol.boundaryDict(processor=p,
+                                                                    time=self.opts.time)
+                                                   )[b]["nFaces"]
+                    except KeyError:
+                        nFaces=0
+                        
+                    print nrFormat % nFaces,
                 print
                 
         if self.opts.longBCreport:
@@ -291,7 +355,9 @@ dictionary-files
                 for fName in fieldNames:
                     print "   ",fName,
                     f=fields[fName]
-                    if b not in f["boundaryField"]:
+                    if "boundaryField" not in f:
+                        print " "*(nameMaxLen-len(fName)+2)+": Not a field file"
+                    elif b not in f["boundaryField"]:
                         print " "*(nameMaxLen-len(fName)+2)+": MISSING !!!"
                     else:
                         bf=f["boundaryField"][b]
@@ -329,10 +395,14 @@ dictionary-files
             
                 for fName in fields:
                     f=fields[fName]
-                    if b not in f["boundaryField"]:
-                        types[b][fName]="MISSING"
-                    else:
-                        types[b][fName]=f["boundaryField"][b]["type"]
+                    try:
+                        if b not in f["boundaryField"]:
+                            types[b][fName]="MISSING"
+                        else:
+                            types[b][fName]=f["boundaryField"][b]["type"]
+                    except KeyError:
+                        types[b][fName]="Not a field"
+                        
                     colLen[b]=max(colLen[b],len(types[b][fName]))
 
             print " "*(nameMaxLen),
@@ -379,9 +449,12 @@ dictionary-files
             print "-"*len(head)
             for fName in fieldNames:
                 f=fields[fName]
-
-                print fName+" "*(nameMaxLen-len(fName))+" :",f["dimensions"]
-
+                try:
+                    dim=f["dimensions"]
+                    print fName+" "*(nameMaxLen-len(fName))+" :",dim
+                except KeyError:
+                    print fName,"is not a field file"
+                    
         if self.opts.internal:
             print "\Internal value of fields for t =",time
             print
@@ -394,16 +467,21 @@ dictionary-files
 
                 print fName+" "*(nameMaxLen-len(fName))+" :",
 
-                cont=str(f["internalField"])
-                if cont.find("\n")>=0:
-                    print cont[:cont.find("\n")],"..."
-                else:
-                    print cont
-
+                try:
+                    cont=str(f["internalField"])
+                    if cont.find("\n")>=0:
+                        print cont[:cont.find("\n")],"..."
+                    else:
+                        print cont
+                except KeyError:
+                    print "Not a field file"
+                    
         if self.opts.processorMatrix:
             if sol.nrProcs()<2:
-                error("The case is not decomposed")
-
+                print "This case is not decomposed"
+                
+                return
+            
             matrix=[ [0,]*sol.nrProcs() for i in range(sol.nrProcs())]
 
             for i,p in enumerate(sol.processorDirs()):
@@ -437,3 +515,39 @@ dictionary-files
                     print colFormat % matrix[i][j],
                 print
                 
+        if self.opts.linearSolvers:
+            fvSol=ParsedParameterFile(path.join(sol.systemDir(),"fvSolution"))
+            allInfo={}
+            for sName in fvSol["solvers"]:
+                raw=fvSol["solvers"][sName]
+                info={}
+                info["solver"]=raw[0]
+                try:
+                    info["tolerance"]=raw[1]["tolerance"]
+                except KeyError:
+                    info["tolerance"]=1.
+                try:
+                    info["relTol"]=raw[1]["relTol"]
+                except KeyError:
+                    info["relTol"]=0.
+                    
+                allInfo[sName]=info
+
+            title="%15s | %15s | %10s | %8s" % ("name","solver","tolerance","relative")
+            print title
+            print "-"*len(title)
+            for n,i in allInfo.iteritems():
+                print "%15s | %15s | %10g | %8g" % (n,i["solver"],i["tolerance"],i["relTol"])
+            print
+            
+        if self.opts.relaxationFactors:
+            fvSol=ParsedParameterFile(path.join(sol.systemDir(),"fvSolution"))
+            if "relaxationFactors" in fvSol:
+                title="%20s | %15s" % ("name","factor")
+                print title
+                print "-"*len(title)
+                for n,f in fvSol["relaxationFactors"].iteritems():
+                    print "%20s | %15g" % (n,f)
+                print
+            else:
+                print "No relaxation factors defined for this case"

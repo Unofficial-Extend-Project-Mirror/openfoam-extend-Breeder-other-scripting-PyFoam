@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Hardcoded.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: Hardcoded.py 11471 2010-04-19 08:27:53Z bgschaid $ 
 """Hardcoded values"""
 
 from os import path,makedirs,environ
@@ -15,6 +15,10 @@ def globalConfigFile():
     """@return: The name of the global configuration File"""
     return path.join(globalDirectory(),_pyFoamConfigName)
 
+def globalConfigDir():
+    """@return: The name of the global configuration directory where .cfg-files can be placed"""
+    return globalConfigFile()+".d"
+
 def userDirectory():
     """@return: the user directory"""
     return path.expanduser(path.join("~","."+_pyFoamDirName))
@@ -22,6 +26,10 @@ def userDirectory():
 def userConfigFile():
     """@return: The name of the user configuration File"""
     return path.join(userDirectory(),_pyFoamConfigName)
+
+def userConfigDir():
+    """@return: The name of the user configuration directory where .cfg-files can be placed"""
+    return userConfigFile()+".d"
 
 def userName():
     """@return: name of the current user"""

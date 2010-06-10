@@ -1,10 +1,10 @@
-#  ICE Revision: $Id: AnalyzedRunner.py 10900 2009-09-28 13:04:35Z bgschaid $ 
+#  ICE Revision: $Id: AnalyzedRunner.py 11063 2009-11-26 14:22:59Z bgschaid $ 
 """Command is run and output is analyzed"""
 
 from BasicRunner import BasicRunner
-from AnalyzedCommon import AnalyzedCommon
+from StepAnalyzedCommon import StepAnalyzedCommon
 
-class AnalyzedRunner(AnalyzedCommon,BasicRunner):
+class AnalyzedRunner(StepAnalyzedCommon,BasicRunner):
     """The output of a command is analyzed while being run
 
     Side effects (files written etc) depend on the analyzer"""
@@ -19,7 +19,8 @@ class AnalyzedRunner(AnalyzedCommon,BasicRunner):
                  restart=False,
                  noLog=False,
                  remark=None,
-                 jobId=None):
+                 jobId=None,
+                 smallestFreq=60.):
         """ @param analyzer: the analyzer for the output
         argv, silent, logname, server, lam, noLog - see BasicRunner"""
         BasicRunner.__init__(self,argv,silent,logname,
@@ -30,11 +31,14 @@ class AnalyzedRunner(AnalyzedCommon,BasicRunner):
                              noLog=noLog,
                              remark=remark,
                              jobId=jobId)
-        AnalyzedCommon.__init__(self,logname,analyzer)
+        StepAnalyzedCommon.__init__(self,
+                                    logname,
+                                    analyzer,
+                                    smallestFreq=smallestFreq)
 
     def lineHandle(self,line):
         """Not to be called: calls the analyzer for the current line"""
-        AnalyzedCommon.lineHandle(self,line)
+        StepAnalyzedCommon.lineHandle(self,line)
         BasicRunner.lineHandle(self,line)
 
     def lastTime(self):
@@ -70,4 +74,7 @@ class AnalyzedRunner(AnalyzedCommon,BasicRunner):
 
     def stopHandle(self):
         BasicRunner.stopHandle(self)
+        StepAnalyzedCommon.stopHandle(self)
+
         self.tearDown()
+            

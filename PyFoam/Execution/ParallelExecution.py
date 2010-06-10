@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ParallelExecution.py 10020 2009-02-17 13:04:30Z bgschaid $ 
+#  ICE Revision: $Id: ParallelExecution.py 11495 2010-04-21 11:02:03Z bgschaid $ 
 """Things that are needed for convenient parallel Execution"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -53,11 +53,11 @@ class LAMMachine(Utilities):
         
     def boot(self):
         """Boots a LAM-machine using the machine-file"""
-        if(foamMPI()=="LAM"):
+        if foamMPI()=="LAM":
             warning("LAM is untested. Any Feedback most welcome")
             self.execute("lamboot -s -v "+self.mFile)
             self.running=True
-        elif(foamMPI()=="OPENMPI" or foamMPI()=="SYSTEMOPENMPI"):
+        elif foamMPI()=="OPENMPI" or foamMPI()=="SYSTEMOPENMPI":
             self.running=True
         else:
             error(" Unknown or missing MPI-Implementation: "+foamMPI())
@@ -87,7 +87,7 @@ class LAMMachine(Utilities):
                     elif len(tmp)==0:
                         pass
                     else:
-                        error("Machinefile not valid (I think): more than one element in one line:"+str(tmp))
+                        error("Machinefile not valid (I think): more than one element in one line:"+str(tmp)+"\nPropably you wrote a line in the form 'node1 cpu=2', but I only understand 'node1\\nnode1'")
 
                 if self.procNr==None:
                     return nr

@@ -10,3 +10,7 @@ sdist: docu
 
 rpm:
 	python setup.py bdist_rpm 
+
+dpkg:
+	dpkg-buildpackage -us -uc
+

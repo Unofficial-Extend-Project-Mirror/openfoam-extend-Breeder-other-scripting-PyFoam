@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotWatcher.py 10948 2009-10-13 08:37:46Z bgschaid $ 
+#  ICE Revision: $Id: PlotWatcher.py 11665 2010-06-07 07:56:05Z bgschaid $ 
 """
 Class that implements pyFoamPlotWatcher
 """
@@ -36,6 +36,17 @@ class PlotWatcher(PyFoamApplication,
 
     def addOptions(self):
         CommonPlotOptions.addOptions(self)
+
+        input=OptionGroup(self.parser,
+                           "Input",
+                           "Specifics of the input")
+        self.parser.add_option_group(input)
+        
+        input.add_option("--solver-not-running-anymore",
+                          action="store_true",
+                          dest="solverNotRunning",
+                          default=False,
+                          help="It makes no sense to wait for further output, because the solver is not running anymore. Watcher ends as soon as he encounters the end of the file. Only makes sense with --persist or --hardcopy")
 
         output=OptionGroup(self.parser,
                            "Output",
@@ -87,8 +98,10 @@ class PlotWatcher(PyFoamApplication,
                 
     def run(self):
         self.processPlotOptions()
-        self.processPlotLineOptions(autoPath=path.dirname(self.parser.getArgs()[0]))
-
+        hereDir=path.dirname(self.parser.getArgs()[0])
+        self.processPlotLineOptions(autoPath=hereDir)
+        self.addLocalConfig(hereDir)
+        
         run=GnuplotWatcher(self.parser.getArgs()[0],
                            smallestFreq=self.opts.frequency,
                            persist=self.opts.persist,
@@ -112,6 +125,7 @@ class PlotWatcher(PyFoamApplication,
                            end=self.opts.end,
                            singleFile=self.opts.singleDataFilesOnly,
                            replotFrequency=self.opts.replotFrequency,
-                           plottingImplementation=self.opts.implementation)
+                           plottingImplementation=self.opts.implementation,
+                           solverNotRunning=self.opts.solverNotRunning)
 
         run.start()

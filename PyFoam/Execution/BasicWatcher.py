@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BasicWatcher.py 10428 2009-05-07 14:22:40Z bgschaid $ 
+#  ICE Revision: $Id: BasicWatcher.py 11665 2010-06-07 07:56:05Z bgschaid $ 
 """Watches the output of Foam-run"""
 
 from os import path
@@ -15,10 +15,15 @@ class BasicWatcher(object):
     Works like the UNIX-command 'tail -f <file>': the last lines of the file are output.
     If the file grows then these lines are output as they arrive"""
 
-    def __init__(self,filename,silent=False,tailLength=1000,sleep=0.1):
+    def __init__(self,filename,
+                 silent=False,
+                 tailLength=1000,
+                 sleep=0.1,
+                 follow=True):
         """@param filename: name of the logfile to watch
         @param silent: if True no output is sent to stdout
         @param tailLength: number of bytes at the end of the fail that should be output.
+        @param follow: if the end of the file is reached wait for further input
         Because data is output on a per-line-basis
         @param sleep: interval to sleep if no line is returned"""
 
@@ -26,6 +31,7 @@ class BasicWatcher(object):
         self.silent=silent
         self.tail=tailLength
         self.sleep=sleep
+        self.follow=follow
         self.isTailing=False
         
         if not path.exists(self.filename):
@@ -50,7 +56,7 @@ class BasicWatcher(object):
             
         self.startHandle()
         
-        while 1:
+        while self.follow or currSize>self.reader.bytesRead():
             try:
                 status=self.reader.read(fh)
                 if status:

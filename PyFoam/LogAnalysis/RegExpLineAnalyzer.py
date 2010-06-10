@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: RegExpLineAnalyzer.py 10770 2009-08-24 07:51:28Z bgschaid $ 
+#  ICE Revision: $Id: RegExpLineAnalyzer.py 11465 2010-04-15 11:17:39Z bgschaid $ 
 """Analyzes lines with regular expressions"""
 
 import re
@@ -96,7 +96,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
                 if self.idNr!=None and self.titles[i].find("%s")>=0:
                     name=self.titles[i] % ID
                 else:
-                    name=prefix+self.titles[i]
+                    name=prefix+str(self.titles[i])
 
             self.lines.setValue(name,val)
         

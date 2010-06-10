@@ -1,9 +1,10 @@
-#  ICE Revision: $Id: SolutionDirectory.py 10967 2009-10-19 16:02:07Z fpoll $ 
+#  ICE Revision: $Id: SolutionDirectory.py 11557 2010-05-11 08:03:23Z bgschaid $ 
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
 from PyFoam.Basics.BasicFile import BasicFile
 from PyFoam.Error import warning
+from PyFoam import configuration as conf
 
 from TimeDirectory import TimeDirectory
 from ParsedParameterFile import ParsedParameterFile,WriteParameterFile
@@ -12,7 +13,7 @@ from os import listdir,path,mkdir,symlink,stat,getlogin,uname,environ
 from time import asctime
 from stat import ST_CTIME
 import tarfile,fnmatch
-import re
+import re,shutil
 
 class SolutionDirectory(Utilities):
     """Represents a solution directory
@@ -60,13 +61,34 @@ class SolutionDirectory(Utilities):
                         self.initialDir()]
         self.addToClone("PyFoamHistory")
 
+        self.addToClone("customRegexp")
+        self.addToClone("LocalConfigPyFoam")
+
         # Old-school Paraview-reader (this can be removed eventually)
         if paraviewLink and not path.exists(self.controlDict()+".foam"):
             symlink(path.basename(self.controlDict()),self.controlDict()+".foam")
 
         emptyFoamFile=path.join(self.name,path.basename(self.name)+".foam")
         if paraviewLink and not path.exists(emptyFoamFile):
-            dummy=open(emptyFoamFile,"w") # equivalent to touch 
+            dummy=open(emptyFoamFile,"w") # equivalent to touch
+            
+    def setToParallel(self):
+        """Use the parallel times instead of the serial.
+
+        Used to reset the behaviour after it has been set by the constructor"""
+        if self.parallel:
+            warning(self.name,"is already in parallel mode")
+        else:
+            self.parallel=True
+            if self.processorDirs():
+                self.dirPrefix = self.processorDirs()[0]
+            self.reread(force=True)
+            
+    def addLocalConfig(self):
+        """Add the local configuration file of the case to the configuration"""
+        fName=path.join(self.name,"LocalConfigPyFoam")
+        if path.exists(fName):
+            conf().addFile(fName)
         
     def __len__(self):
         self.reread()
@@ -375,7 +397,13 @@ class SolutionDirectory(Utilities):
         for f in self.backups:
             self.execute("cp -r "+f+" "+fname)
             
-    def clearResults(self,after=None,removeProcs=False,keepLast=False,vtk=True,keepRegular=False):
+    def clearResults(self,
+                     after=None,
+                     removeProcs=False,
+                     keepLast=False,
+                     vtk=True,
+                     keepRegular=False,
+                     functionObjectData=False):
         """remove all time-directories after a certain time. If not time ist
         set the initial time is used
         @param after: time after which directories ar to be removed
@@ -384,7 +412,8 @@ class SolutionDirectory(Utilities):
         processor-directories
         @param keepLast: Keep the data from the last timestep
         @param vtk: Remove the VTK-directory if it exists
-        @param keepRegular: keep all the times (only remove processor and other stuff)"""
+        @param keepRegular: keep all the times (only remove processor and other stuff)
+        @param functionObjectData: tries do determine which data was written by function obejects and removes it"""
 
         self.reread()
 
@@ -422,6 +451,14 @@ class SolutionDirectory(Utilities):
                             except ValueError:
                                 pass
                             
+        if functionObjectData:
+            cd=ParsedParameterFile(self.controlDict())
+            if "functions" in cd:
+                for f in cd["functions"][0::2]:
+                    pth=path.join(self.name,f)
+                    if path.exists(pth):
+                        shutil.rmtree(pth)
+                    
     def clearPattern(self,glob):
         """Clear all files that fit a certain shell (glob) pattern
         @param glob: the pattern which the files are going to fit"""
@@ -447,7 +484,8 @@ class SolutionDirectory(Utilities):
               keepLast=False,
               vtk=True,
               keepRegular=False,
-              clearHistory=False):
+              clearHistory=False,
+              functionObjectData=False):
         """One-stop-shop to remove data
         @param after: time after which directories ar to be removed
         @param processor: remove the processorXX directories
@@ -457,7 +495,8 @@ class SolutionDirectory(Utilities):
                           removeProcs=processor,
                           keepLast=keepLast,
                           vtk=vtk,
-                          keepRegular=keepRegular)
+                          keepRegular=keepRegular,
+                          functionObjectData=functionObjectData)
         self.clearOther(pyfoam=pyfoam,
                         clearHistory=clearHistory)
         
@@ -491,6 +530,8 @@ class SolutionDirectory(Utilities):
         @rtype: str"""
         pre=self.name
         if processor!=None:
+            if type(processor)==int:
+                processor="processor%d" % processor
             pre=path.join(pre,processor)
             
         if region==None and self.region!=None:

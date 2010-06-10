@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GnuplotTimelines.py 10972 2009-10-26 17:18:02Z bgschaid $ 
+#  ICE Revision: $Id: GnuplotTimelines.py 11536 2010-05-04 14:33:54Z bgschaid $ 
 """Plots a collection of timelines"""
 
 from PyFoam.ThirdParty.Gnuplot import Gnuplot,Data
@@ -62,18 +62,24 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
                 self.set_string('y2label  "'+self.spec.y2label+'"')
         except AttributeError:
             pass
-            
-        if self.spec.raiseit:
+
+        raiseit=False
+        if "raiseit" in dir(self.spec):
+            raiseit=self.spec.raiseit
+        if raiseit:
             x11addition=" raise"
         else:
             x11addition=" noraise"
-            
-        if uname()[0]=="Darwin":
-            self.set_string("terminal x11"+x11addition)
-            # self.set_string("terminal aqua "+str(GnuplotTimelines.terminalNr))
-            GnuplotTimelines.terminalNr+=1
+
+        if showWindow:
+            if uname()[0]=="Darwin":
+                self.set_string("terminal x11"+x11addition)
+                # self.set_string("terminal aqua "+str(GnuplotTimelines.terminalNr))
+                GnuplotTimelines.terminalNr+=1
+            else:
+                self.set_string("terminal x11"+x11addition)
         else:
-            self.set_string("terminal x11"+x11addition)
+            self.set_string("terminal dumb")
             
         self.with_=self.spec.with_
         
@@ -141,3 +147,4 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
         else:
             warning("Hardcopy format",form,"unknown. Falling back to postscript")
             self.hardcopy(filename=filename+".ps",color=True)
+

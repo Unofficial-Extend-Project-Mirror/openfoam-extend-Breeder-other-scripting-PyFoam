@@ -1,8 +1,9 @@
-#  ICE Revision: $Id: PlotTimelinesFactory.py 10884 2009-09-23 08:11:01Z bgschaid $ 
+#  ICE Revision: $Id: PlotTimelinesFactory.py 11210 2010-01-29 09:20:05Z bgschaid $ 
 """Creates subclasses of GeneralPlotTimelines"""
 
 from GnuplotTimelines import GnuplotTimelines
 from MatplotlibTimelines import MatplotlibTimelines
+from QwtPlotTimelines import QwtPlotTimelines
 from DummyPlotTimelines import DummyPlotTimelines
 
 from CustomPlotInfo import CustomPlotInfo
@@ -13,9 +14,14 @@ from PyFoam.Error import error
 
 lookupTable = { "gnuplot" : GnuplotTimelines ,
                 "matplotlib" : MatplotlibTimelines,
+                "qwtplot" : QwtPlotTimelines,
                 "dummy" : DummyPlotTimelines  }
 
-def createPlotTimelines(timelines,custom,implementation=None):
+def createPlotTimelines(timelines,
+                        custom,
+                        implementation=None,
+                        showWindow=True,
+                        registry=None):
     """Creates a plotting object
     @param timelines: The timelines object
     @type timelines: TimeLineCollection
@@ -29,7 +35,10 @@ def createPlotTimelines(timelines,custom,implementation=None):
         error("Requested plotting implementation",implementation,
               "not in list of available implementations",lookupTable.keys())
 
-    return lookupTable[implementation](timelines,custom)
+    return lookupTable[implementation](timelines,
+                                       custom,
+                                       showWindow=showWindow,
+                                       registry=registry)
 
 def createPlotTimelinesDirect(name,
                               timelines,

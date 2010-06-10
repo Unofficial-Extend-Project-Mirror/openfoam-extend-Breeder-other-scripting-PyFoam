@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamInformation.py 10943 2009-10-09 07:31:48Z bgschaid $ 
+#  ICE Revision: $Id: FoamInformation.py 11497 2010-04-21 16:01:10Z bgschaid $ 
 """Getting Information about the Foam-Installation (like the installation directory)"""
 
 from os import environ,path,listdir
@@ -40,14 +40,32 @@ def foamMPI():
         vStr=environ["WM_MPLIB"]
         return vStr
     
-def foamVersion():
-    """@return: tuple that represents the Foam-version as found
+def foamVersionString(useConfigurationIfNoInstallation=False):
+    """@return: string for the  Foam-version as found
     in $WM_PROJECT_VERSION"""
     
-    if not environ.has_key("WM_PROJECT_VERSION"):
+    if not environ.has_key("WM_PROJECT_VERSION") and not useConfigurationIfNoInstallation:
+        return ""
+    else:
+        if environ.has_key("WM_PROJECT_VERSION"):
+            vStr=environ["WM_PROJECT_VERSION"]
+        else:
+            vStr=""
+            
+        if vStr=="" and  useConfigurationIfNoInstallation:
+            vStr=config().get("OpenFOAM","Version")
+
+    return vStr
+
+def foamVersion(useConfigurationIfNoInstallation=False):
+    """@return: tuple that represents the Foam-version as found
+    in $WM_PROJECT_VERSION"""
+
+    vStr=foamVersionString(useConfigurationIfNoInstallation=useConfigurationIfNoInstallation)
+    
+    if vStr=="":
         return ()
     else:
-        vStr=environ["WM_PROJECT_VERSION"]
         res=[]
 
         for el in vStr.split("."):
@@ -59,11 +77,11 @@ def foamVersion():
                 
         return tuple(res)
     
-def foamVersionNumber():
+def foamVersionNumber(useConfigurationIfNoInstallation=False):
     """@return: tuple that represents the Foam-Version-Number (without
     strings"""
 
-    ver=foamVersion()
+    ver=foamVersion(useConfigurationIfNoInstallation=useConfigurationIfNoInstallation)
 
     nr=[]
 
@@ -72,7 +90,7 @@ def foamVersionNumber():
             nr.append(e)
         else:
             break
-        
+
     return tuple(nr)
 
 def oldAppConvention():
@@ -97,8 +115,12 @@ def foamInstalledVersions():
     if environ.has_key("WM_PROJECT_INST_DIR"):
         basedir=environ["WM_PROJECT_INST_DIR"]
     else:
-        basedir=path.expanduser("~/OpenFOAM")
-        
+        basedir=path.expanduser(config().get("OpenFOAM","Installation"))
+
+    if not path.exists(basedir) or not path.isdir(basedir):
+        warning("Basedir",basedir,"does not exist or is not a directory")
+        return []
+    
     for f in listdir(basedir):
         m=valid.match(f)
         if m:
@@ -168,7 +190,7 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
         if environ.has_key("SHELL"):
             shell=environ["SHELL"]
 
-        if(path.basename(shell)=="python"):
+        if(path.basename(shell).find("python")==0):
             # this assumes that the 'shell' is a PyFoam-Script on a cluster
             shell=config().get("Paths","bash")
             environ["SHELL"]=shell

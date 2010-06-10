@@ -41,6 +41,7 @@ class ClusterJob:
                  arrayJob=False,
                  hardRestart=False,
                  autoParallel=True,
+                 doAutoReconstruct=True,
                  foamVersion=None,
                  useFoamMPI=False,
                  multiRegion=False):
@@ -50,6 +51,7 @@ class ClusterJob:
         are identified by their task-id
         @param hardRestart: treat the job as restarted
         @param autoParallel: Parallelization is handled by the base-class
+        @param doAutoReconstruct: Automatically reconstruct the case if autoParalellel is set
         @param foamVersion: The foam-Version that is to be used
         @param useFoamMPI: Use the OpenMPI supplied with OpenFOAM
         @param multiRegion: This job consists of multiple regions"""
@@ -81,6 +83,7 @@ class ClusterJob:
             error("No OpenFOAM-Version seems to be configured. Set the foamVersion-parameter")
             
         self.autoParallel=autoParallel
+        self.doAutoReconstruct=doAutoReconstruct
         self.multiRegion=multiRegion
         
         self.hostfile=None
@@ -305,9 +308,12 @@ class ClusterJob:
     def autoReconstruct(self):
         """Default reconstruction of a parallel run"""
 
-        self.foamRun("reconstructPar",
-                     args=["--logname=ReconstructPar"])
-        
+        if self.doAutoReconstruct:
+            self.foamRun("reconstructPar",
+                         args=["--logname=ReconstructPar"])
+        else:
+            self.message("No reconstruction (because asked to)")
+            
     def setup(self,parameters):
         """Set up the job. Called in the beginning if the
         job has not been restarted
@@ -395,6 +401,7 @@ class SolverJob(ClusterJob):
                  arrayJob=False,
                  hardRestart=False,
                  autoParallel=True,
+                 doAutoReconstruct=True,
                  foamVersion=None,
                  useFoamMPI=False,
                  steady=False,
@@ -412,6 +419,7 @@ class SolverJob(ClusterJob):
                             arrayJob=arrayJob,
                             hardRestart=hardRestart,
                             autoParallel=autoParallel,
+                            doAutoReconstruct=doAutoReconstruct,
                             foamVersion=foamVersion,
                             useFoamMPI=useFoamMPI,
                             multiRegion=multiRegion)

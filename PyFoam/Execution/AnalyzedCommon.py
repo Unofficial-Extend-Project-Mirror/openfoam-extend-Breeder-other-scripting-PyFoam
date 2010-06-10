@@ -1,7 +1,8 @@
-#  ICE Revision: $Id: AnalyzedCommon.py 10976 2009-10-28 10:25:32Z bgschaid $ 
+#  ICE Revision: $Id: AnalyzedCommon.py 11537 2010-05-04 14:34:40Z bgschaid $ 
 """Common stuff for classes that use analyzers"""
 
 from os import path,mkdir
+from shutil import move
 
 from PyFoam.Basics.PlotTimelinesFactory import createPlotTimelines,createPlotTimelinesDirect
 from PyFoam.Basics.TimeLineCollection import signedMax
@@ -9,13 +10,24 @@ from PyFoam.LogAnalysis.RegExpLineAnalyzer import RegExpLineAnalyzer
 
 from PyFoam.Error import error
 
+# import pickle
+import cPickle as pickle
+from PyFoam.Basics.GeneralPlotTimelines import allPlots
+from PyFoam.Basics.TimeLineCollection import allLines
+
+from threading import Lock
+
 class AnalyzedCommon(object):
     """This class collects information and methods that are needed for
     handling analyzers"""
 
-    def __init__(self,filename,analyzer):
+    def __init__(self,
+                 filename,
+                 analyzer,
+                 doPickling=True):
         """@param filename: name of the file that is being analyzed
-        @param analyzer: the analyzer itself"""
+        @param analyzer: the analyzer itself
+        @param doPickling: write the pickled plot data"""
 
         self.analyzer=analyzer
 
@@ -26,7 +38,11 @@ class AnalyzedCommon(object):
             
         if not path.exists(self.logDir):
             mkdir(self.logDir)
-        
+            
+        self.doPickling=doPickling
+        if self.doPickling:
+            self.pickleLock=Lock()
+            
         self.reset()
 
     def tearDown(self):
@@ -255,3 +271,25 @@ class AnalyzedCommon(object):
             self.reset()
             
         return plots
+
+    def picklePlots(self,wait=False):
+        """Writes the necessary information for the plots permanently to disc,
+        so that it doesn't have to be generated again
+        @param wait: wait for the lock to be allowed to pickle"""
+
+        #        print "Putting some pickles in the jar"
+        
+        lines=allLines()
+        plots=allPlots()
+        if lines and plots:
+            gotIt=self.pickleLock.acquire(wait)
+            if not gotIt:
+                return
+            
+            pickleFile=path.join(self.logDir,"pickledPlots")
+            pick=pickle.Pickler(open(pickleFile+".tmp","w"))
+            pick.dump(lines.prepareForTransfer())
+            pick.dump(plots.prepareForTransfer())
+            move(pickleFile+".tmp",pickleFile)
+
+            self.pickleLock.release()

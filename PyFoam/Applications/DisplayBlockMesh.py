@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+"""
+Old implementation using Tkinter. This is no longer supported.
+If possible use the Qt-Variant
+"""
 
 import sys
 
@@ -11,7 +14,12 @@ def doImports():
         global Tkinter
         import Tkinter
         global vtk
-        import vtk
+        try:
+            import vtk
+            print "Using system-VTK"
+        except ImportError:
+            print "Trying VTK implementation from Paraview"
+            from paraview import vtk
         global vtkTkRenderWindowInteractor
         from vtk.tk.vtkTkRenderWindowInteractor import vtkTkRenderWindowInteractor
     except ImportError,e:
@@ -25,9 +33,15 @@ vertices as spheres (with numbers). The blocks are sketched by
 lines. One block can be seceted with a slider. It will be
 displayed as a green cube with the local directions x1,x2 and
 x3. Also a patch that is selected by a slider will be sketched
-by blue squares
+by blue squares.
+This implementation uses Tkinter and is no longer activly developed.
+Use the QT-version.
         """
-        PyFoamApplication.__init__(self,description=description,usage="%prog [options] <blockMeshDict>",interspersed=True,nr=1)
+        PyFoamApplication.__init__(self,
+                                   description=description,
+                                   usage="%prog [options] <blockMeshDict>",
+                                   interspersed=True,
+                                   nr=1)
 
     def run(self):
         doImports()

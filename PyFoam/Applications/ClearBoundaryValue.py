@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ReadDictionary.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id: ClearBoundaryValue.py 11120 2009-12-21 17:00:47Z bgschaid $ 
 """
 Application class that implements pyFoamClearBoundaryValue.py
 """

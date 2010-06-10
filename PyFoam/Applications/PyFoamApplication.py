@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PyFoamApplication.py 10947 2009-10-09 07:31:51Z bgschaid $ 
+#  ICE Revision: $Id: PyFoamApplication.py 11417 2010-04-06 09:37:07Z bgschaid $ 
 """Base class for pyFoam-applications
 
 Classes can also be called with a command-line string"""
@@ -10,6 +10,8 @@ from PyFoam.FoamInformation import oldAppConvention as oldApp
 from PyFoam.RunDictionary.SolutionDirectory import NoTouchSolutionDirectory
 
 from PyFoam.Basics.TerminalFormatter import TerminalFormatter
+from PyFoam import configuration
+
 format=TerminalFormatter()
 format.getConfigFormat("error")
 format.getConfigFormat("warn")
@@ -225,4 +227,10 @@ class PyFoamApplication(object):
         logline+=text
         apply(NoTouchSolutionDirectory.addToHistory,logline)
         
-        
+    def addLocalConfig(self,directory=None):
+        """
+        Adds a local directory (assuming it is found)
+        """
+        if directory!=None:
+            configuration().addFile(path.join(directory,"LocalConfigPyFoam"),silent=True)
+    

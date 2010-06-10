@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotRunner.py 10948 2009-10-13 08:37:46Z bgschaid $ 
+#  ICE Revision: $Id: PlotRunner.py 11400 2010-03-30 08:13:56Z bgschaid $ 
 """
 Class that implements pyFoamPlotRunner
 """
@@ -85,7 +85,8 @@ class PlotRunner(PyFoamApplication,
         self.processPlotLineOptions(autoPath=cName)
         
         sol=SolutionDirectory(cName,archive=None)
-        
+        sol.addLocalConfig()
+
         self.clearCase(sol)
 
         lam=self.getParallel()

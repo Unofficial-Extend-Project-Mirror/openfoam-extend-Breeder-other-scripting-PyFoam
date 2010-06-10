@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/WriteDictionary.py 5999 2010-01-03T16:37:51.687182Z bgschaid  $ 
+#  ICE Revision: $Id: WriteDictionary.py 11146 2010-01-04 10:40:03Z bgschaid $ 
 """
 Application class that implements pyFoamWriteDictionary
 """

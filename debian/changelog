@@ -1,0 +1,17 @@
+pyfoam (0.5.4-1~ppa1~lucid1) lucid; urgency=low
+
+  * Little fixes to make everything work as expected
+
+ --  Bernhard F.W. Gschaider <bgschaid@ice-sf.at>  Wed, 21 Apr 2010 22:19:51 +0200
+
+pyfoam (0.5.4-1~ppa1~lucid1) unreleased; urgency=low
+ 
+  * Feature complete release for the stick for the OFWS5
+
+ --  Bernhard F.W. Gschaider <bgschaid@ice-sf.at>  Tue, 20 Apr 2010 23:07:11 +0200
+
+pyfoam (0.5.4-1~ppa1~lucid1) unreleased; urgency=low
+
+  * Initial release
+
+ -- Bernhard F.W. Gschaider <bgschaid@ice-sf.at>  Thu, 01 Apr 2010 23:59:58 +0200

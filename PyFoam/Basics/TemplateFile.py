@@ -78,9 +78,13 @@ class TemplateFile:
                     if mid.find(k)>=0:
                         mid=mid.replace(k,str(symbols[k]))
                         break
-                    
-            input=pre+str(eval(mid))+post
 
+            try:
+                input=pre+str(eval(mid))+post
+            except ArithmeticError,e:
+                print "Problem evaluating",mid
+                raise e
+            
             m=exp.search(input)
                 
         return input

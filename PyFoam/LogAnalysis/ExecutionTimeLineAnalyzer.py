@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ExecutionTimeLineAnalyzer.py 10948 2009-10-13 08:37:46Z bgschaid $ 
+#  ICE Revision: $Id: ExecutionTimeLineAnalyzer.py 11423 2010-04-06 09:37:10Z bgschaid $ 
 """Check for Execution-Time information"""
 
 import re
@@ -7,7 +7,7 @@ def executionRegexp():
     """@Return: The regular expression that parses the execution time
     depending on the OpenFOAM-Version"""
     
-    if foamVersionNumber()>=(1,3):
+    if foamVersionNumber(useConfigurationIfNoInstallation=True)>=(1,3):
         return "^ExecutionTime = (.+) s  ClockTime = (.+) s$"
     else:
         return "^ExecutionTime = (.+) s$"

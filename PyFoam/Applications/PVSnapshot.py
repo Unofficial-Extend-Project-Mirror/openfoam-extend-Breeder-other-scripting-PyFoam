@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PVSnapshot.py 10996 2009-11-04 08:52:12Z bgschaid $ 
+#  ICE Revision: $Id: PVSnapshot.py 11666 2010-06-07 07:56:06Z bgschaid $ 
 """
 Class that implements pyFoamPVSnapshot
 """
@@ -12,6 +12,7 @@ from CommonSelectTimesteps import CommonSelectTimesteps
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.Paraview.ServermanagerWrapper import ServermanagerWrapper as SM
 from PyFoam.Paraview.StateFile import StateFile
+from PyFoam.Paraview import version as PVVersion
 
 from PyFoam.FoamInformation import foamVersion
 
@@ -146,8 +147,8 @@ replacements can be specified
         values[self.opts.casenameKey]=short
         sf.rewriteTexts(values)
         newState=sf.writeTemp()
-        
-        sm=SM()
+
+        sm=SM(requiredReader=sf.readerType())
         if not self.opts.progress:
             sm.ToggleProgressPrinting()
 
@@ -168,9 +169,22 @@ replacements can be specified
             for j,view in enumerate(views):
                 view.ViewTime=float(t)
                 fn = timeString % {'nr':i,'t':t,'view':j}
-                view.WriteImage(fn,self.typeTable[self.opts.type],self.opts.magnification)
-
+                if PVVersion()<(3,6):
+                    view.WriteImage(fn,
+                                    self.typeTable[self.opts.type],
+                                    self.opts.magnification)
+                else:
+                    from paraview.simple import SetActiveView,Render,WriteImage
+                    SetActiveView(view)
+                    Render()
+                    # This always produces segmentation fauklts for me 
+                    WriteImage(fn,
+                               view,
+#                               Writer=self.typeTable[self.opts.type],
+                               Magnification=self.opts.magnification)
+                    
         if createdDataFile:
             self.warning("Removing pseudo-data-file",dataFile)
             unlink(dataFile)
-            
+
+        del sm

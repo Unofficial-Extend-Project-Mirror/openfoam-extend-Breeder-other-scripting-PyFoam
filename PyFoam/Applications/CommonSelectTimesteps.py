@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CommonSelectTimesteps.py 10517 2009-06-29 09:19:38Z bgschaid $ 
+#  ICE Revision: $Id: CommonSelectTimesteps.py 11483 2010-04-20 09:47:43Z bgschaid $ 
 """
 Class that implements common functionality for selecting timesteps
 """
@@ -67,13 +67,22 @@ class CommonSelectTimesteps(object):
                         default=False,
                         help="Show the times in the case and the times that will be used")
 
+        time.add_option("--parallel-times",
+                        dest="parallelTimes",
+                        action="store_true",
+                        default=False,
+                        help="Use the information from 'processor0' to determine the available times")
+
         self.parser.add_option_group(time)
 
     def processTimestepOptions(self,
                                sol):
         """Process the options
         @param sol: the solution-directory that is to be worked with"""
-        
+
+        if self.opts.parallelTimes:
+            sol.setToParallel()
+            
         if self.opts.latest:
             self.opts.time.append(float(sol.getLast()))
         if self.opts.all:
