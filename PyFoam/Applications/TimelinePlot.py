@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: TimelinePlot.py 11144 2009-12-22 10:10:52Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/TimelinePlot.py 6720 2010-06-23T09:27:41.975267Z bgschaid  $ 
 """
 Application class that implements pyFoamTimelinePlot.py
 """
@@ -91,6 +91,13 @@ and generates the commands to gnuplot it
                         default=None,
                         choices=["bars","lines"],
                         help="Whether 'bars' of the values at selected times or 'lines' over the whole timelines should be plotted")
+        vModes=["mag","x","y","z"]
+        plot.add_option("--vector-mode",
+                        type="choice",
+                        dest="vectorMode",
+                        default="mag",
+                        choices=vModes,
+                        help="How vectors should be plotted. By magnitude or as a component. Possible values are "+str(vModes)+" Default: %default")
         plot.add_option("--collect-lines-by",
                         type="choice",
                         dest="collectLines",
@@ -142,12 +149,20 @@ and generates the commands to gnuplot it
         return 'set output "%s"\n' % name
         
     def run(self):
+        # remove trailing slashif present
+        if self.opts.dirName[-1]==path.sep:
+            self.opts.dirName=self.opts.dirName[:-1]
+            
         timelines=TimelineDirectory(self.parser.getArgs()[0],dirName=self.opts.dirName,writeTime=self.opts.writeTime)
-        
+
         if self.opts.info:
             print "Write Times    : ",timelines.writeTimes
             print "Used Time      : ",timelines.usedTime
-            print "Values         : ",timelines.values
+            print "Values         : ",timelines.values,
+            if len(timelines.vectors)>0:
+                print " Vectors: ",timelines.vectors
+            else:
+                print
             print "Positions      : ",timelines.positions()
             print "Time range     : ",timelines.timeRange()
             sys.exit(0)
@@ -235,7 +250,8 @@ and generates the commands to gnuplot it
         elif self.opts.basicMode=='lines':
             #            print self.opts.positions
             plots=timelines.getDataLocation(value=self.opts.values,
-                                            position=self.opts.positions)
+                                            position=self.opts.positions,
+                                            vectorMode=self.opts.vectorMode)
             #            print plots
             minTime,maxTime=timelines.timeRange()
             if self.opts.minTime:
@@ -245,8 +261,11 @@ and generates the commands to gnuplot it
             result+= "set xrange [%g:%g]\n" % (minTime,maxTime)
             if self.opts.collectLines=="values":
                 for val in self.opts.values:
-                    result+=self.setFile("%s_writeTime_%s_Value_%s.png"  % (self.opts.dirName,timelines.usedTime,val))
-                    result+='set title "Directory: %s WriteTime: %s Value: %s"\n' % (self.opts.dirName,timelines.usedTime,val)
+                    vname=val
+                    if val in timelines.vectors:
+                        vname+="_"+self.opts.vectorMode
+                    result+=self.setFile("%s_writeTime_%s_Value_%s.png"  % (self.opts.dirName,timelines.usedTime,vname))
+                    result+='set title "Directory: %s WriteTime: %s Value: %s"\n' % (self.opts.dirName,timelines.usedTime,vname)
                     result+= "plot "
                     first=True
                     for f,v,p,i in plots:
@@ -255,7 +274,11 @@ and generates the commands to gnuplot it
                                 first=False
                             else:
                                 result+=" , "
-                            result+= ' "%s" using 1:%d title "%s" with lines ' % (f,i+2,p)
+                            if type(i)==int:
+                                result+= ' "%s" using 1:%d title "%s" with lines ' % (f,i+2,p)
+                            else:
+                                result+= ' "%s" using 1:%s title "%s" with lines ' % (f,i,p)
+                                
                     result+="\n"
             elif self.opts.collectLines=="positions":
                 for pos in self.opts.positions:
@@ -269,7 +292,10 @@ and generates the commands to gnuplot it
                                 first=False
                             else:
                                 result+=" , "
-                            result+= ' "%s" using 1:%d title "%s" with lines ' % (f,i+2,v)
+                            if type(i)==int:
+                                result+= ' "%s" using 1:%d title "%s" with lines ' % (f,i+2,v)
+                            else:
+                                result+= ' "%s" using 1:%s title "%s" with lines ' % (f,i,v)
                     result+="\n"
                 
             else:

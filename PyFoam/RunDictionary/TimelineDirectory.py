@@ -44,9 +44,12 @@ class TimelineDirectory(object):
         self.dir=path.join(self.dir,self.usedTime)
 
         self.values=[]
+        self.vectors=[]
         for v in listdir(self.dir):
-            if not TimelineValue(self.dir,v).isVector:
-                self.values.append(v)
+            self.values.append(v)
+            if TimelineValue(self.dir,v).isVector:
+                self.vectors.append(v)
+                
         self.allPositions=None
         
     def __iter__(self):
@@ -104,7 +107,7 @@ class TimelineDirectory(object):
 
         return minTime,maxTime
     
-    def getDataLocation(self,value=None,position=None):
+    def getDataLocation(self,value=None,position=None,vectorMode=None):
         """Get Timeline sets
         @param value: name of the value. All
         if unspecified
@@ -120,7 +123,26 @@ class TimelineDirectory(object):
         
         for v in value:
             for p in position:
-                sets.append((path.join(self.dir,v),v,p,self.positionIndex[self.positions().index(p)]))
+                fName=path.join(self.dir,v)
+                pos=self.positionIndex[self.positions().index(p)]
+                if v in self.vectors:
+                    fName="< tr <%s -d '()'" %fName
+                    pos=pos*3
+                    if vectorMode=="x":
+                        pass
+                    elif vectorMode=="y":
+                        pos+=1
+                    elif vectorMode=="z":
+                        pos+=2
+                    elif vectorMode=="mag":
+                        pos+=2
+                        pos="(sqrt($%d*$%d+$%d*$%d+$%d*$%d))" % (pos,pos,
+                                                                 pos+1,pos+1,
+                                                                 pos+2,pos+2)
+                    else:
+                        error("Unsupported vector mode",vectorMode)
+                        
+                sets.append((fName,v,p,pos))
                 
         return sets
 
