@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: WriteDictionary.py 11146 2010-01-04 10:40:03Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/WriteDictionary.py 6750 2010-07-07T21:28:38.167493Z bgschaid  $ 
 """
 Application class that implements pyFoamWriteDictionary
 """
@@ -28,7 +28,7 @@ Example of usage:
                                    usage="%prog [options] <dictfile> <key> <val>",
                                    changeVersion=False,
                                    nr=3,
-                                   interspersed=True)
+                                   interspersed=False)
         
     def addOptions(self):
         self.parser.add_option("--test",
