@@ -18,3 +18,16 @@ write access to that)
 
 The paths in the files have to be adapted to your site.
 
+Mercurial_extension
+-------------------
+
+An extension to the Version-control system Mercurial that adds a
+command foamdiff to hg. This command shows the difference between
+revisions in a file. The differences are shown as differences between
+OpenFOAM-dictionaries (the way the utility pyFoamCompareDictionary.py
+does) not as the textual differences. The extension is installed the
+way extensions are usually installed in mercurial. In the file ~/.hgrc
+add the path to the extension in the extension-section:
+
+[extensions]
+foamdiff = <Path to the PyFoam-Installation>/PyFoam/contrib/Mercurial_extension/foamdiff.py

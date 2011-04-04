@@ -33,10 +33,11 @@ class CustomPlotInfo(object):
 
     nr=1
     
-    def __init__(self,raw=None,name=None):
+    def __init__(self,raw=None,name=None,enabled=True):
         """@param raw: The raw data. Either a string for the two legacy-formats or a
         dictionary for the new format
-        @param name: Name of the expression (only to be used for the new format)"""
+        @param name: Name of the expression (only to be used for the new format)
+        @param enabled: Should this plot be actually used?"""
         self.nr=CustomPlotInfo.nr
         CustomPlotInfo.nr+=1
 
@@ -60,6 +61,8 @@ class CustomPlotInfo(object):
         self.with_="lines"
         self.type="regular";
         self.master=None
+        self.progress=None
+        self.enabled=enabled
         
         # Legacy format
         if raw==None:
@@ -138,7 +141,9 @@ def readCustomPlotInfo(rawData):
     info=[]
 
     try:
-        data=FoamStringParser(rawData)
+        data=FoamStringParser(rawData,
+                              duplicateCheck=True,
+                              duplicateFail=True)
         for k,d in data.data.iteritems():
             info.append(CustomPlotInfo(d,name=k))
     except PyFoamParserError:

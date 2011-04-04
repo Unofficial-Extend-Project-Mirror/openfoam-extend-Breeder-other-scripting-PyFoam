@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CommonSelectTimesteps.py 11483 2010-04-20 09:47:43Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CommonSelectTimesteps.py 6492 2010-04-20T11:17:07.894584Z bgschaid  $ 
 """
 Class that implements common functionality for selecting timesteps
 """

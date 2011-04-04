@@ -75,8 +75,7 @@ Modify GGI boundary condition parameters
         bnd=boundary.content
 
         if type(bnd)!=list:
-            print "Problem with boundary file (not a list)"
-            sys.exit(-1)
+            self.error("Problem with boundary file (not a list)")
 
         found=False
 
@@ -113,8 +112,7 @@ Modify GGI boundary condition parameters
                 break
 
         if not found:
-            print "Boundary",bName,"not found in",bnd[::2]
-            sys.exit(-1)
+            self.error("Boundary",bName,"not found in",bnd[::2])
 
         if self.parser.getOptions().test:
             print boundary

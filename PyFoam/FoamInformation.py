@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamInformation.py 11497 2010-04-21 16:01:10Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/FoamInformation.py 7359 2011-03-16T23:02:32.346825Z bgschaid  $ 
 """Getting Information about the Foam-Installation (like the installation directory)"""
 
 from os import environ,path,listdir
@@ -105,12 +105,50 @@ def oldTutorialStructure():
     """
     return foamVersionNumber()<(1,6)
 
+def findInstalledVersions(basedir,valid):
+    versions=set()
+
+    try:
+        candidates=listdir(basedir)
+    except OSError:
+        return versions
+
+    for f in candidates:
+        m=valid.match(f)
+        if m:
+            dname=path.join(basedir,f)
+            if path.isdir(dname):
+                name=m.groups(1)[0]
+                dotDir=path.join(dname,".OpenFOAM-"+name)
+                etcDir=path.join(dname,"etc")
+                if path.isdir(etcDir) and path.exists(path.join(etcDir,"bashrc")):
+                    versions.add(m.groups(1)[0])
+                elif path.isdir(dotDir) and path.exists(path.join(dotDir,"bashrc")):
+                    versions.add(m.groups(1)[0])
+    
+    return versions
+
+def findBaseDir(newDir):
+    if environ.has_key("WM_PROJECT_INST_DIR"):
+        basedir=environ["WM_PROJECT_INST_DIR"]
+    else:
+        basedir=path.expanduser(config().get("OpenFOAM","Installation"))
+    
+    for bdir in [basedir]+config().getList("OpenFOAM","AdditionalInstallation"):
+        if path.exists(path.join(bdir,"OpenFOAM-"+newDir)):
+            return (bdir,"OpenFOAM-")
+        elif path.exists(path.join(bdir,"openfoam"+newDir)):
+            return (bdir,"openfoam")
+    
+    error("Can't find basedir for OpenFOAM-version",newDir)
+
 def foamInstalledVersions():
     """@return: A list with the installed versions of OpenFOAM"""
 
-    versions=[]
+    versions=set()
 
     valid=re.compile("^OpenFOAM-([0-9]\.[0-9].*)$")
+    valid2=re.compile("^openfoam(1[0-9]+)$")
 
     if environ.has_key("WM_PROJECT_INST_DIR"):
         basedir=environ["WM_PROJECT_INST_DIR"]
@@ -120,21 +158,12 @@ def foamInstalledVersions():
     if not path.exists(basedir) or not path.isdir(basedir):
         warning("Basedir",basedir,"does not exist or is not a directory")
         return []
-    
-    for f in listdir(basedir):
-        m=valid.match(f)
-        if m:
-            dname=path.join(basedir,f)
-            if path.isdir(dname):
-                name=m.groups(1)[0]
-                dotDir=path.join(dname,".OpenFOAM-"+name)
-                etcDir=path.join(dname,"etc")
-                if path.isdir(etcDir) and path.exists(path.join(etcDir,"bashrc")):
-                    versions.append(m.groups(1)[0])
-                elif path.isdir(dotDir) and path.exists(path.join(dotDir,"bashrc")):
-                    versions.append(m.groups(1)[0])
-            
-    return versions
+
+    for bdir in [basedir]+config().getList("OpenFOAM","AdditionalInstallation"):
+        for val in [valid,valid2]:
+            versions |= findInstalledVersions(bdir,val)
+
+    return list(versions)
     
 def changeFoamVersion(new,force64=False,force32=False,compileOption=None):
     """Changes the used FoamVersion. Only valid during the runtime of
@@ -147,34 +176,36 @@ def changeFoamVersion(new,force64=False,force32=False,compileOption=None):
     if not new in foamInstalledVersions():
         error("Version",new,"is not an installed version: ",foamInstalledVersions())
 
+    old=None
     if environ.has_key("WM_PROJECT_VERSION"):
-        if new==environ["WM_PROJECT_VERSION"]:
+        old=environ["WM_PROJECT_VERSION"]
+        if new==old:
             warning(new,"is already being used")
     else:
         warning("No OpenFOAM-Version installed")
         
-    if environ.has_key("WM_PROJECT_INST_DIR"):
-        basedir=environ["WM_PROJECT_INST_DIR"]
-    else:
-        basedir=path.expanduser(config().get("OpenFOAM","Installation"))
+    basedir,prefix=findBaseDir(new)
 
-    if path.exists(path.join(basedir,"OpenFOAM-"+new,"etc")):
-        script=path.join(basedir,"OpenFOAM-"+new,"etc","bashrc")
+    if path.exists(path.join(basedir,prefix+new,"etc")):
+        script=path.join(basedir,prefix+new,"etc","bashrc")
     else:
-        script=path.join(basedir,"OpenFOAM-"+new,".OpenFOAM-"+new,"bashrc")
+        script=path.join(basedir,prefix+new,".OpenFOAM-"+new,"bashrc")
 
     forceArchOption=None
     if force64:
        forceArchOption="64"
     elif force32:
        forceArchOption="32"
-       
+
     injectVariables(script,
                     forceArchOption=forceArchOption,
                     compileOption=compileOption)
     
-    if new!=environ["WM_PROJECT_VERSION"]:
-        error("Problem while changing to version",new,"old version still used:",environ["WM_PROJECT_VERSION"])
+    try:
+        if old==environ["WM_PROJECT_VERSION"]:
+            warning("Problem while changing to version",new,"old version still used:",environ["WM_PROJECT_VERSION"])
+    except KeyError:
+        pass
 
 def injectVariables(script,forceArchOption=None,compileOption=None):
     """Executes a script in a subshell and changes the current
@@ -182,6 +213,12 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
     @param script: the script that is executed
     @param forceArchOption: To which architecture Option should be forced
     @param compileOption: to which value the WM_COMPILE_OPTION should be forced"""
+
+    try:
+        # Certan bashrc-s fail if this is set
+        del environ["FOAM_INST_DIR"]
+    except KeyError:
+        pass
 
     if not path.exists(script):
         error("Can not execute",script,"it does not exist")
@@ -219,13 +256,16 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
     rein.close()
     raus.close()
 
+    # clumsy but avoids more complicated expressions
     exp=re.compile('export (.+)="(.*)"\n')
+    exp2=re.compile("export (.+)='(.*)'\n")
 
     cnt=0
     
     for l in lines:
         m=exp.match(l)
+        if not m:
+            m=exp2.match(l)
         if m:
             cnt+=1
             environ[m.groups()[0]]=m.groups()[1]
-    

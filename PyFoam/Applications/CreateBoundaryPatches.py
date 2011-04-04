@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CreateBoundaryPatches.py 11120 2009-12-21 17:00:47Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CreateBoundaryPatches.py 6771 2010-08-08T19:32:36.252973Z bgschaid  $ 
 """
 Application class that implements pyFoamCreateBoundaryPatches.py
 """
@@ -102,9 +102,12 @@ zeroGradient for all patches and walls
             flter=re.compile(self.opts.filter)
             
         boundaries=dictFile["boundaryField"]
-            
-        bFile=BoundaryDict(case,region=region)
 
+        try:
+            bFile=BoundaryDict(case,region=region)
+        except IOError,e:
+            self.error("Problem reading the boundary file:",e)
+            
         if self.opts.clear:
             for b in boundaries.keys():
                 if b not in bFile.patches():

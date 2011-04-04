@@ -29,7 +29,7 @@ class Field(FoamDataType):
         return result
 
     def __cmp__(self,other):
-        if other==None:
+        if other==None or type(other)!=Field:
             return 1
         if self.uniform!=other.uniform:
             return cmp(self.uniform,other.uniform)
@@ -88,7 +88,7 @@ class FixedLength(FoamDataType):
         return "("+string.join(map(lambda v:"%g"%v,self.vals))+")"
     
     def __cmp__(self,other):
-        if other==None:
+        if other==None or not issubclass(type(other),FixedLength):
             return 1
         return cmp(self.vals,other.vals)
     
@@ -247,7 +247,10 @@ class DictProxy(dict):
                 if e.match(key):
                     return True
             return False
-        
+
+    def keys(self):
+        return self._order[:]
+
     def addDecoration(self,key,text):
         if key in self:
             self._decoration[key]=text

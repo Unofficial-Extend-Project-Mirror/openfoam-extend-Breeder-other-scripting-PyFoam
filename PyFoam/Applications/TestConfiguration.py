@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: TestConfiguration.py 11497 2010-04-21 16:01:10Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/TestConfiguration.py 6510 2010-04-21T16:13:50.349113Z bgschaid  $ 
 """
 Application class that implements pyFoamTestConfiguration.py
 """

@@ -27,6 +27,10 @@ class DictProxyTest(unittest.TestCase):
             cnt+=1
         self.assertEqual(len(d),cnt)
         self.assertEqual(str(d),"{'a': 5, 'b': 'nix'}")
+        self.assertEqual(d.keys(),['a','b'])
+        d["c"]=2
+        self.assertEqual(str(d),"{'a': 5, 'c': 2, 'b': 'nix'}")
+        self.assertEqual(d.keys(),['a','b','c'])
 
     def testRegExp(self):
         d=DictProxy()

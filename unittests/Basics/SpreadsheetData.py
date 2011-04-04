@@ -1,0 +1,166 @@
+
+import unittest
+import math
+
+from PyFoam.Basics.SpreadsheetData import SpreadsheetData
+
+theSuite=unittest.TestSuite()
+
+names1=['t','p1','p2']
+data1=[[(k+1)*i for k in range(len(names1))] for i in range(len(names1)*2)]
+
+names2=['t','p1','p3','p4']
+data2=[[(k+1)*i for k in range(len(names2))] for i in range(len(names1)*2)]
+
+class SpreadsheetDataTest(unittest.TestCase):
+    def testSpreadsheetDataConstruction(self):
+        sp=SpreadsheetData(data=data1,names=names1)
+        self.assertEqual(names1,list(sp.names()))
+        self.assertEqual(len(sp.data),len(names1)*2)
+        self.assertEqual(max(sp.data['t']-range(len(names1)*2)),0)
+
+    def testSpreadsheetDataAddition(self):
+        sp1=SpreadsheetData(data=data1,names=names1)
+        sp2=SpreadsheetData(data=data2,names=names2,title="nix")
+        sp=sp1+sp2
+        self.assertEqual(len(names1)+len(names2)-1,len(sp.names()))
+
+    def testSpreadsheetDataExtend(self):
+        sp1=SpreadsheetData(data=data1,names=names1)
+        sp1.append("test",[i*i for i in range(len(data1))])
+        self.assertEqual(len(sp1.names()),len(names1)+1)
+        self.assert_("test" in sp1.names())
+
+    def testSpreadsheetDataAddTimes(self):
+        sp1=SpreadsheetData(data=data1,names=names1)
+        self.assertEqual(len(sp1.data),6)
+        sp1.addTimes([1.5],interpolate=True)
+        self.assertEqual(len(sp1.data),7)
+        self.assertAlmostEqual(sp1.data["p1"][2],3)
+        sp1.addTimes([2.5],interpolate=False)
+        self.assertEqual(len(sp1.data),8)
+        self.assert_(math.isnan(sp1.data["p1"][4]))
+        sp1.addTimes([-1],interpolate=True,invalidExtend=True)
+        self.assertEqual(len(sp1.data),9)
+        self.assertAlmostEqual(sp1.data["p1"][0],0)
+        sp1.addTimes([10],interpolate=True,invalidExtend=False)
+        self.assertEqual(len(sp1.data),10)
+        self.assert_(math.isnan(sp1.data["p1"][-1]))
+        sp1.addTimes([0,1,2],interpolate=True)
+        self.assertEqual(len(sp1.data),10)
+        sp1.addTimes([-2,2.37,20],interpolate=True)
+        self.assertEqual(len(sp1.data),13)
+        sp1.addTimes([-3,4,19],interpolate=True)
+        self.assertEqual(len(sp1.data),15)
+        
+theSuite.addTest(unittest.makeSuite(SpreadsheetDataTest,"test"))
+
+names3 = ['t','val']
+data3=[[k,k*k]for k in range(10)]
+
+class SpreadsheetInterpolationTest(unittest.TestCase):
+    def testSpreadsheetDataInterpolation(self):
+        sp=SpreadsheetData(data=data3,names=names3)
+        self.assertAlmostEqual(sp(-1,"val",invalidExtend=True),0)
+        self.assert_(math.isnan(sp(-1,"val")))
+        self.assertAlmostEqual(sp(10,"val",invalidExtend=True),81)
+        self.assert_(math.isnan(sp(10,"val")))
+        self.assertAlmostEqual(sp(1,"val"),1)
+        self.assertAlmostEqual(sp(1.5,"val"),2.5)
+        self.assertAlmostEqual(sp(5,"val"),25)
+        self.assertAlmostEqual(sp(5.1,"val"),26.1)
+        self.assertAlmostEqual(sp(8.9,"val"),79.3)
+        self.assertAlmostEqual(sp(8.9,"t"),8.9)
+
+        self.assertAlmostEqual(sp(1,"val",noInterpolation=True),1)
+        self.assert_(math.isnan(sp(1.5,"val",noInterpolation=True)))
+
+    def testSpreadsheetDataOuterLimitNoInterpolate(self):
+        sp=SpreadsheetData(data=data3,names=names3)
+        self.assertAlmostEqual(sp(0,"val",noInterpolation=True),0)
+        self.assertAlmostEqual(sp(9,"val",noInterpolation=True),81)
+        self.assertAlmostEqual(sp(0,"val"),0)
+        self.assertAlmostEqual(sp(9,"val"),81)
+        
+theSuite.addTest(unittest.makeSuite(SpreadsheetInterpolationTest,"test"))
+
+names4 = ['t','val']
+data4=[[k,k*k+1] for k in range(10)]
+data5=[[k-0.5,(k-0.5)*(k-0.5)] for k in range(11)]
+data6=[[k,k] for k in range(10)]
+data7=[[k-0.5,k-0.5] for k in range(11)]
+
+class SpreadsheetDifferenceTest(unittest.TestCase):
+    def testSpreadsheetDataCompare1(self):
+        sp=SpreadsheetData(data=data3,names=names3)
+        sp2=SpreadsheetData(data=data4,names=names4)
+        diff1=sp.compare(sp2,"val")
+        self.assertAlmostEqual(diff1["max"],1)
+        self.assertAlmostEqual(diff1["average"],1)
+        self.assertAlmostEqual(diff1["wAverage"],1)        
+        diff2=sp2.compare(sp,"val")
+        self.assertEqual(diff1["max"],diff2["max"])
+        self.assertEqual(diff1["average"],diff2["average"])
+        self.assertEqual(diff1["wAverage"],diff2["wAverage"])
+        diff3=sp.compare(sp,"val")
+        self.assertAlmostEqual(diff3["max"],0)
+        self.assertAlmostEqual(diff3["average"],0)
+        self.assertAlmostEqual(diff3["wAverage"],0)        
+
+    def testSpreadsheetDataCompare2(self):
+        sp=SpreadsheetData(data=data3,names=names3)
+        sp2=SpreadsheetData(data=data5,names=names4)
+        diff1=sp.compare(sp2,"val")
+        self.assertAlmostEqual(diff1["max"],0.25)
+        self.assertAlmostEqual(diff1["average"],0.25)
+        self.assertAlmostEqual(diff1["wAverage"],0.25)        
+        diff2=sp2.compare(sp,"val")
+        self.assertAlmostEqual(diff2["max"],9.25)
+        self.assertAlmostEqual(diff2["average"],1.0681818181)
+        self.assertAlmostEqual(diff2["wAverage"],0.7)        
+
+    def testSpreadsheetDataCompare3(self):
+        sp=SpreadsheetData(data=data6,names=names3)
+        sp2=SpreadsheetData(data=data7,names=names4)
+        diff1=sp.compare(sp2,"val")
+        self.assertAlmostEqual(diff1["max"],0)
+        self.assertAlmostEqual(diff1["average"],0)
+        self.assertAlmostEqual(diff1["wAverage"],0)        
+        diff2=sp2.compare(sp,"val")
+        self.assertAlmostEqual(diff2["max"],0.5)
+        self.assertAlmostEqual(diff2["average"],0.09090909)
+        self.assertAlmostEqual(diff2["wAverage"],0.05)        
+
+theSuite.addTest(unittest.makeSuite(SpreadsheetDifferenceTest,"test"))
+
+filecontent="""# time  Initial         Final   Iterations
+0.005   1       2.96338e-06     8
+0.01    0.148584        7.15711e-06     6
+0.015   0.0448669       2.39894e-06     6
+0.02    0.0235438       1.57074e-06     6
+0.025   0.0148809       5.14401e-06     5
+"""
+
+from StringIO import StringIO
+
+class SpreadsheetReadFileTest(unittest.TestCase):
+    def testSpreadsheetReadFileTest(self):
+        fName="/tmp/testdata"
+        open(fName,"w").write(filecontent)
+        sp=SpreadsheetData(txtName=fName)
+        self.assertEqual(len(sp.names()),4)
+        self.assertEqual(sp.size(),5)
+        self.assertEqual(sp.tRange(),(0.005,0.025))
+        self.assertEqual(sp.names()[1],"Initial")
+        
+    def testSpreadsheetReadFileHandleTest(self):
+        fName="/tmp/testdata"
+        open(fName,"w").write(filecontent)
+        sp=SpreadsheetData(txtName=open(fName))
+        self.assertEqual(len(sp.names()),4)
+
+    def testSpreadsheetReadFileHandleTest(self):
+        sp=SpreadsheetData(txtName=StringIO(filecontent))
+        self.assertEqual(len(sp.names()),4)
+
+theSuite.addTest(unittest.makeSuite(SpreadsheetReadFileTest,"test"))

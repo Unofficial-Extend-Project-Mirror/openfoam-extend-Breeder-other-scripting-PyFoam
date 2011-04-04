@@ -12,11 +12,15 @@ import re
 class MeshInformation:
     """Reads Information about the mesh on demand"""
     
-    def __init__(self,case,time="constant",processor=None):
+    def __init__(self,
+                 case,
+                 time="constant",
+                 processor=None,
+                 region=None):
         """@param case: Path to the case-directory
         @param time: Time for which the  mesh should be looked at
         @param processor: Name of the processor directory for decomposed cases"""
-        self.sol=SolutionDirectory(case,paraviewLink=False,archive=None)
+        self.sol=SolutionDirectory(case,paraviewLink=False,archive=None,region=region)
         self.time=time
         self.processor=processor
         
@@ -24,16 +28,26 @@ class MeshInformation:
         try:
             return self.faces
         except AttributeError:
-            faces=ListFile(self.sol.polyMeshDir(time=self.time,processor=self.processor),"faces")
-            self.faces=faces.getSize()
+            try:
+                faces=ListFile(self.sol.polyMeshDir(time=self.time,processor=self.processor),"faces")
+                self.faces=faces.getSize()
+            except IOError:
+                faces=ListFile(self.sol.polyMeshDir(processor=self.processor),"faces")
+                self.faces=faces.getSize()
+                
             return self.faces
 
     def nrOfPoints(self):
         try:
             return self.points
         except AttributeError:
-            points=ListFile(self.sol.polyMeshDir(time=self.time,processor=self.processor),"points")
-            self.points=points.getSize()
+            try:
+                points=ListFile(self.sol.polyMeshDir(time=self.time,processor=self.processor),"points")
+                self.points=points.getSize()
+            except IOError:
+                points=ListFile(self.sol.polyMeshDir(processor=self.processor),"points")
+                self.points=points.getSize()
+
             return self.points
 
     def nrOfCells(self):
@@ -41,7 +55,11 @@ class MeshInformation:
             return self.cells
         except:
             try:
-                owner=ParsedFileHeader(path.join(self.sol.polyMeshDir(time=self.time,processor=self.processor),"owner"))
+                try:
+                    owner=ParsedFileHeader(path.join(self.sol.polyMeshDir(time=self.time,processor=self.processor),"owner"))
+                except IOError:
+                    owner=ParsedFileHeader(path.join(self.sol.polyMeshDir(processor=self.processor),"owner"))
+
                 mat=re.compile('.+nCells: *([0-9]+) .+').match(owner["note"])
                 self.cells=int(mat.group(1))
                 return self.cells

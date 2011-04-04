@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SolutionDirectory.py 11557 2010-05-11 08:03:23Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionDirectory.py 7203 2011-02-13T16:55:51.965613Z bgschaid  $ 
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -213,7 +213,10 @@ class SolutionDirectory(Utilities):
         @param name: name of the subdirectory (the case directory is prepended)"""
         if path.exists(path.join(self.name,name)):
             self.essential.append(path.join(self.name,name))
-
+        elif self.parallel:
+            if path.exists(path.join(self.name,"processor0",name)):
+                self.essential.append(path.join(self.name,name))
+            
     def cloneCase(self,name,svnRemove=True,followSymlinks=False):
         """create a clone of this case directory. Remove the target directory, if it already exists
 
@@ -230,9 +233,22 @@ class SolutionDirectory(Utilities):
         if path.exists(name):
             self.execute("rm -r "+name)
         mkdir(name)
+        if self.parallel:
+            for i in range(self.nrProcs()):
+                mkdir(path.join(name,"processor%d" % i))
+                
         for d in self.essential:
             if d!=None:
-                self.execute("cp "+cpOptions+" "+d+" "+name)
+                if self.parallel:
+                    pth,fl=path.split(d)
+                    if path.exists(path.join(pth,"processor0",fl)):
+                        for i in range(self.nrProcs()):
+                            self.execute("cp "+cpOptions+" "
+                                         + path.join(pth,"processor%d" % i,fl) +" "
+                                         + path.join(name,"processor%d" % i))
+                            
+                if path.exists(d):
+                    self.execute("cp "+cpOptions+" "+d+" "+name)
 
         if svnRemove:
             self.execute("find "+name+" -name .svn -exec rm -rf {} \\; -prune")
@@ -716,7 +732,20 @@ class SolutionDirectory(Utilities):
             warning("File",name,"does not exist in directory",directory,"of case",self.name)
             
         return result
-    
+
+    def determineVCS(self):
+        """Find out whether this directory is controlled by a VCS and
+        return the abbreviation of that VCS"""
+
+        if path.isdir(path.join(self.name,".hg")):
+            return "hg"
+        elif path.isdir(path.join(self.name,".git")):
+            return "git"
+        elif path.isdir(path.join(self.name,".svn")):
+            return "svn"
+        else:
+            return None
+        
 class ChemkinSolutionDirectory(SolutionDirectory):
     """Solution directory with a directory for the Chemkin-files"""
 

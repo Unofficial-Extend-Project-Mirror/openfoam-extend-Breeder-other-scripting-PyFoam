@@ -1,7 +1,8 @@
-#  ICE Revision: $Id: TimeDirectory.py 11348 2010-03-11 11:01:33Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/TimeDirectory.py 7314 2011-03-02T22:54:00.234857Z bgschaid  $ 
 """Working with direcotries from a time-step"""
 
 from SolutionFile import SolutionFile
+from ParsedParameterFile import ParsedParameterFile
 from FileBasis import FileBasis
 from PyFoam.Error import error,warning
 
@@ -12,13 +13,21 @@ from fnmatch import fnmatch
 class TimeDirectory(object):
     """Represents a directory for a timestep"""
 
-    def __init__(self,name,time,create=False,region=None,processor=None):
+    def __init__(self,
+                 name,
+                 time,
+                 create=False,
+                 region=None,
+                 processor=None,
+                 yieldParsedFiles=False):
         """@param name: name of the case directory
         @param time: time in the directory
         @param create: Create the directory if it does not exist
-        @param region: The mesh region for multi-region cases"""
+        @param region: The mesh region for multi-region cases
+        @param yieldParsedFiles: let the iterator return PasedParameterFile objects instead of SolutionFile"""
 
         self.name=name
+        self.yieldParsedFiles=yieldParsedFiles
         if processor!=None:
             if type(processor)==int:
                 processor="processor%d" % processor
@@ -137,7 +146,10 @@ class TimeDirectory(object):
     def __iter__(self):
         self.reread()
         for key in self.values:
-            yield SolutionFile(self.name,key)
+            if self.yieldParsedFiles:
+                yield ParsedParameterFile(path.join(self.name,key))
+            else:
+                yield SolutionFile(self.name,key)
 
     def clear(self):
         """Wipe the directory clean"""

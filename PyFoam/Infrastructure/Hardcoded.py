@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Hardcoded.py 11471 2010-04-19 08:27:53Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Hardcoded.py 6471 2010-04-16T19:46:47.669328Z bgschaid  $ 
 """Hardcoded values"""
 
 from os import path,makedirs,environ

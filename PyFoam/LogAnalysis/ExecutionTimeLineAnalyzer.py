@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ExecutionTimeLineAnalyzer.py 11423 2010-04-06 09:37:10Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/ExecutionTimeLineAnalyzer.py 6298 2010-04-02T12:51:05.772488Z bgschaid  $ 
 """Check for Execution-Time information"""
 
 import re

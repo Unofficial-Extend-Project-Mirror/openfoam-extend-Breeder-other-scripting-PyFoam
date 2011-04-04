@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SourceBase.py 10106 2009-03-12 09:50:26Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Paraview/SourceBase.py 4714 2009-03-11T22:10:59.062514Z bgschaid  $ 
 """ Base class for the wrapping of graphical objects
 
 The actual object is accessed via the member variable src.

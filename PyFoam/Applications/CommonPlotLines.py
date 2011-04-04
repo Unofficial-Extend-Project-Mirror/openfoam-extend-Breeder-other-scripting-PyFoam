@@ -4,6 +4,7 @@ Class that implements common functionality for collecting plot-lines
 """
 
 import sys
+import re
 from os import path
 from optparse import OptionGroup
 
@@ -11,6 +12,15 @@ from PyFoam.Error import error,warning
 from PyFoam.LogAnalysis.RegExpLineAnalyzer import RegExpLineAnalyzer
 
 from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo
+
+ruleList=[]
+
+def addRegexpInclude(option,opt,value,parser,*args,**kwargs):
+    ruleList.append((True,value))
+    
+def addRegexpExclude(option,opt,value,parser,*args,**kwargs):
+    ruleList.append((False,value))
+        
 
 class CommonPlotLines(object):
     """ This class collects the lines that should be plotted
@@ -39,7 +49,7 @@ class CommonPlotLines(object):
         txt=f.read()
         f.close()
         self.lines_+=readCustomPlotInfo(txt)
-                
+
     def addOptions(self):
         grp=OptionGroup(self.parser,
                         "Regular expression",
@@ -69,6 +79,26 @@ class CommonPlotLines(object):
                        dest="dumpCustomRegexp",
                        help="Dump the used regular expressions in a format suitable to put into a customRegexp-file and finish the program")
         self.parser.add_option_group(grp)
+
+        grp.add_option("--list-custom-Regexp",
+                       action="store_true",
+                       default=False,
+                       dest="listCustomRegexp",
+                       help="List the customRegexp by name. A * before the name means that it is enabled")
+
+        grp.add_option("--include-regexp-fitting",
+                       action="callback",
+                       callback=addRegexpInclude,
+                       type="string",
+                       help="Add all the customRegex whose name fits this regular expression. This option can be used as often as liked ")
+        
+        grp.add_option("--exclude-regexp-fitting",
+                       action="callback",
+                       callback=addRegexpExclude,
+                       type="string",
+                       help="Remove all the customRegex whose name fits this regular expression. This option can be used as often as liked ")
+        
+        self.parser.add_option_group(grp)
         
         grp2=OptionGroup(self.parser,
                         "Data files",
@@ -78,6 +108,11 @@ class CommonPlotLines(object):
                        default=False,
                        dest="singleDataFilesOnly",
                        help="Don't create consecutive data files 'value', 'value_2', 'value_3' etc but put all the data into a single file")
+        grp2.add_option("--write-files",
+                        action="store_true",
+                        default=False,
+                        dest="writeFiles",
+                        help="Writes the parsed data to files")
 
         self.parser.add_option_group(grp2)
 
@@ -98,10 +133,40 @@ class CommonPlotLines(object):
                 print " Reading regular expressions from",autoFile
                 self.addFileRegexps(autoFile)
 
+        for include,expr in ruleList:
+            rexp=re.compile(expr)
+            for l in self.lines_:
+                if rexp.search(l.id):
+                    if include:
+                        l.enabled=True
+                    else:
+                        l.enabled=False
+                        
         if self.opts.dumpCustomRegexp:
             print "\nDumping customRegexp:\n"
             for l in self.lines_:
                 print l
-            sys.exit(-1)
+            return -1
+
+        if self.opts.listCustomRegexp:
+            print "\nListing the customRegexp:\n"
+            for l in self.lines_:
+                if l.enabled:
+                    prefix="*"
+                else:
+                    prefix=" "
+                    
+                print prefix,l.id
+
+            if len(ruleList)>0:
+                print "\nAccording to list of rules:"
+                for incl,expr in ruleList:
+                    if incl:
+                        prefix="Include"
+                    else:
+                        prefix="Exclude"
+                    print prefix,"matching",'"%s"' % expr
+                    
+            return -1
             
         

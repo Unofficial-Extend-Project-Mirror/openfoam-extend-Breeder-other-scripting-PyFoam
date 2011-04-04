@@ -39,6 +39,12 @@ def testLibrary(name,textMissing=None):
             print "\t",textMissing,
         print
         return False
+    except SyntaxError:
+        print "Syntax Error",
+        if textMissing:
+            print "\t",textMissing,
+        print
+        return False
         
 print "\nInstalled libraries:"
 testLibrary("Gnuplot","Not a problem. Version from ThirdParty is used")
@@ -59,3 +65,4 @@ testLibrary("PyQt4","Only some experimental GUI-stuff relies on this")
 testLibrary("PyQt4.Qwt5","Only an alternate plotting back-end")
 testLibrary("vtk","Not a problem. Only used for some utilities")
 testLibrary("Tkinter","Not a problem. Used for the old version of DisplayBlockmesh and some matplotlib-implementations")
+testLibrary("mercurial","Not a problem. Used for experimental case handling")

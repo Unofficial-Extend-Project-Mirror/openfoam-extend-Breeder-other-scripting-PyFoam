@@ -7,8 +7,16 @@ class ParsedBlockMeshDict(ParsedParameterFile):
     """ A parsed version of a blockMeshDict-file. Adds some
     convenience-methods to access parts of the file"""
 
-    def __init__(self,name,backup=False,debug=False):
-        ParsedParameterFile.__init__(self,name,backup=backup,debug=debug)
+    def __init__(self,
+                 name,
+                 backup=False,
+                 debug=False,
+                 doMacroExpansion=False):
+        ParsedParameterFile.__init__(self,
+                                     name,
+                                     backup=backup,
+                                     debug=debug,
+                                     doMacroExpansion=doMacroExpansion)
         
     def convertToMeters(self):
         return float(self["convertToMeters"])
@@ -39,11 +47,15 @@ class ParsedBlockMeshDict(ParsedParameterFile):
     def arcs(self):
         factor=self.convertToMeters()
         result=[]
-        for i in range(len(self["edges"])):
-            if str(self["edges"][i])=='arc':
-                result.append((int(self["edges"][i+1]),
-                               map(lambda y:float(y)*factor,self["edges"][i+3]),
-                               int(self["edges"][i+2])))
+        try:
+            for i in range(len(self["edges"])):
+                if str(self["edges"][i])=='arc':
+                    result.append((int(self["edges"][i+1]),
+                                   map(lambda y:float(y)*factor,self["edges"][i+3]),
+                                   int(self["edges"][i+2])))
+        except KeyError:
+            pass
+        
         return result
     
     def getBounds(self):

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: RegExpLineAnalyzer.py 11465 2010-04-15 11:17:39Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/RegExpLineAnalyzer.py 7014 2010-11-21T23:14:21.485436Z bgschaid  $ 
 """Analyzes lines with regular expressions"""
 
 import re
@@ -28,6 +28,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
                  doTimelines=False,
                  doFiles=True,
                  accumulation=None,
+                 progressTemplate=None,
                  singleFile=False,
                  startTime=None,
                  endTime=None):
@@ -44,10 +45,11 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
                                      doTimelines=doTimelines,
                                      doFiles=doFiles,
                                      accumulation=accumulation,
+                                     progressTemplate=progressTemplate,
                                      singleFile=singleFile,
                                      startTime=startTime,
                                      endTime=endTime)
-
+        
         self.name=name
         self.idNr=idNr
 

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BasicFile.py 11001 2009-11-05 12:48:47Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/BasicFile.py 5789 2009-11-06T12:32:54.086322Z bgschaid  $ 
 """Basic file output"""
 
 class BasicFile(object):

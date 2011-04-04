@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: __init__.py 10791 2009-09-01 07:47:51Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Paraview/__init__.py 6742 2010-07-06T10:08:29.831117Z bgschaid  $ 
 """ Paraview interaction
 
 Classes that help to interact with a Python-enabled paraFoam/paraview
@@ -37,14 +37,24 @@ def paraFoamReader():
     result=None
     
     src=proxyManager.GetProxiesInGroup("sources")
-    
-    for s in src:
-        if type(src[s])==servermanager.sources.PV3FoamReader:
-            if result==None:
-                result=src[s]
-            else:
-                warning("Found a second paraFoam-reader:",s)
 
+    try:
+        # test for OpenFOAM-Plugin
+        for s in src:
+            if type(src[s])==servermanager.sources.PV3FoamReader:
+                if result==None:
+                    result=src[s]
+                else:
+                    warning("Found a second paraFoam-reader:",s)
+    except AttributeError:
+        # test for native reader
+        for s in src:
+            if type(src[s])==servermanager.sources.OpenFOAMReader:
+                if result==None:
+                    result=src[s]
+                else:
+                    warning("Found a second paraFoam-reader:",s)
+        
     if result==None:
         warning("No paraFoam-reader found")
 
@@ -87,12 +97,22 @@ def characteristicLength():
 
 def viewTime():
     """Time that is currently displayed"""
-    return renderView().ViewTime.GetData()
+    try:
+        # old school paraview
+        return renderView().ViewTime.GetData()
+    except AttributeError:
+        return renderView().ViewTime
 
 def caseDirectory():
     """The directory in which the case is stored"""
+    try:
+        # old school paraview
+        fName=path.dirname(paraFoamReader().FileName.GetData())
+    except AttributeError:
+        fName=path.dirname(paraFoamReader().FileName)
+        
     return SolutionDirectory(
-        path.dirname(paraFoamReader().FileName.GetData()),
+        fName,
         archive=None,
         paraviewLink=False)
 

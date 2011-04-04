@@ -7,7 +7,7 @@
 <!ATTLIST casebuilder description CDATA #REQUIRED>
 <!ATTLIST casebuilder initialdir CDATA #IMPLIED>                    <!-- Need reason. -->
 
-<!ELEMENT helptext CDATA>
+<!ELEMENT helptext (#PCDATA)>
 
 <!ELEMENT arguments (argumentgroup*, arg*)>
 
@@ -28,7 +28,7 @@
 <!ATTLIST var name CDATA #REQUIRED>
 <!ATTLIST var description CDATA #REQUIRED>
 
-<!ELEMENT meshpreparation (utility | copy)>
+<!ELEMENT meshpreparation (utility* | copy)>
 
 <!ELEMENT copy EMPTY>
 <!ATTLIST copy template CDATA #REQUIRED>
@@ -39,11 +39,12 @@
 <!ATTLIST utility arguments CDATA #REQUIRED>
 
 <!ELEMENT validator EMPTY>
-<!ATTLIST validator type (integer|float|file) #REQUIRED>
+<!ATTLIST validator type (integer|float|file|vector|selection) #REQUIRED>
 <!ATTLIST validator min CDATA #IMPLIED>
 <!ATTLIST validator max CDATA #IMPLIED>
+<!ATTLIST validator values CDATA #IMPLIED>
 
-<!ELEMENT script CDATA>
+<!ELEMENT script (#PCDATA)>
 <!ATTLIST script plugin (python) #REQUIRED>
 <!ATTLIST script in CDATA #IMPLIED>                                  <!-- Decision in progress. -->
 <!ATTLIST script out CDATA #IMPLIED>                                 <!-- Decision in progress. -->

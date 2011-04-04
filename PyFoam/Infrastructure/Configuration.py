@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Configuration.py 11520 2010-04-22 15:35:51Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Configuration.py 7345 2011-03-09T21:17:59.267549Z bgschaid  $ 
 """Reads configuration-files that define defaults for various PyFoam-Settings
 
 Also hardcodes defaults for the settings"""
@@ -37,11 +37,13 @@ _defaults={
     },
     "OpenFOAM": {
     "Installation" : "~/OpenFOAM",
+    "AdditionalInstallation" : "~/OpenFOAM",
     "Version" : "1.5",
     },
     "MPI": {
 #    "run_OPENMPI":"mpirun",
 #    "run_LAM":"mpirun",
+    "OpenMPI_add_prefix":"False",
     "options_OPENMPI_pre": '["--mca","pls","rsh","--mca","pls_rsh_agent","rsh"]',
     "options_OPENMPI_post":'["-x","PATH","-x","LD_LIBRARY_PATH","-x","WM_PROJECT_DIR","-x","PYTHONPATH","-x","FOAM_MPI_LIBBIN","-x","MPI_BUFFER_SIZE","-x","MPI_ARCH_PATH"]'
     },
@@ -53,6 +55,7 @@ _defaults={
     "useFoamMPI":'["1.5"]',
     "path":"/opt/openmpi/bin",
     "ldpath":"/opt/openmpi/lib",
+    "doAutoReconstruct":"True",
     },
     "Debug": {
 #    "ParallelExecution":"True",
@@ -182,6 +185,19 @@ class Configuration(ConfigParser):
             result+="\n"
 
         return result
+
+    def getList(self,section,option,default="",splitchar=","):
+        """Get a list of strings (in the original they are separated by commas)
+        @param section: the section
+        @param option: the option
+        @param default: if set and the option is not found, then this value is used
+        @param splitchar: the character by which the values are separated"""
+
+        val=self.get(section,option,default=default)
+        if val=="":
+            return []
+        else:
+            return val.split(splitchar)
 
     def getboolean(self,section,option,default=None):
         """Overrides the original implementation from ConfigParser

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ConvergenceRunner.py 10900 2009-09-28 13:04:35Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/ConvergenceRunner.py 5655 2009-09-28T18:16:31.683539Z bgschaid  $ 
 """Stop solver at convergence"""
 
 from AnalyzedRunner import AnalyzedRunner

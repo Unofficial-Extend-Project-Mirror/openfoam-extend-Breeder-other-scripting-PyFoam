@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: OutputFile.py 11002 2009-11-05 13:31:35Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/OutputFile.py 5789 2009-11-06T12:32:54.086322Z bgschaid  $ 
 """Output of time-dependent data"""
 
 from BasicFile import BasicFile

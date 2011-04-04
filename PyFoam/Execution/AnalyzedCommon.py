@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: AnalyzedCommon.py 11537 2010-05-04 14:34:40Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/AnalyzedCommon.py 7025 2010-11-24T18:09:16.966619Z bgschaid  $ 
 """Common stuff for classes that use analyzers"""
 
 from os import path,mkdir
@@ -215,6 +215,9 @@ class AnalyzedCommon(object):
             masters={}
             slaves=[]
             for i,custom in enumerate(customRegexp):
+                if not custom.enabled:
+                    continue
+                
                 if persist!=None:
                     custom.persist=persist
                 if start!=None:
@@ -231,6 +234,7 @@ class AnalyzedCommon(object):
                                                         doTimelines=True,
                                                         doFiles=writeFiles,
                                                         accumulation=custom.accumulation,
+                                                        progressTemplate=custom.progress,
                                                         singleFile=True,
                                                         idNr=custom.idNr,
                                                         startTime=custom.start,
@@ -244,6 +248,7 @@ class AnalyzedCommon(object):
                                                         doTimelines=True,
                                                         doFiles=writeFiles,
                                                         accumulation=custom.accumulation,
+                                                        progressTemplate=custom.progress,
                                                         singleFile=True,
                                                         startTime=custom.start,
                                                         endTime=custom.end))

@@ -186,9 +186,12 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
             self.editor=QtGui.QPlainTextEdit()
             self.editor.setLineWrapMode(QtGui.QPlainTextEdit.NoWrap)
             self.editor.textChanged.connect(self.blockMeshWasModified)
+            self.alwaysSave=False
         except AttributeError:
             warning("Old PyQT4-version. Editing might not work as expected")
             self.editor=QtGui.QTextEdit()
+            self.alwaysSave=True
+            self.saveAction.setEnabled(True)
 
         self.editor.setFont(QtGui.QFont("Courier"))
         
@@ -401,11 +404,13 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
             self.editor.setPlainText(txt)
             
         self.setWindowModified(False)
-        self.saveAction.setEnabled(False)
+        if not self.alwaysSave:
+            self.saveAction.setEnabled(False)
         self.rereadAction.setEnabled(True)
         self.rereadButton.setEnabled(True)
         
-        self.blockMesh=ParsedBlockMeshDict(self.fName)
+        self.blockMesh=ParsedBlockMeshDict(self.fName,
+                                           doMacroExpansion=True)
 
         self.vertices=self.blockMesh.vertices()
         self.vActors=[None]*len(self.vertices)

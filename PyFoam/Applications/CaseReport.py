@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CaseReport.py 11364 2010-03-16 17:32:12Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CaseReport.py 7398 2011-04-03T18:50:26.071288Z bgschaid  $ 
 """
 Application class that implements pyFoamCasedReport.py
 """
@@ -13,6 +13,8 @@ from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.BoundaryDict import BoundaryDict
 from PyFoam.RunDictionary.MeshInformation import MeshInformation
 from PyFoam.RunDictionary.ParsedParameterFile import PyFoamParserError,ParsedBoundaryDict,ParsedParameterFile
+from PyFoam.Basics.RestructuredTextHelper import RestructuredTextHelper
+from PyFoam.Basics.DataStructures import DictProxy
 
 from PyFoam.Error import error,warning
 
@@ -24,7 +26,10 @@ class CaseReport(PyFoamApplication):
         description="""
 Produces human-readable reports about a case. Attention: the amount of
 information in the reports is limited. The truth is always in the
-dictionary-files
+dictionary-files.
+
+The format of the output is restructured-text so it can be run through a
+postprocessor like rst2tex or rst2html to produce PDF or HTML respectivly
         """
         
         PyFoamApplication.__init__(self,
@@ -48,6 +53,19 @@ dictionary-files
                              "Internal",
                              "Details of the parser")
         self.parser.add_option_group(internal)
+        
+        format=OptionGroup(self.parser,
+                             "Formatting",
+                             "Restructured Text formatting")
+        self.parser.add_option_group(format)
+        
+        format.add_option("--heading-level",
+                          action="store",
+                          type="int",
+                          default=2,
+                          dest="headingLevel",
+                          help="Default level of the headings. Valid values from 0 to 5. Default: %default")
+
         output=OptionGroup(self.parser,
                              "Output",
                              "How Output should be generated")
@@ -58,6 +76,12 @@ dictionary-files
                           default=None,
                           dest="file",
                           help="Write the output to a file instead of the console")
+        
+        report.add_option("--full-report",
+                          action="store_true",
+                          default=False,
+                          dest="all",
+                          help="Print all available reports at once")
         
         report.add_option("--short-bc-report",
                           action="store_true",
@@ -107,18 +131,29 @@ dictionary-files
                           default=None,
                           help="Do the report for a special region for multi-region cases")
         
+        select.add_option("--all-regions",
+                          dest="allRegions",
+                          action="store_true",
+                          default=False,
+                          help="Do the report for all regions for multi-region cases")
+        
         select.add_option("--parallel",
                           action="store_true",
                           default=False,
                           dest="parallel",
-                          help="Print the relaxation factors (if there are any)")
+                          help="Get times from the processor-directories")
         
         internal.add_option("--long-field-threshold",
                             action="store",
                             type="int",
                             default=100,
                             dest="longlist",
-                            help="Fields that are longer than this won't be parsed, but read into memory (and compared as strings)")
+                            help="Fields that are longer than this won't be parsed, but read into memory (and compared as strings). Default: %default")
+        internal.add_option("--no-do-macro-expansion",
+                          action="store_false",
+                          default=True,
+                          dest="doMacros",
+                          help="Don't expand macros with $ and # in the field-files")
 
         select.add_option("--patches",
                           action="append",
@@ -150,15 +185,43 @@ dictionary-files
                                dest="decomposition",
                                help="Reports the size of the parallel decomposition")
         
-    def run(self):
+    def run(self):        
         if self.opts.file:
             sys.stdout=open(self.opts.file,"w")
+
+        if self.opts.allRegions:
+            sol=SolutionDirectory(self.parser.getArgs()[0],
+                                  archive=None,
+                                  parallel=self.opts.parallel,
+                                  paraviewLink=False)
+            for r in sol.getRegions():
+                self.doRegion(r)
+        else:
+            self.doRegion(self.opts.region)
+        
+    def doRegion(self,theRegion):
+        ReST=RestructuredTextHelper(defaultHeading=self.opts.headingLevel)
+
+        if self.opts.allRegions:
+            print ReST.buildHeading("Region: ",theRegion,level=self.opts.headingLevel-1)
             
         sol=SolutionDirectory(self.parser.getArgs()[0],
                               archive=None,
                               parallel=self.opts.parallel,
                               paraviewLink=False,
-                              region=self.opts.region)
+                              region=theRegion)
+
+        if self.opts.all:
+            self.opts.caseSize=True
+            self.opts.shortBCreport=True
+            self.opts.longBCreport=True
+            self.opts.dimensions=True
+            self.opts.internal=True
+            self.opts.linearSolvers=True
+            self.opts.relaxationFactors=True
+            self.opts.processorMatrix=True
+            self.opts.decomposition=True
+            
         if self.opts.time:
             try:
                 self.opts.time=sol.timeName(sol.timeIndex(self.opts.time,minTime=True))
@@ -189,7 +252,7 @@ dictionary-files
         if needsPolyBoundaries:
             proc=None
             boundary=BoundaryDict(sol.name,
-                                  region=self.opts.region,
+                                  region=theRegion,
                                   time=self.opts.time,
                                   processor=defaultProc)
 
@@ -245,7 +308,8 @@ dictionary-files
             
             for f in tDir:
                 try:
-                    fields[f.baseName()]=f.getContent(listLengthUnparsed=self.opts.longlist)
+                    fields[f.baseName()]=f.getContent(listLengthUnparsed=self.opts.longlist,
+                                                      doMacroExpansion=self.opts.doMacros)
                     nameMaxLen=max(nameMaxLen,len(f.baseName()))
                 except PyFoamParserError,e:
                     warning("Couldn't parse",f.name,"because of an error:",e," -> skipping")
@@ -254,7 +318,8 @@ dictionary-files
             fieldNames.sort()
 
         if self.opts.caseSize:
-            print "Size of the case"
+            print ReST.heading("Size of the case")
+            
             nFaces=0
             nPoints=0
             nCells=0
@@ -263,11 +328,11 @@ dictionary-files
                 print "Accumulated from",sol.nrProcs(),"processors"
             else:
                 procs=[None]
-            print
 
             for p in procs:
                 info=MeshInformation(sol.name,
                                      processor=p,
+                                     region=theRegion,
                                      time=self.opts.time)
                 nFaces+=info.nrOfFaces()
                 nPoints+=info.nrOfPoints()
@@ -275,121 +340,118 @@ dictionary-files
                     nCells+=info.nrOfCells()
                 except:
                     nCells="Not available"
-            print "Faces:  \t",nFaces
-            print "Points: \t",nPoints
-            print "Cells:  \t",nCells
+            tab=ReST.table()
+            tab[0]=("Faces",nFaces)
+            tab[1]=("Points",nPoints)
+            tab[2]=("Cells",nCells)
+            print tab
             
         if self.opts.decomposition:
+            print ReST.heading("Decomposition")
+            
             if sol.nrProcs()<2:
                 print "This case is not decomposed"
-                return
-            
-            print "Case is decomposed for",sol.nrProcs(),"processors"
-
-            nCells=[]
-            nFaces=[]
-            nPoints=[]
-            for p in sol.processorDirs():
-                info=MeshInformation(sol.name,
-                                     processor=p,
-                                     time=self.opts.time)
-                nPoints.append(info.nrOfPoints())
-                nFaces.append(info.nrOfFaces())
-                nCells.append(info.nrOfCells())
-                
-            digits=int(ceil(log10(max(sol.nrProcs(),
-                                      max(nCells),
-                                      max(nFaces),
-                                      max(nPoints)
-                                      ))))+2
-            nameLen=max(len("Points"),boundMaxLen)
-            
-            nrFormat  ="%%%dd" % digits
-            nameFormat="%%%ds" % nameLen
-            
-            print " "*nameLen,"|",
-            for i in range(sol.nrProcs()):
-                print nrFormat % i,
-            print
-
-            print "-"*(nameLen+3+(digits+1)*sol.nrProcs())
-            
-            print nameFormat % "Points","|",
-            for p in nPoints:
-                print nrFormat % p,
-            print
-            print nameFormat % "Faces","|",
-            for p in nFaces:
-                print nrFormat % p,
-            print
-            print nameFormat % "Cells","|",
-            for p in nCells:
-                print nrFormat % p,
-            print
-            
-            print "-"*(nameLen+3+(digits+1)*sol.nrProcs())
-
-            for b in boundaryNames:
-                print nameFormat % b,"|",
-                for p in sol.processorDirs():
-                    try:
-                        nFaces= ParsedBoundaryDict(sol.boundaryDict(processor=p,
-                                                                    time=self.opts.time)
-                                                   )[b]["nFaces"]
-                    except KeyError:
-                        nFaces=0
-                        
-                    print nrFormat % nFaces,
+            else:            
+                print "Case is decomposed for",sol.nrProcs(),"processors"
                 print
                 
+                nCells=[]
+                nFaces=[]
+                nPoints=[]
+                for p in sol.processorDirs():
+                    info=MeshInformation(sol.name,
+                                         processor=p,
+                                         region=theRegion,
+                                         time=self.opts.time)
+                    nPoints.append(info.nrOfPoints())
+                    nFaces.append(info.nrOfFaces())
+                    nCells.append(info.nrOfCells())
+
+                digits=int(ceil(log10(max(sol.nrProcs(),
+                                          max(nCells),
+                                          max(nFaces),
+                                          max(nPoints)
+                                          ))))+2
+                nameLen=max(len("Points"),boundMaxLen)
+
+                tab=ReST.table()
+                tab[0]=["CPU"]+range(sol.nrProcs())
+                
+                tab.addLine()
+                
+                tab[1]=["Points"]+nPoints
+                tab[2]=["Faces"]+nFaces
+                tab[3]=["Cells"]+nCells
+                tab.addLine(head=True)
+
+                nr=3
+                for b in boundaryNames:
+                    nr+=1
+                    tab[(nr,0)]=b
+                    for i,p in enumerate(sol.processorDirs()):
+                        try:
+                            nFaces= ParsedBoundaryDict(sol.boundaryDict(processor=p,
+                                                                        region=theRegion,
+                                                                        time=self.opts.time)
+                                                       )[b]["nFaces"]
+                        except IOError:
+                            nFaces= ParsedBoundaryDict(sol.boundaryDict(processor=p,
+                                                                        region=theRegion)
+                                                       )[b]["nFaces"]
+                        except KeyError:
+                            nFaces=0
+
+                        tab[(nr,i+1)]=nFaces
+
+                print tab
+                
         if self.opts.longBCreport:
-            print "\nThe boundary conditions for t =",time
+            print ReST.heading("The boundary conditions for t =",time)
 
             for b in boundaryNames:
-                print "\nBoundary: \t",b
+                print ReST.buildHeading("Boundary: ",b,level=self.opts.headingLevel+1)
                 bound=boundary[b]
-                print " type:\t",bound["type"],
+                print ":Type:\t",bound["type"]
                 if "physicalType" in bound:
-                    print "( Physical:",bound["physicalType"],")",
-                print " \t Faces:",bound["nFaces"]
-                for fName in fieldNames:
-                    print "   ",fName,
+                    print ":Physical:\t",bound["physicalType"]
+                print ":Faces:\t",bound["nFaces"]
+                print
+                heads=["Field","type"]
+                tab=ReST.table()
+                tab[0]=heads
+                tab.addLine(head=True)
+                for row,fName in enumerate(fieldNames):
+                    tab[(row+1,0)]=fName
                     f=fields[fName]
                     if "boundaryField" not in f:
-                        print " "*(nameMaxLen-len(fName)+2)+": Not a field file"
+                        tab[(row+1,1)]="Not a field file"
                     elif b not in f["boundaryField"]:
-                        print " "*(nameMaxLen-len(fName)+2)+": MISSING !!!"
+                        tab[(row+1,1)]="MISSING !!!"
                     else:
                         bf=f["boundaryField"][b]
-                        maxKeyLen=0
-                        for k in bf:
-                            maxKeyLen=max(maxKeyLen,len(k))
                             
-                        print " "*(nameMaxLen-len(fName)+2)+"type "+" "*(maxKeyLen-4)+": ",bf["type"]
                         for k in bf:
-                            if k!="type":
-                                print " "*(nameMaxLen+6),k," "*(maxKeyLen-len(k))+": ",
-                                cont=str(bf[k])
-                                if cont.find("\n")>=0:
-                                    print cont[:cont.find("\n")],"..."
-                                else:
-                                    print cont
-
+                            try:
+                                col=heads.index(k)
+                            except ValueError:
+                                col=len(heads)
+                                tab[(0,col)]=k
+                                heads.append(k)
+                            cont=str(bf[k])
+                            if cont.find("\n")>=0:
+                                tab[(row+1,col)]=cont[:cont.find("\n")]+"..."
+                            else:
+                                tab[(row+1,col)]=cont
+                print tab
+                
         if self.opts.shortBCreport:
-            print "\nTable of boundary conditions for t =",time
-            print
+            print ReST.heading("Table of boundary conditions for t =",time)
             
-            colLen = {}
             types={}
             hasPhysical=False
-            nameMaxLen=max(nameMaxLen,len("Patch Type"))
             for b in boundary:
-                colLen[b]=max(len(b),len(boundary[b]["type"]))
-                colLen[b]=max(len(b),len(str(boundary[b]["nFaces"])))
                 if "physicalType" in boundary[b]:
                     hasPhysical=True
-                    nameMaxLen=max(nameMaxLen,len("Physical Type"))
-                    colLen[b]=max(colLen[b],len(boundary[b]["physicalType"]))
                     
                 types[b]={}
             
@@ -403,151 +465,155 @@ dictionary-files
                     except KeyError:
                         types[b][fName]="Not a field"
                         
-                    colLen[b]=max(colLen[b],len(types[b][fName]))
-
-            print " "*(nameMaxLen),
-            nr=nameMaxLen+1
-            for b in boundaryNames:
-                print "| "+b+" "*(colLen[b]-len(b)),
-                nr+=colLen[b]+3
-            print
-            print "-"*nr
-            print "Patch Type"+" "*(nameMaxLen-len("Patch Type")),
-            for b in boundaryNames:
-                t=boundary[b]["type"]
-                print "| "+t+" "*(colLen[b]-len(t)),
-            print
+            tab=ReST.table()
+            tab[0]=[""]+boundaryNames
+            tab.addLine()
+            tab[(1,0)]="Patch Type"
+            for i,b in enumerate(boundaryNames):
+                tab[(1,i+1)]=boundary[b]["type"]
+                    
+            nr=2       
             if hasPhysical:
-                print "Physical Type"+" "*(nameMaxLen-len("Physical Type")),
-                for b in boundaryNames:
-                    t=""
+                tab[(nr,0)]="Physical Type"
+                for i,b in enumerate(boundaryNames):
                     if "physicalType" in boundary[b]:
-                        t=boundary[b]["physicalType"]
-                    print "| "+t+" "*(colLen[b]-len(t)),
-                print
-            print "Length"+" "*(nameMaxLen-len("Length")),
-            for b in boundaryNames:
-                s=str(boundary[b]["nFaces"])
-                print "| "+s+" "*(colLen[b]-len(s)),
-            print
-            print "-"*nr
+                        tab[(nr,i+1)]=boundary[b]["physicalType"]
+                nr+=1
+                    
+            tab[(nr,0)]="Length"
+            for i,b in enumerate(boundaryNames):
+                tab[(nr,i+1)]=boundary[b]["nFaces"]
+            nr+=1
+            tab.addLine(head=True)
+                    
             for fName in fieldNames:
-                print fName+" "*(nameMaxLen-len(fName)),
-                for b in boundaryNames:
-                    t=types[b][fName]
-                    print "| "+t+" "*(colLen[b]-len(t)),
-                print
+                tab[(nr,0)]=fName
+                for i,b in enumerate(boundaryNames):
+                    tab[(nr,i+1)]=types[b][fName]
+                nr+=1
                 
-            print
+            print tab
                         
         if self.opts.dimensions:
-            print "\nDimensions of fields for t =",time
-            print
+            print ReST.heading("Dimensions of fields for t =",time)
 
-            head="Name"+" "*(nameMaxLen-len("Name"))+" : [kg m s K mol A cd]"
-            print head
-            print "-"*len(head)
-            for fName in fieldNames:
+            tab=ReST.table()
+            tab[0]=["Name"]+"[ kg m s K mol A cd ]".split()[1:-1]
+            tab.addLine(head=True)
+            for i,fName in enumerate(fieldNames):
                 f=fields[fName]
                 try:
-                    dim=f["dimensions"]
-                    print fName+" "*(nameMaxLen-len(fName))+" :",dim
+                    dim=str(f["dimensions"]).split()[1:-1]
                 except KeyError:
-                    print fName,"is not a field file"
-                    
+                    dim=["-"]*7
+                tab[i+1]=[fName]+dim
+            print tab
+            
         if self.opts.internal:
-            print "\Internal value of fields for t =",time
-            print
+            print ReST.heading("Internal value of fields for t =",time)
 
-            head="Name"+" "*(nameMaxLen-len("Name"))+" : Value              "
-            print head
-            print "-"*len(head)
-            for fName in fieldNames:
+            tab=ReST.table()
+            tab[0]=["Name","Value"]
+            tab.addLine(head=True)
+            for i,fName in enumerate(fieldNames):
                 f=fields[fName]
-
-                print fName+" "*(nameMaxLen-len(fName))+" :",
 
                 try:
                     cont=str(f["internalField"])
                     if cont.find("\n")>=0:
-                        print cont[:cont.find("\n")],"..."
+                        val=cont[:cont.find("\n")]+"..."
                     else:
-                        print cont
+                        val=cont
                 except KeyError:
-                    print "Not a field file"
-                    
+                    val="Not a field file"
+                tab[i+1]=[fName,val]
+            print tab
+            
         if self.opts.processorMatrix:
+            print ReST.heading("Processor matrix")
+            
             if sol.nrProcs()<2:
                 print "This case is not decomposed"
-                
-                return
-            
-            matrix=[ [0,]*sol.nrProcs() for i in range(sol.nrProcs())]
+            else:            
+                matrix=[ [0,]*sol.nrProcs() for i in range(sol.nrProcs())]
 
-            for i,p in enumerate(sol.processorDirs()):
-                bound=ParsedBoundaryDict(path.join(sol.name,p,procTime,"polyMesh","boundary"))
-                for j in range(sol.nrProcs()):
-                    name="procBoundary%dto%d" %(j,i)
-                    name2="procBoundary%dto%d" %(i,j)
-                    if name in bound:
-                        matrix[i][j]=bound[name]["nFaces"]
-                    if name2 in bound:
-                        matrix[i][j]=bound[name2]["nFaces"]
+                for i,p in enumerate(sol.processorDirs()):
+                    try:
+                        bound=ParsedBoundaryDict(sol.boundaryDict(processor=p,
+                                                                  region=theRegion,
+                                                                  time=self.opts.time))
+                    except IOError:
+                        bound=ParsedBoundaryDict(sol.boundaryDict(processor=p,
+                                                                  region=theRegion))
                         
-            print "Matrix of processor interactions (faces)"
-            print
-            
-            digits=int(ceil(log10(sol.nrProcs())))+2
-            colDigits=int(ceil(log10(max(digits,max(max(matrix))))))+2
-            
-            format="%%%dd" % digits
-            colFormat="%%%dd" % colDigits
+                    for j in range(sol.nrProcs()):
+                        name="procBoundary%dto%d" %(j,i)
+                        name2="procBoundary%dto%d" %(i,j)
+                        if name in bound:
+                            matrix[i][j]=bound[name]["nFaces"]
+                        if name2 in bound:
+                            matrix[i][j]=bound[name2]["nFaces"]
 
-            print " "*(digits),"|",
-            for j in range(sol.nrProcs()):
-                print colFormat % j,
-            print
-            print "-"*(digits+3+(colDigits+1)*sol.nrProcs())
-                       
-            for i,col in enumerate(matrix):
-                print format % i,"|",
-                for j,nr in enumerate(col):
-                    print colFormat % matrix[i][j],
+                print "Matrix of processor interactions (faces)"
                 print
+
+                tab=ReST.table()
+                tab[0]=["CPU"]+range(sol.nrProcs())
+                tab.addLine(head=True)
+
+                for i,col in enumerate(matrix):
+                    tab[i+1]=[i]+matrix[i]
+
+                print tab
                 
         if self.opts.linearSolvers:
+            print ReST.heading("Linear Solvers")
+
+            linTable=ReST.table()
+            
             fvSol=ParsedParameterFile(path.join(sol.systemDir(),"fvSolution"))
             allInfo={}
             for sName in fvSol["solvers"]:
                 raw=fvSol["solvers"][sName]
                 info={}
                 info["solver"]=raw[0]
-                try:
-                    info["tolerance"]=raw[1]["tolerance"]
-                except KeyError:
-                    info["tolerance"]=1.
-                try:
-                    info["relTol"]=raw[1]["relTol"]
-                except KeyError:
-                    info["relTol"]=0.
+
+                if type(raw[1]) in [dict,DictProxy]:
+                    try:
+                        info["tolerance"]=raw[1]["tolerance"]
+                    except KeyError:
+                        info["tolerance"]=1.
+                    try:
+                        info["relTol"]=raw[1]["relTol"]
+                    except KeyError:
+                        info["relTol"]=0.
+                else:
+                    info["tolerance"]=raw[1]
+                    info["relTol"]=raw[2]
                     
                 allInfo[sName]=info
 
-            title="%15s | %15s | %10s | %8s" % ("name","solver","tolerance","relative")
-            print title
-            print "-"*len(title)
+            linTable[0]=["Name","Solver","Abs. Tolerance","Relative Tol."]
+            linTable.addLine(head=True)
+
+            nr=0
             for n,i in allInfo.iteritems():
-                print "%15s | %15s | %10g | %8g" % (n,i["solver"],i["tolerance"],i["relTol"])
-            print
+                nr+=1
+                linTable[nr]=(n,i["solver"],i["tolerance"],i["relTol"])
+            print linTable
             
         if self.opts.relaxationFactors:
+            print ReST.heading("Relaxation")
+
             fvSol=ParsedParameterFile(path.join(sol.systemDir(),"fvSolution"))
             if "relaxationFactors" in fvSol:
-                title="%20s | %15s" % ("name","factor")
-                print title
-                print "-"*len(title)
+                tab=ReST.table()
+                tab[0]=["Name","Factor"]
+                tab.addLine(head=True)
+                nr=0
                 for n,f in fvSol["relaxationFactors"].iteritems():
-                    print "%20s | %15g" % (n,f)
-                print
+                    nr+=1
+                    tab[nr]=[n,f]
+                print tab
             else:
                 print "No relaxation factors defined for this case"

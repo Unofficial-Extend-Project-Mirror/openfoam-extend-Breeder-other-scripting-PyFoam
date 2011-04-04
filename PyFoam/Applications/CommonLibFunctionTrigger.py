@@ -53,6 +53,9 @@ class LibFunctionTrigger:
 
             if self.fresh:
                 self.control.writeFile()
+            else:
+                self.control.restore()
+                
         except Exception,e:
             warning("Restoring defaults")
             self.control.restore()

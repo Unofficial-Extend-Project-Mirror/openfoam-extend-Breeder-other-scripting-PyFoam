@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: EchoDictionary.py 10485 2009-05-25 14:50:08Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/EchoDictionary.py 7397 2011-04-03T18:35:06.691206Z bgschaid  $ 
 """
 Application class that implements pyFoamEchoDictionary
 """
@@ -10,6 +10,8 @@ from PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 from CommonParserOptions import CommonParserOptions
+
+from PyFoam.Error import PyFoamException
 
 class EchoDictionary(PyFoamApplication,
                      CommonParserOptions):
@@ -44,6 +46,6 @@ unformated dictionaries and debugging the parser
                                          doMacroExpansion=self.opts.doMacros)
         except IOError,e:
             self.error("Problem with file",fName,":",e)
-
+        
         print dictFile
             

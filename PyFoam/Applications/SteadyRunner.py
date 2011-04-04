@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SteadyRunner.py 10948 2009-10-13 08:37:46Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SteadyRunner.py 7319 2011-03-03T23:10:51.400635Z bgschaid  $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -22,6 +22,7 @@ from CommonSafeTrigger import CommonSafeTrigger
 from CommonWriteAllTrigger import CommonWriteAllTrigger
 from CommonStandardOutput import CommonStandardOutput
 from CommonServer import CommonServer
+from CommonVCSCommit import CommonVCSCommit
 
 class SteadyRunner(PyFoamApplication,
                    CommonPlotLines,
@@ -32,7 +33,8 @@ class SteadyRunner(PyFoamApplication,
                    CommonReportUsage,
                    CommonParallel,
                    CommonRestart,
-                   CommonStandardOutput):
+                   CommonStandardOutput,
+                   CommonVCSCommit):
     def __init__(self,args=None):
         description="""
 Runs an OpenFoam steady solver.  Needs the usual 3 arguments (<solver>
@@ -62,6 +64,7 @@ stopped and the last simulation state is written to disk
         CommonSafeTrigger.addOptions(self)
         CommonWriteAllTrigger.addOptions(self)
         CommonServer.addOptions(self)
+        CommonVCSCommit.addOptions(self)
         
     def run(self):
         cName=self.parser.casePath()
@@ -73,11 +76,14 @@ stopped and the last simulation state is written to disk
         
         self.clearCase(sol)
 
-        lam=self.getParallel()
+        lam=self.getParallel(sol)
 
         self.setLogname()
         
+        self.checkAndCommit(sol)
+            
         run=ConvergenceRunner(BoundingLogAnalyzer(progress=self.opts.progress,
+                                                  doFiles=self.opts.writeFiles,
                                                   singleFile=self.opts.singleDataFilesOnly,
                                                   doTimelines=True),
                               silent=self.opts.progress,
@@ -91,7 +97,8 @@ stopped and the last simulation state is written to disk
                               remark=self.opts.remark,
                               jobId=self.opts.jobId)
 
-        run.createPlots(customRegexp=self.lines_)
+        run.createPlots(customRegexp=self.lines_,
+                        writeFiles=self.opts.writeFiles)
             
         self.addSafeTrigger(run,sol)
         self.addWriteAllTrigger(run,sol)

@@ -14,14 +14,22 @@ class BoundaryDict(ParsedBoundaryDict):
                  processor=None,
                  time=None):
         """@param case: Path to the case-directory"""
-        ParsedBoundaryDict.__init__(self,
-                                    SolutionDirectory(case,
-                                                      archive=None,
-                                                      paraviewLink=False).boundaryDict(time=time,
-                                                                                       region=region,
-                                                                                       processor=processor),
-                                    backup=backup)
-
+        try:
+            ParsedBoundaryDict.__init__(self,
+                                        SolutionDirectory(case,
+                                                          archive=None,
+                                                          paraviewLink=False).boundaryDict(time=time,
+                                                                                           region=region,
+                                                                                           processor=processor),
+                                        backup=backup)
+        except IOError:
+            ParsedBoundaryDict.__init__(self,
+                                        SolutionDirectory(case,
+                                                          archive=None,
+                                                          paraviewLink=False).boundaryDict(region=region,
+                                                                                           processor=processor),
+                                        backup=backup)
+            
     def __getitem__(self,key):
         return self.content[key]
     

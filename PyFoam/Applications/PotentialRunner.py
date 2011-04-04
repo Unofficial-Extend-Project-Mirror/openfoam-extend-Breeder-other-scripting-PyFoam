@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PotentialRunner.py 11365 2010-03-16 17:32:37Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PotentialRunner.py 7319 2011-03-03T23:10:51.400635Z bgschaid  $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -18,13 +18,15 @@ from PyFoam.FoamInformation import oldAppConvention as oldApp
 from CommonParallel import CommonParallel
 from CommonStandardOutput import CommonStandardOutput
 from CommonServer import CommonServer
+from CommonVCSCommit import CommonVCSCommit
 
 from PyFoam.FoamInformation import oldTutorialStructure
 
 class PotentialRunner(PyFoamApplication,
                       CommonStandardOutput,
                       CommonServer,
-                      CommonParallel):
+                      CommonParallel,
+                      CommonVCSCommit):
     def __init__(self,args=None):
         description="""
 Runs the potentialFoam solver on a case to get a decent initial condition.
@@ -79,10 +81,12 @@ Copies the current fields for U and p to backup-files.
         CommonParallel.addOptions(self)
         CommonStandardOutput.addOptions(self)
         CommonServer.addOptions(self,False)
+        CommonVCSCommit.addOptions(self)
         
     def run(self):
         cName=self.parser.getArgs()[0]
         sol=SolutionDirectory(cName,archive=None)
+        self.addLocalConfig(cName)
         initial=sol[0]
         if "U" not in initial or "p" not in initial:
             error("Either 'p' or 'U' missing from the initial directory",initial.baseName())
@@ -90,7 +94,7 @@ Copies the current fields for U and p to backup-files.
             initial["p.prepotential"]=initial["p"]
         initial["U.prepotential"]=initial["U"]
         
-        lam=self.getParallel()
+        lam=self.getParallel(sol)
 
         if self.opts.writep:
             writep=["-writep"]
@@ -104,7 +108,9 @@ Copies the current fields for U and p to backup-files.
             argv+=["-case",cName]
         
         self.setLogname(default="Potential",useApplication=False)
-            
+
+        self.checkAndCommit(sol)
+        
         run=BasicRunner(argv=argv+writep,
                         server=self.opts.server,
                         logname=self.opts.logname,

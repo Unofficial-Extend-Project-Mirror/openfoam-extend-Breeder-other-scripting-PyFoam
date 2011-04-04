@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PyFoamApplicationQt4.py 11410 2010-04-01 09:34:56Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PyFoamApplicationQt4.py 6286 2010-04-01T09:40:31.994745Z bgschaid  $ 
 """
 Base class for pyFoam-applications that have a QT4-GUI
 """

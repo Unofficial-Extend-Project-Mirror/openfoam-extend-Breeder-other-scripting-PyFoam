@@ -9,12 +9,13 @@ import os
 import shutil
 import glob
 
-from PyFoam.Error import error
-from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+from PyFoam.Error import error,warning
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,FoamStringParser
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 from CreateBoundaryPatches import CreateBoundaryPatches
 from PyFoam import configuration as config
+from PyFoam.Basics.DataStructures import Vector
 
 class CaseBuilderDescriptionList(object):
     """Gets a list of the case-builder files found in the current path"""
@@ -36,6 +37,33 @@ class CaseBuilderDescriptionList(object):
 
     def __getitem__(self,i):
         return self.list[i]
+
+class ArgWrapper(object):
+    """Wraps the argument element for convenient access"""
+    def __init__(self,el):
+        self.el=el
+
+    def __getattr__(self,name):
+        if name=="type":
+            tmp=self.el.getElementsByTagName("verify")
+            if len(tmp)!=1:
+                return None
+            val=tmp[0].getElementsByTagName("validator")
+            if len(val)!=1:
+                return None
+            else:
+                return val[0].getAttribute("type")
+        elif name=="values":
+            tmp=self.el.getElementsByTagName("verify")
+            if len(tmp)!=1:
+                return None
+            val=tmp[0].getElementsByTagName("validator")
+            if len(val)!=1:
+                return None
+            else:
+                return map(str,val[0].getAttribute("values").split("|"))
+        else:
+            return self.el.getAttribute(name)
     
 class CaseBuilderFile(object):
     """
@@ -153,6 +181,14 @@ and gives information about the case and if asked to builds the actual case
             
         return args
 
+    def argumentDict(self):
+        args={}
+
+        for a in self.argTree().getElementsByTagName("arg"):
+            args[a.getAttribute("name")]=ArgWrapper(a)
+            
+        return args
+
     def groupArguments(self,name=None):
         """Returns a list with the arguments belongin to a specific group
         @param name: Name of the group. If none is given, then all the arguments
@@ -240,6 +276,14 @@ and gives information about the case and if asked to builds the actual case
                     elif typ=="file":
                         if not path.exists(arg):
                             msg="File "+arg+" does not exist"
+                    elif typ=="selection":
+                            vals=valid.getAttribute("values").split("|")
+                            if not arg in vals:
+                                msg="Not in list of possible values: "+", ".join(vals)
+                    elif typ=="vector":
+                        tmp=FoamStringParser("a "+arg+";")
+                        if type(tmp['a'])!=Vector:
+                            msg="Is not a valid vector"
                     else:
                         error("No validator implemented for type",typ,"in variable",nm)
                     if isNumeric and not msg:
@@ -308,21 +352,22 @@ and gives information about the case and if asked to builds the actual case
                     pf.writeFile()
 
         prep=self.getSingleElement(self.doc,"meshpreparation")
-        util=self.getSingleElement(prep,"utility",optional=True)
+        util=prep.getElementsByTagName("utility")
         copy=self.getSingleElement(prep,"copy",optional=True)
         
-        if util and copy:
+        if len(util)>0 and copy:
             error("Copy and utilitiy mesh preparation specified")
-        elif util:
-            app=util.getAttribute("command")
-            arg=self.expandVars(util.getAttribute("arguments"),args)
-            argv=[app,"-case",cName]+arg.split()
-            if oldApp():
-                argv[1]="."
-            run=BasicRunner(argv=argv,silent=True,logname="CaseBuilder.prepareMesh."+app)
-            run.start()
-            if not run.runOK():
-                error(app,"failed. Check the logs")
+        elif len(util)>0:
+            for u in util:
+                app=u.getAttribute("command")
+                arg=self.expandVars(u.getAttribute("arguments"),args)
+                argv=[app,"-case",cName]+arg.split()
+                if oldApp():
+                    argv[1]="."
+                run=BasicRunner(argv=argv,silent=True,logname="CaseBuilder.prepareMesh."+app)
+                run.start()
+                if not run.runOK():
+                    error(app,"failed. Check the logs")
         elif copy:
             source=self.expandVars(copy.getAttribute("template"),args)
             time=self.expandVars(copy.getAttribute("time"),args)

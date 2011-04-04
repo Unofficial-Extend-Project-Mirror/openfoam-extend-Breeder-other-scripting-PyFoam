@@ -1,11 +1,11 @@
-#  ICE Revision: $Id: PyFoamApplication.py 11417 2010-04-06 09:37:07Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PyFoamApplication.py 7393 2011-03-29T14:55:03.425417Z bgschaid  $ 
 """Base class for pyFoam-applications
 
 Classes can also be called with a command-line string"""
 
 from optparse import OptionGroup
 from PyFoam.Basics.FoamOptionParser import FoamOptionParser
-from PyFoam.Error import error,warning
+from PyFoam.Error import error,warning,FatalErrorPyFoamException
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 from PyFoam.RunDictionary.SolutionDirectory import NoTouchSolutionDirectory
 
@@ -17,7 +17,7 @@ format.getConfigFormat("error")
 format.getConfigFormat("warn")
 
 import sys
-from os import path,getcwd
+from os import path,getcwd,environ
 
 class PyFoamApplication(object):
     def __init__(self,
@@ -48,10 +48,19 @@ class PyFoamApplication(object):
                         "Options common to all PyFoam-applications")
 
         if changeVersion:
+            # the options are evaluated in Basics.FoamOptionParser
             grp.add_option("--foamVersion",
                            dest="foamVersion",
                            default=None,
                            help="Change the OpenFOAM-version that is to be used")
+            if "WM_PROJECT_VERSION" in environ:
+                grp.add_option("--currentFoamVersion",
+                               dest="foamVersion",
+                               const=environ["WM_PROJECT_VERSION"],
+                               default=None,
+                               action="store_const",
+                               help="Use the current OpenFOAM-version "+environ["WM_PROJECT_VERSION"])
+            
             grp.add_option("--force-32bit",
                            dest="force32",
                            default=False,
@@ -95,6 +104,11 @@ class PyFoamApplication(object):
                        default=False,
                        action="store_true",
                        help="Profile the python-script using the hotshot-library (not the OpenFOAM-program) - mostly of use for developers - EXPERIMENTAL")
+        grp.add_option("--traceback-on-error",
+                       dest="traceback",
+                       default=False,
+                       action="store_true",
+                       help="Prints a traceback when an error is encountered (for debugging)")
 
         self.parser.add_option_group(grp)
 
@@ -137,8 +151,15 @@ class PyFoamApplication(object):
             stats.sort_stats('time','calls')
             stats.print_stats(20)
         else:
-            self.run()
-
+            try:
+                result=self.run()
+                return result
+            except FatalErrorPyFoamException,e:
+                if self.opts.traceback:
+                    raise
+                else:
+                    self.error(e.descr)
+                
     def ensureGeneralOptions(self):
         if self.generalOpts==None:
             self.generalOpts=OptionGroup(self.parser,

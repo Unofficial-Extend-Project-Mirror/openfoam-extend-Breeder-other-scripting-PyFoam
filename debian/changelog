@@ -1,3 +1,9 @@
+pyfoam (0.5.5~ppa1~lucid1) lucid; urgency=low
+
+  * Start packaging a new version 
+
+ -- bgschaid <bgschaid@bgschaid-VirtualBox>  Fri, 04 Mar 2011 11:38:01 +0100
+
 pyfoam (0.5.4-1~ppa1~lucid1) lucid; urgency=low
 
   * Little fixes to make everything work as expected

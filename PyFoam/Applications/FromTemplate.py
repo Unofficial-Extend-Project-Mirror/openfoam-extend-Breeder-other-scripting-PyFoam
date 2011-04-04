@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FromTemplate.py 9161 2008-08-04 08:01:05Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/FromTemplate.py 3501 2008-08-03T18:40:52.402178Z bgschaid  $ 
 """
 Application class that implements pyFoamFromTemplate
 """

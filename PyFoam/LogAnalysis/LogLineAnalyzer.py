@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: LogLineAnalyzer.py 8292 2007-12-12 15:22:00Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/LogLineAnalyzer.py 7013 2010-11-21T22:22:06.604864Z bgschaid  $ 
 """Base class for analyzing lines"""
 
 from PyFoam.Error import error
@@ -31,7 +31,12 @@ class LogLineAnalyzer(object):
 
         @param parent: The Analyzer class of which this is a part"""
         self.parent=parent
-        
+
+    def writeProgress(self,msg):
+        """Let the parent write an additional progress message"""
+        if self.parent:
+            self.parent.writeProgress(msg)
+            
     def setDirectory(self,oDir):
         """Set the directory to which output is to be written (if any
         output is written)"""

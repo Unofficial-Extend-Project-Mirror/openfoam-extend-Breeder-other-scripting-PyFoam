@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ChangeBoundaryType.py 10473 2009-05-25 08:00:21Z bgschaid $
+#  ICE Revision: $Id:$
 """
 Application class that implements pyFoamChangeBoundaryType.py
 """
@@ -7,6 +7,8 @@ from PyFoamApplication import PyFoamApplication
 
 from os import path
 import sys
+from optparse import OptionGroup
+
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.RunDictionary.ListFile import ListFile
 
@@ -23,11 +25,16 @@ Changes the type of a boundary in the boundary-file
                                    interspersed=True)
         
     def addOptions(self):
-        self.parser.add_option("--test",
-                               action="store_true",
-                               default=False,
-                               dest="test",
-                               help="Only print the new boundary file")
+        change=OptionGroup(self.parser,
+                           "Change",
+                           "Change specific options")
+        self.parser.add_option_group(change)
+
+        change.add_option("--test",
+                          action="store_true",
+                          default=False,
+                          dest="test",
+                          help="Only print the new boundary file")
 
     def run(self):
         fName=self.parser.getArgs()[0]
@@ -39,8 +46,7 @@ Changes the type of a boundary in the boundary-file
         bnd=boundary.content
 
         if type(bnd)!=list:
-            print "Problem with boundary file (not a list)"
-            sys.exit(-1)
+            self.error("Problem with boundary file (not a list)")
 
         found=False
 
@@ -52,8 +58,7 @@ Changes the type of a boundary in the boundary-file
                 break
 
         if not found:
-            print "Boundary",bName,"not found in",bnd[::2]
-            sys.exit(-1)
+            self.error("Boundary",bName,"not found in",bnd[::2])
 
         if self.opts.test:
             print boundary

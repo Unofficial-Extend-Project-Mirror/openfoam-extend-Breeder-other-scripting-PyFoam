@@ -45,11 +45,6 @@ class CommonPlotOptions(object):
         writeDGroup=OptionGroup(self.parser,
                                 "Write plot data",
                                 "How data and the plots themself should be written to disk")
-        writeDGroup.add_option("--write-files",
-                               action="store_true",
-                               default=False,
-                               dest="writeFiles",
-                               help="Writes the parsed data to files")
         writeDGroup.add_option("--hardcopy",
                                action="store_true",
                                default=False,

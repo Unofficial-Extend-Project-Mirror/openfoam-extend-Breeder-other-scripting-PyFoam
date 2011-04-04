@@ -86,6 +86,16 @@ class FoamStringParserTest(unittest.TestCase):
         p1=FoamStringParser('test  uniform;')
         self.assertEqual(p1["test"],"uniform")
     
+    def testParseFieldUniform(self):
+        p1=FoamStringParser('test  uniform 42;')
+        self.assertEqual(type(p1["test"]),Field)
+        self.assert_(p1["test"].isUniform())
+    
+    def testParseFieldNonniform(self):
+        p1=FoamStringParser('test  nonuniform 4(42 66 34 44);')
+        self.assertEqual(type(p1["test"]),Field)
+        self.assert_(not p1["test"].isUniform())
+    
     def testParseWordMinus(self):
         p1=FoamStringParser('test  name-0;')
         self.assertEqual(p1["test"],"name-0")
@@ -402,6 +412,13 @@ theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest5,"test"))
                  
 class ParsedParameterFileTest6(unittest.TestCase):
     def setUp(self):
+        try:
+            if foamVersionNumber()>=(1,6):
+                from nose.plugins.skip import SkipTest
+                raise SkipTest()
+        except ImportError:
+            pass
+        
         self.theFile="/tmp/test.diesleSpray"
         system("cp "+path.join(dieselAachenTutorial(),"0","spray")+" "+self.theFile)
         
@@ -419,7 +436,11 @@ if foamVersionNumber()<(1,5):
                  
 class ParsedParameterFileIncludeTest(unittest.TestCase):
     def setUp(self):
-        self.fileName=path.join(simpleBikeTutorial(),"0","U")
+        if oldTutorialStructure():
+            null="0"
+        else:
+            null="0.org"
+        self.fileName=path.join(simpleBikeTutorial(),null,"U")
 
     def tearDown(self):
         pass

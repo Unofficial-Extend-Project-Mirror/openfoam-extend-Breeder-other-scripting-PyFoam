@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: UpdateDictionary.py 11120 2009-12-21 17:00:47Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpdateDictionary.py 5985 2009-12-21T21:05:52.364284Z bgschaid  $ 
 """
 Application class that implements pyFoamUpdateDictionary.py
 """

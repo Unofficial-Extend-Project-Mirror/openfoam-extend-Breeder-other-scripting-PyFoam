@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotHelpers.py 11125 2009-12-21 18:11:01Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotHelpers.py 5985 2009-12-21T21:05:52.364284Z bgschaid  $ 
 """
 Helper-functions for the plots
 """

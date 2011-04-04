@@ -3,7 +3,7 @@ Application-class that implements pyFoamListCases.py
 """
 from optparse import OptionGroup
 from os import path,listdir,stat
-import time
+import time,datetime
 from stat import ST_MTIME
 import string
 import subprocess
@@ -31,7 +31,7 @@ doesn't honor the parallel data
                                    nr=0,
                                    exactNr=False)
 
-    sortChoices=["name","first","last","mtime","nrSteps","procs","diskusage","pFirst","pLast","nrParallel"]
+    sortChoices=["name","first","last","mtime","nrSteps","procs","diskusage","pFirst","pLast","nrParallel","nowTime","state","lastOutput","startedAt"]
     
     def addOptions(self):
         what=OptionGroup(self.parser,
@@ -57,6 +57,18 @@ doesn't honor the parallel data
                         default=False,
                         help="Print information about parallel runs (if present): number of processors and processor first and last time. The mtime will be that of the processor-directories")
 
+        what.add_option("--no-state",
+                        action="store_false",
+                        dest="state",
+                        default=True,
+                        help="Don't read state-files")
+
+        what.add_option("--advanced-state",
+                        action="store_true",
+                        dest="advancedState",
+                        default=False,
+                        help="Additional state information (run started, last output seen)")
+
         how=OptionGroup(self.parser,
                          "How",
                          "How the things should be shown")
@@ -74,6 +86,11 @@ doesn't honor the parallel data
                        dest="reverse",
                        default=False,
                        help="Sort in reverse order")
+        how.add_option("--relative-times",
+                       action="store_true",
+                       dest="relativeTime",
+                       default=False,
+                       help="Show the timestamps relative to the current time")
 
         behave=OptionGroup(self.parser,
                          "Behaviour",
@@ -86,6 +103,14 @@ doesn't honor the parallel data
                           default=False,
                           help="Print the directories while they are being processed")
 
+    def readState(self,sol,sFile,default=""):
+        fName=path.join(sol.name,"PyFoamState."+sFile)
+        if not path.exists(fName):
+            return default
+        else:
+            self.hasState=True
+            return open(fName).read().strip()
+        
     def run(self):
         dirs=self.parser.getArgs()
         
@@ -94,6 +119,8 @@ doesn't honor the parallel data
 
         cData=[]
         totalDiskusage=0
+
+        self.hasState=False
         
         for d in dirs:
             for n in listdir(d):
@@ -138,6 +165,23 @@ doesn't honor the parallel data
                                     if re.compile("processor[0-9]+").match(f):
                                         data["mtime"]=max(stat(path.join(cName,f))[ST_MTIME],data["mtime"])
 
+                            if self.opts.state:
+                                try:
+                                    data["nowTime"]=float(self.readState(sol,"CurrentTime"))
+                                except ValueError:
+                                    data["nowTime"]=None
+                                    
+                                try:
+                                    data["lastOutput"]=time.mktime(time.strptime(self.readState(sol,"LastOutputSeen")))
+                                except ValueError:
+                                    data["lastOutput"]="nix"
+                                try:
+                                    data["startedAt"]=time.mktime(time.strptime(self.readState(sol,"StartedAt")))
+                                except ValueError:
+                                    data["startedAt"]="nix"
+
+                                data["state"]=self.readState(sol,"TheState")
+                                    
                             cData.append(data)
                     except OSError:
                         print cName,"is unreadable"
@@ -162,7 +206,17 @@ doesn't honor the parallel data
         for k in cData[0].keys():
             lens[k]=len(k)
         for c in cData:
-            c["mtime"]=time.asctime(time.localtime(c["mtime"]))
+            for k in ["mtime","lastOutput","startedAt"]:
+                try:
+                    if self.opts.relativeTime:
+                        c[k]=datetime.timedelta(seconds=long(time.time()-c[k]))
+                    else:
+                        c[k]=time.asctime(time.localtime(c[k]))
+                except KeyError:
+                    pass
+                except TypeError:
+                    c[k]=None
+                    
             for k,v in c.iteritems():
                 lens[k]=max(lens[k],len(str(v)))
 
@@ -172,6 +226,11 @@ doesn't honor the parallel data
             spec+=["| ","procs"," : ","pFirst"," - ","pLast"," (","nrParallel",") | "]
         if self.opts.diskusage:
             spec+=["diskusage"," MB "]
+        if self.hasState:
+            spec+=["nowTime"," s ","state"," | "]
+            if self.opts.advancedState:
+                spec+=["lastOutput"," | ","startedAt"," | "]
+                
         spec+=["name"]
         
         for i,l in enumerate(spec):

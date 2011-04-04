@@ -29,9 +29,6 @@ time {
 }
 '''
 
-def testFunc(name,*rest):
-    pass
-
 class CustomPlotInfoTest(unittest.TestCase):
     def testPureRegex(self):
         ci=CustomPlotInfo(pureRegexp)

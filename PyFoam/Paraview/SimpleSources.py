@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SimpleSources.py 10106 2009-03-12 09:50:26Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Paraview/SimpleSources.py 6996 2010-11-05T18:07:37.592944Z bgschaid  $ 
 """ Simple sources
 
 Builds and displays simple sources. Grants easy access to the actual source
@@ -51,7 +51,11 @@ class Sphere(SimpleSource):
         @param relRadius: radius relative to the characteristic length
         @param absRadius: absolute radius. Overrides relRadius if set"""
 
-        sphr=servermanager.sources.SphereSource()
+        try:
+            sphr=servermanager.sources.SphereSource()
+        except AttributeError:
+            sphr=servermanager.sources.Sphere()
+
         sphr.Center=list(center)
         if absRadius:
             sphr.Radius=absRadius
@@ -79,7 +83,11 @@ class Line(SimpleSource):
         @param pt1: the start of the line
         @param pt2: the end of the line"""
 
-        ln=servermanager.sources.LineSource()
+        try:
+            ln=servermanager.sources.LineSource()
+        except AttributeError:
+            ln=servermanager.sources.Line()
+
         ln.Point1 = list(pt1)
         ln.Point2 = list(pt2)
         SimpleSource.__init__(self,name,ln)
@@ -93,7 +101,11 @@ class Plane(SimpleSource):
         @param pt1: one point the plane spans to
         @param pt2: the other point the plane spans to"""
 
-        pl=servermanager.sources.PlaneSource()
+        try:
+            pl=servermanager.sources.PlaneSource()
+        except AttributeError:
+            pl=servermanager.sources.Plane()
+
         pl.Origin = list(origin)
         pl.Point1 = list(pt1)
         pl.Point2 = list(pt2)
@@ -109,7 +121,10 @@ class Cube(SimpleSource):
 
         pt1=self.makeVector(pt1)
         pt2=self.makeVector(pt2)
-        box=servermanager.sources.CubeSource()
+        try:
+            box=servermanager.sources.CubeSource()
+        except AttributeError:
+            box=servermanager.sources.Box()
         box.Center=list(0.5*(pt1+pt2))
         diff=pt1-pt2
         box.XLength=abs(diff[0])
@@ -125,7 +140,11 @@ class STL(SimpleSource):
         """@param name: name under which the surface should be displayed
         @param stlFile: the STL-file"""
 
-        stl=servermanager.sources.stlreader()
+        try:
+            stl=servermanager.sources.stlreader()
+        except AttributeError:
+            stl=servermanager.sources.STLReader()
+            
         stl.FileNames=[stlFile]
         stl.UpdatePipeline()
 
@@ -140,14 +159,23 @@ class Text(SimpleSource):
         @param scale: the scaling of the text (in terms ofcharacterist length of the geometry
         @param position: the actual position at which the object should be centered"""
 
-        txt=servermanager.sources.VectorText()
+        try:
+            txt=servermanager.sources.VectorText()
+        except AttributeError:
+            txt=servermanager.sources.a3DText()
+            
         txt.Text=text
         
         SimpleSource.__init__(self,name,txt)
 
         if not position:
             position=gc()
-        self.repr.Translate=list(position)
+
+        try:
+            self.repr.Translate=list(position)
+        except AttributeError:
+            self.repr.Position=list(position)
+        
         self.repr.Origin=list(position)
         
         scale*=lc()/self.characteristicLength()
@@ -203,7 +231,19 @@ class Arrow(DirectedSource):
         """@param name: name under which the arrow will be displayed
         @param base: the base the arrow points away from
         @param tip: the point the arrow points to"""
-        DirectedSource.__init__(self,name,servermanager.sources.ArrowSource(),base,tip)
+        
+        try:
+            DirectedSource.__init__(self,
+                                    name,
+                                    servermanager.sources.ArrowSource(),
+                                    base,
+                                    tip)
+        except AttributeError:
+            DirectedSource.__init__(self,
+                                    name,
+                                    servermanager.sources.Arrow(),
+                                    base,
+                                    tip)
 
 class Glyph(DirectedSource):
     """Displays a simple glyph"""
@@ -212,5 +252,16 @@ class Glyph(DirectedSource):
         """@param name: name under which the glyph will be displayed
         @param base: the base the glyph points away from
         @param tip: the point the glyph points to"""
-        DirectedSource.__init__(self,name,servermanager.sources.GlyphSource2D(),base,tip)
 
+        try:
+            DirectedSource.__init__(self,
+                                    name,
+                                    servermanager.sources.GlyphSource2D(),
+                                    base,
+                                    tip)
+        except AttributeError:
+            DirectedSource.__init__(self,
+                                    name,
+                                    servermanager.sources.a2DGlyph(),
+                                    base,
+                                    tip)

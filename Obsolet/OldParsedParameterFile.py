@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: OldParsedParameterFile.py 7842 2007-08-29 18:17:28Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/Obsolet/OldParsedParameterFile.py 1917 2007-08-29T20:48:07.428000Z bgschaid  $ 
 """Parameter file is read into memory and modified there"""
 
 raise "PyFoam","Old. Buggy. Just here forsentimental reasons"

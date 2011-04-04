@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SimpleFilters.py 9833 2008-12-22 09:22:12Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Paraview/SimpleFilters.py 6996 2010-11-05T18:07:37.592944Z bgschaid  $ 
 """ Simple filters
 
 Builds and displays simple filters. Grants easy access to the actual filter
@@ -25,7 +25,11 @@ class Group(SimpleFilter):
     """Class for grouping other objects"""
 
     def __init__(self,name):
-        grp=servermanager.filters.GroupDataSets()
+        try:
+            grp=servermanager.filters.GroupDataSets()
+        except AttributeError:
+            grp=servermanager.filters.GroupDatasets()
+            
         SimpleFilter.__init__(self,name,grp)
 
     def add(self,obj):

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PVSnapshot.py 11666 2010-06-07 07:56:06Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PVSnapshot.py 7399 2011-04-03T18:50:46.298018Z bgschaid  $ 
 """
 Class that implements pyFoamPVSnapshot
 """
@@ -127,7 +127,10 @@ replacements can be specified
             timeString+="_t=%(t)s"
         timeString+="."+self.opts.type
 
-        sol=SolutionDirectory(case,paraviewLink=False,archive=None)
+        sol=SolutionDirectory(case,
+                              paraviewLink=False,
+                              archive=None)
+        
         times=self.processTimestepOptions(sol)
         if len(times)<1:
             self.warning("Can't continue without time-steps")

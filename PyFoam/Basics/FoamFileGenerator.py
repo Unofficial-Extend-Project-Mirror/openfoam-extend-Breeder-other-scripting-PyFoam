@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamFileGenerator.py 10750 2009-08-19 07:47:56Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/FoamFileGenerator.py 5431 2009-08-18T22:13:53.461504Z bgschaid  $ 
 """Transform a Python data-structure into a OpenFOAM-File-Representation"""
 
 from PyFoam.Error import error,PyFoamException

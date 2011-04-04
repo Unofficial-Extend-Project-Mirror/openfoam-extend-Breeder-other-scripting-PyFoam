@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SimpleLineAnalyzer.py 10948 2009-10-13 08:37:46Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/SimpleLineAnalyzer.py 5717 2009-10-12T21:41:13.626022Z bgschaid  $ 
 """Do analysis for simple expressions"""
 
 import re

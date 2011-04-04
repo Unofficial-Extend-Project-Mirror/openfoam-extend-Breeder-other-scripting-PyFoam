@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CompareDictionary.py 11120 2009-12-21 17:00:47Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CompareDictionary.py 7134 2011-01-20T09:22:01.720659Z bgschaid  $ 
 """
 Application class that implements pyFoamCompareDictionary.py
 """
@@ -8,7 +8,7 @@ from os import path
 
 from PyFoamApplication import PyFoamApplication
 
-from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,PyFoamParserError
 from PyFoam.Basics.DataStructures import DictProxy,Dimension,Tensor,SymmTensor,Vector,Field,TupleProxy
 from PyFoam.Basics.FoamFileGenerator import makeString
 
@@ -22,6 +22,7 @@ f=TerminalFormatter()
 f.getConfigFormat("source",shortName="src")
 f.getConfigFormat("destination",shortName="dst")
 f.getConfigFormat("difference",shortName="diff")
+f.getConfigFormat("error",shortName="name")
 
 class CompareDictionary(PyFoamApplication,
                         CommonParserOptions):
@@ -30,10 +31,18 @@ class CompareDictionary(PyFoamApplication,
 Takes two dictionary and compares them semantically (by looking at the
 structure, not the textual representation. If the dictionaries do not
 have the same name, it looks for the destination file by searching the
-equivalent place in the destination case
+equivalent place in the destination case. If more than two files are specified
+then the last name is assumed to be a directory and all the equivalents to the
+other files are searched there.
         """
         
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <source> <destination-case>",nr=2,interspersed=True)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <source> <destination-case>",
+                                   nr=2,
+                                   exactNr=False,
+                                   interspersed=True)
         
     def addOptions(self):
         self.parser.add_option("--not-equal",
@@ -58,66 +67,76 @@ equivalent place in the destination case
 
     
     def run(self):
-        sName=path.abspath(self.parser.getArgs()[0])
-        dName=path.abspath(self.parser.getArgs()[1])
+        sFiles=self.parser.getArgs()[0:-1]
+        dFile=path.abspath(self.parser.getArgs()[-1])
 
-        try:
-            source=ParsedParameterFile(sName,
-                                       backup=False,
-                                       debug=self.opts.debugParser,
-                                       listLengthUnparsed=self.opts.longlist,
-                                       noBody=self.opts.noBody,
-                                       noHeader=self.opts.noHeader,
-                                       boundaryDict=self.opts.boundaryDict,
-                                       listDict=self.opts.listDict,
-                                       listDictWithHeader=self.opts.listDictWithHeader)
-        except IOError,e:
-            self.error("Problem with file",sName,":",e)
-
-        found=False
-
-        if path.isfile(sName) and path.isfile(dName):
-            found=True
+        for s in sFiles:
+            sName=path.abspath(s)
+            dName=dFile
             
-        if not found and not self.opts.notequal and path.basename(sName)!=path.basename(dName):
-            parts=sName.split(path.sep)
-            for i in range(len(parts)):
-                tmp=apply(path.join,[dName]+parts[-(i+1):])
-                
-                if path.exists(tmp):
-                    found=True
-                    dName=tmp
-                    warning("Found",dName,"and using this")
-                    break
-                
-            if not found:
-                error("Could not find a file named",path.basename(sName),"in",dName)
-                
-        if path.samefile(sName,dName):
-            error("Source",sName,"and destination",dName,"are the same")
-        
-        try:
-            dest=ParsedParameterFile(dName,
-                                     backup=False,
-                                     debug=self.opts.debugParser,
-                                     listLengthUnparsed=self.opts.longlist,
-                                     noBody=self.opts.noBody,
-                                     noHeader=self.opts.noHeader,
-                                     boundaryDict=self.opts.boundaryDict,
-                                     listDict=self.opts.listDict,
-                                     listDictWithHeader=self.opts.listDictWithHeader)
-        except IOError,e:
-            self.error("Problem with file",dName,":",e)
+            if len(s)>1:
+                print f.name+"Source file",sName,f.reset
+            try:
+                source=ParsedParameterFile(sName,
+                                           backup=False,
+                                           debug=self.opts.debugParser,
+                                           listLengthUnparsed=self.opts.longlist,
+                                           noBody=self.opts.noBody,
+                                           noHeader=self.opts.noHeader,
+                                           boundaryDict=self.opts.boundaryDict,
+                                           listDict=self.opts.listDict,
+                                           listDictWithHeader=self.opts.listDictWithHeader)
+            except IOError,e:
+                self.warning("Problem with file",sName,":",e)
+                continue
+            except PyFoamParserError,e:
+                self.warning("Parser problem with",sName,":",e)
+                continue
+            
+            found=False
 
-        self.pling=False
+            if path.isfile(sName) and path.isfile(dName):
+                found=True
 
-        if not self.opts.boundaryDict and not self.opts.listDict and not self.opts.listDictWithHeader:
-            self.compareDict(source.content,dest.content,1,path.basename(sName))
-        else:
-            self.compareIterable(source.content,dest.content,1,path.basename(sName))
+            if not found and not self.opts.notequal and path.basename(sName)!=path.basename(dName):
+                parts=sName.split(path.sep)
+                for i in range(len(parts)):
+                    tmp=apply(path.join,[dName]+parts[-(i+1):])
 
-        if not self.pling:
-            print "\nNo differences found"
+                    if path.exists(tmp):
+                        found=True
+                        dName=tmp
+                        warning("Found",dName,"and using this")
+                        break
+
+                if not found:
+                    error("Could not find a file named",path.basename(sName),"in",dName)
+
+            if path.samefile(sName,dName):
+                error("Source",sName,"and destination",dName,"are the same")
+
+            try:
+                dest=ParsedParameterFile(dName,
+                                         backup=False,
+                                         debug=self.opts.debugParser,
+                                         listLengthUnparsed=self.opts.longlist,
+                                         noBody=self.opts.noBody,
+                                         noHeader=self.opts.noHeader,
+                                         boundaryDict=self.opts.boundaryDict,
+                                         listDict=self.opts.listDict,
+                                         listDictWithHeader=self.opts.listDictWithHeader)
+            except IOError,e:
+                self.error("Problem with file",dName,":",e)
+
+            self.pling=False
+
+            if not self.opts.boundaryDict and not self.opts.listDict and not self.opts.listDictWithHeader:
+                self.compareDict(source.content,dest.content,1,path.basename(sName))
+            else:
+                self.compareIterable(source.content,dest.content,1,path.basename(sName))
+
+            if not self.pling:
+                print "\nNo differences found"
             
     def dictString(self,path,name):
         return "%s[%s]" % (path,name)

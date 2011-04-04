@@ -165,10 +165,12 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorUnparsedList,"test"))
 class FoamFileGeneratorRoundtrip(unittest.TestCase):
     def setUp(self):
         self.theFile=tmpnam()
+        print self.theFile,damBreakTutorial()
         system("cp "+path.join(damBreakTutorial(),"system","fvSolution")+" "+self.theFile)
 
     def tearDown(self):
-        system("rm "+self.theFile)
+        # system("rm "+self.theFile)
+        pass
     
     def testReadTutorial(self):
         test=ParsedParameterFile(self.theFile)
@@ -351,7 +353,11 @@ theSuite.addTest(unittest.makeSuite(MakeStringFunction,"test"))
 class IncludeFilesRoundTrip(unittest.TestCase):
     def setUp(self):
         self.theDir=tmpnam()
-        system("cp -r "+path.join(simpleBikeTutorial(),"0")+" "+self.theDir)
+        if oldTutorialStructure():
+            null="0"
+        else:
+            null="0.org"
+        system("cp -r "+path.join(simpleBikeTutorial(),null)+" "+self.theDir)
         self.theFile=path.join(self.theDir,"U")
         
     def tearDown(self):

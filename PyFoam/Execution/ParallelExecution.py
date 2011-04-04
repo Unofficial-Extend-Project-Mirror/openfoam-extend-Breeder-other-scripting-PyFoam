@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ParallelExecution.py 11495 2010-04-21 11:02:03Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/ParallelExecution.py 6780 2010-08-13T13:32:00.345730Z bgschaid  $ 
 """Things that are needed for convenient parallel Execution"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -114,12 +114,18 @@ class LAMMachine(Utilities):
             mpirun+=["-np",nr]
         elif(foamMPI()=="OPENMPI" or foamMPI()=="SYSTEMOPENMPI"):
             nr=[]
+            if "MPI_ARCH_PATH" in environ and config().getboolean("MPI","OpenMPI_add_prefix"):
+                nr+=["--prefix",environ["MPI_ARCH_PATH"]]
             if self.procNr!=None:
-                nr=["-np",str(self.procNr)]
+                nr+=["--n",str(self.procNr)]
             machine=[]
             if self.mFile!=None:
-                machine=["-machinefile",self.mFile]
-            mpirun+=nr+machine
+                machine=["--machinefile",self.mFile]
+                if config().getdebug("ParallelExecution"):
+                    debug("Start of",self.mFile)
+                    debug("\n"+open(self.mFile).read())
+                    debug("End of",self.mFile)
+            mpirun+=machine+nr
         else:
             error(" Unknown or missing MPI-Implementation for mpirun: "+foamMPI())
 

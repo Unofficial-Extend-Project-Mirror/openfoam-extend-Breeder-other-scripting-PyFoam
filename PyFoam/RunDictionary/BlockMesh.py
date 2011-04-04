@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BlockMesh.py 10067 2009-03-02 09:39:42Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/BlockMesh.py 4667 2009-02-28T22:46:13.716267Z bgschaid  $ 
 """Manipulate a C{blockMeshDict}"""
 
 import re,os

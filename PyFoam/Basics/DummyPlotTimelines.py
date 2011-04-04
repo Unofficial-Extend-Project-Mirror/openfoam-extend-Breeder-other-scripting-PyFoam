@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: DummyPlotTimelines.py 10932 2009-10-01 23:03:38Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/DummyPlotTimelines.py 5686 2009-10-01T23:01:19.710923Z bgschaid  $ 
 """Plots a collection of timelines"""
 
 from PyFoam.Error import warning,error

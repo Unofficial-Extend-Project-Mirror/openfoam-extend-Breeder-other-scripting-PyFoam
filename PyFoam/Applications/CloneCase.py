@@ -11,10 +11,14 @@ from PyFoam.Error import error,warning
 
 from os import path
 
+from PyFoam.Basics.GeneralVCSInterface import getVCS
+
 class CloneCase(PyFoamApplication):
     def __init__(self,args=None):
         description="""
 Clones a case by copying the system, constant and 0-directories
+
+If the case is under VCS then the cloning mechanism of the VCS is used
 """
         PyFoamApplication.__init__(self,
                                    args=args,
@@ -54,6 +58,11 @@ Clones a case by copying the system, constant and 0-directories
         behave=OptionGroup(self.parser,
                            "Behaviour")
         self.parser.add_option_group(behave)
+        behave.add_option("--parallel",
+                          action="store_true",
+                          dest="parallel",
+                          default=False,
+                          help="Clone the processor-directories")
         behave.add_option("--force",
                           action="store_true",
                           dest="force",
@@ -64,6 +73,11 @@ Clones a case by copying the system, constant and 0-directories
                           dest="followSymlinks",
                           default=False,
                           help="Follow symlinks instead of just copying them")
+        behave.add_option("--no-vcs",
+                          action="store_false",
+                          dest="vcs",
+                          default=True,
+                          help="Do NOT use the VCS-clone mechanism if the case is under source control")
 
     def run(self):
         if len(self.parser.getArgs())>2:
@@ -84,8 +98,20 @@ Clones a case by copying the system, constant and 0-directories
         elif not path.exists(path.dirname(dName)):
             warning("Directory",path.dirname(dName),"does not exist. Creating")
                 
-        sol=SolutionDirectory(sName,archive=None,paraviewLink=False)
+        sol=SolutionDirectory(sName,
+                              archive=None,
+                              paraviewLink=False,
+                              parallel=self.opts.parallel)
 
+        if sol.determineVCS()!=None and self.opts.vcs:
+            if self.opts.chemkin or self.opts.additional or self.opts.latest:
+                self.error("Using an unimplemented option together with VCS")
+            
+            vcsInter=getVCS(sol.determineVCS(),
+                            path=sol.name)
+            vcsInter.clone(dName)
+            return
+        
         if self.parser.getOptions().chemkin:
             sol.addToClone("chemkin")
 

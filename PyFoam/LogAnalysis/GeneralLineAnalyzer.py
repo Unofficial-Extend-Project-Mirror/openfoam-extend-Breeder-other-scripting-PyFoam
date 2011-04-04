@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GeneralLineAnalyzer.py 10767 2009-08-24 07:51:26Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/GeneralLineAnalyzer.py 7014 2010-11-21T23:14:21.485436Z bgschaid  $ 
 """Line analyzer with output and the capability to store lines"""
 
 from LogLineAnalyzer import LogLineAnalyzer
@@ -16,10 +16,12 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
                  titles=[],
                  accumulation=None,
                  singleFile=False,
+                 progressTemplate=None,
                  startTime=None,
                  endTime=None):
         """
         @param titles: The titles of the data elements
+        @param progressTemplate: Progress output to be reported
         """
         LogLineAnalyzer.__init__(self)
 
@@ -45,6 +47,9 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
         
         self.master=None
 
+        self.didProgress=False
+        self.progressTemplate=progressTemplate
+        
     def setMaster(self,master):
         """Assign another line-analyzer that will do the actual data gathering"""
         self.master=master
@@ -79,7 +84,8 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
                     self.lines.setTime(self.getTime())
             except ValueError:
                 pass
-
+        self.didProgress=False
+        
     def getTimeline(self,name):
         """@param name: Name of the timeline to return
         @return: the timeline as two list: the times and the values"""
@@ -106,6 +112,14 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
                 self.addToFiles(m)
 
             self.endAnalysis(m)
+
+            if not self.didProgress and self.progressTemplate:
+                myProgress=self.progressTemplate
+                for i,g in enumerate(m.groups()):
+                    myProgress=myProgress.replace("$%d" % i,g)
+                self.writeProgress(myProgress)
+                
+            self.didProgress=False
 
     def startAnalysis(self,match):
         """Method at the start of a successfull match"""

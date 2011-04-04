@@ -42,10 +42,32 @@ class RedoPlot(PyFoamApplication):
                         action="store_true",
                         default=False,
                         help="Get the data from a pickle-file")
+
         self.parser.add_option_group(mode)
+
+        output=OptionGroup(self.parser,
+                           "Output",
+                           "Output of the data")
+        output.add_option("--csv-files",
+                          dest="csvFiles",
+                          action="store_true",
+                          default=False,
+                          help="Write CSV-files instead of plotting")
+        output.add_option("--file-prefix",
+                          dest="filePrefix",
+                          default="",
+                          help="Prefix to add to the names of the data files")
+        output.add_option("--raw-lines",
+                          dest="rawLines",
+                          action="store_true",
+                          default=False,
+                          help="Write the raw line data (not the way it is plotted)")
+        self.parser.add_option_group(output)
+
         plot=OptionGroup(self.parser,
                          "Plot mode",
                          "How the data should be plotted")
+
         plot.add_option("--implementation",
                         default="matplotlib",
                         dest="implementation",
@@ -95,11 +117,9 @@ class RedoPlot(PyFoamApplication):
                 self.server=xmlrpclib.ServerProxy("http://%s:%d" % (host,port))
                 methods=self.server.system.listMethods()
             except socket.error,reason:
-                print "Socket error while connecting:",reason
-                sys.exit(1)
+                self.error("Socket error while connecting:",reason)
             except xmlrpclib.ProtocolError,reason:
-                print "XMLRPC-problem",reason
-                sys.exit(1)
+                self.error("XMLRPC-problem",reason)
 
             plotInfo=self.executeCommand("getPlots()")
             lineInfo=self.executeCommand("getPlotData()")
@@ -122,6 +142,16 @@ class RedoPlot(PyFoamApplication):
             
         registry.resolveSlaves()
 
+        if self.opts.csvFiles and self.opts.rawLines:
+            for k,l in registry.lines.iteritems():
+                name=str(k)
+                if type(k)==int:
+                    name="Line%d" % k
+                name=self.opts.filePrefix+name+".csv"
+                print "Writing",k,"to",name
+                l.getData().writeCSV(name)
+            return
+        
         pRegistry=PlotLinesRegistry()
         
         for i,p in plotInfo.iteritems():
@@ -129,18 +159,21 @@ class RedoPlot(PyFoamApplication):
             print "Plotting",i,":",theId,
             spec=CustomPlotInfo(raw=p["spec"])
             if len(registry.get(p["data"]).getTimes())>0 and registry.get(p["data"]).getValueNames()>0:
-                mp=createPlotTimelines(registry.get(p["data"]),
-                                       spec,
-                                       implementation=self.opts.implementation,
-                                       showWindow=self.opts.showWindow,
-                                       registry=pRegistry)
-                if self.opts.insertTitles:
-                    mp.actualSetTitle(p["spec"]["theTitle"])
-                if self.opts.writePictures:
-                    if mp.hasData():
-                        mp.doHardcopy(self.opts.prefix+theId,"png")
-                    else:
-                        print "has no data",
+                if self.opts.csvFiles:
+                    registry.get(p["data"]).getData().writeCSV(self.opts.filePrefix+theId+".csv")
+                else:
+                    mp=createPlotTimelines(registry.get(p["data"]),
+                                           spec,
+                                           implementation=self.opts.implementation,
+                                           showWindow=self.opts.showWindow,
+                                           registry=pRegistry)
+                    if self.opts.insertTitles:
+                        mp.actualSetTitle(p["spec"]["theTitle"])
+                    if self.opts.writePictures:
+                        if mp.hasData():
+                            mp.doHardcopy(self.opts.prefix+theId,"png")
+                        else:
+                            print "has no data",
                 print
             else:
                 print "No data - skipping"

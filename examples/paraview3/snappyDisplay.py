@@ -18,7 +18,10 @@ snap=ParsedParameterFile(path.join(sol.systemDir(),"snappyHexMeshDict"))
 pointInMesh=tuple(snap["castellatedMeshControls"]["locationInMesh"])
 print "PointInMesh:",pointInMesh
 pt=Point("PointInMesh",pointInMesh)
-pt.repr.Color = (1,0,0)
+
+pt.repr.DiffuseColor = (1,0,0)
+
+geometries=[]
 
 for name,spec in snap["geometry"].iteritems():
     if spec["type"]=="triSurfaceMesh":
@@ -40,4 +43,7 @@ for name,spec in snap["geometry"].iteritems():
         print "Unknown Geometry type ",spec["type"]
 
     ob.repr.Opacity=0.7
-    ob.repr.Color=(0,1,0)
+    ob.repr.DiffuseColor=(0,1,0)
+
+    geometries.append(ob)
+    

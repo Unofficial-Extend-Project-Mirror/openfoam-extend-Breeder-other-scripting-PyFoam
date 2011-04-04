@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamOptionParser.py 10943 2009-10-09 07:31:48Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/FoamOptionParser.py 7200 2011-02-13T10:40:48.367544Z bgschaid  $ 
 """Parse options for the PyFoam-Scripts"""
 
 from optparse import OptionParser,TitledHelpFormatter
@@ -58,7 +58,7 @@ class FoamOptionParser(OptionParser):
         3 is default for pre-1.5 versions of OpenFOAM
         """
         (self.options,self.args)=self.parse_args(args=self.argLine)
-        
+            
         if "foamVersion" in dir(self.options):
             if self.options.foamVersion!=None:
                 if self.options.force32 and self.options.force64:
@@ -69,6 +69,8 @@ class FoamOptionParser(OptionParser):
                                   compileOption=self.options.compileOption)
             elif self.options.force32 or self.options.force64:
                 warning("Foring version to be 32 or 64 bit, but no version chosen. Doing nothing")
+            elif self.options.compileOption:
+                warning("No OpenFOAM-version chosen. Can't set compile-option to",self.options.compileOption)
                 
         if nr==None:
             if oldApp():

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Utilities.py 10375 2009-04-27 10:35:16Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/Utilities.py 4985 2009-04-27T17:43:32.496023Z bgschaid  $ 
 """ Utility functions
 
 Can be used via a class or as functions"""

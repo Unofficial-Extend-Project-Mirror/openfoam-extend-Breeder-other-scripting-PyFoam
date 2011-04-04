@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ParsedParameterFile.py 10727 2009-08-17 07:49:18Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/ParsedParameterFile.py 7397 2011-04-03T18:35:06.691206Z bgschaid  $ 
 """Parameter file is read into memory and modified there"""
 
 from FileBasis import FileBasisBackup
@@ -7,7 +7,7 @@ from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator
 
 from PyFoam.Basics.DataStructures import Vector,Field,Dimension,DictProxy,TupleProxy,Tensor,SymmTensor,Unparsed,UnparsedList
 
-from PyFoam.Error import error
+from PyFoam.Error import error,warning,FatalErrorPyFoamException
 
 from os import path
 from copy import deepcopy
@@ -25,6 +25,7 @@ class ParsedParameterFile(FileBasisBackup):
                  listDictWithHeader=False,
                  listLengthUnparsed=None,
                  noHeader=False,
+                 binaryMode=False,
                  noBody=False,
                  doMacroExpansion=False,
                  dontRead=False,
@@ -35,6 +36,8 @@ class ParsedParameterFile(FileBasisBackup):
         @param listDict: the file only contains a list
         @param listDictWithHeader: the file only contains a list and a header
         @param listLengthUnparsed: Lists longer than that length are not parsed
+        @param binaryMode: Parse long lists in binary mode (to be overridden by
+        the settings in the header
         @param noHeader: don't expect a header
         @param noBody: don't read the body of the file (only the header)
         @param doMacroExpansion: expand #include and $var
@@ -57,6 +60,8 @@ class ParsedParameterFile(FileBasisBackup):
         self.header=None
         self.content=None
 
+        self.binaryMode=binaryMode
+        
         if not dontRead:
             self.readFile()
 
@@ -71,6 +76,7 @@ class ParsedParameterFile(FileBasisBackup):
                               listLengthUnparsed=self.listLengthUnparsed,
                               noHeader=self.noHeader,
                               noBody=self.noBody,
+                              binaryMode=self.binaryMode,
                               doMacroExpansion=self.doMacros)
         
         self.content=parser.getData()
@@ -154,12 +160,18 @@ class FoamFileParser(PlyParser):
                  preserveNewlines=True,
                  listDict=False,
                  listDictWithHeader=False,
-                 listLengthUnparsed=None):
+                 listLengthUnparsed=None,
+                 binaryMode=False,
+                 duplicateCheck=False,
+                 duplicateFail=True):
         """@param content: the string to be parsed
         @param fName: Name of the actual file (if any)
         @param debug: output debug information during parsing
-        @param noHeader: switch that turns off the parsing of the header"""
+        @param noHeader: switch that turns off the parsing of the header
+        @param duplicateCheck: Check for duplicates in dictionaries
+        @param duplicateFail: Fail if a duplicate is discovered"""
 
+        self.binaryMode=binaryMode
         self.fName=fName
         self.data=None
         self.header=None
@@ -168,7 +180,9 @@ class FoamFileParser(PlyParser):
         self.doMacros=doMacroExpansion
         self.preserveComments=preserveComments
         self.preserveNewLines=preserveNewlines
-
+        self.duplicateCheck=duplicateCheck
+        self.duplicateFail=duplicateFail
+        
         self.collectDecorations=False
         self.inputMode=inputModes.merge
         
@@ -473,7 +487,15 @@ class FoamFileParser(PlyParser):
     def p_header(self,p):
         'header : FOAMFILE dictionary'
         p[0] = p[2]
-
+        if p[0]["format"]=="binary":
+            self.binaryMode=True
+            raise FatalErrorPyFoamException("Can not parse binary files. It is not implemented")
+        elif p[0]["format"]=="ascii":
+            self.binaryMode=False
+        else:
+            raise FatalErrorPyFoamException("Don't know how to parse file format",p[0]["format"])
+            
+ 
     def p_macro(self,p):
         '''macro : KANALGITTER include
                  | KANALGITTER inputMode
@@ -553,6 +575,12 @@ class FoamFileParser(PlyParser):
 
         if len(p)==3:
             p[0]=p[1]
+            if self.duplicateCheck:
+                if p[2][0] in p[0]:
+                    if self.duplicateFail:
+                        error("Key",p[2][0],"already defined")
+                    else:
+                        warning("Key",p[2][0],"already defined")
             p[0][p[2][0]]=p[2][1]
             p[0].addDecoration(p[2][0],self.getDecoration())
         else:
@@ -669,6 +697,7 @@ class FoamFileParser(PlyParser):
                     | dictkey prelist ';'
                     | dictkey fieldvalue ';'
                     | macro
+                    | substitution ';'
                     | dictkey dictionary'''
         if len(p)==4 and type(p[2])==list:
             # remove the prefix from long lists (if present)
@@ -685,8 +714,13 @@ class FoamFileParser(PlyParser):
                             tmp.extend(nix)
                             doAgain=True
                             break            
-        if len(p)>=3:
+        if len(p)==4:
             p[0] = ( p[1] , p[2] )
+        elif len(p)==3:
+            if p[2]==';':
+                p[0]= (p[1],'')
+            else:
+                p[0] = ( p[1] , p[2] )            
         else:
             p[0] = ( self.emptyCnt , p[1] )
             self.emptyCnt+=1
@@ -733,7 +767,12 @@ class FoamFileParser(PlyParser):
         '''dictitem : longitem
                     | pitem'''
         if type(p[1])==tuple:
-            p[0]=TupleProxy(p[1])
+            if len(p[1])==2 and p[1][0]=="uniform":
+                p[0]=Field(p[1][1])
+            elif len(p[1])==3 and p[1][0]=="nonuniform":
+                p[0]=Field(p[1][2],name=p[1][1])
+            else:
+                p[0]=TupleProxy(p[1])
         else:
             p[0] = p[1]
 
@@ -779,8 +818,9 @@ class FoamFileParser(PlyParser):
         # Just discard the token and tell the parser it's okay.
         # self.yacc.errok()
 
-class PyFoamParserError:
+class PyFoamParserError(FatalErrorPyFoamException):
     def __init__(self,descr,data=None):
+        FatalErrorPyFoamException.__init__(self,"Parser Error:",descr)
         self.descr=descr
         self.data=data
 
@@ -804,11 +844,21 @@ class PyFoamParserError:
 class FoamStringParser(FoamFileParser):
     """Convenience class that parses only a headerless OpenFOAM dictionary"""
 
-    def __init__(self,content,debug=False):
+    def __init__(self,
+                 content,
+                 debug=False,
+                 duplicateCheck=False,
+                 duplicateFail=False):
         """@param content: the string to be parsed
         @param debug: output debug information during parsing"""
 
-        FoamFileParser.__init__(self,content,debug=debug,noHeader=True,boundaryDict=False)
+        FoamFileParser.__init__(self,
+                                content,
+                                debug=debug,
+                                noHeader=True,
+                                boundaryDict=False,
+                                duplicateCheck=duplicateCheck,
+                                duplicateFail=duplicateFail)
 
     def __str__(self):
         return str(FoamFileGenerator(self.data))

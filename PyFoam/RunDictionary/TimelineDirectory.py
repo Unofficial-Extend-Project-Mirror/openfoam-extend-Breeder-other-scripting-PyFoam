@@ -8,6 +8,8 @@ from glob import glob
 from PyFoam.Error import error
 import math
 
+from PyFoam.Basics.SpreadsheetData import SpreadsheetData
+
 class TimelineDirectory(object):
     """A directory of sampled times"""
 
@@ -47,24 +49,27 @@ class TimelineDirectory(object):
         self.vectors=[]
         for v in listdir(self.dir):
             self.values.append(v)
-            if TimelineValue(self.dir,v).isVector:
+            if TimelineValue(self.dir,v,self.usedTime).isVector:
                 self.vectors.append(v)
                 
         self.allPositions=None
         
     def __iter__(self):
         for t in self.values:
-            yield TimelineValue(self.dir,t)
+            yield TimelineValue(self.dir,t,self.usedTime)
 
     def __getitem__(self,value):
         if value in self:
-            return TimelineValue(self.dir,value)
+            return TimelineValue(self.dir,value,self.usedTime)
         else:
-            raise KeyError,time
+            raise KeyError,value
 
     def __contains__(self,value):
         return value in self.values
     
+    def __len__(self):
+        return len(self.values)
+
     def sorttimes(self,x,y):
         """Sort function for the solution files"""
         if(float(x)==float(y)):
@@ -115,7 +120,7 @@ class TimelineDirectory(object):
         if unspecified"""
         
         if value==None:
-            value=se<lf.values
+            value=self.values
         if position==None:
             position=self.positions()
             
@@ -124,6 +129,8 @@ class TimelineDirectory(object):
         for v in value:
             for p in position:
                 fName=path.join(self.dir,v)
+                if not "positionIndex" in self:
+                    self.positions()
                 pos=self.positionIndex[self.positions().index(p)]
                 if v in self.vectors:
                     fName="< tr <%s -d '()'" %fName
@@ -142,7 +149,7 @@ class TimelineDirectory(object):
                     else:
                         error("Unsupported vector mode",vectorMode)
                         
-                sets.append((fName,v,p,pos))
+                sets.append((fName,v,p,pos,TimelineValue(self.dir,v,self.usedTime)))
                 
         return sets
 
@@ -155,7 +162,7 @@ class TimelineDirectory(object):
         if unspecified"""
         
         if value==None:
-            value=se<lf.values
+            value=self.values
         if position==None:
             position=self.positions()
             
@@ -165,7 +172,7 @@ class TimelineDirectory(object):
             posIndex.append(self.positions().index(p))
             
         for v in value:
-            val=TimelineValue(self.dir,v)
+            val=TimelineValue(self.dir,v,self.usedTime)
             data=val.getData(times)
             for i,t in enumerate(times):
                 used=[]
@@ -179,10 +186,13 @@ class TimelineDirectory(object):
 class TimelineValue(object):
     """A file with one timelined value"""
 
-    def __init__(self,sDir,val):
+    def __init__(self,sDir,val,time):
         """@param sDir: The timeline-dir
+        @param val: the value
         @param time: the timename"""
 
+        self.val=val
+        self.time=time
         self.file=path.join(sDir,val)
         poses=[]
 
@@ -193,10 +203,13 @@ class TimelineValue(object):
         if len(l1)<1 or l1[0]!='#':
             error("Data file",self.file,"has no description of the fields")
         l2=data.readline()
+
+        self._isProbe=True
         if l2[0]!='#':
             # Not a probe-file. The whole description is in the first line
             poses=l1[1:].split()[1:]
             firstData=l2
+            self._isProbe=False
         else:
             # probe-file so we need one more line
             l3=data.readline()
@@ -224,6 +237,18 @@ class TimelineValue(object):
                     self.positionIndex.append(i)
 
         self.cache={}
+
+    def __repr__(self):
+        if self.isVector:
+            vect=" (vector)"
+        else:
+            vect=""
+            
+        return "TimelineData of %s%s on %s at t=%s " % (self.val,vect,str(self.positions),self.time)
+
+    def isProbe(self):
+        """Is this a probe-file"""
+        return self._isProbe
 
     def timeRange(self):
         """Range of times"""
@@ -270,3 +295,23 @@ class TimelineValue(object):
             result.append(tmp)
 
         return result
+
+    def __call__(self):
+        """Return the data as a SpreadsheetData-object"""
+        
+        lines=open(self.file).readlines()
+        data=[]
+        for l in lines:
+            v=l.split()
+            if v[0][0]!='#':
+                data.append(map(lambda x:float(x.replace('(','').replace(')','')),v))
+        names=["time"]
+        if self.isVector:
+            for p in self.positions:
+                names+=[p+" x",p+" y",p+" z"]
+        else:
+            names+=self.positions
+
+        return SpreadsheetData(data=data,
+                               names=names,
+                               title="%s_t=%s" % (self.val,self.time))

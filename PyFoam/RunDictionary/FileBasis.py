@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FileBasis.py 10572 2009-07-08 14:41:54Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/FileBasis.py 7312 2011-03-02T22:16:22.092043Z bgschaid  $ 
 """Basis for the handling of OpenFOAM-files
 
 Transparently accepts gnuzipped files"""
@@ -222,6 +222,8 @@ class FileBasis(Utilities):
 class FileBasisBackup(FileBasis):
     """A file with a backup-copy"""
 
+    counter={}
+    
     def __init__(self,name,backup=False,createZipped=True):
         """@param name: The name of the parameter file
         @type name: str
@@ -232,15 +234,22 @@ class FileBasisBackup(FileBasis):
 
         if backup:
             self.backupName=self.name+".backup"
-            self.execute("cp "+self.name+" "+self.backupName)
+            try:
+                FileBasisBackup.counter[self.name]+=1
+            except KeyError:
+                FileBasisBackup.counter[self.name]=1
+                self.execute("cp "+self.name+" "+self.backupName)
         else:
             self.backupName=None
 
     def restore(self):
         """if a backup-copy was made the file is restored from this"""
         if self.backupName!=None:
-            self.execute("cp "+self.backupName+" "+self.name)
-            self.execute("rm "+self.backupName)
+            FileBasisBackup.counter[self.name]-=1
+            if FileBasisBackup.counter[self.name]==0:
+                self.execute("cp "+self.backupName+" "+self.name)
+                self.execute("rm "+self.backupName)
+                del FileBasisBackup.counter[self.name]
         
 def exists(name):
     f=FileBasis(name)

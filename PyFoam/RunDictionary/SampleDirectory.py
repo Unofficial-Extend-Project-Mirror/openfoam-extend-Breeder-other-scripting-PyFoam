@@ -5,6 +5,8 @@ from os import path,listdir
 from PyFoam.Error import error
 import math
 
+from PyFoam.Basics.SpreadsheetData import SpreadsheetData
+
 class SampleDirectory(object):
     """A directory of sampled times"""
 
@@ -24,6 +26,9 @@ class SampleDirectory(object):
                     pass
 
         self.times.sort(self.sorttimes)
+
+    def __len__(self):
+        return len(self.times)
 
     def __iter__(self):
         for t in self.times:
@@ -73,14 +78,15 @@ class SampleDirectory(object):
 
         return values
 
-    def getData(self,line=None,value=None,time=None):
+    def getData(self,line=None,value=None,time=None,note=""):
         """Get Sample sets
         @param line: name of the line. All
         if unspecified
         @param value: name of the sampled value. All
         if unspecified
         @param time: times for which the samples are to be got. All
-        if unspecified"""
+        if unspecified
+        @param note: A short annotation (for plots)"""
         
         if line==None:
             line=self.lines()
@@ -96,6 +102,7 @@ class SampleDirectory(object):
                 for v in value:
                     try:
                         d=self[t][(l,v)]
+                        d.note=note
                         sets.append(d)
                     except KeyError:
                         pass
@@ -171,11 +178,14 @@ class SampleTime(object):
                 vector,index=self.determineIndex(fName,val,tmp)
 
             col0.append(float(tmp[0]))
-            if vector:
-                data.append(tuple(map(float,tmp[index:index+3])))
-            else:
-                data.append(float(tmp[index]))
-                
+            try:
+                if vector:
+                    data.append(tuple(map(float,tmp[index:index+3])))
+                else:
+                    data.append(float(tmp[index]))
+            except IndexError:
+                raise KeyError(key)
+
         self.cache[key]=SampleData(fName=path.join(self.dir,fName),
                                    name=val,
                                    index=index,
@@ -212,7 +222,7 @@ class SampleTime(object):
 class SampleData(object):
     """Data from a sample-set"""
 
-    def __init__(self,fName,name,index,col0,data):
+    def __init__(self,fName,name,index,col0,data,note=""):
         """@param fName: Name of the file
         @param name: Name of the value
         @param index: Index of the data in the file
@@ -224,7 +234,8 @@ class SampleData(object):
         self.data=data
         self.name=name
         self.index=index
-
+        self.note=note
+        
     def __repr__(self):
         if self.isVector():
             vect=" (vector)"
@@ -276,3 +287,25 @@ class SampleData(object):
             return data
         else:
             return self.data
+
+    def __call__(self):
+        """Return the data as SpreadsheetData-object"""
+        
+        data=[]
+        if self.isVector():
+            for i,c in enumerate(self.col0):
+                data.append([c]+list(self.data[i]))
+        else:
+            for i,c in enumerate(self.col0):
+                data.append([c,self.data[i]])
+
+        names=["col0"]
+        if self.isVector():
+            names+=[self.name+"_x",self.name+"_y",self.name+"_z"]
+        else:
+            names.append(self.name)
+
+        return SpreadsheetData(data=data,
+                               names=names,
+                               title="%s_t=%s" % (self.line(),self.time()))
+

@@ -1,9 +1,13 @@
-#  ICE Revision: $Id: FoamLogAnalyzer.py 10893 2009-09-24 08:29:45Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/FoamLogAnalyzer.py 7013 2010-11-21T22:22:06.604864Z bgschaid  $ 
 """Analyze OpenFOAM logs"""
 
 from TimeLineAnalyzer import TimeLineAnalyzer
 from PyFoam.Basics.LineReader import LineReader
 from PyFoam.Error import error
+
+from PyFoam.Basics.ProgressOutput import ProgressOutput
+
+from sys import stdout
 
 class FoamLogAnalyzer(object):
     """Base class for all analyzers
@@ -21,6 +25,10 @@ class FoamLogAnalyzer(object):
         self.line=LineReader()
         self.timeListeners=[]
         self.timeTriggers=[]
+
+        self.progressOut=None
+        if progress:
+            self.progressOut=ProgressOutput(stdout)
         
         tm=TimeLineAnalyzer(progress=progress)
         self.addAnalyzer("Time",tm)
@@ -39,12 +47,20 @@ class FoamLogAnalyzer(object):
         @param time: the new value of the time
         """
         if time!=self.time:
+            if self.progressOut:
+                self.progressOut.reset()
+                
             self.time=time
             for listener in self.timeListeners:
                 listener.timeChanged()
             for nm in self.analyzers:
                 self.analyzers[nm].timeChanged()
             self.checkTriggers()
+
+    def writeProgress(self,msg):
+        """Write a message to the progress output"""
+        if self.progressOut:
+            self.progressOut(msg)
             
     def addTimeListener(self,listener):
         """@param listener: An object that is notified when the time changes. Has to

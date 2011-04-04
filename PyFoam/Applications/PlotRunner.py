@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotRunner.py 11400 2010-03-30 08:13:56Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotRunner.py 7319 2011-03-03T23:10:51.400635Z bgschaid  $ 
 """
 Class that implements pyFoamPlotRunner
 """
@@ -22,6 +22,7 @@ from CommonSafeTrigger import CommonSafeTrigger
 from CommonWriteAllTrigger import CommonWriteAllTrigger
 from CommonLibFunctionTrigger import CommonLibFunctionTrigger
 from CommonServer import CommonServer
+from CommonVCSCommit import CommonVCSCommit
 
 from os import path
 
@@ -36,7 +37,8 @@ class PlotRunner(PyFoamApplication,
                  CommonReportUsage,
                  CommonParallel,
                  CommonRestart,
-                 CommonStandardOutput):
+                 CommonStandardOutput,
+                 CommonVCSCommit):
     def __init__(self,args=None):
         description="""
         runs an OpenFoam solver needs the usual 3 arguments (<solver>
@@ -75,23 +77,26 @@ class PlotRunner(PyFoamApplication,
         CommonWriteAllTrigger.addOptions(self)
         CommonLibFunctionTrigger.addOptions(self)
         CommonServer.addOptions(self)
+        CommonVCSCommit.addOptions(self)
         
     def run(self):
         self.processPlotOptions()
         
         cName=self.parser.casePath()
         self.checkCase(cName)
+        self.addLocalConfig(cName)
 
         self.processPlotLineOptions(autoPath=cName)
         
         sol=SolutionDirectory(cName,archive=None)
-        sol.addLocalConfig()
 
         self.clearCase(sol)
 
-        lam=self.getParallel()
+        lam=self.getParallel(sol)
         
         self.setLogname()
+
+        self.checkAndCommit(sol)
         
         run=GnuplotRunner(argv=self.parser.getArgs(),
                           smallestFreq=self.opts.frequency,

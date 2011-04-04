@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: TimeLineCollection.py 10977 2009-10-28 13:21:44Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/TimeLineCollection.py 7328 2011-03-06T20:34:24.030569Z bgschaid  $ 
 """Collection of array of timelines"""
 
 from PyFoam.Error import error
@@ -406,3 +406,17 @@ class TimeLineCollection(object):
         
         transmissionLock.release()
 
+    def getData(self):
+        """Return the whole current data as a SpreadsheetData-object"""
+
+        from SpreadsheetData import SpreadsheetData
+        import numpy
+        
+        names=["time"]+self.values.keys()
+        data=[]
+        data.append(self.times)
+        for k in self.values.keys():
+            data.append(self.values[k])
+
+        return SpreadsheetData(names=names,data=numpy.asarray(data).transpose())
+    

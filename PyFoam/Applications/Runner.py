@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Runner.py 10948 2009-10-13 08:37:46Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Runner.py 7319 2011-03-03T23:10:51.400635Z bgschaid  $ 
 """
 Application class that implements pyFoamRunner
 """
@@ -22,6 +22,7 @@ from CommonStandardOutput import CommonStandardOutput
 from CommonParallel import CommonParallel
 from CommonRestart import CommonRestart
 from CommonServer import CommonServer
+from CommonVCSCommit import CommonVCSCommit
 
 from os import path
 
@@ -35,7 +36,8 @@ class Runner(PyFoamApplication,
              CommonMultiRegion,
              CommonParallel,
              CommonServer,
-             CommonStandardOutput):
+             CommonStandardOutput,
+             CommonVCSCommit):
     def __init__(self,args=None):
         description="""
         Runs an OpenFoam solver.  Needs the usual 3 arguments (<solver>
@@ -64,6 +66,7 @@ class Runner(PyFoamApplication,
         CommonLibFunctionTrigger.addOptions(self)
         CommonMultiRegion.addOptions(self)
         CommonServer.addOptions(self)
+        CommonVCSCommit.addOptions(self)
         
     def run(self):
         if self.opts.keeppseudo and (not self.opts.regions and self.opts.region==None):
@@ -73,6 +76,7 @@ class Runner(PyFoamApplication,
 
         casePath=self.parser.casePath()
         self.checkCase(casePath)
+        self.addLocalConfig(casePath)
         
         self.addToCaseLog(casePath,"Starting")
 
@@ -88,12 +92,15 @@ class Runner(PyFoamApplication,
 
         self.clearCase(SolutionDirectory(casePath,archive=None))
 
-        lam=self.getParallel()
+        lam=self.getParallel(SolutionDirectory(casePath,archive=None))
+
+        self.checkAndCommit(SolutionDirectory(casePath,archive=None))
         
         for theRegion in regionNames:
             args=self.buildRegionArgv(casePath,theRegion)
             self.setLogname()
             run=AnalyzedRunner(BoundingLogAnalyzer(progress=self.opts.progress,
+                                                   doFiles=self.opts.writeFiles,
                                                    singleFile=self.opts.singleDataFilesOnly,
                                                    doTimelines=True),
                                silent=self.opts.progress,
@@ -107,7 +114,8 @@ class Runner(PyFoamApplication,
                                remark=self.opts.remark,
                                jobId=self.opts.jobId)
 
-            run.createPlots(customRegexp=self.lines_)
+            run.createPlots(customRegexp=self.lines_,
+                            writeFiles=self.opts.writeFiles)
             
             self.addWriteAllTrigger(run,SolutionDirectory(casePath,archive=None))
             self.addLibFunctionTrigger(run,SolutionDirectory(casePath,archive=None))

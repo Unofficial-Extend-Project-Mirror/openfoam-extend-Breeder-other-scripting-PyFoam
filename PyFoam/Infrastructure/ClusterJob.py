@@ -13,6 +13,7 @@ from PyFoam.FoamInformation import changeFoamVersion
 from PyFoam.Error import error,warning
 from PyFoam import configuration as config
 from PyFoam.FoamInformation import oldAppConvention as oldApp
+from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 def checkForMessageFromAbove(job):
     if not job.listenToTimer:
@@ -37,24 +38,31 @@ class ClusterJob:
     There is a number of variables in this class that are used to
     'communicate' information between the various stages"""
 
-    def __init__(self,basename,
+    def __init__(self,
+                 basename,
                  arrayJob=False,
                  hardRestart=False,
                  autoParallel=True,
-                 doAutoReconstruct=True,
+                 doAutoReconstruct=None,
                  foamVersion=None,
+                 compileOption=None,
                  useFoamMPI=False,
-                 multiRegion=False):
+                 multiRegion=False,
+                 isDecomposed=False):
         """Initializes the Job
         @param basename: Basis name of the job
         @param arrayJob: this job is a parameter variation. The tasks
         are identified by their task-id
         @param hardRestart: treat the job as restarted
         @param autoParallel: Parallelization is handled by the base-class
-        @param doAutoReconstruct: Automatically reconstruct the case if autoParalellel is set
+        @param doAutoReconstruct: Automatically reconstruct the case if
+        autoParalellel is set. If the value is None then it is looked up from
+        the configuration
         @param foamVersion: The foam-Version that is to be used
+        @param compileOption: Forces compile-option (usually 'Opt' or 'Debug')
         @param useFoamMPI: Use the OpenMPI supplied with OpenFOAM
-        @param multiRegion: This job consists of multiple regions"""
+        @param multiRegion: This job consists of multiple regions
+        @param isDecomposed: Assume that the job is already decomposed"""
 
         #        print os.environ
         
@@ -77,13 +85,17 @@ class ClusterJob:
         if foamVersion==None:
             foamVersion=config().get("OpenFOAM","Version")
             
-        changeFoamVersion(foamVersion)
+        changeFoamVersion(foamVersion,compileOption=compileOption)
 
         if not os.environ.has_key("WM_PROJECT_VERSION"):
             error("No OpenFOAM-Version seems to be configured. Set the foamVersion-parameter")
             
         self.autoParallel=autoParallel
+        
         self.doAutoReconstruct=doAutoReconstruct
+        if self.doAutoReconstruct==None:
+            self.doAutoReconstruct=config().getboolean("ClusterJob","doAutoReconstruct")
+            
         self.multiRegion=multiRegion
         
         self.hostfile=None
@@ -113,8 +125,8 @@ class ClusterJob:
             os.environ["PATH"]=config().get("ClusterJob","path")+":"+os.environ["PATH"]
             os.environ["LD_LIBRARY_PATH"]=config().get("ClusterJob","ldpath")+":"+os.environ["LD_LIBRARY_PATH"]
         
-        self.isDecomposed=False
-
+        self.isDecomposed=isDecomposed
+                
     def fullJobId(self):
         """Return a string with the full job-ID"""
         result=str(self.jobID)
@@ -173,7 +185,7 @@ class ClusterJob:
         if not self.restarted:
             self.setState("Setting up")
             self.setup(parameters)
-            if self.autoParallel and self.nproc>1:
+            if self.autoParallel and self.nproc>1 and not self.isDecomposed:
                 self.setState("Decomposing")
                 self.autoDecompose()
 
@@ -201,8 +213,6 @@ class ClusterJob:
             self.setState("Post Running")
             self.preReconstructCleanup(parameters)
 
-            self.isDecomposed=False
-            
             if self.autoParallel and self.nproc>1:
                 self.setState("Reconstructing")
                 self.autoReconstruct()
@@ -259,6 +269,7 @@ class ClusterJob:
         if self.isDecomposed and self.nproc>1:
             arglist+=["--procnr=%d" % self.nproc,
                       "--machinefile=%s" % self.hostfile]
+
         if progress:
             arglist+=["--progress"]
         if noLog:
@@ -309,6 +320,8 @@ class ClusterJob:
         """Default reconstruction of a parallel run"""
 
         if self.doAutoReconstruct:
+            self.isDecomposed=False
+            
             self.foamRun("reconstructPar",
                          args=["--logname=ReconstructPar"])
         else:
@@ -401,14 +414,16 @@ class SolverJob(ClusterJob):
                  arrayJob=False,
                  hardRestart=False,
                  autoParallel=True,
-                 doAutoReconstruct=True,
+                 doAutoReconstruct=None,
                  foamVersion=None,
+                 compileOption=None,
                  useFoamMPI=False,
                  steady=False,
                  multiRegion=False,
                  progress=False,
                  solverProgress=False,
-                 solverNoLog=False):
+                 solverNoLog=False,
+                 isDecomposed=False):
         """@param template: Name of the template-case. It is assumed that
         it resides in the same directory as the actual case
         @param cloneParameters: a list with additional parameters for the
@@ -421,14 +436,18 @@ class SolverJob(ClusterJob):
                             autoParallel=autoParallel,
                             doAutoReconstruct=doAutoReconstruct,
                             foamVersion=foamVersion,
+                            compileOption=compileOption,
                             useFoamMPI=useFoamMPI,
-                            multiRegion=multiRegion)
+                            multiRegion=multiRegion,
+                            isDecomposed=isDecomposed)
         self.solver=solver
         self.steady=steady
         if template!=None and not self.restarted:
             template=path.join(path.dirname(self.casedir()),template)
             if path.abspath(basename)==path.abspath(template):
                 error("The basename",basename,"and the template",template,"are the same directory")
+            if isDecomposed:
+                cloneParameters+=["--parallel"]
             clone=CloneCase(
                 args=cloneParameters+[template,self.casedir(),"--follow-symlinks"])
         self.solverProgress=solverProgress

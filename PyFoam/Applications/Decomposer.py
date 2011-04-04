@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Decomposer.py 11635 2010-05-27 23:02:16Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Decomposer.py 7393 2011-03-29T14:55:03.425417Z bgschaid  $ 
 """
 Class that implements pyFoamDecompose
 """
@@ -18,6 +18,7 @@ from PyFoam.FoamInformation import foamVersion
 from CommonMultiRegion import CommonMultiRegion
 from CommonStandardOutput import CommonStandardOutput
 from CommonServer import CommonServer
+from CommonVCSCommit import CommonVCSCommit
 
 from os import path,system,listdir,symlink
 import sys,string
@@ -25,7 +26,8 @@ import sys,string
 class Decomposer(PyFoamApplication,
                  CommonStandardOutput,
                  CommonServer,
-                 CommonMultiRegion):
+                 CommonMultiRegion,
+                 CommonVCSCommit):
     def __init__(self,args=None):
         description="""
 Generates a decomposeParDict for a case and runs the decompose-Utility on that case
@@ -44,6 +46,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
         if foamVersion()>=(1,6):
             self.defaultMethod="scotch"
             self.decomposeChoices+=[self.defaultMethod]
+            self.decomposeChoices+=["parMetis"]
             
         spec=OptionGroup(self.parser,
                          "Decomposition Specification",
@@ -79,7 +82,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                         dest="processorWeights",
                         action="store",
                         default=None,
-                        help="The weights of the processors. A python list. Used for metis")
+                        help="The weights of the processors. A python list. Used for metis, scotch and parMetis")
         
         spec.add_option("--globalFaceZones",
                         dest="globalFaceZones",
@@ -135,6 +138,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
         CommonMultiRegion.addOptions(self)
         CommonStandardOutput.addOptions(self)
         CommonServer.addOptions(self,False)
+        CommonVCSCommit.addOptions(self)
         
     def run(self):
         if self.opts.keeppseudo and (not self.opts.regions and self.opts.region==None):
@@ -158,7 +162,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
             fZones=eval(self.opts.globalFaceZones)
             result["globalFaceZones"]=fZones
 
-        if method=="metis" or method=="scotch":
+        if method in ["metis","scotch","parMetis"]:
             if self.opts.processorWeights!=None:
                 weigh=eval(self.opts.processorWeights)
                 if nr!=len(weigh):
@@ -193,7 +197,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
         
         if self.opts.test:
             print str(gen)
-            sys.exit(-1)
+            return -1
         else:
             f=open(path.join(case,"system","decomposeParDict"),"w")
             writeDictionaryHeader(f)
@@ -202,6 +206,8 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
             
         if self.opts.clear:
             system("rm -rf "+path.join(case,"processor*"))
+
+        self.checkAndCommit(SolutionDirectory(case,archive=None))
 
         if self.opts.doDecompose:
             regionNames=[self.opts.region]

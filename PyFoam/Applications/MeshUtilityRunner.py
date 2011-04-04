@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: MeshUtilityRunner.py 10473 2009-05-25 08:00:21Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/MeshUtilityRunner.py 7319 2011-03-03T23:10:51.400635Z bgschaid  $ 
 """
 Application class that implements pyFoamMeshUtilityRunner
 """
@@ -12,10 +12,12 @@ from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 from CommonLibFunctionTrigger import CommonLibFunctionTrigger
 from CommonServer import CommonServer
+from CommonVCSCommit import CommonVCSCommit
 
 class MeshUtilityRunner(PyFoamApplication,
                         CommonServer,
-                        CommonLibFunctionTrigger):
+                        CommonLibFunctionTrigger,
+                        CommonVCSCommit):
     def __init__(self,args=None):
         description="""
 Runs an OpenFoam utility that manipulates meshes.  Needs the usual 3
@@ -41,6 +43,7 @@ should therefor be used with care
     def addOptions(self):
         CommonLibFunctionTrigger.addOptions(self)
         CommonServer.addOptions(self,False)
+        CommonVCSCommit.addOptions(self)
         
     def run(self):
         cName=self.parser.casePath()
@@ -52,7 +55,9 @@ should therefor be used with care
         print "Clearing out old timesteps ...."
             
         sol.clearResults()
-            
+
+        self.checkAndCommit(SolutionDirectory(cName,archive=None))
+        
         run=BasicRunner(argv=self.parser.getArgs(),
                         server=self.opts.server,
                         logname="PyFoamMeshUtility")

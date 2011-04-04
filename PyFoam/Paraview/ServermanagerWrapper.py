@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ServermanagerWrapper.py 11666 2010-06-07 07:56:06Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Paraview/ServermanagerWrapper.py 6676 2010-06-06T19:17:36.696220Z bgschaid  $ 
 """ Wrapper class for the paraview servermanager
 
 Sets up the servermanager to be used with OpenFOAM-Data. Especially makes sure that

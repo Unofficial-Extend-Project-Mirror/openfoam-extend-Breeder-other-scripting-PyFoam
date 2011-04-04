@@ -11,10 +11,14 @@ from os import path
 
 ro=readerObject()
 
-env=ParsedParameterFile(path.join(caseDirectory().constantDir(),"environmentalProperties"))
-g=env["g"][2]
-
-# gly=Glyph("Gravity",ro.getCenter(),ro.getCenter()+0.5*g*abs(ro.getExtent())/abs(g))
+try:
+    env=ParsedParameterFile(path.join(caseDirectory().constantDir(),"environmentalProperties"))
+    g=env["g"][2]
+except IOError:
+    env=ParsedParameterFile(path.join(caseDirectory().constantDir(),"g"))
+    g=env["value"]
+    
+#gly=Glyph("Gravity2D",ro.getCenter(),ro.getCenter()+0.5*g*abs(ro.getExtent())/abs(g))
 gly=Arrow("Gravity",ro.getCenter(),ro.getCenter()+0.5*g*abs(ro.getExtent())/abs(g))
 
-gly.repr.Color=(0,0,0)
+gly.repr.DiffuseColor=(0,0,0)

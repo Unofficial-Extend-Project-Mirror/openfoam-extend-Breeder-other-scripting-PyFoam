@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GnuplotFile.py 10067 2009-03-02 09:39:42Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GnuplotFile.py 4667 2009-02-28T22:46:13.716267Z bgschaid  $ 
 """Analyze a file with GNUPLOT-Data"""
 
 from string import strip,split

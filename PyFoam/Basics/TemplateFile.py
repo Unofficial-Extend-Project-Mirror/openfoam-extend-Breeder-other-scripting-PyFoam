@@ -53,7 +53,7 @@ class TemplateFile:
 
         symbols=vals.copy()
         
-        exp=re.compile("\$[^$]*\$")
+        exp=re.compile("\$[^$\n]*\$")
         
         for n,e in self.expressions.iteritems():
             if vals.has_key(n):

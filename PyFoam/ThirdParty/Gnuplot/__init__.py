@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-# $Id: __init__.py 294 2006-11-07 02:33:08Z parejkoj $
+# $Id: __init__.py 306 2008-05-02 01:09:02Z alford $
 
 # Copyright (C) 1998-2003 Michael Haggerty <mhagger@alum.mit.edu>
 #
@@ -156,7 +156,7 @@ Bugs:
 
 """
 
-__version__ = '1.7+'
+__version__ = '1.8'
 
 # Other modules that should be loaded for 'from Gnuplot import *':
 __all__ = ['utils', 'funcutils', ]

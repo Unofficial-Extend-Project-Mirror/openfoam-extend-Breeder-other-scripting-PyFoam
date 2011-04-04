@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GeneralPlotTimelines.py 10977 2009-10-28 13:21:44Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GeneralPlotTimelines.py 7077 2011-01-02T20:22:44.071809Z bgschaid  $ 
 """Plots a collection of timelines. General superclass for te other implementations"""
 
 from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo,CustomPlotInfo
@@ -145,11 +145,6 @@ class GeneralPlotTimelines(object):
         """Sets the label on the first Y-Axis"""
 
         notImplemented(self,"setYLabel")
-
-    def setYLabel2(self,title):
-        """Sets the label on the second Y-Axis"""
-
-        notImplemented(self,"setYLabel2")
 
     def setYLabel2(self,title):
         """Sets the label on the second Y-Axis"""

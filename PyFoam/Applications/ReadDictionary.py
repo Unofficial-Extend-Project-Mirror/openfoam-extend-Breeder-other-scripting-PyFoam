@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ReadDictionary.py 9861 2009-01-05 16:22:37Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ReadDictionary.py 4365 2009-01-05T19:43:50.269309Z bgschaid  $ 
 """
 Application class that implements pyFoamReadDictionary
 """

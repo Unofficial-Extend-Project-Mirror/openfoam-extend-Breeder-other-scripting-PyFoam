@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BasicRunner.py 10967 2009-10-19 16:02:07Z fpoll $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/BasicRunner.py 7361 2011-03-17T09:41:49.879693Z bgschaid  $ 
 """Run a OpenFOAM command"""
 
 import sys
@@ -6,7 +6,7 @@ import string
 import gzip
 from os import path
 from threading import Timer
-from time import time
+from time import time,asctime
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 
@@ -20,7 +20,7 @@ from PyFoam.Infrastructure.FoamServer import FoamServer
 from PyFoam.Infrastructure.Logging import foamLogger
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.ParameterFile import ParameterFile
-from PyFoam.Error import warning,error
+from PyFoam.Error import warning,error,debug
 from PyFoam import configuration as config
 
 def restoreControlDict(ctrl,runner):
@@ -56,7 +56,8 @@ class BasicRunner(object):
                  restart=False,
                  noLog=False,
                  remark=None,
-                 jobId=None):
+                 jobId=None,
+                 writeState=True):
         """@param argv: list with the tokens that are the command line
         if not set the standard command line is used
         @param silent: if True no output is sent to stdout
@@ -67,7 +68,8 @@ class BasicRunner(object):
         @type lam: PyFoam.Execution.ParallelExecution.LAMMachine
         @param noLog: Don't output a log file
         @param remark: User defined remark about the job
-        @param jobId: Job ID of the controlling system (Queueing system)"""
+        @param jobId: Job ID of the controlling system (Queueing system)
+        @param writeState: Write the state to some files in the case"""
 
         if sys.version_info < (2,3):
             # Python 2.2 does not have the capabilities for the Server-Thread
@@ -100,9 +102,14 @@ class BasicRunner(object):
         self.silent=silent
         self.lam=lam
         self.origArgv=self.argv
+        self.writeState=writeState
+        self.__lastLastSeenWrite=0
+        self.__lastNowTimeWrite=0
         
         if self.lam!=None:
             self.argv=lam.buildMPIrun(self.argv)
+            if config().getdebug("ParallelExecution"):
+                debug("Command line:",string.join(self.argv))
         self.cmd=string.join(self.argv," ")
         foamLogger().info("Starting: "+self.cmd+" in "+path.abspath(path.curdir))
         self.logFile=path.join(self.dir,logname+".logfile")
@@ -169,10 +176,14 @@ class BasicRunner(object):
 
         self.startHandle()
 
+        self.writeStartTime()
+        self.writeTheState("Running")
+        
         check=BasicRunnerCheck()
         
         self.run.start()
-
+        interrupted=False
+        
         while self.run.check():
             try:
                 self.run.read()
@@ -181,6 +192,7 @@ class BasicRunner(object):
 
                 line=self.run.getLine()
                 self.lastLogLineSeen=time()
+                self.writeLastSeen()
 
                 tmp=check.getTime(line)
                 if check.controlDictRead(line):
@@ -193,6 +205,8 @@ class BasicRunner(object):
                         
                 if tmp!=None:
                     self.nowTime=tmp
+                    self.writeTheState("Running",always=False)
+                    self.writeNowTime()
                     self.lastTimeStepSeen=time()
                     if self.createTime==None:
                         # necessary because interFoam reports no creation time
@@ -237,9 +251,16 @@ class BasicRunner(object):
             except KeyboardInterrupt,e:
                 foamLogger().warning("Keyboard Interrupt")
                 self.run.interrupt()
-
+                self.writeTheState("Interrupted")
+                interrupted=True
+                
+        self.writeNowTime(force=True)
+       
         self.stopHandle()
 
+        if not interrupted:
+            self.writeTheState("Finished")
+            
         for t in self.endTriggers:
             t()
 
@@ -252,6 +273,30 @@ class BasicRunner(object):
             
         foamLogger().info("Finished")
 
+    def writeToStateFile(self,fName,message):
+        """Write a message to a state file"""
+        if self.writeState:
+            open(path.join(self.dir,"PyFoamState."+fName),"w").write(message+"\n")
+        
+    def writeStartTime(self):
+        """Write the real time the run was started at"""
+        self.writeToStateFile("StartedAt",asctime())
+
+    def writeTheState(self,state,always=True):
+        """Write the current state the run is in"""
+        if always or (time()-self.__lastLastSeenWrite)>9:
+            self.writeToStateFile("TheState",state)
+        
+    def writeLastSeen(self):
+        if (time()-self.__lastLastSeenWrite)>10:
+            self.writeToStateFile("LastOutputSeen",asctime())
+            self.__lastLastSeenWrite=time()
+
+    def writeNowTime(self,force=False):
+        if (time()-self.__lastNowTimeWrite)>10 or force:
+            self.writeToStateFile("CurrentTime",str(self.nowTime))
+            self.__lastNowTimeWrite=time()
+    
     def runOK(self):
         """checks whether the run was successful"""
         if self.started:

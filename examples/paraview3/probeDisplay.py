@@ -6,6 +6,8 @@
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
+from PyFoam.Basics.DataStructures import DictProxy
+
 from PyFoam.Paraview import caseDirectory
 from PyFoam.Paraview.SimpleSources import Point
 from PyFoam.Paraview.SimpleFilters import Group
@@ -26,24 +28,24 @@ grps=[]
 name="Nix"
 
 if "functions" in ctrl:
-    for f in ctrl["functions"]:
-        if type(f)==str:
-            print "Group:",f
-            name=f
-        else:
-            if f["type"]=="probes":
-                pObs=[]
-                for p in f["probeLocations"]:
-                    probes.append(p)
-                    pObs.append(Point("Probe_%d_in_%s" % (probeNr,name),p))
-                    probeNr += 1
-                grp=Group("Probes_%s" % name)
-                groupNr += 1
-                for o in pObs:
-                    grp.add(o)
-                    o.repr.Visibility = False
-                grp.repr.Color = (1,0,0)
-                grps.append(grp)
+    lst=ctrl["functions"]
+    if type(lst) in [dict,DictProxy]:
+        pass
+    for name,f in lst.iteritems():
+        print "Group:",name
+        if f["type"]=="probes":
+            pObs=[]
+            for p in f["probeLocations"]:
+                probes.append(p)
+                pObs.append(Point("Probe_%d_in_%s" % (probeNr,name),p))
+                probeNr += 1
+            grp=Group("Probes_%s" % name)
+            groupNr += 1
+            for o in pObs:
+                grp.add(o)
+                o.repr.Visibility = False
+            grp.repr.DiffuseColor = (1,0,0)
+            grps.append(grp)
                 
 print "Probes:",probes
 
@@ -52,4 +54,4 @@ if len(grps)>1:
     for o in grps:
         total.add(o)
         o.repr.Visibility = False
-    total.repr.Color = (1,0,0)
+        total.repr.DiffuseColor = (1,0,0)

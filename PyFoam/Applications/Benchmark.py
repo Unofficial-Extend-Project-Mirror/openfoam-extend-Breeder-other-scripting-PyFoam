@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Benchmark.py 9166 2008-08-04 12:21:49Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Benchmark.py 7393 2011-03-29T14:55:03.425417Z bgschaid  $ 
 """
 Class that implements pyFoamBenchmark
 """
@@ -75,12 +75,10 @@ class Benchmark(PyFoamApplication):
             nrCpus=config.getint("General","nProcs")
             machineFile=config.get("General","machines")
             if not path.exists(machineFile):
-                print "Machine file ",machineFile,"needed for parallel run"
-                sys.exit(-1)
+                self.error("Machine file ",machineFile,"needed for parallel run")
             lam=LAMMachine(machineFile,nr=nrCpus)
             if lam.cpuNr()>nrCpus:
-                print "Wrong number of CPUs: ",lam.cpuNr()
-                sys.exit(-1)
+                self.error("Wrong number of CPUs: ",lam.cpuNr())
 
             print "Running parallel on",lam.cpuNr(),"CPUs"
 
@@ -90,8 +88,7 @@ class Benchmark(PyFoamApplication):
             casesDirectory=foamTutorials()
 
         if not path.exists(casesDirectory):
-            print "Directory",casesDirectory,"needed with the benchmark cases is missing"
-            sys.exit(-1)
+            self.error("Directory",casesDirectory,"needed with the benchmark cases is missing")
         else:
             print "Using cases from directory",casesDirectory
 

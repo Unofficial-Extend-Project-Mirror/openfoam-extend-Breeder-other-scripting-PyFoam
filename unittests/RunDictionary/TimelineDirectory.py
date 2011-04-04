@@ -1,0 +1,124 @@
+import unittest
+
+from PyFoam.RunDictionary.TimelineDirectory import TimelineDirectory,TimelineValue
+from PyFoam.Basics.SpreadsheetData import SpreadsheetData
+
+from os import path,environ,system,mkdir
+from shutil import rmtree
+
+theSuite=unittest.TestSuite()
+
+theDir="/tmp/timelineDirectoryTest"
+
+def destroyDirectory():
+    if path.exists(theDir):
+        rmtree(theDir)
+
+def createDirectory():
+    destroyDirectory()
+
+    mkdir(theDir)
+    mkdir(path.join(theDir,"timeline"))
+    mkdir(path.join(theDir,"timeline","0"))
+    open(path.join(theDir,"timeline","0","p"),"w").write(
+"""# time p p2 p3
+0 0 0 0 
+1 0 0 1
+3 1 1 1
+""")
+    open(path.join(theDir,"timeline","0","h"),"w").write(
+"""# time p p2 p3
+0 0 0 0 
+1 0 1
+3 1 1 1
+""")
+    mkdir(path.join(theDir,"timeline","5"))
+    mkdir(path.join(theDir,"probes"))
+    mkdir(path.join(theDir,"probes","0"))
+    open(path.join(theDir,"probes","0","p"),"w").write(
+"""# x 0 1 2 3
+# y 0 0 0 1
+# z 1 1 1 1
+# Time
+0 0 0 0 1 
+1 0 0 1 1
+3 1 1 1 1
+""")
+    open(path.join(theDir,"probes","0","h"),"w").write(
+"""# x 0 1 2 3
+# y 0 0 0 1
+# z 1 1 1 1
+# Time
+0 0 0 0 0 
+1 0 1
+3 1 1 1
+""")
+
+class TimelineDirectoryTest(unittest.TestCase):
+    def setUp(self):
+        createDirectory()
+
+    def tearDown(self):
+        destroyDirectory()
+
+    def testFindCorrectNames(self):
+        sd=TimelineDirectory(theDir,writeTime=0.1)
+        self.assertEqual(len(sd),2)
+        self.assertEqual(sd.timeRange(),(0.,3.))
+        self.assertEqual(len(sd.getData([0])),2)
+        self.assertEqual(len(sd.getData([0])[0][2]),4)
+        self.assertEqual(len(sd.getDataLocation()),8)
+        self.assertEqual(sd.positions(),  ['(0 0 1)', '(1 0 1)', '(2 0 1)', '(3 1 1)'])
+
+theSuite.addTest(unittest.makeSuite(TimelineDirectoryTest,"test"))
+
+class TimelineValueTest(unittest.TestCase):
+    def setUp(self):
+        createDirectory()
+
+    def tearDown(self):
+        destroyDirectory()
+
+    def testGetTimes(self):
+        sd=TimelineDirectory(theDir)
+        st=sd["p"]
+        self.assertEqual(st.getData([0.5,1,2,4]), [[0.0, 0.0, 0.0, 1.0], 
+                                                   [0.0, 0.0, 1.0, 1.0], 
+                                                   [0.0, 0.0, 1.0, 1.0], 
+                                                   [1.0, 1.0, 1.0, 1.0]] )
+        self.assert_(st.isProbe())
+        st=sd["h"]
+        # this should be checked, but I don't want to
+        self.assertEqual(st.getData([0.5,1,2,4]), [[0.0, 0.0, 0.0, 0.0], 
+                                                   [0.0, 1.0], 
+                                                   [0.0, 1.0], 
+                                                   [1.0, 1.0, 1.0]])
+        self.assertRaises(KeyError,sd.__getitem__,"ha")
+
+    def testGetTimesTimeline(self):
+        sd=TimelineDirectory(theDir,dirName="timeline")
+        st=sd["p"]
+        self.assertEqual(st.getData([0.5,1,2,4]),[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [1.0, 1.0, 1.0]])
+        self.assert_(not st.isProbe())
+        st=sd["h"]
+        self.assertEqual(st.getData([0.5,1,2,4]), [[0.0, 0.0, 0.0], [0.0, 1.0], [0.0, 1.0], [1.0, 1.0, 1.0]])
+        self.assertRaises(KeyError,sd.__getitem__,"ha")
+
+    def testGetSpreadsheet(self):
+        csvName="/tmp/nix.csv"
+        sd=TimelineDirectory(theDir)
+        st=sd["p"]
+        spread=st()
+        spread.writeCSV(csvName)
+        self.assertEqual(len(st.positions)+1,len(spread.names()))
+        rereadSpread=SpreadsheetData(csvName=csvName)
+        self.assertEqual(len(spread.names()),len(rereadSpread.names()))
+        self.assertEqual(len(spread.data),len(rereadSpread.data))        
+        sd=TimelineDirectory(theDir,"timeline")
+        st=sd["p"]
+        spread=st()
+        spread.writeCSV("/tmp/nix2.csv")
+        
+theSuite.addTest(unittest.makeSuite(TimelineValueTest,"test"))
+
+

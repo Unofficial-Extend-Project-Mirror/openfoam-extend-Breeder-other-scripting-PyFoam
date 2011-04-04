@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SolutionFile.py 8665 2008-03-31 17:28:46Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionFile.py 6755 2010-07-19T21:46:50.519125Z bgschaid  $ 
 """ Working with solutions """
 
 import re,os
@@ -199,6 +199,10 @@ class SolutionFile(FileBasis):
         fh.close()
         os.rename(fn,self.realName())
       
-    def getContent(self,listLengthUnparsed=None):
+    def getContent(self,
+                   listLengthUnparsed=None,
+                   doMacroExpansion=False):
         """Returns the parsed content of the file"""
-        return ParsedParameterFile(self.name,listLengthUnparsed=listLengthUnparsed)
+        return ParsedParameterFile(self.name,
+                                   listLengthUnparsed=listLengthUnparsed,
+                                   doMacroExpansion=doMacroExpansion)

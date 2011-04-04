@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Error.py 10866 2009-09-21 08:41:45Z bgschaid $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Error.py 7239 2011-02-23T17:26:11.661549Z bgschaid  $ 
 """Standardized Error Messages"""
 
 import traceback
@@ -36,11 +36,17 @@ def warning(*text):
     @param text: The error message"""
     __common(defaultFormat.warn,"Warning",*text)
     
-def error(*text):
-    """Prints an error message with the occuring line number and aborts
+def oldSchoolError(*text):
+    """Prints an error message and aborts
     @param text: The error message"""
     __common(defaultFormat.error,"Fatal Error",*text)
     sys.exit(-1)
+    
+def error(*text):
+    """Raises an error that might or might not get caught
+    @param text: The error message"""
+    #    __common(defaultFormat.error,"Fatal Error",*text)
+    raise FatalErrorPyFoamException(*text)
     
 def debug(*text):
     """Prints a debug message with the occuring line number
@@ -56,9 +62,23 @@ def notImplemented(obj,name):
 class PyFoamException(Exception):
      """The simplest exception for PyFoam"""
 
-     def __init__(self,descr):
-          self.descr=descr
+     def __init__(self,*text):
+          self.descr=text[0]
+          for t in text[1:]:
+               self.descr+=" "+str(t)
 
      def __str__(self):
           return "Problem in PyFoam: '"+self.descr+"'"
+          
+class FatalErrorPyFoamException(PyFoamException):
+     """The PyFoam-exception that does not expect to be caught"""
+
+     def __init__(self,*text):
+          info=getLine(up=2)
+          descr="PyFoam FATAL ERROR on line %d of file %s:" % (info[1],info[0])
+          #          super(FatalErrorPyFoamException,self).__init__(descr,*text) # does not work with Python 2.4
+          PyFoamException.__init__(self,descr,*text)
+
+     def __str__(self):
+          return "FatalError in PyFoam: '"+self.descr+"'"
           
