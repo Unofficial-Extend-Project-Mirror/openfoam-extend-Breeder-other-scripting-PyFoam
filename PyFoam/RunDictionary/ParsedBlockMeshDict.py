@@ -26,6 +26,7 @@ class ParsedBlockMeshDict(ParsedParameterFile):
         return map(lambda x:map(lambda y:float(y)*factor,x),self["vertices"])
 
     def blocks(self):
+        """Returns a list with the 8 vertices that define each block"""
         result=[]
         i=1
         while i<len(self["blocks"]):
@@ -38,9 +39,15 @@ class ParsedBlockMeshDict(ParsedParameterFile):
         return result
 
     def patches(self):
+        """Returns a dictionary with lists of 4-tuples that define each patch"""
         result={}
-        for i in range(1,len(self["patches"]),3):
-            result[self["patches"][i]]=map(lambda x:map(int,x),self["patches"][i+1])
+        if "boundary" in self:
+            # New format in 2.0
+            for k,d in zip(self["boundary"][0::2],self["boundary"][1::2]):
+                result[k]=map(lambda x:map(int,x),d["faces"])
+        else:
+            for i in range(1,len(self["patches"]),3):
+                result[self["patches"][i]]=map(lambda x:map(int,x),self["patches"][i+1])
             
         return result
 

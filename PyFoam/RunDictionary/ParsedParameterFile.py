@@ -1,11 +1,11 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/ParsedParameterFile.py 7397 2011-04-03T18:35:06.691206Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/ParsedParameterFile.py 7522 2011-07-14T22:29:37.344800Z bgschaid  $ 
 """Parameter file is read into memory and modified there"""
 
 from FileBasis import FileBasisBackup
 from PyFoam.Basics.PlyParser import PlyParser
 from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator
 
-from PyFoam.Basics.DataStructures import Vector,Field,Dimension,DictProxy,TupleProxy,Tensor,SymmTensor,Unparsed,UnparsedList
+from PyFoam.Basics.DataStructures import Vector,Field,Dimension,DictProxy,TupleProxy,Tensor,SymmTensor,Unparsed,UnparsedList,Codestream
 
 from PyFoam.Error import error,warning,FatalErrorPyFoamException
 
@@ -329,6 +329,7 @@ class FoamFileParser(PlyParser):
         'UNIFORM',
         'NONUNIFORM',
         'UNPARSEDCHUNK',
+        'CODESTREAMCHUNK',
         'REACTION',
         'SUBSTITUTION',
         'MERGE',
@@ -342,6 +343,8 @@ class FoamFileParser(PlyParser):
         'REMOVE',
         'INPUTMODE',
         'KANALGITTER',
+        'CODESTART',
+        'CODEEND',
     )
 
     reserved = {
@@ -362,6 +365,7 @@ class FoamFileParser(PlyParser):
 
     states = (
         ('unparsed', 'exclusive'),
+        ('codestream', 'exclusive'),
         )
 
     def t_unparsed_left(self,t):
@@ -388,6 +392,25 @@ class FoamFileParser(PlyParser):
         print "Error",t.lexer.lexdata[t.lexer.lexpos]
         t.lexer.skip(1)
     
+    def t_codestream_end(self,t):
+        r"\#\}"
+        t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos-2]
+        t.lexer.lexpos-=2
+        t.type = "CODESTREAMCHUNK"
+        t.lexer.lineno += t.value.count('\n')
+        t.lexer.begin('INITIAL')
+        return t
+
+    t_codestream_ignore = ''
+
+    def t_codestream_throwaway(self,t):
+        r'[^#]'
+        pass
+    
+    def t_codestream_error(self,t):
+        print "Error",t.lexer.lexdata[t.lexer.lexpos]
+        t.lexer.skip(1)
+    
     def t_NAME(self,t):
         r'[a-zA-Z_][+\-<>(),.\*|a-zA-Z_0-9&%:]*'
         t.type=self.reserved.get(t.value,'NAME')
@@ -410,6 +433,10 @@ class FoamFileParser(PlyParser):
 
         return t
 
+    t_CODESTART = r'\#\{'
+
+    t_CODEEND = r'\#\}'
+    
     t_KANALGITTER = r'\#'
     
     t_ICONST = r'(-|)\d+([uU]|[lL]|[uU][lL]|[lL][uU])?'
@@ -619,19 +646,21 @@ class FoamFileParser(PlyParser):
     def p_prelist_seen(self,p):
         '''prelist_seen : '''
         if self.listLengthUnparsed!=None:
-#            print "Hepp"
             if int(p[-1])>=self.listLengthUnparsed:
-#                print "Ho",p.lexer.lexpos,p.lexer.lexdata[p.lexer.lexpos-1:p.lexer.lexpos+2],p[1],len(p[1])
                 p.lexer.begin('unparsed')
                 p.lexer.level=0
                 p.lexer.code_start = p.lexer.lexpos
 
-#                t=p.lexer.token()
-                
-##                 print t.type
-##                 return t
-#        p[0] = None
-    
+    def p_codestream(self,p):
+        '''codestream : codeSeen CODESTART CODESTREAMCHUNK CODEEND '''
+        p[0] = Codestream(p[3])
+        
+    def p_codeSeen(self,p):
+        '''codeSeen : '''
+        p.lexer.begin('codestream')
+        p.lexer.level=0
+        p.lexer.code_start = p.lexer.lexpos
+        
     def p_prelist(self,p):
         '''prelist : integer prelist_seen '(' itemlist ')'
                    | integer prelist_seen '(' unparsed ')' '''
@@ -698,6 +727,7 @@ class FoamFileParser(PlyParser):
                     | dictkey fieldvalue ';'
                     | macro
                     | substitution ';'
+                    | dictkey codestream ';'
                     | dictkey dictionary'''
         if len(p)==4 and type(p[2])==list:
             # remove the prefix from long lists (if present)

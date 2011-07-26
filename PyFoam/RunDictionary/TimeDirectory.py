@@ -1,12 +1,13 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/TimeDirectory.py 7314 2011-03-02T22:54:00.234857Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/TimeDirectory.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
 """Working with direcotries from a time-step"""
 
 from SolutionFile import SolutionFile
 from ParsedParameterFile import ParsedParameterFile
 from FileBasis import FileBasis
 from PyFoam.Error import error,warning
+from PyFoam.Basics.Utilities import remove
 
-from os import listdir,stat,path,system,makedirs
+from os import listdir,stat,path,makedirs
 from stat import ST_CTIME
 from fnmatch import fnmatch
 
@@ -112,9 +113,9 @@ class TimeDirectory(object):
     def __remove(self,key):
         f=path.join(self.name,key)
         if path.exists(f):
-            system("rm -f "+f)
+            remove(f)
         elif path.exists(f+".gz"):
-            system("rm -f "+f+".gz")
+            remove(f+".gz")
         else:
             error("Problem:",key,"(",f,") is supposed to exists, but no file found")
         self.values.remove(key)
@@ -156,7 +157,8 @@ class TimeDirectory(object):
 
         for v in self.values:
             nm=path.join(self.name,v)
-            system("rm -f "+nm+" "+nm+".gz")
+            remove(nm)
+            remove(nm+".gz")
 
         self.reread(force=True)
             

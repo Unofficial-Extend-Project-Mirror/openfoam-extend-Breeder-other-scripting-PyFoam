@@ -1,11 +1,12 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/RegionCases.py 6624 2010-05-27T22:52:22.964263Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/RegionCases.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
 """Pseudo-Cases for Regions, built from symlinks"""
 
 from SolutionDirectory import SolutionDirectory
 from PyFoam.Error import error
 from glob import glob
+from PyFoam.Basics.Utilities import rmtree
 
-from os import path,mkdir,symlink,unlink,listdir,system,renames
+from os import path,mkdir,symlink,unlink,listdir,renames
 
 class RegionCases:
     """Builds pseudocases for the regions"""
@@ -132,4 +133,4 @@ class RegionCases:
             self.clean(r)
 
     def clean(self,region):
-        system("rm -rf "+self.master.name+"."+region)
+        rmtree(self.master.name+"."+region,ignore_errors=True)

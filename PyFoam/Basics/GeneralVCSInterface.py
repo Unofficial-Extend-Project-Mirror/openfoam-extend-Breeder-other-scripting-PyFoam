@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GeneralVCSInterface.py 7239 2011-02-23T17:26:11.661549Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GeneralVCSInterface.py 7439 2011-05-10T13:46:14.981530Z bgschaid  $ 
 """General interface to VCS implementations"""
 
 from PyFoam.Error import notImplemented,error
@@ -55,6 +55,8 @@ class GeneralVCSInterface(object):
     def addStandardIgnores(self):
         """Add the usual ignores"""
         self.addGlobToIgnore("*.gz")
+        self.addGlobToIgnore("*~")
+        self.addGlobToIgnore("*.foam")
         self.addRegexpToIgnore(".*\\.logfile")
         
 def getVCS(vcs,

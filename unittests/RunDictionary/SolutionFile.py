@@ -5,13 +5,18 @@ from PyFoam.RunDictionary.SolutionFile import SolutionFile
 from os import path,environ,system
 
 from TimeDirectory import damBreakTutorial,gammaName
+from PyFoam.FoamInformation import foamVersionNumber
 
 theSuite=unittest.TestSuite()
 
 class SolutionFileTest(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test."+gammaName()
-        system("cp "+path.join(damBreakTutorial(),"0",gammaName())+" "+self.theFile)
+        if foamVersionNumber()>=(2,0):
+            extension=".org"
+        else:
+            extension=""
+        system("cp "+path.join(damBreakTutorial(),"0",gammaName()+extension)+" "+self.theFile)
         
     def tearDown(self):
         system("rm "+self.theFile)
@@ -31,7 +36,11 @@ theSuite.addTest(unittest.makeSuite(SolutionFileTest,"test"))
 class SolutionFileTestZipped(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test."+gammaName()
-        system("cp "+path.join(damBreakTutorial(),"0",gammaName())+" "+self.theFile)
+        if foamVersionNumber()>=(2,0):
+            extension=".org"
+        else:
+            extension=""
+        system("cp "+path.join(damBreakTutorial(),"0",gammaName()+extension)+" "+self.theFile)
         system("gzip -f "+self.theFile)
         
     def tearDown(self):

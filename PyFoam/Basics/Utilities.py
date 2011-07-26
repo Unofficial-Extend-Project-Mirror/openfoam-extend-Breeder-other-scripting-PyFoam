@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/Utilities.py 4985 2009-04-27T17:43:32.496023Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/Utilities.py 7538 2011-07-19T09:17:44.150060Z bgschaid  $ 
 """ Utility functions
 
 Can be used via a class or as functions"""
@@ -9,9 +9,15 @@ if sys.version_info<(2,6):
     from popen2 import popen4
 else:
     from subprocess import Popen,PIPE,STDOUT
-from os import listdir
+from os import listdir,path,remove as removeFile
 
 import re
+
+try:
+    import shutil
+except ImportError:
+    # this is an old python-version without it. We'll try to work around it
+    pass
 
 class Utilities(object):
     """Class with utility methods
@@ -44,6 +50,47 @@ class Utilities(object):
 
         return tmp
 
+    def remove(self,f):
+        """Remove a file if it exists."""
+        if path.exists(f):
+            removeFile(f)
+            
+    def rmtree(self,path,ignore_errors=False):
+        """Encapsulates the shutil rmtree and provides an alternative for
+        old Python-version"""
+        try:
+            shutil.rmtree(path,ignore_errors=ignore_errors)
+        except NameError:
+            self.execute("rm -rf "+path)
+            
+    def copytree(self,src,dst,
+                 symlinks=False):
+        """Encapsulates the shutil copytree and provides an alternative for
+        old Python-version"""
+        try:
+            if path.isdir(dst):
+                dst=path.join(dst,path.basename(path.abspath(src)))
+            if path.isdir(src):
+                shutil.copytree(src,dst,
+                                symlinks=symlinks)
+            else:
+                self.copyfile(src,dst)
+        except NameError:
+            cpOptions="-R"
+            if not symlinks:
+                cpOptions+=" -L"
+            self.execute("cp "+cpOptions+" "+src+" "+dst)
+            
+    def copyfile(self,src,dst):
+        """Encapsulates the shutil copyfile and provides an alternative for
+        old Python-version"""
+        try:
+            if path.isdir(dst):
+                dst=path.join(dst,path.basename(path.abspath(src)))
+            shutil.copyfile(src,dst)
+        except NameError:
+            self.execute("cp "+src+" "+dst)
+            
     def writeDictionaryHeader(self,f):
         """Writes a dummy header so OpenFOAM accepts the file as a dictionary
         @param f: The file to write to
@@ -99,3 +146,19 @@ def listDirectory(d):
     """Calls the method of the same name from the Utilites class"""
     return Utilities().listDirectory(d)
     
+def rmtree(path,ignore_errors=False):
+    """Calls the method of the same name from the Utilites class"""
+    return Utilities().rmtree(path,ignore_errors=ignore_errors)
+
+def copytree(src,dest,symlinks=False):
+    """Calls the method of the same name from the Utilites class"""
+    return Utilities().copytree(src,dest,symlinks=symlinks)
+
+def remove(f):
+    """Calls the method of the same name from the Utilites class"""
+    return Utilities().remove(f)
+
+def copyfile(src,dest):
+    """Calls the method of the same name from the Utilites class"""
+    return Utilities().copyfile(src,dest)
+

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CaseReport.py 7398 2011-04-03T18:50:26.071288Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CaseReport.py 7514 2011-07-11T21:26:23.957775Z bgschaid  $ 
 """
 Application class that implements pyFoamCasedReport.py
 """
@@ -576,19 +576,26 @@ postprocessor like rst2tex or rst2html to produce PDF or HTML respectivly
             for sName in fvSol["solvers"]:
                 raw=fvSol["solvers"][sName]
                 info={}
-                info["solver"]=raw[0]
-
-                if type(raw[1]) in [dict,DictProxy]:
+                if type(raw) in [dict,DictProxy]:
+                    # fvSolution format in 1.7
+                    info["solver"]=raw["solver"]
+                    solverData=raw
+                else:
+                    info["solver"]=raw[0]
+                    solverData=raw[1]
+                    
+                if type(solverData) in [dict,DictProxy]:
                     try:
-                        info["tolerance"]=raw[1]["tolerance"]
+                        info["tolerance"]=solverData["tolerance"]
                     except KeyError:
                         info["tolerance"]=1.
                     try:
-                        info["relTol"]=raw[1]["relTol"]
+                        info["relTol"]=solverData["relTol"]
                     except KeyError:
                         info["relTol"]=0.
                 else:
-                    info["tolerance"]=raw[1]
+                    # the old (pre-1.5) fvSolution-format
+                    info["tolerance"]=solverData
                     info["relTol"]=raw[2]
                     
                 allInfo[sName]=info

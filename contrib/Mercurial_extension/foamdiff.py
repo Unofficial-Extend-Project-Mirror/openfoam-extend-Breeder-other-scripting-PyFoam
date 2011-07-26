@@ -14,7 +14,7 @@ Parts lifted from the extdiff-extension
 '''
 
 from mercurial.i18n import _
-from mercurial import commands,util,cmdutil
+from mercurial import commands,util,scmutil
 from mercurial.node import nullid,short
 
 import tempfile,os,shutil
@@ -39,7 +39,7 @@ def snapshot(ui, repo, files, node, tmproot):
     else:
         ui.note(_('making snapshot of %d files from working directory\n') %
             (len(files)))
-    wopener = util.opener(base)
+    wopener = scmutil.opener(base)
     fns_and_mtime = []
     ctx = repo[node]
     for fn in files:
@@ -82,7 +82,7 @@ def foamdiff(ui, repo, *files, **opts):
         node2 = repo.lookup(change)
         node1a, node1b = repo.changelog.parents(node2)
     else:
-        node1a, node2 = cmdutil.revpair(repo, revs)
+        node1a, node2 = scmutil.revpair(repo, revs)
         if not revs:
             node1b = repo.dirstate.parents()[1]
         else:
@@ -91,7 +91,7 @@ def foamdiff(ui, repo, *files, **opts):
     if node1b!=nullid:
         raise util.Abort("Can't do 3-way comparisons")
     
-    matcher = cmdutil.match(repo, files, opts)
+    matcher = scmutil.match(repo[node2], files, opts)
     mod_a, add_a, rem_a = map(set, repo.status(node1a, node2, matcher)[:3])
     modadd = mod_a | add_a 
     common = modadd | rem_a 

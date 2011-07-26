@@ -1,8 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/ParallelExecution.py 6780 2010-08-13T13:32:00.345730Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/ParallelExecution.py 7428 2011-04-18T14:35:39.514227Z bgschaid  $ 
 """Things that are needed for convenient parallel Execution"""
 
 from PyFoam.Basics.Utilities import Utilities
-from PyFoam.FoamInformation import foamMPI
+from PyFoam.FoamInformation import foamMPI,oldAppConvention
 from PyFoam.Error import error,warning,debug
 from PyFoam import configuration as config
 
@@ -138,8 +138,11 @@ class LAMMachine(Utilities):
                 progname=argv[0]
                 warning("which can not find a match for",progname,". Hoping for the best")
 
-        mpirun+=[progname]+argv[1:3]+["-parallel"]+argv[3:]
-        
+        if oldAppConvention():
+            mpirun+=[progname]+argv[1:3]+["-parallel"]+argv[3:]
+        else:
+            mpirun+=[progname]+argv[1:]+["-parallel"]
+            
         if config().getdebug("ParallelExecution"):
             debug("MPI:",foamMPI())
             debug("Arguments:",mpirun)

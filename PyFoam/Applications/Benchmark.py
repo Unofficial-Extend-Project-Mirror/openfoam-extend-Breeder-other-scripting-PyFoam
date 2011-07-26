@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Benchmark.py 7393 2011-03-29T14:55:03.425417Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Benchmark.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
 """
 Class that implements pyFoamBenchmark
 """
@@ -18,7 +18,7 @@ from PyFoam.RunDictionary.SolutionFile import SolutionFile
 from PyFoam.RunDictionary.ParameterFile import ParameterFile
 from PyFoam.RunDictionary.BlockMesh import BlockMesh
 from PyFoam.Execution.ParallelExecution import LAMMachine
-from PyFoam.Basics.Utilities import execute
+from PyFoam.Basics.Utilities import execute,remove,rmtree
 from PyFoam.Basics.CSVCollection import CSVCollection
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 
@@ -246,7 +246,7 @@ class Benchmark(PyFoamApplication):
             for rm in toRemove:
                 fn=path.join(caseDir,rm)
                 print "Removing file",fn
-                execute("rm -f "+fn)
+                remove(fn)
 
             for field,bc,val in setInit:
                 print "Setting",field,"on",bc,"to",val
@@ -357,7 +357,7 @@ class Benchmark(PyFoamApplication):
                     print "not ... because it failed"
                 else:
                     print "completely"
-                    execute("rm -rf "+caseDir)
+                    rmtree(caseDir,ignore_errors=True)
 
             print
             print

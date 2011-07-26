@@ -12,5 +12,8 @@ rpm:
 	python setup.py bdist_rpm 
 
 dpkg:
-	dpkg-buildpackage -us -uc
+	dpkg-buildpackage
+#	dpkg-buildpackage -us -uc
 
+source-dpkg:
+	dpkg-buildpackage -S

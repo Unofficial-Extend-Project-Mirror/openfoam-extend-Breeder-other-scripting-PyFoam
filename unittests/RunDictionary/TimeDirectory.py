@@ -7,6 +7,7 @@ from PyFoam.RunDictionary.FileBasis import FileBasis
 
 from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
 from os import path,environ,system
+from shutil import copytree,rmtree,copyfile
 
 theSuite=unittest.TestSuite()
 
@@ -27,10 +28,13 @@ def gammaName():
 class TimeDirectoryTest(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.damBreak"
-        system("cp -r "+damBreakTutorial()+" "+self.theFile)
-        
+        copytree(damBreakTutorial(),self.theFile)
+        if foamVersionNumber()>=(2,):
+            copyfile(path.join(self.theFile,"0","alpha1.org"),
+                     path.join(self.theFile,"0","alpha1"))
+            
     def tearDown(self):
-        system("rm -rf "+self.theFile)
+        rmtree(self.theFile)
     
     def testTimeDirectoryBasicContainerStuff(self):
         test=SolutionDirectory(self.theFile)["0"]
@@ -71,11 +75,14 @@ theSuite.addTest(unittest.makeSuite(TimeDirectoryTest,"test"))
 class TimeDirectoryTestZipped(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.damBreak"
-        system("cp -r "+damBreakTutorial()+" "+self.theFile)
+        copytree(damBreakTutorial(),self.theFile)
+        if foamVersionNumber()>=(2,):
+            copyfile(path.join(self.theFile,"0","alpha1.org"),
+                     path.join(self.theFile,"0","alpha1"))
         system("gzip "+path.join(self.theFile,"0",gammaName()))
         
     def tearDown(self):
-        system("rm -rf "+self.theFile)
+        rmtree(self.theFile)
     
     def testTimeReplacingZippedFile(self):
         test=SolutionDirectory(self.theFile)["0"]
@@ -88,10 +95,13 @@ theSuite.addTest(unittest.makeSuite(TimeDirectoryTestZipped,"test"))
 class TimeDirectoryTestCopy(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test.damBreak"
-        system("cp -r "+damBreakTutorial()+" "+self.theFile)
+        copytree(damBreakTutorial(),self.theFile)
+        if foamVersionNumber()>=(2,):
+            copyfile(path.join(self.theFile,"0","alpha1.org"),
+                     path.join(self.theFile,"0","alpha1"))
         
     def tearDown(self):
-        system("rm -rf "+self.theFile)
+        rmtree(self.theFile)
     
     def testTimeCopy(self):
         sol=SolutionDirectory(self.theFile)

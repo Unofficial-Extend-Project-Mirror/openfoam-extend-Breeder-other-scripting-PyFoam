@@ -6,7 +6,7 @@ from os import path,environ,system
 
 from PyFoam.RunDictionary.ParsedParameterFile import FoamStringParser,ParsedParameterFile,ParsedBoundaryDict,DictProxy,TupleProxy,PyFoamParserError
 
-from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,Tensor,SymmTensor
+from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,Tensor,SymmTensor,Codestream
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 
@@ -56,6 +56,14 @@ def turbCavityTutorial():
     else:
         prefix=path.join(prefix,"incompressible","pisoFoam","ras")            
     return path.join(prefix,"cavity")
+        
+def potentialCylinderTutorial():
+    prefix=foamTutorials()
+    if oldTutorialStructure():
+        prefix=path.join(prefix,"potentialFoam")            
+    else:
+        prefix=path.join(prefix,"basic","potentialFoam")            
+    return path.join(prefix,"cylinder")
         
 theSuite=unittest.TestSuite()
     
@@ -345,7 +353,11 @@ theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest,"test"))
 class ParsedParameterFileTest2(unittest.TestCase):
     def setUp(self):
         self.theFile="/tmp/test."+gammaName()
-        system("cp "+path.join(damBreakTutorial(),"0",gammaName())+" "+self.theFile)
+        if foamVersionNumber()>=(2,0):
+            extension=".org"
+        else:
+            extension=""
+        system("cp "+path.join(damBreakTutorial(),"0",gammaName()+extension)+" "+self.theFile)
 
     def tearDown(self):
         system("rm "+self.theFile)
@@ -367,7 +379,8 @@ class ParsedParameterFileTest3(unittest.TestCase):
     def testReadTutorial(self):
         test=ParsedParameterFile(self.theFile)
         self.assertEqual(len(test["boundaryField"]),3)
-        self.assertEqual(len(test["boundaryField"]["floor"]["value"].val),400)
+        if foamVersionNumber()<(2,):
+            self.assertEqual(len(test["boundaryField"]["floor"]["value"].val),400)
     
 theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest3,"test"))
                  
@@ -454,3 +467,18 @@ class ParsedParameterFileIncludeTest(unittest.TestCase):
 if foamVersionNumber()>=(1,6):
     theSuite.addTest(unittest.makeSuite(ParsedParameterFileIncludeTest,"test"))
     
+class ParsedParameterFileCodeStreamTest(unittest.TestCase):
+    def setUp(self):
+        self.fileName=path.join(potentialCylinderTutorial(),"system","controlDict")
+
+    def tearDown(self):
+        pass
+
+    def testBasicInclude(self):
+        test=ParsedParameterFile(self.fileName)
+        if foamVersionNumber()<(2,):
+            return
+        self.assertEqual(type(test["functions"]["difference"]["code"]),Codestream)
+        
+if foamVersionNumber()>=(2,):
+    theSuite.addTest(unittest.makeSuite(ParsedParameterFileCodeStreamTest,"test"))

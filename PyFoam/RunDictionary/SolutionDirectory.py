@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionDirectory.py 7203 2011-02-13T16:55:51.965613Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionDirectory.py 7524 2011-07-15T17:08:53.797429Z bgschaid  $ 
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -64,10 +64,6 @@ class SolutionDirectory(Utilities):
         self.addToClone("customRegexp")
         self.addToClone("LocalConfigPyFoam")
 
-        # Old-school Paraview-reader (this can be removed eventually)
-        if paraviewLink and not path.exists(self.controlDict()+".foam"):
-            symlink(path.basename(self.controlDict()),self.controlDict()+".foam")
-
         emptyFoamFile=path.join(self.name,path.basename(self.name)+".foam")
         if paraviewLink and not path.exists(emptyFoamFile):
             dummy=open(emptyFoamFile,"w") # equivalent to touch
@@ -130,7 +126,7 @@ class SolutionDirectory(Utilities):
         if nm==None:
             raise KeyError(key)
 
-        self.execute("rm -rf "+path.join(self.name, self.fullPath(nm)))
+        self.rmtree(path.join(self.name, self.fullPath(nm)),ignore_errors=True)
         
         self.reread(force=True)
         
@@ -231,7 +227,7 @@ class SolutionDirectory(Utilities):
             cpOptions+=" -L"
             
         if path.exists(name):
-            self.execute("rm -r "+name)
+            self.rmtree(name)
         mkdir(name)
         if self.parallel:
             for i in range(self.nrProcs()):
@@ -243,12 +239,12 @@ class SolutionDirectory(Utilities):
                     pth,fl=path.split(d)
                     if path.exists(path.join(pth,"processor0",fl)):
                         for i in range(self.nrProcs()):
-                            self.execute("cp "+cpOptions+" "
-                                         + path.join(pth,"processor%d" % i,fl) +" "
-                                         + path.join(name,"processor%d" % i))
+                            self.copytree(path.join(pth,"processor%d" % i,fl),
+                                          path.join(name,"processor%d" % i),
+                                          symlinks=not followSymlinks)
                             
                 if path.exists(d):
-                    self.execute("cp "+cpOptions+" "+d+" "+name)
+                    self.copytree(d,name,symlinks=not followSymlinks)
 
         if svnRemove:
             self.execute("find "+name+" -name .svn -exec rm -rf {} \\; -prune")
@@ -407,11 +403,11 @@ class SolutionDirectory(Utilities):
         self.reread()
         fname=path.join(self.archive,name)
         if path.exists(fname):
-            self.execute("rm -r "+fname)
+            self.rmtree(fname)
         mkdir(fname)
-        self.execute("cp -r "+path.join(self.name,self.last)+" "+fname)
+        self.copytree(path.join(self.name,self.last),fname)
         for f in self.backups:
-            self.execute("cp -r "+f+" "+fname)
+            self.copytree(f,fname)
             
     def clearResults(self,
                      after=None,
@@ -447,23 +443,23 @@ class SolutionDirectory(Utilities):
         if not keepRegular:
             for f in self.times:
                 if float(f)>time and not (keepLast and f==last):
-                    self.execute("rm -r "+path.join(self.name,f))
+                    self.rmtree(path.join(self.name,f))
 
         if path.exists(path.join(self.name,"VTK")) and vtk:
-            self.execute("rm -r "+path.join(self.name,"VTK"))
+            self.rmtree(path.join(self.name,"VTK"))
             
         if self.nrProcs():
             for f in listdir(self.name):
                 if re.compile("processor[0-9]+").match(f):
                     if removeProcs:
-                        self.execute("rm -r "+path.join(self.name,f))
+                        self.rmtree(path.join(self.name,f))
                     else:
                         pDir=path.join(self.name,f)
                         for t in listdir(pDir):
                             try:
                                 val=float(t)
                                 if val>time:
-                                    self.execute("rm -r "+path.join(pDir,t))
+                                    self.rmtree(path.join(pDir,t))
                             except ValueError:
                                 pass
                             
@@ -479,7 +475,7 @@ class SolutionDirectory(Utilities):
         """Clear all files that fit a certain shell (glob) pattern
         @param glob: the pattern which the files are going to fit"""
 
-        self.execute("rm -rf "+path.join(self.name,glob))
+        self.rmtree(path.join(self.name,glob),ignore_errors=True)
         
     def clearOther(self,
                    pyfoam=True,

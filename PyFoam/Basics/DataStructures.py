@@ -253,7 +253,9 @@ class DictProxy(dict):
 
     def addDecoration(self,key,text):
         if key in self:
-            self._decoration[key]=text
+            if key not in self._decoration:
+                self._decoration[key]=""
+            self._decoration[key]+=text
 
     def getDecoration(self,key):
         if key in self._decoration:
@@ -281,6 +283,15 @@ class Unparsed(object):
 
     def __str__(self):
         return self.data
+    
+class Codestream(object):
+    """A class that encapsulates an codestream string"""
+
+    def __init__(self,data):
+        self.data=data
+
+    def __str__(self):
+        return "#{" + self.data + "#}"
     
 class UnparsedList(object):
     """A class that encapsulates a list that was not parsed for

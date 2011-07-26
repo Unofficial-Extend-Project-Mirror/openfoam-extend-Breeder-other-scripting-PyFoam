@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Comparator.py 3774 2008-09-20T13:38:28.547955Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Comparator.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
 """
 Application class that implements pyFoamComparator
 """
@@ -8,11 +8,11 @@ import re
 import string
 from xml.dom.minidom import parse
 import xml.dom
-from os import path,environ
+from os import path,environ,mkdir
 from optparse import OptionGroup
 
 from PyFoam.Error import error
-from PyFoam.Basics.Utilities import execute
+from PyFoam.Basics.Utilities import execute,rmtree,copytree
 from PyFoam.Execution.AnalyzedRunner import AnalyzedRunner
 from PyFoam.Execution.ConvergenceRunner import ConvergenceRunner
 from PyFoam.Execution.BasicRunner import BasicRunner
@@ -128,8 +128,8 @@ and executes all the variations of that case
         csv=CSVCollection(self.data.id+".csv")
         
         rDir=self.data.id+".results"
-        execute("rm -rf "+rDir)
-        execute("mkdir "+rDir)
+        rmtree(rDir)
+        mkdir(rDir)
 
         calculated=0
         format="%%0%dd" % len(str(len(self.data)))
@@ -176,17 +176,17 @@ and executes all the variations of that case
             print "Case-directory:",cName
             para["results"]=path.join(rDir,runID)
             print "Results directory:",para["results"]
-            execute("mkdir "+para["results"])
+            mkdir(para["results"])
             
             if path.exists(cName):
                 if self.opts.removeOld:
                     print "   Removing old case-directory"
-                    execute("rm -r "+cName)
+                    rmtree(cName)
                 else:
                     error("Case-directory",cName,"exists")
 
             print "   copying template"
-            out=execute("cp -r "+self.data.template+" "+cName)
+            out=copytree(self.data.template,cName)
             print >>log,"---- Copying"
             for l in out:
                 print >>log,l,
@@ -274,7 +274,7 @@ and executes all the variations of that case
                     
             if purge:
                 print "   removing the case-directory"
-                out=execute("rm -r "+cName)
+                out=rmtree(cName)
                 print >>log,"---- Removing"
                 for l in out:
                     print >>log,l,
@@ -793,7 +793,7 @@ class CopyLogCommand(Command):
 
     def execute(self,para,log):
         print "     Copy logfile"
-        execute("cp "+para["runlog"]+" "+para["results"])
+        copyfile(para["runlog"],para["results"])
         return True,None
     
 class Variation(object):

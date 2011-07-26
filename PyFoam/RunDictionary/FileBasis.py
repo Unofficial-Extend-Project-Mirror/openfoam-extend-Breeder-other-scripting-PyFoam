@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/FileBasis.py 7312 2011-03-02T22:16:22.092043Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/FileBasis.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
 """Basis for the handling of OpenFOAM-files
 
 Transparently accepts gnuzipped files"""
@@ -238,7 +238,7 @@ class FileBasisBackup(FileBasis):
                 FileBasisBackup.counter[self.name]+=1
             except KeyError:
                 FileBasisBackup.counter[self.name]=1
-                self.execute("cp "+self.name+" "+self.backupName)
+                self.copyfile(self.name,self.backupName)
         else:
             self.backupName=None
 
@@ -247,8 +247,8 @@ class FileBasisBackup(FileBasis):
         if self.backupName!=None:
             FileBasisBackup.counter[self.name]-=1
             if FileBasisBackup.counter[self.name]==0:
-                self.execute("cp "+self.backupName+" "+self.name)
-                self.execute("rm "+self.backupName)
+                self.copyfile(self.backupName,self.name)
+                self.remove(self.backupName)
                 del FileBasisBackup.counter[self.name]
         
 def exists(name):

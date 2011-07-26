@@ -8,7 +8,8 @@ Standards-Version: 3.8.4
 
 Package: pyfoam
 Architecture: all
-Depends: python-matplotlib, python-vtk, python-numpy, python-tk, ${python:Depends}, ${misc:Depends} 
+Depends: python-numpy, mercurial, python-tk, ${python:Depends}, ${misc:Depends}
+Recommends: python-vtk, python-matplotlib, python-qt4
 XB-Python-Version: ${python:Versions}
 Description: Python library to control OpenFOAM
  This Python library is used to control the OpenSource-CFD

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Decomposer.py 7393 2011-03-29T14:55:03.425417Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Decomposer.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
 """
 Class that implements pyFoamDecompose
 """
@@ -8,7 +8,7 @@ from optparse import OptionGroup
 from PyFoamApplication import PyFoamApplication
 from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator
 from PyFoam.Error import error
-from PyFoam.Basics.Utilities import writeDictionaryHeader
+from PyFoam.Basics.Utilities import writeDictionaryHeader,rmtree
 from PyFoam.Execution.UtilityRunner import UtilityRunner
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.RegionCases import RegionCases
@@ -20,7 +20,7 @@ from CommonStandardOutput import CommonStandardOutput
 from CommonServer import CommonServer
 from CommonVCSCommit import CommonVCSCommit
 
-from os import path,system,listdir,symlink
+from os import path,listdir,symlink
 import sys,string
 
 class Decomposer(PyFoamApplication,
@@ -205,7 +205,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
             f.close()
             
         if self.opts.clear:
-            system("rm -rf "+path.join(case,"processor*"))
+            rmtree(path.join(case,"processor*"),ignore_errors=True)
 
         self.checkAndCommit(SolutionDirectory(case,archive=None))
 

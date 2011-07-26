@@ -1,8 +1,20 @@
+pyfoam (0.5.6-development1~ppa1~lucid1) lucid; urgency=low
+
+  * Intermediate version for repackaging
+
+ -- Bernhard F.W. Gschaider <bgschaid@ice-sf.at>  Thu, 28 Apr 2011 13:27:24 +0200
+
+pyfoam (0.5.5~ppa1~lucid2) lucid; urgency=low
+
+  * This version has been released as PyFoam 0.5.5 
+
+ -- Bernhard F.W. Gschaider <bgschaid@ice-sf.at>  Tue, 12 Apr 2011 10:37:24 +0200
+
 pyfoam (0.5.5~ppa1~lucid1) lucid; urgency=low
 
   * Start packaging a new version 
 
- -- bgschaid <bgschaid@bgschaid-VirtualBox>  Fri, 04 Mar 2011 11:38:01 +0100
+ -- bgschaid <bgschaid@ice-sf.at>  Fri, 04 Mar 2011 11:38:01 +0100
 
 pyfoam (0.5.4-1~ppa1~lucid1) lucid; urgency=low
 
