@@ -19,7 +19,7 @@ class ParameterFile(FileBasisBackup):
         """creates a regular expression that looks for aparameter
 
         parameter - name of the parameter"""
-        return re.compile("(.*) *"+parameter+" +(.*) *;(.*)")
+        return re.compile("(.*)\s*"+parameter+"\s+(.*)\s*;(.*)")
         
     def readParameter(self,parameter):
         """reads the value of a parameter

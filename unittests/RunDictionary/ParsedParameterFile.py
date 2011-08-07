@@ -73,6 +73,12 @@ class FoamStringParserTest(unittest.TestCase):
         p1=FoamStringParser("test 1;")
         self.assertEqual(p1["test"],1)
         
+    def testParseWithTab(self):
+        p1=FoamStringParser("test\t1;")
+        self.assertEqual(p1["test"],1)
+        p1=FoamStringParser("\ttest\t 1 \t;")
+        self.assertEqual(p1["test"],1)
+        
     def testParseFloat(self):
         p1=FoamStringParser("test 1.23e-4;")
         self.assertAlmostEqual(p1["test"],1.234e-4,6)

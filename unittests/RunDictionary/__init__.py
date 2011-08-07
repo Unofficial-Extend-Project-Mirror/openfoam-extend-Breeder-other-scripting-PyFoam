@@ -1,6 +1,7 @@
 
 import unittest
 
+from ParameterFile import theSuite as ParameterFile
 from ParsedParameterFile import theSuite as ParsedParameterFile
 from ParsedBlockMeshDict import theSuite as ParsedBlockMeshDict
 from BoundaryDict import theSuite as BoundaryDict
@@ -12,6 +13,7 @@ from TimeDirectory import theSuite as TimeDirectory
 
 theSuite=unittest.TestSuite()
 
+theSuite.addTest(ParameterFile)
 theSuite.addTest(ParsedParameterFile)
 theSuite.addTest(ParsedBlockMeshDict)
 theSuite.addTest(BoundaryDict)
