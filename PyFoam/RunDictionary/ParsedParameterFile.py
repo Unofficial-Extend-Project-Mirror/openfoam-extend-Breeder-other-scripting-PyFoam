@@ -29,6 +29,7 @@ class ParsedParameterFile(FileBasisBackup):
                  noBody=False,
                  doMacroExpansion=False,
                  dontRead=False,
+                 noVectorOrTensor=False,
                  createZipped=True):
         """@param name: The name of the parameter file
         @param backup: create a backup-copy of the file
@@ -41,6 +42,8 @@ class ParsedParameterFile(FileBasisBackup):
         @param noHeader: don't expect a header
         @param noBody: don't read the body of the file (only the header)
         @param doMacroExpansion: expand #include and $var
+        @param noVectorOrTensor: short lists of length 3, 6 an 9 are NOT
+        interpreted as vectors or tensors
         @param dontRead: Do not read the file during construction
         """
 
@@ -56,7 +59,8 @@ class ParsedParameterFile(FileBasisBackup):
         self.listDictWithHeader=listDictWithHeader
         self.listLengthUnparsed=listLengthUnparsed
         self.doMacros=doMacroExpansion
-        
+        self.noVectorOrTensor=noVectorOrTensor 
+
         self.header=None
         self.content=None
 
@@ -77,6 +81,7 @@ class ParsedParameterFile(FileBasisBackup):
                               noHeader=self.noHeader,
                               noBody=self.noBody,
                               binaryMode=self.binaryMode,
+                              noVectorOrTensor=self.noVectorOrTensor,
                               doMacroExpansion=self.doMacros)
         
         self.content=parser.getData()
@@ -163,6 +168,7 @@ class FoamFileParser(PlyParser):
                  listLengthUnparsed=None,
                  binaryMode=False,
                  duplicateCheck=False,
+                 noVectorOrTensor=False,
                  duplicateFail=True):
         """@param content: the string to be parsed
         @param fName: Name of the actual file (if any)
@@ -182,6 +188,7 @@ class FoamFileParser(PlyParser):
         self.preserveNewLines=preserveNewlines
         self.duplicateCheck=duplicateCheck
         self.duplicateFail=duplicateFail
+        self.noVectorOrTensor=noVectorOrTensor 
         
         self.collectDecorations=False
         self.inputMode=inputModes.merge
@@ -620,7 +627,8 @@ class FoamFileParser(PlyParser):
     def p_list(self,p):
         '''list : '(' itemlist ')' '''
         p[0] = self.condenseAllPreFixLists(p[2])
-        if len(p[2])==3 or len(p[2])==9 or len(p[2])==6:
+        if not self.noVectorOrTensor and ( 
+            len(p[2])==3 or len(p[2])==9 or len(p[2])==6):
             isVector=True
             for i in p[2]:
                 try:
@@ -771,15 +779,24 @@ class FoamFileParser(PlyParser):
 
     def p_vector(self,p):
         '''vector : '(' number number number ')' '''
-        p[0]=apply(Vector,p[2:5])
+        if self.noVectorOrTensor:
+            p[0]=p[2:5]
+        else:
+            p[0]=apply(Vector,p[2:5])
 
     def p_tensor(self,p):
         '''tensor : '(' number number number number number number number number number ')' '''
-        p[0]=apply(Tensor,p[2:11])
+        if self.noVectorOrTensor:
+            p[0]=p[2:11]
+        else:
+            p[0]=apply(Tensor,p[2:11])
 
     def p_symmtensor(self,p):
         '''symmtensor : '(' number number number number number number ')' '''
-        p[0]=apply(SymmTensor,p[2:8])
+        if self.noVectorOrTensor:
+            p[0]=p[2:8]
+        else:
+            p[0]=apply(SymmTensor,p[2:8])
 
     def p_fieldvalue_uniform(self,p):
         '''fieldvalue : UNIFORM number
@@ -877,6 +894,7 @@ class FoamStringParser(FoamFileParser):
     def __init__(self,
                  content,
                  debug=False,
+                 noVectorOrTensor=False,
                  duplicateCheck=False,
                  duplicateFail=False):
         """@param content: the string to be parsed
@@ -887,6 +905,7 @@ class FoamStringParser(FoamFileParser):
                                 debug=debug,
                                 noHeader=True,
                                 boundaryDict=False,
+                                noVectorOrTensor=noVectorOrTensor,
                                 duplicateCheck=duplicateCheck,
                                 duplicateFail=duplicateFail)
 

@@ -180,13 +180,28 @@ class FoamStringParserTest(unittest.TestCase):
         p1=FoamStringParser("test ( 1 3 4 );")
         self.assertEqual(p1["test"].__class__,Vector)
         
+    def testDataNoVector(self):
+        p1=FoamStringParser("test ( 1 3 4 );",
+                            noVectorOrTensor=True)
+        self.assertEqual(p1["test"].__class__,list)
+        
     def testDataTensor(self):
         p1=FoamStringParser("test ( 1 2 3 4 5 4 3 2 1 );")
         self.assertEqual(p1["test"].__class__,Tensor)
         
+    def testDataNoTensor(self):
+        p1=FoamStringParser("test ( 1 2 3 4 5 4 3 2 1 );",
+                            noVectorOrTensor=True)
+        self.assertEqual(p1["test"].__class__,list)
+        
     def testDataSymmTensor(self):
         p1=FoamStringParser("test ( 1 2 3 4 5 4 );")
         self.assertEqual(p1["test"].__class__,SymmTensor)
+        
+    def testDataNoSymmTensor(self):
+        p1=FoamStringParser("test ( 1 2 3 4 5 4 );",
+                            noVectorOrTensor=True)
+        self.assertEqual(p1["test"].__class__,list)
         
     def testDataDimension(self):
         p1=FoamStringParser("test [1 2 -3 0 1.4 1 2];")
@@ -240,6 +255,13 @@ nix // Hepp
         p=FoamStringParser("test (3(1.1 -1 1) 3(2.2 -2 2) 3(3.3 -3 3));")
         self.assertEqual(len(p["test"]),3)
         self.assertEqual(type(p["test"][1]),Vector)
+        self.assertEqual(p["test"][1][0],2.2)
+
+    def testListAllPreListNoVector(self):
+        p=FoamStringParser("test (3(1.1 -1 1) 3(2.2 -2 2) 3(3.3 -3 3));",
+                           noVectorOrTensor=True)
+        self.assertEqual(len(p["test"]),3)
+        self.assertEqual(type(p["test"][1]),list)
         self.assertEqual(p["test"][1][0],2.2)
 
     def testReactionList(self):
