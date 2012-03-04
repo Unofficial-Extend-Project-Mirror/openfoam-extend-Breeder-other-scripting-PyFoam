@@ -126,6 +126,20 @@ class FoamFileGeneratorTest(unittest.TestCase):
         except FoamFileGeneratorError:
             pass
 
+    def testMakeLongList(self):
+        g=FoamFileGenerator([i for i in range(20)])
+        testString="(\n  0"
+        self.assertEqual(str(g)[0:len(testString)],testString)
+        g=FoamFileGenerator([i for i in range(21)])
+        testString="21\n(\n  0"
+        self.assertEqual(str(g)[0:len(testString)],testString)
+        g=FoamFileGenerator([i for i in range(20)],longListThreshold=10)
+        testString="20\n(\n  0"
+        self.assertEqual(str(g)[0:len(testString)],testString)
+        g=FoamFileGenerator([i for i in range(21)],longListThreshold=None)
+        testString="(\n  0"
+        self.assertEqual(str(g)[0:len(testString)],testString)
+                     
 theSuite.addTest(unittest.makeSuite(FoamFileGeneratorTest,"test"))
 
 class FoamFileGeneratorUnparsed(unittest.TestCase):

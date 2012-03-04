@@ -12,14 +12,21 @@ class FoamFileGenerator(object):
 
     primitiveTypes=[SymmTensor,Tensor,Vector,Dimension,Field,Unparsed]
     
-    def __init__(self,data,header=None):
+    def __init__(self,
+                 data,
+                 header=None,
+                 longListThreshold=20):
         """@param data: data structure that will be turned into a
         Foam-compatible file
         @param header: header information that is to be prepended
+        @param longListThreshold: Threshold for lists before they are considered
+        long. This means that they are prefixed with the number of elements. If the
+        threshold is 0 or None then no list is considered long
         """
         
         self.data=data
         self.header=header
+        self.longListThreshold=longListThreshold
         
     def __str__(self):
         return self.makeString()
@@ -148,8 +155,9 @@ class FoamFileGenerator(object):
         if isFixedType:
             s+="("+string.join(map(lambda v:"%g"%v,lst))+")"
         else:
-            if theLen>20:
-                s+=(" "*indent)+str(theLen)+"\n"
+            if self.longListThreshold:
+                if theLen>self.longListThreshold:
+                    s+=(" "*indent)+str(theLen)+"\n"
             s+=(" "*indent)+"(\n"
             for v in lst:
                 if type(v)in [unicode,str]:

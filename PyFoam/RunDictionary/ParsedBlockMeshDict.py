@@ -16,6 +16,7 @@ class ParsedBlockMeshDict(ParsedParameterFile):
                                      name,
                                      backup=backup,
                                      debug=debug,
+                                     longListOutputThreshold=None,
                                      doMacroExpansion=doMacroExpansion)
         
     def convertToMeters(self):
