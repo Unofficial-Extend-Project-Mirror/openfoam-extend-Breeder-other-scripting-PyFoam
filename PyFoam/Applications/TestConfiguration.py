@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/TestConfiguration.py 6510 2010-04-21T16:13:50.349113Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/TestConfiguration.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamTestConfiguration.py
 """
@@ -16,8 +16,9 @@ from PyFoam import configuration as config
 class TestConfiguration(PyFoamApplication,
                      CommonParserOptions):
     def __init__(self,args=None):
-        description="""
-Tests what value a section/option pair gives for a specific OpenFOAM-version
+        description="""\
+Tests what value a section/option pair gives for a specific
+OpenFOAM-version
 
 Used to find configuration problems
         """

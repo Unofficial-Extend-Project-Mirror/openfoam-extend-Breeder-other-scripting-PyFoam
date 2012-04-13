@@ -14,7 +14,7 @@ from PyFoam.RunDictionary.ListFile import ListFile
 
 class ChangeBoundaryType(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Changes the type of a boundary in the boundary-file
         """
         PyFoamApplication.__init__(self,args=args,

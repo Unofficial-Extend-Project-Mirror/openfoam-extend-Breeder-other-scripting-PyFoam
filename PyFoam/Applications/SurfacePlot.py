@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SurfacePlot.py 6179 2010-02-12T13:34:04.618848Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SurfacePlot.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamSurfacePlot.py
 """
@@ -18,9 +18,9 @@ from PlotHelpers import cleanFilename
 
 class SurfacePlot(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-Searches for sampled surface in the VTK-format in a directory and makes
-pictures from them
+        description="""\
+Searches for sampled surface in the VTK-format in a directory and
+makes pictures from them
         """
         
         PyFoamApplication.__init__(self,

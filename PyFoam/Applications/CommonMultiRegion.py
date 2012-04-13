@@ -22,8 +22,9 @@ class CommonMultiRegion(object):
 
         grp.add_option("--region",
                        dest="region",
+                       action="append",
                        default=None,
-                       help="Executes the command for a region (builds a pseudo-case for that region)")
+                       help="Executes the command for a region (builds a pseudo-case for that region). A value of 'region0' is the default region")
 
         grp.add_option("--keep-pseudocases",
                        action="store_true",

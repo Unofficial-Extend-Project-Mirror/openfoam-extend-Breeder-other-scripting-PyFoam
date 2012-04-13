@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SamplePlot.py 7393 2011-03-29T14:55:03.425417Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SamplePlot.py 7945 2012-03-29T15:50:57.506443Z bgschaid  $ 
 """
 Application class that implements pyFoamSamplePlot.py
 """
@@ -17,10 +17,9 @@ from PlotHelpers import cleanFilename
 
 class SamplePlot(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Reads data from the sample-dictionary and generates appropriate
-gnuplot-commands. As an option the data can be written to a
-CSV-file.
+gnuplot-commands. As an option the data can be written to a CSV-file.
         """
         
         PyFoamApplication.__init__(self,
@@ -49,6 +48,16 @@ CSV-file.
                         default=None,
                         dest="field",
                         help="The fields that are plotted (can be used more than once). If none are specified all found fields are used")
+        data.add_option("--postfix-for-field-names",
+                        action="append",
+                        default=[],
+                        dest="fieldPostfix",
+                        help="Possible postfix for field names of the form 'name_postfix'. Note that this should not be a possible field name")
+        data.add_option("--prefix-for-field-names",
+                        action="append",
+                        default=[],
+                        dest="fieldPrefix",
+                        help="Possible prefix for field names of the form 'prefix_name'. Note that this should not be a possible field name")
         data.add_option("--directory-name",
                         action="store",
                         default="samples",
@@ -71,6 +80,60 @@ CSV-file.
                         dest="referenceCase",
                         help="A reference case where a directory with the same name is looked for. Mutual exclusive with --reference-directory")
         
+        scale=OptionGroup(self.parser,
+                          "Scale",
+                          "Scale the data before comparing (not used during plotting)")
+        self.parser.add_option_group(scale)
+        scale.add_option("--scale-data",
+                         action="store",
+                         type="float",
+                         default=1,
+                         dest="scaleData",
+                         help="Scale the data by this factor. Default: %default")
+        scale.add_option("--offset-data",
+                         action="store",
+                         type="float",
+                         default=0,
+                         dest="offsetData",
+                         help="Offset the data by this factor. Default: %default")
+        scale.add_option("--scale-x-axis",
+                         action="store",
+                         type="float",
+                         default=1,
+                         dest="scaleXAxis",
+                         help="Scale the x-axis by this factor. Default: %default")
+        scale.add_option("--offset-x-axis",
+                         action="store",
+                         type="float",
+                         default=0,
+                         dest="offsetXAxis",
+                         help="Offset the x-axis by this factor. Default: %default")
+
+        scale.add_option("--scale-reference-data",
+                         action="store",
+                         type="float",
+                         default=1,
+                         dest="scaleReferenceData",
+                         help="Scale the reference data by this factor. Default: %default")
+        scale.add_option("--offset-reference-data",
+                         action="store",
+                         type="float",
+                         default=0,
+                         dest="offsetReferenceData",
+                         help="Offset the reference data by this factor. Default: %default")
+        scale.add_option("--scale-reference-x-axis",
+                         action="store",
+                         type="float",
+                         default=1,
+                         dest="scaleReferenceXAxis",
+                         help="Scale the reference x-axis by this factor. Default: %default")
+        scale.add_option("--offset-reference-x-axis",
+                         action="store",
+                         type="float",
+                         default=0,
+                         dest="offsetReferenceXAxis",
+                         help="Offset the reference x-axis by this factor. Default: %default")
+
         time=OptionGroup(self.parser,
                          "Time",
                          "Select the times to plot")
@@ -98,6 +161,21 @@ CSV-file.
                         default=False,
                         dest="fuzzyTime",
                         help="Try to find the next timestep if the time doesn't match exactly")
+        time.add_option("--latest-time",
+                        action="store_true",
+                        default=False,
+                        dest="latestTime",
+                        help="Take the latest time from the data")
+        time.add_option("--reference-time",
+                        action="store",
+                        default=None,
+                        dest="referenceTime",
+                        help="Take this time from the reference data (instead of using the same time as the regular data)")
+        time.add_option("--tolerant-reference-time",
+                        action="store_true",
+                        default=False,
+                        dest="tolerantReferenceTime",
+                        help="Take the reference-time that is nearest to the selected time")
 
         output=OptionGroup(self.parser,
                            "Appearance",
@@ -177,15 +255,37 @@ CSV-file.
                           dest="compare",
                           default=None,
                           help="Compare all data sets that are also in the reference data")
+        output.add_option("--common-range-compare",
+                          action="store_true",
+                          dest="commonRange",
+                          default=None,
+                          help="When comparing two datasets only use the common time range")
+        output.add_option("--index-tolerant-compare",
+                          action="store_true",
+                          dest="indexTolerant",
+                          default=None,
+                          help="Compare two data sets even if they have different indizes")
         output.add_option("--metrics",
                           action="store_true",
                           dest="metrics",
                           default=None,
                           help="Print the metrics of the data sets")
+        output.add_option("--silent",
+                          action="store_true",
+                          dest="silent",
+                          default=False,
+                          help="Don't write to screen (with the silent and the compare-options)")
+
         
     def run(self):
+        # remove trailing slashif present
+        if self.opts.dirName[-1]==path.sep:
+            self.opts.dirName=self.opts.dirName[:-1]
+                    
         samples=SampleDirectory(self.parser.getArgs()[0],
-                                dirName=self.opts.dirName)
+                                dirName=self.opts.dirName,
+                                postfixes=self.opts.fieldPostfix,
+                                prefixes=self.opts.fieldPrefix)
         reference=None
         if self.opts.reference and self.opts.referenceCase:
             self.error("Options --reference-directory and --reference-case are mutual exclusive")
@@ -194,25 +294,44 @@ CSV-file.
             
         if self.opts.reference:
             reference=SampleDirectory(self.parser.getArgs()[0],
-                                      dirName=self.opts.reference)
+                                      dirName=self.opts.reference,
+                                      postfixes=self.opts.fieldPostfix,
+                                      prefixes=self.opts.fieldPrefix)
         elif self.opts.referenceCase:
             reference=SampleDirectory(self.opts.referenceCase,
-                                      dirName=self.opts.dirName)
+                                      dirName=self.opts.dirName,
+                                      postfixes=self.opts.fieldPostfix,
+                                      prefixes=self.opts.fieldPrefix)
 
+        if reference:
+            if path.samefile(reference.dir,samples.dir):
+                self.error("Used sample directory",samples.dir,
+                           "and reference directory",reference.dir,
+                           "are the same")
+        
         lines=samples.lines()
         times=samples.times
         values=samples.values()
         
         if self.opts.info:
-            print "Times : ",samples.times
-            print "Lines : ",samples.lines()
-            print "Fields: ",samples.values()
+            if not self.opts.silent:
+                print "Times : ",samples.times
+                print "Lines : ",samples.lines()
+                print "Fields: ",samples.values()
+
+            self.setData({'times'  : samples.times,
+                          'lines'  : samples.lines(),
+                          'values' : samples.values()})
 
             if reference:
-                print "\nReference Data:"
-                print "Times : ",reference.times
-                print "Lines : ",reference.lines()
-                print "Fields: ",reference.values()
+                if not self.opts.silent:
+                    print "\nReference Data:"
+                    print "Times : ",reference.times
+                    print "Lines : ",reference.lines()
+                    print "Fields: ",reference.values()
+                self.setData({'reference':{'times'  : samples.times,
+                                           'lines'  : samples.lines(),
+                                           'values' : samples.values()}})
                 
             return 0
             
@@ -223,6 +342,12 @@ CSV-file.
             for l in self.opts.line:
                 if l not in lines:
                     error("The line",l,"does not exist in",lines)
+
+        if self.opts.latestTime:
+            if self.opts.time:
+                self.opts.time.append(samples.times[-1])
+            else:
+                self.opts.time=[samples.times[-1]]
 
         if self.opts.maxTime or self.opts.minTime:
             if self.opts.time:
@@ -258,7 +383,17 @@ CSV-file.
                 else:
                     pass
                 #                    self.warning("Time",t,"not found in the sample-times. Use option --fuzzy")
-                
+        if self.opts.tolerantReferenceTime:
+            if self.opts.referenceTime:
+                self.error("--tolerant-reference-time and --reference-time can't be used at the same time")
+            refTimes={}
+            for t in self.opts.time:
+                dist=1e20
+                for rt in reference.times:
+                    if abs(float(t)-float(rt))<dist:
+                        refTimes[t]=rt
+                        dist=abs(float(t)-float(rt))
+
         plots=[]
         oPlots=[]
         rPlots=[]
@@ -278,9 +413,14 @@ CSV-file.
                                              time=[t])
                         oPlots.append(plot[:])
                         if reference:
+                            rT=[t]
+                            if self.opts.referenceTime:
+                                rT=[self.opts.referenceTime]
+                            elif self.opts.tolerantReferenceTime:
+                                rT=[refTimes[t]]
                             p=reference.getData(line=[l],
                                                 value=[f],
-                                                time=[t],
+                                                time=rT,
                                                 note=self.opts.refprefix+" ")
                             rPlots.append(p)
                             plot+=p
@@ -299,9 +439,14 @@ CSV-file.
                     oPlots.append(plot[:])
 
                     if reference:
+                        rT=self.opts.time
+                        if self.opts.referenceTime:
+                            rT=[self.opts.referenceTime]
+                        elif self.opts.tolerantReferenceTime:
+                            rT=[refTimes[t]]
                         p=reference.getData(line=[l],
                                             value=[f],
-                                            time=self.opts.time,
+                                            time=rT,
                                             note=self.opts.refprefix+" ")
                         rPlots.append(p)
                         plot+=p
@@ -324,9 +469,14 @@ CSV-file.
                                          time=[t])
                     oPlots.append(plot[:])
                     if reference:
+                        rT=t
+                        if self.opts.referenceTime:
+                            rT=self.opts.referenceTime
+                        elif self.opts.tolerantReferenceTime:
+                            rT=refTimes[t]
                         p=reference.getData(line=[l],
                                             value=self.opts.field,
-                                            time=[t],
+                                            time=[rT],
                                             note=self.opts.refprefix+" ")
                         rPlots.append(p)
                         plot+=p
@@ -346,9 +496,14 @@ CSV-file.
                     oPlots.append(plot[:])
 
                     if reference:
+                        rT=t
+                        if self.opts.referenceTime:
+                            rT=self.opts.referenceTime
+                        elif self.opts.tolerantReferenceTime:
+                            rT=refTimes[t]
                         p=reference.getData(line=self.opts.line,
                                             value=[f],
-                                            time=[t],
+                                            time=[rT],
                                             note=self.opts.refprefix+" ")
                         rPlots.append(p)
                         plot+=p
@@ -365,9 +520,14 @@ CSV-file.
                                  time=self.opts.time)
             oPlots.append(plot[:])
             if reference:
+                rT=self.opts.time
+                if self.opts.referenceTime:
+                    rT=[self.opts.referenceTime]
+                elif self.opts.tolerantReferenceTime:
+                    rT=[refTimes[t]]
                 p=reference.getData(line=self.opts.line,
                                     value=self.opts.field,
-                                    time=self.opts.time,
+                                    time=rT,
                                     note=self.opts.refprefix+" ")
                 plot+=p
                 rPlots.append(p)
@@ -449,7 +609,7 @@ CSV-file.
                 
             result+='set output "%s"\n' % name
             if title!=None:
-                result+='set title "%s"\n' % title
+                result+='set title "%s"\n' % title.replace("_","\\_")
                 
             result+="plot "
             if self.opts.scaled:
@@ -470,7 +630,7 @@ CSV-file.
 
                 colSpec="%s" % (d.index+1)
                 if d.isVector():
-                    if self.opts.component:
+                    if self.opts.component!=None:
                         colSpec="%d" % (d.index+1+self.opts.component)
                     else:
                         colSpec="(sqrt($%d**2+$%d**2+$%d**2))" % (d.index+1,d.index+2,d.index+3)
@@ -495,7 +655,7 @@ CSV-file.
                 if title=="":
                     result+="notitle "
                 else:
-                    result+='title "%s" ' % title
+                    result+='title "%s" ' % title.replace("_","\\_")
 
                 result+="with %s " % self.opts.style
 
@@ -524,6 +684,17 @@ CSV-file.
                     
             c.writeCSV(self.opts.csvFile)
         elif self.opts.compare or self.opts.metrics:
+            statData={}
+            if self.opts.compare:
+                statData["compare"]={}
+            if self.opts.metrics:
+                statData["metrics"]={}
+            for p in self.opts.line:
+                if self.opts.compare:
+                    statData["compare"][p]={}
+                if self.opts.metrics:
+                    statData["metrics"][p]={}
+
             oPlots=[item for sublist in oPlots for item in sublist]
             rPlots=[item for sublist in rPlots for item in sublist]
             if len(rPlots)!=len(oPlots) and self.opts.compare:
@@ -533,40 +704,61 @@ CSV-file.
             if len(rPlots)==0 and self.opts.metrics:
                 rPlots=[None]*len(oPlots)
                 
-            for o,r in zip(oPlots,rPlots):                    
-                data=o()                
+            for o,r in zip(oPlots,rPlots):  
+                data=o(scaleData=self.opts.scaleData,
+                       offsetData=self.opts.offsetData,
+                       scaleX=self.opts.scaleXAxis,
+                       offsetX=self.opts.offsetXAxis)
                 if self.opts.compare:
-                    if o.name!=r.name or o.index!=r.index:
+                    if o.name!=r.name or (o.index!=r.index and not self.opts.indexTolerant):
                         self.error("Data from original",o.name,o.index,
                                    "and reference",r.name,r.index,
-                                   "do not match")
-                    ref=r()
+                                   "do not match. Try --index-tolerant-compare if you're sure that the data is right")
+                    ref=r(scaleData=self.opts.scaleReferenceData,
+                          offsetData=self.opts.offsetReferenceData,
+                          scaleX=self.opts.scaleReferenceXAxis,
+                          offsetX=self.opts.offsetReferenceXAxis)
                 else:
                     ref=None
                 for i,n in enumerate(data.names()):
                     if i==0:
                         continue
+                    indexName=o.name
+                    if n.split(" ")[-1]!=indexName:
+                        indexName=n.split(" ")[-1]
+
                     if self.opts.metrics:
-                        print "Metrics for",o.name,"(Path:",o.file,")"
+                        if not self.opts.silent:
+                            print "Metrics for",indexName,"(Path:",o.file,")"
                         result=data.metrics(data.names()[i])
-                        print "  Min                :",result["min"]
-                        print "  Max                :",result["max"]
-                        print "  Average            :",result["average"]
-                        print "  Weighted average   :",result["wAverage"]
-                        if not self.opts.compare:
-                            print "Data size:",data.size()
-                        print "  Time Range         :",result["tMin"],result["tMax"]
-                    if self.opts.compare:
-                        print "Comparing",o.name,"with name",n,"(Path:",o.file,")"
-                        result=data.compare(ref,data.names()[i])
-                        print "  Max difference     :",result["max"]
-                        print "  Average difference :",result["average"]
-                        print "  Weighted average   :",result["wAverage"]
-                        print "Data size:",data.size(),"Reference:",ref.size()
-                        if not self.opts.metrics:
+                        statData["metrics"][o.line()][indexName]=result
+                        if not self.opts.silent:
+                            print "  Min                :",result["min"]
+                            print "  Max                :",result["max"]
+                            print "  Average            :",result["average"]
+                            print "  Weighted average   :",result["wAverage"]
+                            if not self.opts.compare:
+                                print "Data size:",data.size()
                             print "  Time Range         :",result["tMin"],result["tMax"]
-                        
-                    print
+                    if self.opts.compare:
+                        oname=data.names()[i]
+                        if self.opts.referenceTime or self.opts.tolerantReferenceTime:
+                            oname=ref.names()[i]
+                        if not self.opts.silent:
+                            print "Comparing",indexName,"with name",oname,"(Path:",r.file,")"
+                        result=data.compare(ref,data.names()[i],otherName=oname,common=self.opts.commonRange)
+                        statData["compare"][o.line()][indexName]=result
+                        if not self.opts.silent:
+                            print "  Max difference     :",result["max"],"(at",result["maxPos"],")"
+                            print "  Average difference :",result["average"]
+                            print "  Weighted average   :",result["wAverage"]
+                            print "Data size:",data.size(),"Reference:",ref.size()
+                            if not self.opts.metrics:
+                                print "  Time Range         :",result["tMin"],result["tMax"]
+                    if not self.opts.silent:
+                        print
+
+            self.setData(statData)
         else:
             dest=sys.stdout
             if self.opts.gnuplotFile:

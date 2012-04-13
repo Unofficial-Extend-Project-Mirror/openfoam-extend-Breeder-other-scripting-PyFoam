@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/FoamInformation.py 7359 2011-03-16T23:02:32.346825Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/FoamInformation.py 7870 2012-02-15T17:53:40.344304Z bgschaid  $ 
 """Getting Information about the Foam-Installation (like the installation directory)"""
 
 from os import environ,path,listdir
@@ -237,11 +237,14 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
             error("Currently only implemented for the shells",allowedShells,", not for",shell)
 
         cmd=""
+        postCmd=""
         if forceArchOption!=None:
             cmd+="export WM_ARCH_OPTION="+forceArchOption+"; "
+            postCmd+=" WM_ARCH_OPTION="+forceArchOption
         if compileOption!=None:
             cmd+="export WM_COMPILE_OPTION="+compileOption+"; "
-        cmd+=". "+script+'; echo "Starting The Dump Of Variables"; export'
+            postCmd+=" WM_COMPILE_OPTION="+compileOption
+        cmd+=". "+script+postCmd+'; echo "Starting The Dump Of Variables"; export'
     except KeyError,name:
         error("Can't do it, because shell variable",name,"is undefined")
 

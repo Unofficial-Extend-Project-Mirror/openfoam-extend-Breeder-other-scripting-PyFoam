@@ -15,7 +15,7 @@ from PyFoam.Error import error
 class CaseBuilder(PyFoamApplication,
                   CommonCaseBuilder):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Gets a XML-file that describes how to build a case from a case
 template and some parameters
 """

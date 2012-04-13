@@ -11,7 +11,7 @@ from optparse import OptionGroup
 from PyFoam.Error import error,warning
 from PyFoam.LogAnalysis.RegExpLineAnalyzer import RegExpLineAnalyzer
 
-from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo
+from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo,resetCustomCounter
 
 ruleList=[]
 
@@ -36,11 +36,15 @@ class CommonPlotLines(object):
         """Add a single line"""
         self.lines_+=readCustomPlotInfo(line)
 
-    def addPlotLines(self,lines):
+    def addPlotLines(self,lines,name=None):
         """Adds a list of lines"""
         if lines:
-            for l in lines:
-                self.lines_+=readCustomPlotInfo(l)
+            for i,l in enumerate(lines):
+                if name:
+                    useName="%s_%i" % (name,i)
+                else:
+                    useName=None
+                self.lines_+=readCustomPlotInfo(l,useName=useName)
 
     def addFileRegexps(self,fName):
         """Adds the lines from a file to the custom regular expressions
@@ -119,6 +123,9 @@ class CommonPlotLines(object):
     def processPlotLineOptions(self,autoPath=None):
         """Process the options that have to do with plot-lines"""
 
+        # make sure that every object starts with a new batch
+        resetCustomCounter()
+        
         self.addPlotLines(self.opts.customRegex)
         
         if self.opts.regexpFile!=None:

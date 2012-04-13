@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/AnalyzedCommon.py 7025 2010-11-24T18:09:16.966619Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/AnalyzedCommon.py 7665 2012-01-10T15:12:19.780331Z bgschaid  $ 
 """Common stuff for classes that use analyzers"""
 
 from os import path,mkdir
@@ -47,6 +47,10 @@ class AnalyzedCommon(object):
 
     def tearDown(self):
         self.analyzer.tearDown()
+        if hasattr(self,"data"):
+            pickleFile=path.join(self.logDir,"pickledData")
+            pick=pickle.Pickler(open(pickleFile,"w"))
+            pick.dump(self.data)
 
     def listAnalyzers(self):
         """@returns: A list with the names of the analyzers"""
@@ -298,3 +302,7 @@ class AnalyzedCommon(object):
             move(pickleFile+".tmp",pickleFile)
 
             self.pickleLock.release()
+
+    def setDataSet(self,data):
+        if hasattr(self,"data"):
+            self.data["analyzed"]=data

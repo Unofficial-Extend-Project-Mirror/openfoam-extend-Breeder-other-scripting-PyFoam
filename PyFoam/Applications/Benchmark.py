@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Benchmark.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Benchmark.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Class that implements pyFoamBenchmark
 """
@@ -24,8 +24,8 @@ from PyFoam.FoamInformation import oldAppConvention as oldApp
 
 class Benchmark(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-        Runs a set of benchmarks specified in a config files
+        description="""\
+Runs a set of benchmarks specified in a config files
         """
         PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <specification>",interspersed=True,nr=1)
 

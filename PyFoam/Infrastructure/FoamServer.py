@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/FoamServer.py 5682 2009-10-01T15:23:03.944623Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/FoamServer.py 7641 2011-12-18T21:49:13.536132Z bgschaid  $ 
 """A XMLRPC-Server that answeres about the current state of a Foam-Run"""
 
 from ServerBase import ServerBase
@@ -151,6 +151,10 @@ class FoamAnswerer(object):
         """Name of the Python-Script that runs the show"""
         return sys.argv[0]
 
+    def runnerData(self):
+        """@return: the data the runner collected so far"""
+        return self._master.data
+    
     def lastLogLineSeen(self):
         """@return: the time at which the last log-line was seen"""
         return self._master.lastLogLineSeen

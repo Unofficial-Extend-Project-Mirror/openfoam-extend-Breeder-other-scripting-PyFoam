@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotRunner.py 7319 2011-03-03T23:10:51.400635Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotRunner.py 7722 2012-01-18T17:50:53.943725Z bgschaid  $ 
 """
 Class that implements pyFoamPlotRunner
 """
@@ -18,6 +18,7 @@ from CommonRestart import CommonRestart
 from CommonPlotOptions import CommonPlotOptions
 from CommonClearCase import CommonClearCase
 from CommonReportUsage import CommonReportUsage
+from CommonReportRunnerData import CommonReportRunnerData
 from CommonSafeTrigger import CommonSafeTrigger
 from CommonWriteAllTrigger import CommonWriteAllTrigger
 from CommonLibFunctionTrigger import CommonLibFunctionTrigger
@@ -35,20 +36,21 @@ class PlotRunner(PyFoamApplication,
                  CommonClearCase,
                  CommonServer,
                  CommonReportUsage,
+                 CommonReportRunnerData,
                  CommonParallel,
                  CommonRestart,
                  CommonStandardOutput,
                  CommonVCSCommit):
     def __init__(self,args=None):
-        description="""
-        runs an OpenFoam solver needs the usual 3 arguments (<solver>
-        <directory> <case>) and passes them on (plus additional arguments).
-        Output is sent to stdout and a logfile inside the case directory
-        (PyFoamSolver.logfile) Information about the residuals is output as
-        graphs
+        description="""\
+Runs an OpenFoam solver needs the usual 3 arguments (<solver>
+<directory> <case>) and passes them on (plus additional arguments).
+Output is sent to stdout and a logfile inside the case directory
+(PyFoamSolver.logfile) Information about the residuals is output as
+graphs
         
-        If the directory contains a file customRegexp this is automatically
-        read and the regular expressions in it are displayed
+If the directory contains a file customRegexp this is automatically
+read and the regular expressions in it are displayed
         """
         CommonPlotOptions.__init__(self,persist=True)
         CommonPlotLines.__init__(self)
@@ -69,6 +71,7 @@ class PlotRunner(PyFoamApplication,
                                help="This is a steady run. Stop it after convergence")
         
         CommonReportUsage.addOptions(self)
+        CommonReportRunnerData.addOptions(self)
         CommonStandardOutput.addOptions(self)
         CommonParallel.addOptions(self)
         CommonRestart.addOptions(self)
@@ -117,12 +120,14 @@ class PlotRunner(PyFoamApplication,
                           lam=lam,
                           raiseit=self.opts.raiseit,
                           steady=self.opts.steady,
-                          progress=self.opts.progress,
+                          progress=self.opts.progress or self.opts.silent,
                           restart=self.opts.restart,
                           logname=self.opts.logname,
                           compressLog=self.opts.compress,
                           noLog=self.opts.noLog,
+                          logTail=self.opts.logTail,
                           plottingImplementation=self.opts.implementation,
+                          writePickled=self.opts.writePickled,
                           singleFile=self.opts.singleDataFilesOnly,
                           remark=self.opts.remark,
                           jobId=self.opts.jobId)
@@ -135,7 +140,12 @@ class PlotRunner(PyFoamApplication,
         
         run.start()
 
+        self.setData(run.data)
+
         self.addToCaseLog(cName,"Ending")
 
         self.reportUsage(run)
+        self.reportRunnerData(run)
 
+        return run.data
+    

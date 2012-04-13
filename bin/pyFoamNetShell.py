@@ -11,9 +11,9 @@ class NetShell(PyFoamApplication):
     prompt="PFNET> "
 
     def __init__(self):
-        description="""
-        Connects to a running pyFoam-Server and executes commands via
-        remote procedure calls
+        description="""\
+Connects to a running pyFoam-Server and executes commands via remote
+procedure calls
         """
         PyFoamApplication.__init__(self,description=description,usage="%prog <host> <port>",interspersed=True,nr=2)
     def addOptions(self):

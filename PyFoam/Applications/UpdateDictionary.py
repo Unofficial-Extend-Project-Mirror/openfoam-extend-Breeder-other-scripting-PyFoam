@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpdateDictionary.py 5985 2009-12-21T21:05:52.364284Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpdateDictionary.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamUpdateDictionary.py
 """
@@ -27,11 +27,11 @@ f.getConfigFormat("input")
 class UpdateDictionary(PyFoamApplication,
                        CommonParserOptions):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Takes two dictionary and modifies the second one after the example of
 the first. If the dictionaries do not have the same name, it looks for
-the destination file by searching the equivalent place in the destination
-case
+the destination file by searching the equivalent place in the
+destination case
         """
         
         PyFoamApplication.__init__(self,

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/MatplotlibTimelines.py 5768 2009-10-31T12:43:14.986952Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/MatplotlibTimelines.py 7611 2011-10-26T17:40:01.014376Z bgschaid  $ 
 """Plots a collection of timelines"""
 
 from PyFoam.Error import warning,error
@@ -32,6 +32,7 @@ class MatplotlibTimelines(GeneralPlotTimelines):
             global plt,matplotlib,firstTimeImport,SubplotHost
             import matplotlib
             if not showWindow and firstTimeImport:
+#                matplotlib.use("MacOSX")
                 matplotlib.use("agg")
                 firstTimeImport=False
             import matplotlib.pyplot as plt
@@ -163,8 +164,10 @@ class MatplotlibTimelines(GeneralPlotTimelines):
             l.get_frame().set_alpha(0.7)
             l.get_texts()[0].set_size(10)
         plt.suptitle(self.title)
+        plt.grid(True)
         plt.draw()
-
+        #  plt.show()
+        
     def actualSetTitle(self,title):
         """Sets the title"""
 

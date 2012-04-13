@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/GeneralLineAnalyzer.py 7014 2010-11-21T23:14:21.485436Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/GeneralLineAnalyzer.py 7656 2012-01-06T14:43:20.069830Z bgschaid  $ 
 """Line analyzer with output and the capability to store lines"""
 
 from LogLineAnalyzer import LogLineAnalyzer
@@ -50,6 +50,12 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
         self.didProgress=False
         self.progressTemplate=progressTemplate
         
+    def getCurrentData(self):
+        if self.lines:
+            return self.lines.getLatestData()
+        else:
+            return {}
+
     def setMaster(self,master):
         """Assign another line-analyzer that will do the actual data gathering"""
         self.master=master

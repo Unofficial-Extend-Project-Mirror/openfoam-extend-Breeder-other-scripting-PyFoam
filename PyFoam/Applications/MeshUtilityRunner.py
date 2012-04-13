@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/MeshUtilityRunner.py 7319 2011-03-03T23:10:51.400635Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/MeshUtilityRunner.py 7663 2012-01-10T14:02:49.258628Z bgschaid  $ 
 """
 Application class that implements pyFoamMeshUtilityRunner
 """
@@ -19,17 +19,19 @@ class MeshUtilityRunner(PyFoamApplication,
                         CommonLibFunctionTrigger,
                         CommonVCSCommit):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Runs an OpenFoam utility that manipulates meshes.  Needs the usual 3
-arguments (<solver> <directory> <case>) and passes them on (plus additional arguments).
+arguments (<solver> <directory> <case>) and passes them on (plus
+additional arguments).
 
 Output is sent to stdout and a logfile inside the case directory
 (PyFoamMeshUtility.logfile)
 
 Before running it clears all timesteps but the first.
 
-After the utility ran it moves all the data from the polyMesh-directory
-of the first time-step to the constant/polyMesh-directory
+After the utility ran it moves all the data from the
+polyMesh-directory of the first time-step to the
+constant/polyMesh-directory
 
 ATTENTION: This utility erases quite a lot of data without asking and
 should therefor be used with care
@@ -67,6 +69,8 @@ should therefor be used with care
         self.addToCaseLog(cName,"Starting")
         
         run.start()
+
+        self.setData(run.data)
 
         sol.reread(force=True)
         

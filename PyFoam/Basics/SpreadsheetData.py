@@ -17,13 +17,17 @@ class SpreadsheetData(object):
     storing all the data at once
     """
     def __init__(self,
+                 timeName=None,
+                 validData=None,
                  csvName=None,
                  txtName=None,
                  data=None,
                  names=None,
                  title=None):
         """Either this is constructed from a file or from the data and the column headers
-        
+
+        @param timeName: the data colum that is to be considered the time in this file
+        @param validData: names of the valid data columns (all others should be discarded)
         @param csvName: name of the CSV-file the data should be constructed from,
         @param txtName: name of a file the data should be constructed from,
         @param data: the actual data to use
@@ -32,7 +36,7 @@ class SpreadsheetData(object):
 
         self.title=title
         
-        if csvName and data:
+        if (csvName or txtName) and data:
             error("SpreadsheetData is either constructed from data or from a file")
 
         if csvName:
@@ -65,8 +69,30 @@ class SpreadsheetData(object):
 
             self.data=numpy.array(map(tuple,data),dtype=zip(names,['f8']*len(names)))
 
+        if timeName:
+            try:
+                index=list(self.data.dtype.names).index(timeName)
+            except ValueError:
+                error("Time name",timeName,"not in",self.data.dtype.names)
+        else:
+            index=0
+        self.time=self.data.dtype.names[index]
+
+        if validData:
+            usedData=[]
+            usedNames=[]
+            
+            for n in self.data.dtype.names:
+                if n==self.time or n in validData:
+                    usedData.append(tuple(self.data[n]))
+                    usedNames.append(n)
+
+            usedData=numpy.array(usedData).transpose()
+            self.data=numpy.array(map(tuple,usedData),dtype=zip(usedNames,['f8']*len(usedNames)))
+            index=list(self.data.dtype.names).index(self.time)
+                
         if self.title!=None:
-            self.data.dtype.names=[self.data.dtype.names[0]]+map(lambda x:self.title+" "+x,self.data.dtype.names[1:])
+            self.data.dtype.names=map(lambda x:self.title+" "+x,self.data.dtype.names[0:index])+[self.data.dtype.names[index]]+map(lambda x:self.title+" "+x,self.data.dtype.names[index+1:])
 
     def names(self):
         return copy.copy(self.data.dtype.names)
@@ -88,7 +114,7 @@ class SpreadsheetData(object):
         """Return the range of times
         @param time: name of the time. If None the first column is used"""
         if time==None:
-            time=self.names()[0]
+            time=self.time
         t=self.data[time]
 
         return (t[0],t[-1])
@@ -102,7 +128,7 @@ class SpreadsheetData(object):
         @param prefix: String that is added to the other names. If none is given then
         the title is used"""
         if time==None:
-            time=self.names()[0]
+            time=self.time
         if prefix==None:
             prefix=other.title
             if prefix==None:
@@ -178,7 +204,7 @@ class SpreadsheetData(object):
         @param noInterpolation: if t doesn't exactly fit a data-point return 'nan'"""
         
         if time==None:
-            time=self.names()[0]
+            time=self.time
 
         x=self.data[time]
         y=self.data[name]
@@ -230,7 +256,7 @@ class SpreadsheetData(object):
         the smallest or the biggest value. If False use nan"""
 
         if time==None:
-            time=self.names()[0]
+            time=self.time
 
         if len(times)==len(self.data[time]):
             same=True
@@ -282,6 +308,7 @@ class SpreadsheetData(object):
     def resample(self,
                  other,
                  name,
+                 otherName=None,
                  time=None,
                  invalidExtend=False,
                  extendData=False,
@@ -295,7 +322,7 @@ class SpreadsheetData(object):
         @param extendData: if the time range of x is bigger than the range then extend the range before resampling
         @param noInterpolation: if t doesn't exactly fit a data-point return 'nan'"""
         if time==None:
-            time=self.names()[0]
+            time=self.time
             
         if extendData and (
             self.data[time][0] > other.data[time][0] or \
@@ -337,14 +364,17 @@ class SpreadsheetData(object):
         result=[]
         
         for t in self.data[time]:
-            result.append(other(t,name,
+            nm=name
+            if otherName:
+                nm=otherName
+            result.append(other(t,nm,
                                 time=time,
                                 invalidExtend=invalidExtend,
                                 noInterpolation=noInterpolation))
 
         return result
     
-    def compare(self,other,name,time=None):
+    def compare(self,other,name,otherName=None,time=None,common=False):
         """Compare this data-set with another. The time-points of this dataset are used as
         a reference. Returns a dictionary with a number of norms: maximum absolute
         difference, average absolute difference
@@ -352,37 +382,70 @@ class SpreadsheetData(object):
         @param other: the other data-set
         @param name: name of the data column to be evaluated. Assumes that that column
         is ordered in ascending order
-        @param time: name of the time column. If none is given then the first column is assumed"""
+        @param time: name of the time column. If none is given then the first column is assumed
+        @param common: cut off the parts where not both data sets are defined"""
 
         if time==None:
-            time=self.names()[0]
+            time=self.time
             
         x=self.data[time]
         y=self.data[name]
-        y2=self.resample(other,name,time=time,invalidExtend=True)
-        
+        y2=self.resample(other,name,otherName=otherName,time=time,invalidExtend=True)
+
+        minT,maxT=None,None
+        if common:
+            minTmp,maxTmp=max(x[0],other.data[time][0]),min(x[-1],other.data[time][-1])
+            for i in range(len(x)):
+                if minTmp<=x[i]:
+                    minT=x[i]
+                    break
+            for i in range(len(x)):
+                val=x[-(i+1)]
+                if maxTmp>=val:
+                    maxT=val
+                    break
+        else:
+            minT,maxT=x[0],x[-1]
+
+        if minT==None or maxT==None:
+            return { "max" : None,
+                     "maxPos" : None,
+                     "average" : None,
+                     "wAverage" : None,
+                     "tMin": None,
+                     "tMax": None }
+            
         maxDiff=0
+        maxPos=x[0]
         sumDiff=0
         sumWeighted=0
+        cnt=0
         
         for i,t in enumerate(x):
+            if t<minT or t>maxT:
+                continue
+            cnt+=1
+            
             val1=y[i]
             val2=y2[i]
             diff=abs(val1-val2)
-            maxDiff=max(diff,maxDiff)
+            if diff>maxDiff:
+                maxDiff=diff
+                maxPos=x[i]
             sumDiff+=diff
             weight=0
-            if i>0:
+            if t>minT:
                 weight+=(t-x[i-1])/2
-            if i<(len(x)-1):
+            if t<maxT:
                 weight+=(x[i+1]-t)/2
             sumWeighted+=weight*diff
 
         return { "max" : maxDiff,
-                 "average" : sumDiff/len(x),
-                 "wAverage" : sumWeighted/(x[-1]-x[0]),
-                 "tMin": x[0],
-                 "tMax": x[-1]}
+                 "maxPos" : maxPos,
+                 "average" : sumDiff/cnt,
+                 "wAverage" : sumWeighted/(maxT-minT),
+                 "tMin": minT,
+                 "tMax": maxT}
 
     def metrics(self,name,time=None):
         """Calculates the metrics for a data set. Returns a dictionary
@@ -392,7 +455,7 @@ class SpreadsheetData(object):
         @param time: name of the time column. If none is given then the first column is assumed"""
 
         if time==None:
-            time=self.names()[0]
+            time=self.time
             
         x=self.data[time]
         y=self.data[name]

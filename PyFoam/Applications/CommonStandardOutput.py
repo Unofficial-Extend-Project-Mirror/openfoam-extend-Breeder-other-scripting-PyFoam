@@ -18,6 +18,11 @@ class CommonStandardOutput(object):
                        default=False,
                        dest="progress",
                        help="Only prints the progress of the simulation, but swallows all the other output")
+        grp.add_option("--silent",
+                       action="store_true",
+                       default=False,
+                       dest="silent",
+                       help="Do not print any output")
         grp.add_option("--logname",
                        dest="logname",
                        default=logname,
@@ -32,6 +37,12 @@ class CommonStandardOutput(object):
                        dest="noLog",
                        default=False,
                        help="Do not output a log-file")
+        grp.add_option("--log-tail",
+                       action="store",
+                       dest="logTail",
+                       default=None,
+                       type="int",
+                       help="Only write the last N lines to the logfile. Too small values might cause performance problems")
 
         self.parser.add_option_group(grp)
 

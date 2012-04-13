@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionDirectory.py 7524 2011-07-15T17:08:53.797429Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionDirectory.py 7887 2012-02-26T19:38:06.213880Z bgschaid  $ 
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -12,8 +12,8 @@ from ParsedParameterFile import ParsedParameterFile,WriteParameterFile
 from os import listdir,path,mkdir,symlink,stat,getlogin,uname,environ
 from time import asctime
 from stat import ST_CTIME
-import tarfile,fnmatch
-import re,shutil
+import tarfile,fnmatch,glob
+import re,os
 
 class SolutionDirectory(Utilities):
     """Represents a solution directory
@@ -469,14 +469,22 @@ class SolutionDirectory(Utilities):
                 for f in cd["functions"][0::2]:
                     pth=path.join(self.name,f)
                     if path.exists(pth):
-                        shutil.rmtree(pth)
+                        self.rmtree(pth)
+
+        additional=eval(conf().get("Clearing","additionalpatterns"))
+        for a in additional:
+            self.clearPattern(a)
                     
-    def clearPattern(self,glob):
+    def clearPattern(self,globPat):
         """Clear all files that fit a certain shell (glob) pattern
         @param glob: the pattern which the files are going to fit"""
 
-        self.rmtree(path.join(self.name,glob),ignore_errors=True)
-        
+        for f in glob.glob(path.join(self.name,globPat)):
+            if path.isdir(f):
+                self.rmtree(f,ignore_errors=False)
+            else:
+                os.unlink(f)
+
     def clearOther(self,
                    pyfoam=True,
                    clearHistory=False):
@@ -502,7 +510,8 @@ class SolutionDirectory(Utilities):
         @param after: time after which directories ar to be removed
         @param processor: remove the processorXX directories
         @param pyfoam: rremove all directories typically created by PyFoam
-        @param keepLast: Keep the last time-step"""
+        @param keepLast: Keep the last time-step
+        @param additional: list with additional patterns to clear"""
         self.clearResults(after=after,
                           removeProcs=processor,
                           keepLast=keepLast,
@@ -511,17 +520,20 @@ class SolutionDirectory(Utilities):
                           functionObjectData=functionObjectData)
         self.clearOther(pyfoam=pyfoam,
                         clearHistory=clearHistory)
-        
+            
     def initialDir(self):
         """@return: the name of the first time-directory (==initial
-        conditions
+        conditions)
         @rtype: str"""
         self.reread()
 
         if self.first:
             return path.join(self.name,self.first)
         else:
-            return None
+            if path.exists(path.join(self.name,"0.org")):
+                return path.join(self.name,"0.org")
+            else:
+                return None
         
     def latestDir(self):
         """@return: the name of the first last-directory (==simulation
@@ -620,14 +632,20 @@ class SolutionDirectory(Utilities):
         @rtype: L{BasicFile}"""
         return BasicFile(path.join(self.name,name))
 
-    def getRegions(self):
+    def getRegions(self,defaultRegion=False):
         """Gets a list of all the available mesh regions by checking all
-        directories in constant and using all those that have a polyMesh-subdirectory"""
+        directories in constant and using all those that have a polyMesh-subdirectory
+        @param defaultRegion: should the default region also be added (as None)"""
         lst=[]
         for d in self.listDirectory(self.constantDir()):
             if path.isdir(path.join(self.constantDir(),d)):
                 if path.exists(self.polyMeshDir(region=d)):
                     lst.append(d)
+
+        if defaultRegion:
+            if path.exists(self.polyMeshDir()):
+                lst.append(None)
+
         lst.sort()
         return lst
 

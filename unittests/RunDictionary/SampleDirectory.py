@@ -41,6 +41,18 @@ def createDirectory():
 """)
     mkdir(path.join(theDir,"samples","5"))
 
+def createDirectory2():
+    createDirectory()
+
+    open(path.join(theDir,"samples","0","line1_p_post_preset_pre_p.xy"),"w").write(
+"""0 0 0 0 
+1 0 0 1
+3 1 1 1
+""")
+    open(path.join(theDir,"samples","0","line2_p_post_preset_pre_p.xy"),"w").write(
+        open(path.join(theDir,"samples","0","line1_p_post_preset_pre_p.xy")).read()
+        )
+
 class SampleDirectoryTest(unittest.TestCase):
     def setUp(self):
         createDirectory()
@@ -104,5 +116,23 @@ class SampleDataTest(unittest.TestCase):
         spread+=spread2
         spread.writeCSV("/tmp/sample.csv")
         
-theSuite.addTest(unittest.makeSuite(SampleTimeTest,"test"))
+theSuite.addTest(unittest.makeSuite(SampleDataTest,"test"))
 
+class SampleDataTestPrefix(unittest.TestCase):
+    def setUp(self):
+        createDirectory2()
+
+    def tearDown(self):
+        destroyDirectory()
+
+    def testUsePrePostfix(self):
+        sd=SampleDirectory(theDir,prefixes=["pre"],postfixes=["post"])
+        self.assertEqual(len(sd),2)
+        self.assertEqual(len(sd.lines()),2)
+        self.assertEqual(len(sd.values()),8)
+        self.assertEqual(len(sd.getData()),15)
+        st=sd["0"]
+        p=st[("line2","p_post")]
+        p2=st[("line2","pre_p")]
+
+theSuite.addTest(unittest.makeSuite(SampleTimeTest,"test"))

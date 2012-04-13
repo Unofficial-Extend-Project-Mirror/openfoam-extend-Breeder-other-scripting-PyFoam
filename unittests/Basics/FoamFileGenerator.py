@@ -3,10 +3,10 @@ import unittest
 
 from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator,makeString,FoamFileGeneratorError
 from PyFoam.Basics.DataStructures import DictProxy,TupleProxy,Unparsed,UnparsedList
-from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,FoamStringParser
 
 from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
-from os import tmpnam,system,environ,path
+from os import tmpnam,system,path
 from copy import deepcopy
 import warnings
 
@@ -52,6 +52,15 @@ def simpleBikeTutorial():
         error("The simpleFoam-motorBike-case does not exist before 1.6")
         
     return path.join(prefix,"simpleFoam","motorBike")
+
+def potentialCylinderTutorial():
+    prefix=foamTutorials()
+    if oldTutorialStructure():
+        prefix=path.join(prefix,"potentialFoam")            
+    else:
+        prefix=path.join(prefix,"basic","potentialFoam")            
+    return path.join(prefix,"cylinder")
+        
 
 class FoamFileGeneratorTest(unittest.TestCase):
     def testMakePrimitives(self):
@@ -109,6 +118,27 @@ class FoamFileGeneratorTest(unittest.TestCase):
         d["a"]=False
         g=FoamFileGenerator(d)
         self.assertEqual(str(g),"b yes;\na no;\n")
+
+    def testMakeDictionaryRedirect(self):
+        val="""
+a {
+   b 2;
+}
+c {
+   $a;
+   d 3;
+}
+"""
+        d=FoamStringParser(
+            val,
+            doMacroExpansion=True
+        )
+        self.assertEqual(str(d),"a\n{\n  b 2;\n}\nc\n{\n  $a;\n  d 3; \t\n} \t\n")
+        d=FoamStringParser(
+            val,
+            doMacroExpansion=False
+        )
+        self.assertEqual(str(d),"a\n{\n  b 2;\n}\nc\n{\n  $a ;\n  d 3; \t\n} \t\n")
 
     def testMakeDictionary(self):
         g=FoamFileGenerator({'a':1,'b':2})
@@ -387,3 +417,25 @@ class IncludeFilesRoundTrip(unittest.TestCase):
 
 if foamVersionNumber()>=(1,6):
     theSuite.addTest(unittest.makeSuite(IncludeFilesRoundTrip,"test"))
+
+class CodeStreamRoundTrip(unittest.TestCase):
+    def setUp(self):
+        self.theDir=tmpnam()
+        system("cp -r "+potentialCylinderTutorial()+" "+self.theDir)
+        self.theFile=path.join(self.theDir,"system","controlDict")
+
+    def tearDown(self):
+        system("rm -r "+self.theDir)
+
+    def testBasicInclude(self):
+        if foamVersionNumber()<(2,):
+            return
+        test=ParsedParameterFile(self.theFile)
+        data1=deepcopy(test.content)
+        open(self.theFile,"w").write(str(FoamFileGenerator(data1,header=test.header)))
+        del test
+        test2=ParsedParameterFile(self.theFile)
+        self.assertEqual(data1,test2.content)
+        
+if foamVersionNumber()>=(2,):
+    theSuite.addTest(unittest.makeSuite(CodeStreamRoundTrip,"test"))

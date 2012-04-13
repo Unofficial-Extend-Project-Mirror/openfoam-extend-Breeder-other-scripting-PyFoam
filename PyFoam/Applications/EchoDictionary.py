@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/EchoDictionary.py 7397 2011-04-03T18:35:06.691206Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/EchoDictionary.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamEchoDictionary
 """
@@ -16,9 +16,9 @@ from PyFoam.Error import PyFoamException
 class EchoDictionary(PyFoamApplication,
                      CommonParserOptions):
     def __init__(self,args=None):
-        description="""
-Reads a Foam-Dictionary and prints it to the screen. Mainly for reformatting
-unformated dictionaries and debugging the parser
+        description="""\
+Reads a Foam-Dictionary and prints it to the screen. Mainly for
+reformatting unformated dictionaries and debugging the parser
         """
         
         PyFoamApplication.__init__(self,
@@ -40,6 +40,7 @@ unformated dictionaries and debugging the parser
                                          debug=self.opts.debugParser,
                                          noHeader=self.opts.noHeader,
                                          noBody=self.opts.noBody,
+                                         preserveComments=self.opts.preserveComments,
                                          boundaryDict=self.opts.boundaryDict,
                                          listDict=self.opts.listDict,
                                          listDictWithHeader=self.opts.listDictWithHeader,

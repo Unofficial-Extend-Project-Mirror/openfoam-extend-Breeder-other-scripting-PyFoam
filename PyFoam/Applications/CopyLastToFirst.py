@@ -11,7 +11,7 @@ from PyFoam.Error import error
 
 class CopyLastToFirst(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Copies the contents of the last time-step of the source case to the
 first time-step of the destination case (thus using it as initial
 conditions)

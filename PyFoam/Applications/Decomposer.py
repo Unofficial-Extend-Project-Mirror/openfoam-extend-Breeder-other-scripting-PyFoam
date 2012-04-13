@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Decomposer.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Decomposer.py 7930 2012-03-14T12:33:54.771148Z bgschaid  $ 
 """
 Class that implements pyFoamDecompose
 """
@@ -12,6 +12,7 @@ from PyFoam.Basics.Utilities import writeDictionaryHeader,rmtree
 from PyFoam.Execution.UtilityRunner import UtilityRunner
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.RegionCases import RegionCases
+from PyFoam.RunDictionary.ParsedParameterFile import FoamStringParser
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 from PyFoam.FoamInformation import foamVersion
 
@@ -29,8 +30,9 @@ class Decomposer(PyFoamApplication,
                  CommonMultiRegion,
                  CommonVCSCommit):
     def __init__(self,args=None):
-        description="""
-Generates a decomposeParDict for a case and runs the decompose-Utility on that case
+        description="""\
+Generates a decomposeParDict for a case and runs the decompose-Utility
+on that case
 """
         PyFoamApplication.__init__(self,
                                    args=args,
@@ -88,7 +90,7 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
                         dest="globalFaceZones",
                         action="store",
                         default=None,
-                        help="Global face zones. A python string. Used for the GGI interface. Ex: '(GGI_Z1 GGI_Z2)'")
+                        help="""Global face zones. A string with a python list or an OpenFOAM-list of words. Used for the GGI interface. Ex: '["GGI_Z1","GGI_Z2"]' or '(GGI_Z1 GGI_Z2)'""")
         
         spec.add_option("--dataFile",
                         dest="dataFile",
@@ -141,8 +143,13 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
         CommonVCSCommit.addOptions(self)
         
     def run(self):
+        decomposeParWithRegion=(foamVersion()>=(1,6))
+
         if self.opts.keeppseudo and (not self.opts.regions and self.opts.region==None):
             warning("Option --keep-pseudocases only makes sense for multi-region-cases")
+
+        if decomposeParWithRegion and self.opts.keeppseudo:
+            warning("Option --keep-pseudocases doesn't make sense since OpenFOAM 1.6 because decomposePar supports regions")
 
         nr=int(self.parser.getArgs()[1])
         if nr<2:
@@ -159,7 +166,14 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
         result[method+"Coeffs"]=coeff
 
         if self.opts.globalFaceZones!=None:
-            fZones=eval(self.opts.globalFaceZones)
+            try:
+                fZones=eval(self.opts.globalFaceZones)
+            except SyntaxError:
+                fZones=FoamStringParser(
+                    self.opts.globalFaceZones,
+                    listDict=True
+                ).data
+
             result["globalFaceZones"]=fZones
 
         if method in ["metis","scotch","parMetis"]:
@@ -210,43 +224,62 @@ Generates a decomposeParDict for a case and runs the decompose-Utility on that c
         self.checkAndCommit(SolutionDirectory(case,archive=None))
 
         if self.opts.doDecompose:
-            regionNames=[self.opts.region]
+            if self.opts.region:
+                regionNames=self.opts.region[:]
+                while True:
+                    try:
+                        i=regionNames.index("region0")
+                        regionNames[i]=None
+                    except ValueError:
+                        break
+            else:
+                regionNames=[None]
+
             regions=None
 
-            if self.opts.regions or self.opts.region!=None:
-                print "Building Pseudocases"
-                sol=SolutionDirectory(case)
-                regions=RegionCases(sol,clean=True,processorDirs=False)
+            sol=SolutionDirectory(case)
+            if not decomposeParWithRegion:
+                if self.opts.regions or self.opts.region!=None:
+                    print "Building Pseudocases"
+                    regions=RegionCases(sol,clean=True,processorDirs=False)
 
-                if self.opts.regions:
-                    regionNames=sol.getRegions()
+            if self.opts.regions:
+                regionNames=sol.getRegions(defaultRegion=True)
                 
             for theRegion in regionNames:
                 theCase=path.normpath(case)
-                if theRegion!=None:
+                if theRegion!=None and not decomposeParWithRegion:
                     theCase+="."+theRegion
 
                 if oldApp():
                     argv=[self.opts.decomposer,".",theCase]
                 else:
                     argv=[self.opts.decomposer,"-case",theCase]
-
+                    if theRegion!=None and decomposeParWithRegion:
+                        argv+=["-region",theRegion]
+                        
+                        f=open(path.join(case,"system",theRegion,"decomposeParDict"),"w")
+                        writeDictionaryHeader(f)
+                        f.write(str(gen))
+                        f.close()
+                    
                 self.setLogname(default="Decomposer",useApplication=False)
                 
                 run=UtilityRunner(argv=argv,
-                                  silent=self.opts.progress,
+                                  silent=self.opts.progress or self.opts.silent,
                                   logname=self.opts.logname,
                                   compressLog=self.opts.compress,
                                   server=self.opts.server,
                                   noLog=self.opts.noLog,
+                                  logTail=self.opts.logTail,
                                   jobId=self.opts.jobId)
                 run.start()
 
-                if theRegion!=None:
+                if theRegion!=None and not decomposeParWithRegion:
                     print "Syncing into master case"
                     regions.resync(theRegion)
 
-            if regions!=None:
+            if regions!=None and not decomposeParWithRegion:
                 if not self.opts.keeppseudo:
                     print "Removing pseudo-regions"
                     regions.cleanAll()

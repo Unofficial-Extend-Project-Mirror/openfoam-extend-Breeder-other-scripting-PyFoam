@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/UtilityRunner.py 7358 2011-03-15T17:29:19.750462Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/UtilityRunner.py 7636 2011-11-30T13:54:29.838641Z bgschaid  $ 
 """Run a non-solver utility"""
 
 from AnalyzedRunner import AnalyzedRunner
@@ -21,6 +21,7 @@ class UtilityRunner(AnalyzedRunner):
                  restart=False,
                  compressLog=False,
                  noLog=False,
+                 logTail=None,
                  remark=None,
                  lam=None,
                  jobId=None):
@@ -33,6 +34,7 @@ class UtilityRunner(AnalyzedRunner):
                                 restart=restart,
                                 compressLog=compressLog,
                                 noLog=noLog,
+                                logTail=logTail,
                                 remark=remark,
                                 lam=lam,
                                 jobId=jobId)

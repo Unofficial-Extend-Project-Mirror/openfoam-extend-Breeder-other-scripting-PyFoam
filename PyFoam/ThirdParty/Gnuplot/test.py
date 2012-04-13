@@ -15,10 +15,7 @@ thorough test of many combinations of Gnuplot.py features.
 """
 
 import os, time, math, tempfile
-try:
-    import numpy
-except ImportError:
-    import Numeric as numpy
+import numpy
     
 try:
     import Gnuplot, Gnuplot.PlotItems, Gnuplot.funcutils

@@ -17,10 +17,10 @@ from PyFoam.Error import error,warning
 
 class RedoPlot(PyFoamApplication):
     def __init__(self):
-        description="""
-        Either connects to a running pyFoam-Server and gets all the information for
-        plotting or reads the relevant data from a pickle file and either displays
-        the plot or writes the plots to file
+        description="""\
+Either connects to a running pyFoam-Server and gets all the
+information for plotting or reads the relevant data from a pickle file
+and either displays the plot or writes the plots to file
         """
         PyFoamApplication.__init__(self,
                                    description=description,
@@ -107,7 +107,7 @@ class RedoPlot(PyFoamApplication):
             error("Both modes selected")
 
         if self.opts.server:
-            if len(self.parser.getArgs()[0])!=2:
+            if len(self.parser.getArgs())!=2:
                 error("Need a server and a port to be specified")
                 
             host=self.parser.getArgs()[0]

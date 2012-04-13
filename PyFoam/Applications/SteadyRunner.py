@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SteadyRunner.py 7319 2011-03-03T23:10:51.400635Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SteadyRunner.py 7722 2012-01-18T17:50:53.943725Z bgschaid  $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -18,6 +18,7 @@ from CommonRestart import CommonRestart
 from CommonPlotLines import CommonPlotLines
 from CommonClearCase import CommonClearCase
 from CommonReportUsage import CommonReportUsage
+from CommonReportRunnerData import CommonReportRunnerData
 from CommonSafeTrigger import CommonSafeTrigger
 from CommonWriteAllTrigger import CommonWriteAllTrigger
 from CommonStandardOutput import CommonStandardOutput
@@ -31,12 +32,13 @@ class SteadyRunner(PyFoamApplication,
                    CommonClearCase,
                    CommonServer,
                    CommonReportUsage,
+                   CommonReportRunnerData,
                    CommonParallel,
                    CommonRestart,
                    CommonStandardOutput,
                    CommonVCSCommit):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Runs an OpenFoam steady solver.  Needs the usual 3 arguments (<solver>
 <directory> <case>) and passes them on (plus additional arguments)
 Output is sent to stdout and a logfile inside the case directory
@@ -58,6 +60,7 @@ stopped and the last simulation state is written to disk
         CommonClearCase.addOptions(self)
         CommonRestart.addOptions(self)
         CommonReportUsage.addOptions(self)
+        CommonReportRunnerData.addOptions(self)
         CommonStandardOutput.addOptions(self)
         CommonParallel.addOptions(self)
         CommonPlotLines.addOptions(self)
@@ -86,13 +89,14 @@ stopped and the last simulation state is written to disk
                                                   doFiles=self.opts.writeFiles,
                                                   singleFile=self.opts.singleDataFilesOnly,
                                                   doTimelines=True),
-                              silent=self.opts.progress,
+                              silent=self.opts.progress or self.opts.silent,
                               argv=self.parser.getArgs(),
                               restart=self.opts.restart,
                               server=self.opts.server,
                               logname=self.opts.logname,
                               compressLog=self.opts.compress,
                               lam=lam,
+                              logTail=self.opts.logTail,
                               noLog=self.opts.noLog,
                               remark=self.opts.remark,
                               jobId=self.opts.jobId)
@@ -109,5 +113,10 @@ stopped and the last simulation state is written to disk
 
         self.addToCaseLog(cName,"Ending")
 
-        self.reportUsage(run)
+        self.setData(run.data)
 
+        self.reportUsage(run)
+        self.reportRunnerData(run)
+
+        return run.data
+    

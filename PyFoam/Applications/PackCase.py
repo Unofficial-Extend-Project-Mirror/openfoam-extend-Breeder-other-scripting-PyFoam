@@ -11,9 +11,10 @@ from optparse import OptionGroup
 
 class PackCase(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-Packs a case into a tar-file copying the system, constant and 0-directories.
-Excludes all .svn-direcotries and all files ending with ~
+        description="""\
+Packs a case into a tar-file copying the system, constant and
+0-directories.  Excludes all .svn-direcotries and all files ending
+with ~
 """
         PyFoamApplication.__init__(self,
                                    args=args,

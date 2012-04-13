@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/WriteDictionary.py 6750 2010-07-07T21:28:38.167493Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/WriteDictionary.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamWriteDictionary
 """
@@ -11,12 +11,11 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 class WriteDictionary(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-Write a value to a Foam-Dictionary.
-The description of the value is word. If the value is
-non-atomic (a list or a dictionary) it has to be in in Python-notation.
-Parts of the expression can be accessed by using the Python-notation for accessing
-sub-expressions.
+        description="""\
+Write a value to a Foam-Dictionary.  The description of the value is
+word. If the value is non-atomic (a list or a dictionary) it has to be
+in in Python-notation.  Parts of the expression can be accessed by
+using the Python-notation for accessing sub-expressions.
 
 Example of usage:
                             > pyFoamWriteDictionary.py --test pitzDaily/0/U "boundaryField['inlet']['type']" zeroGradient <

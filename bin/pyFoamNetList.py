@@ -8,8 +8,8 @@ import xmlrpclib,socket,sys,time
 
 class NetList(PyFoamApplication):
     def __init__(self):
-        description="""
-        Lists all the processes known to a meta-server
+        description="""\
+Lists all the processes known to a meta-server
         """
         self.defaultHost=config().get("Metaserver","ip")
         self.defaultPort=config().getint("Metaserver","port")

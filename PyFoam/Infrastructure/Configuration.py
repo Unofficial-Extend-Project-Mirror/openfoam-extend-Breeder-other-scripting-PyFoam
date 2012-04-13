@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Configuration.py 7345 2011-03-09T21:17:59.267549Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Configuration.py 7646 2011-12-19T09:18:22.197517Z bgschaid  $ 
 """Reads configuration-files that define defaults for various PyFoam-Settings
 
 Also hardcodes defaults for the settings"""
@@ -8,7 +8,7 @@ from ConfigParser import ConfigParser,NoOptionError
 from Hardcoded import globalConfigFile,userConfigFile,globalDirectory,userDirectory,globalConfigDir,userConfigDir
 
 from os import path
-import glob
+import glob,re
 
 _defaults={
     "Network": {
@@ -87,6 +87,9 @@ _defaults={
     "SolverOutput": {
     "timeRegExp": "^(Time =|Iteration:) (.+)$",
     },
+    "Clearing": {
+    "additionalPatterns":"[]",
+    }
     }
 
 class Configuration(ConfigParser):
@@ -231,6 +234,16 @@ class Configuration(ConfigParser):
             else:
                 raise
 
+    def getRegexp(self,section,option):
+        """Get an entry and interpret it as a regular expression. Subsitute
+        the usual regular expression value for floating point numbers
+        @param section: the section
+        @param option: the option
+        @param default: if set and the option is not found, then this value is used"""
+        floatRegExp="[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?"
+        
+        return re.compile(self.get(section,option).replace("%f%",floatRegExp))
+    
     def get(self,section,option,default=None):
         """Overrides the original implementation from ConfigParser
         @param section: the section

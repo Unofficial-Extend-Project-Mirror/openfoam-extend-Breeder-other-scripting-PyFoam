@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/FoamOptionParser.py 7200 2011-02-13T10:40:48.367544Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/FoamOptionParser.py 7815 2012-01-30T19:52:34.081422Z bgschaid  $ 
 """Parse options for the PyFoam-Scripts"""
 
 from optparse import OptionParser,TitledHelpFormatter
@@ -9,14 +9,20 @@ from PyFoam.FoamInformation import oldAppConvention as oldApp
 
 from PyFoam.Error import error,warning
 
-from os import path
+from os import path,environ
+from copy import deepcopy
 
 class FoamOptionParser(OptionParser):
     """Wrapper to the usual OptionParser to honor the conventions of OpenFOAM-utilities
 
     Options that are not used by the script are passed to the OpenFOAM-application"""
     
-    def __init__(self,args=None,usage=None,version=None,description=None,interspersed=False):
+    def __init__(self,
+                 args=None,
+                 usage=None,
+                 version=None,
+                 description=None,
+                 interspersed=False):
         """
         @param usage: usage string. If missing a default is used
         @param version: if missing the PyFoam-version is used
@@ -41,7 +47,12 @@ class FoamOptionParser(OptionParser):
         else:
             self.argLine=map(str,args)
             
-        OptionParser.__init__(self,usage=usage,version=version,description=description,formatter=TitledHelpFormatter())
+        OptionParser.__init__(self,
+                              usage=usage,
+                              # prog=self.__type__.__name__,
+                              version=version,
+                              description=description,
+                              formatter=TitledHelpFormatter())
 
         if interspersed:
             self.enable_interspersed_args()
@@ -51,6 +62,15 @@ class FoamOptionParser(OptionParser):
         self.options=None
         self.args=None
         
+        self.__foamVersionChanged=False
+        self.__oldEnvironment=None
+
+    def restoreEnvironment(self):
+        """Restore the environment to its old glory... if it was changed"""
+        if self.__foamVersionChanged:
+            #            print "Restoring the environment"
+            environ.update(self.__oldEnvironment)
+
     def parse(self,nr=None,exactNr=True):
         """
         parse the options
@@ -63,6 +83,10 @@ class FoamOptionParser(OptionParser):
             if self.options.foamVersion!=None:
                 if self.options.force32 and self.options.force64:
                     error("A version can't be 32 and 64 bit at the same time")
+
+                self.__foamVersionChanged=True
+                self.__oldEnvironment=deepcopy(environ)
+
                 changeFoamVersion(self.options.foamVersion,
                                   force64=self.options.force64,
                                   force32=self.options.force32,

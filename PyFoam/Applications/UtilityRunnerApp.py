@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UtilityRunnerApp.py 5103 2009-05-21T13:38:11.860189Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UtilityRunnerApp.py 7873 2012-02-21T17:58:56.249464Z bgschaid  $ 
 """
 Application class that implements pyFoamUtilityRunner
 """
@@ -12,14 +12,14 @@ from os import path
 
 class UtilityRunnerApp(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-        Runs a OpenFoam Utility and analyzes the output.  Needs a regular
-        expression to look for.  The next 3 arguments are the usual OpenFoam
-        argumens (<solver> <directory> <case>) and passes them on (plus
-        additional arguments).  Output is sent to stdout and a logfile inside
-        the case directory (PyFoamUtility.logfile).  The Directory
-        PyFoamUtility.analyzed contains a file test with the information of
-        the regexp (the pattern groups).
+        description="""\
+Runs a OpenFoam Utility and analyzes the output.  Needs a regular
+expression to look for.  The next 3 arguments are the usual OpenFoam
+argumens (<solver> <directory> <case>) and passes them on (plus
+additional arguments).  Output is sent to stdout and a logfile inside
+the case directory (PyFoamUtility.logfile).  The Directory
+PyFoamUtility.analyzed contains a file test with the information of
+the regexp (the pattern groups).
         """
 
         PyFoamApplication.__init__(self,
@@ -30,9 +30,9 @@ class UtilityRunnerApp(PyFoamApplication):
     def addOptions(self):
         self.parser.add_option("-r",
                                "--regexp",
-                               type="string",
+                               action="append",
                                dest="regexp",
-                               help="The regular expression to look for")
+                               help="The regular expression to look for. With more than one the expresions get appended")
         
         self.parser.add_option("-n",
                                "--name",
@@ -63,7 +63,11 @@ class UtilityRunnerApp(PyFoamApplication):
                           silent=self.opts.silent,
                           server=True)
 
-        run.add(self.opts.name,self.opts.regexp)
+        for i,r in enumerate(self.opts.regexp):
+            name=self.opts.name
+            if len(self.opts.regexp)>1:
+                name="%s_%d" % (name,i)                
+            run.add(name,r)
 
         self.addToCaseLog(cName,"Starting")
         
@@ -71,16 +75,26 @@ class UtilityRunnerApp(PyFoamApplication):
 
         self.addToCaseLog(cName,"Ending")
 
-        fn=path.join(run.getDirname(),self.opts.name)
+        allData=run.data
 
-        data=run.analyzer.getData(self.opts.name)
+        for i,r in enumerate(self.opts.regexp):
+            name=self.opts.name
+            if len(self.opts.regexp)>1:
+                name="%s_%d" % (name,i)                
+            
+            fn=path.join(run.getDirname(),name)
 
-        if data==None:
-            print sys.argv[0]+": No data found"
-        else:
-            if self.opts.echo:
-                fh=open(fn)
-                print fh.read()
-                fh.close()
+            data=run.analyzer.getData(name)
+            allData["analyzed"][name]=data
+            
+            if data==None:
+                print sys.argv[0]+": No data found for expression",r
             else:
-                print sys.argv[0]+": Output written to file "+fn
+                if self.opts.echo:
+                    fh=open(fn)
+                    print fh.read()
+                    fh.close()
+                else:
+                    print sys.argv[0]+": Output written to file "+fn
+
+        self.setData(allData)

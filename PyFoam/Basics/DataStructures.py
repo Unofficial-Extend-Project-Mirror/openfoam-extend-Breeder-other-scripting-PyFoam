@@ -190,7 +190,28 @@ class Tensor(FixedLength):
 class SymmTensor(FixedLength):
     def __init__(self,v1,v2,v3,v4,v5,v6):
         FixedLength.__init__(self,[v1,v2,v3,v4,v5,v6])
+
+class DictRedirection(object):
+    """This class is in charge of handling redirections to other directories"""
+    def __init__(self,fullCopy,reference,name):
+        self._fullCopy=fullCopy
+        self._reference=reference
+        self._name=name
+
+    def useAsRedirect(self):
+        self._fullCopy=None
+
+    def getContent(self):
+        result=self._fullCopy
+        self._fullCopy=None
+        return result
         
+    def __call__(self):
+        return self._reference
+
+    def __str__(self):
+        return "$"+self._name
+    
 class DictProxy(dict):
     """A class that acts like a dictionary, but preserves the order
     of the entries. Used to beautify the output"""
@@ -200,6 +221,7 @@ class DictProxy(dict):
         self._order=[]
         self._decoration={}
         self._regex=[]
+        self._redirects=[]
         
     def __setitem__(self,key,value):
         isRegex=False
@@ -221,6 +243,12 @@ class DictProxy(dict):
             for k,e,v in self._regex:
                 if e.match(key):
                     return v
+            for r in self._redirects:
+                try:
+                    return r()[key]
+                except KeyError:
+                    pass
+                    
             raise KeyError(key)
         
     def __delitem__(self,key):
@@ -232,10 +260,13 @@ class DictProxy(dict):
     def __deepcopy__(self,memo):
         new=DictProxy()
         for k in self._order:
-            try:
-                new[k]=deepcopy(self[k],memo)
-            except KeyError:
-                new[k]=deepcopy(self.getRegexpValue(k),memo)
+            if type(k)==DictRedirection:
+                new.addRedirection(k)
+            else:
+                try:
+                    new[k]=deepcopy(self[k],memo)
+                except KeyError:
+                    new[k]=deepcopy(self.getRegexpValue(k),memo)
             
         return new
 
@@ -246,10 +277,14 @@ class DictProxy(dict):
             for k,e,v in self._regex:
                 if e.match(key):
                     return True
+            for r in self._redirects:
+                if key in r():
+                    return True
+                    
             return False
 
     def keys(self):
-        return self._order[:]
+        return filter(lambda x:type(x)!=DictRedirection,self._order)
 
     def addDecoration(self,key,text):
         if key in self:
@@ -268,7 +303,12 @@ class DictProxy(dict):
             if k==key:
                 return v
         raise KeyError(key)
-    
+
+    def addRedirection(self,redir):
+        self._order.append(redir)
+        redir.useAsRedirect()
+        self._redirects.append(redir)
+        
 class TupleProxy(list):
     """Enables Tuples to be manipulated"""
 
@@ -284,14 +324,11 @@ class Unparsed(object):
     def __str__(self):
         return self.data
     
-class Codestream(object):
+class Codestream(str):
     """A class that encapsulates an codestream string"""
 
-    def __init__(self,data):
-        self.data=data
-
     def __str__(self):
-        return "#{" + self.data + "#}"
+        return "#{" + str.__str__(self) + "#}"
     
 class UnparsedList(object):
     """A class that encapsulates a list that was not parsed for

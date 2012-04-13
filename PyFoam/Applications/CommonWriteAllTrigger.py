@@ -23,26 +23,40 @@ class CommonWriteAllTrigger(object):
                                     dest="purgeWrite",
                                     default=None,
                                     help="Together with write-all-timesteps determines the number of time-steps that is kept on disc. All will be kept if unset")
+        self.generalOpts.add_option("--run-until",
+                                    action="store",
+                                    type="float",
+                                    dest="runUntil",
+                                    default=None,
+                                    help="Change the endTime so that the case only runs until this time")
 
     def addWriteAllTrigger(self,run,sol):
-        if self.opts.writeAll:
-            warning("Adding Trigger and resetting to safer start-settings")
-            trig=WriteAllTrigger(sol,self.opts.purgeWrite)
-            run.addEndTrigger(trig.resetIt)
-        elif self.opts.purgeWrite!=None:
+        if self.opts.purgeWrite!=None and not self.opts.writeAll:
             warning("purgeWrite of",self.opts.purgeWrite,"ignored because write-all-timesteps unused")
+            
+        if self.opts.writeAll or self.opts.runUntil!=None:
+            warning("Adding Trigger and resetting to safer start-settings")
+            trig=WriteAllTrigger(sol,
+                                 self.opts.writeAll,
+                                 self.opts.purgeWrite,
+                                 self.opts.runUntil)
+            run.addEndTrigger(trig.resetIt)
         
 class WriteAllTrigger:
-    def __init__(self,sol,purge):
+    def __init__(self,sol,writeAll,purge,until):
         self.control=ParsedParameterFile(path.join(sol.systemDir(),"controlDict"),backup=True)
 
         self.fresh=True
         
         try:
-            self.control["writeControl"]="timeStep"
-            self.control["writeInterval"]="1"
-            if purge!=None:
-                self.control["purgeWrite"]=purge
+            if writeAll:
+                self.control["writeControl"]="timeStep"
+                self.control["writeInterval"]="1"
+                if purge!=None:
+                    self.control["purgeWrite"]=purge
+                    
+            if until!=None:
+                self.control["endTime"]=until
                 
             self.control.writeFile()
         except Exception,e:

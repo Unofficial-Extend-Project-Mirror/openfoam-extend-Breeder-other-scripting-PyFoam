@@ -14,10 +14,7 @@ points and tabulate the output to be used with Gnuplot.
 
 """
 
-try:
-    import numpy
-except ImportError:
-    import Numeric as numpy
+import numpy
     
 import Gnuplot, utils
 

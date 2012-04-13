@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ClearBoundaryValue.py 5985 2009-12-21T21:05:52.364284Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ClearBoundaryValue.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamClearBoundaryValue.py
 """
@@ -12,9 +12,9 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 class ClearBoundaryValue(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-Takes a field-file and makes the whole internal field uniform. Either taking
-the value from a patch or using a user-specified value
+        description="""\
+Takes a field-file and makes the whole internal field uniform. Either
+taking the value from a patch or using a user-specified value
         """
         
         PyFoamApplication.__init__(self,

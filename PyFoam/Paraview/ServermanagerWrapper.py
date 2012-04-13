@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Paraview/ServermanagerWrapper.py 6676 2010-06-06T19:17:36.696220Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Paraview/ServermanagerWrapper.py 7608 2011-10-11T16:50:42.194214Z bgschaid  $ 
 """ Wrapper class for the paraview servermanager
 
 Sets up the servermanager to be used with OpenFOAM-Data. Especially makes sure that
@@ -8,6 +8,8 @@ from math import sqrt
 # from glob import glob
 from paraview import servermanager
 from PyFoam.Paraview import version
+from PyFoam.FoamInformation import foamVersion
+
 if version()>=(3,6):
     from paraview.simple import LoadPlugin
     from paraview import simple
@@ -46,32 +48,46 @@ class ServermanagerWrapper(object):
             elif uname()[0]=="Linux":
                 try:
                     import ctypes
-                    lib=ctypes.CDLL(path.join(environ["FOAM_LIBBIN"],"libPV3FoamReader.so"),mode=ctypes.RTLD_GLOBAL)
+                    dirs=[environ["FOAM_LIBBIN"]]+environ["PV_PLUGIN_PATH"].split(":")
+                    lib=None
+                    for d in dirs:
+                        try:
+                            lib=ctypes.CDLL(path.join(d,"libPV3FoamReader.so"),mode=ctypes.RTLD_GLOBAL)
+                            break
+                        except OSError:
+                            pass
+                    if not lib:
+                        warning("Could not find libPV3FoamReader.so in",dirs)
                 except ImportError:
                     error("The Workaround for Linux-Systems won't work because there is no ctypes library")
 
             plug1="libPV3FoamReader."+dyExt
+            if foamVersion()>=(1,7):
+                plug1=None
+                
             plug2="libPV3FoamReader_SM."+dyExt
 
             loaded=False
             for p in environ["PV_PLUGIN_PATH"].split(":"):
-                if path.exists(path.join(p,plug1)):
+                if path.exists(path.join(p,plug2)):
                     if version()>=(3,6):
                         LoadPlugin(path.join(p,plug2),ns=globals())
                         try:
-                            LoadPlugin(path.join(p,plug1),ns=globals())
+                            if plug1:
+                                LoadPlugin(path.join(p,plug1),ns=globals())
                             pass
                         except NameError:
                             print dir(self.module())
                             pass
                     else:
-                        servermanager.LoadPlugin(path.join(p,plug1))
+                        if plug1:
+                            servermanager.LoadPlugin(path.join(p,plug1))
                         servermanager.LoadPlugin(path.join(p,plug2))
                     loaded=True
                     break
 
             if not loaded:
-                error("The plugin",plug1,"was not found in the PV_PLUGIN_PATH",environ["PV_PLUGIN_PATH"])
+                error("The plugin",plug2,"was not found in the PV_PLUGIN_PATH",environ["PV_PLUGIN_PATH"])
             if not "PV3FoamReader" in dir(servermanager.sources):
                 error("The plugin was not properly loaded. PV3FoamReader not found in the list of sources")
         elif requiredReader=="OpenFOAMReader":

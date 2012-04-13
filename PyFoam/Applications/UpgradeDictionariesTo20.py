@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpgradeDictionariesTo20.py 7545 2011-07-20T19:20:20.383594Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpgradeDictionariesTo20.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamUpgradeDictionariesTo20
 """
@@ -120,9 +120,9 @@ class ThermophysicalUpgradeInfo(DictionaryUpgradeInfo):
             
 class UpgradeDictionariesTo20(UpgradeDictionariesTo17):
     def __init__(self,args=None):
-        description="""
-Examines dictionaries in a case and tries to upgrade them to a form that is
-compatible with OpenFOAM 2.0
+        description="""\
+Examines dictionaries in a case and tries to upgrade them to a form
+that is compatible with OpenFOAM 2.0
         """
         
         UpgradeDictionariesTo17.__init__(self,

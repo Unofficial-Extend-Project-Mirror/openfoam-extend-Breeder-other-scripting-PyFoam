@@ -24,7 +24,7 @@ from PyQt4 import QtCore, QtGui
 class APoMaFoXiiQt(PyFoamApplication,
                CommonCaseBuilder):
     def __init__(self,args=None):
-        description="""
+        description="""\
 APoMaFoX is "A Poor Mans FoamX".
 
 A small text interface to the CaseBuilder-Functionality

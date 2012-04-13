@@ -1,11 +1,11 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/ParsedParameterFile.py 7522 2011-07-14T22:29:37.344800Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/ParsedParameterFile.py 7947 2012-03-29T21:47:16.093247Z bgschaid  $ 
 """Parameter file is read into memory and modified there"""
 
 from FileBasis import FileBasisBackup
 from PyFoam.Basics.PlyParser import PlyParser
 from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator
 
-from PyFoam.Basics.DataStructures import Vector,Field,Dimension,DictProxy,TupleProxy,Tensor,SymmTensor,Unparsed,UnparsedList,Codestream
+from PyFoam.Basics.DataStructures import Vector,Field,Dimension,DictProxy,TupleProxy,Tensor,SymmTensor,Unparsed,UnparsedList,Codestream,DictRedirection
 
 from PyFoam.Error import error,warning,FatalErrorPyFoamException
 
@@ -24,6 +24,7 @@ class ParsedParameterFile(FileBasisBackup):
                  listDict=False,
                  listDictWithHeader=False,
                  listLengthUnparsed=None,
+                 preserveComments=True,
                  noHeader=False,
                  binaryMode=False,
                  noBody=False,
@@ -62,8 +63,8 @@ class ParsedParameterFile(FileBasisBackup):
         self.listDictWithHeader=listDictWithHeader
         self.listLengthUnparsed=listLengthUnparsed
         self.doMacros=doMacroExpansion
-        self.noVectorOrTensor=noVectorOrTensor 
-
+        self.preserveComments=preserveComments
+        self.noVectorOrTensor=noVectorOrTensor        
         self.header=None
         self.content=None
         self.longListOutputThreshold=longListOutputThreshold
@@ -83,6 +84,7 @@ class ParsedParameterFile(FileBasisBackup):
                               listLengthUnparsed=self.listLengthUnparsed,
                               noHeader=self.noHeader,
                               noBody=self.noBody,
+                              preserveComments=self.preserveComments,
                               binaryMode=self.binaryMode,
                               noVectorOrTensor=self.noVectorOrTensor,
                               doMacroExpansion=self.doMacros)
@@ -193,8 +195,9 @@ class FoamFileParser(PlyParser):
         self.preserveNewLines=preserveNewlines
         self.duplicateCheck=duplicateCheck
         self.duplicateFail=duplicateFail
-        self.noVectorOrTensor=noVectorOrTensor 
-        
+        self.noVectorOrTensor=noVectorOrTensor        
+
+        # Make sure that the first comment is discarded
         self.collectDecorations=False
         self.inputMode=inputModes.merge
         
@@ -211,11 +214,13 @@ class FoamFileParser(PlyParser):
         if noHeader:
             self.start='noHeader'
             startCnt+=1
+            self.collectDecorations=True
             
         if listDict:
             self.start='pureList'
             startCnt+=1
             self.dictStack=[]
+            self.collectDecorations=True
 
         if listDictWithHeader:
             self.start='pureListWithHeader'
@@ -378,6 +383,7 @@ class FoamFileParser(PlyParser):
     states = (
         ('unparsed', 'exclusive'),
         ('codestream', 'exclusive'),
+        ('mlcomment', 'exclusive'),
         )
 
     def t_unparsed_left(self,t):
@@ -480,13 +486,42 @@ class FoamFileParser(PlyParser):
                 return t
         #        self.addNewlinesToDecorations(t.value)
             
-    # C or C++ comment (ignore)
+    # C++ comment (ignore)
     def t_ccode_comment(self,t):
-        r'(/\*(.|\n)*?\*/)|(//.*)'
+        r'//.*'
         t.lexer.lineno += t.value.count('\n')
         self.addCommentToDecorations(t.value)
-        pass
 
+    def t_startmlcomment(self,t):
+        r'/\*'
+        t.lexer.begin('mlcomment')
+        self.mllevel=1
+        self.mlcomment_start = t.lexer.lexpos-2
+        
+    def t_mlcomment_newlevel(self,t):
+        r'/\*'
+        self.mllevel+=1
+        
+    def t_mlcomment_endcomment(self,t):
+        r'\*/'
+        self.mllevel-=1
+        if self.mllevel<=0:
+            t.lexer.begin('INITIAL')
+            mlcomment=t.lexer.lexdata[self.mlcomment_start:t.lexer.lexpos]
+            t.lexer.lineno += mlcomment.count('\n')
+            self.addCommentToDecorations(mlcomment)
+            
+    def t_mlcomment_throwaway(self,t):
+        r'[^\*]'
+        pass
+    
+    t_mlcomment_ignore = ''
+
+    def t_mlcomment_error(self,t):
+        if t.lexer.lexdata[t.lexer.lexpos]!="*":
+            print "Error",t.lexer.lexdata[t.lexer.lexpos]
+        t.lexer.skip(1)
+                
     # Error handling rule
     def t_error(self,t):
         raise PyFoamParserError("Illegal character '%s'" % t.value[0])
@@ -533,7 +568,7 @@ class FoamFileParser(PlyParser):
             self.binaryMode=False
         else:
             raise FatalErrorPyFoamException("Don't know how to parse file format",p[0]["format"])
-            
+        self.collectDecorations=True
  
     def p_macro(self,p):
         '''macro : KANALGITTER include
@@ -620,13 +655,25 @@ class FoamFileParser(PlyParser):
                         error("Key",p[2][0],"already defined")
                     else:
                         warning("Key",p[2][0],"already defined")
-            p[0][p[2][0]]=p[2][1]
-            p[0].addDecoration(p[2][0],self.getDecoration())
+            if type(p[2][0])==DictRedirection and p[2][1]=='':
+                p[0].addRedirection(p[2][0])
+            else:
+                if type(p[2][1])==DictRedirection:
+                    p[0][p[2][0]]=p[2][1].getContent()
+                else:
+                    p[0][p[2][0]]=p[2][1]
+                p[0].addDecoration(p[2][0],self.getDecoration())
         else:
             p[0]=self.dictStack[-1]
 
             if p[1]:
-                p[0][p[1][0]]=p[1][1]
+                if type(p[1][0])==DictRedirection and p[1][1]=='':
+                    p[0].addRedirection(p[1][0])
+                else:
+                    if type(p[1][1])==DictRedirection:
+                        p[0][p[1][0]]=p[1][1].getContent()
+                    else:
+                        p[0][p[1][0]]=p[1][1]
 
                     
     def p_list(self,p):
@@ -684,6 +731,7 @@ class FoamFileParser(PlyParser):
 
     def p_itemlist(self,p):
         '''itemlist : itemlist item
+                    | itemlist ';'
                     | item '''
         if len(p)==2:
             if p[1]==None:
@@ -692,8 +740,9 @@ class FoamFileParser(PlyParser):
                 p[0]=[ p[1] ]
         else:
             p[0]=p[1]
-            p[0].append(p[2])
-
+            if p[2]!=';':
+                p[0].append(p[2])
+                
     def p_wordlist(self,p):
         '''wordlist : wordlist word
                     | word '''
@@ -723,8 +772,12 @@ class FoamFileParser(PlyParser):
         if self.doMacros:
             nm=p[1][1:]
             p[0]="<Symbol '"+nm+"' not found>"
-            if nm in self.dictStack[0]:
-                p[0]=deepcopy(self.dictStack[0][nm])
+            for di in reversed(self.dictStack):
+                if nm in di:
+                    p[0]=DictRedirection(deepcopy(di[nm]),
+                                         di[nm],
+                                         nm)
+                    return
         else:
             p[0]=p[1]
 
@@ -901,6 +954,8 @@ class FoamStringParser(FoamFileParser):
                  debug=False,
                  noVectorOrTensor=False,
                  duplicateCheck=False,
+                 listDict=False,
+                 doMacroExpansion=False,
                  duplicateFail=False):
         """@param content: the string to be parsed
         @param debug: output debug information during parsing"""
@@ -908,10 +963,12 @@ class FoamStringParser(FoamFileParser):
         FoamFileParser.__init__(self,
                                 content,
                                 debug=debug,
-                                noHeader=True,
+                                noHeader=not listDict,
                                 boundaryDict=False,
+                                listDict=listDict,
                                 noVectorOrTensor=noVectorOrTensor,
                                 duplicateCheck=duplicateCheck,
+                                doMacroExpansion=doMacroExpansion,
                                 duplicateFail=duplicateFail)
 
     def __str__(self):

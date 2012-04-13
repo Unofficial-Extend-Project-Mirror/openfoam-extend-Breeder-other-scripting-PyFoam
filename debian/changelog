@@ -1,3 +1,9 @@
+pyfoam (0.5.7-development1~ppa1~lucid1) lucid; urgency=low
+
+  * Intermediate version for repackaging
+
+ -- Bernhard F.W. Gschaider <bgschaid@ice-sf.at>  Fri, 6 Apr 2012 13:27:24 +0200
+
 pyfoam (0.5.6-development1~ppa1~lucid1) lucid; urgency=low
 
   * Intermediate version for repackaging

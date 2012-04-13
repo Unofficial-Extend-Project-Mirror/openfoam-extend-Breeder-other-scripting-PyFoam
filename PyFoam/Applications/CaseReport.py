@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CaseReport.py 7514 2011-07-11T21:26:23.957775Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CaseReport.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamCasedReport.py
 """
@@ -23,13 +23,14 @@ from os import path
 
 class CaseReport(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Produces human-readable reports about a case. Attention: the amount of
 information in the reports is limited. The truth is always in the
 dictionary-files.
 
-The format of the output is restructured-text so it can be run through a
-postprocessor like rst2tex or rst2html to produce PDF or HTML respectivly
+The format of the output is restructured-text so it can be run through
+a postprocessor like rst2tex or rst2html to produce PDF or HTML
+respectivly
         """
         
         PyFoamApplication.__init__(self,

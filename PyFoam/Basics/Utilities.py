@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/Utilities.py 7538 2011-07-19T09:17:44.150060Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/Utilities.py 7785 2012-01-24T17:44:12.925376Z bgschaid  $ 
 """ Utility functions
 
 Can be used via a class or as functions"""
@@ -88,6 +88,7 @@ class Utilities(object):
             if path.isdir(dst):
                 dst=path.join(dst,path.basename(path.abspath(src)))
             shutil.copyfile(src,dst)
+            shutil.copymode(src,dst)
         except NameError:
             self.execute("cp "+src+" "+dst)
             

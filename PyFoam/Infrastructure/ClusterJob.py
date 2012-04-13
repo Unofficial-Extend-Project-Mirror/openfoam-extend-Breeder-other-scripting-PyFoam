@@ -1,5 +1,6 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Logging.py 1906 2007-08-28T16:16:19.392553Z bgschaid  $ 
-"""Encapsulates all necessary things for a cluster-job, like setting up, running, restarting"""
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/ClusterJob.py 7722 2012-01-18T17:50:53.943725Z bgschaid  $ 
+"""Encapsulates all necessary things for a cluster-job, like setting
+up, running, restarting"""
 
 import os,sys
 from os import path,unlink
@@ -30,7 +31,7 @@ def checkForMessageFromAbove(job):
     job.timer.start()
     
 
-class ClusterJob:
+class ClusterJob(object):
     """ All Cluster-jobs are to be derived from this base-class
 
     The actual jobs are implemented by overriding methods

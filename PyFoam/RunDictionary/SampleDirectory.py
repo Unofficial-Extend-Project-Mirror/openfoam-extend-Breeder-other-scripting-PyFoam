@@ -4,25 +4,37 @@
 from os import path,listdir
 from PyFoam.Error import error
 import math
+import re
 
 from PyFoam.Basics.SpreadsheetData import SpreadsheetData
 
 class SampleDirectory(object):
     """A directory of sampled times"""
 
-    def __init__(self,case,dirName="samples"):
+    def __init__(self,
+                 case,
+                 dirName="samples",
+                 postfixes=[],
+                 prefixes=[]):
         """@param case: The case directory
-        @param dirName: Name of the directory with the samples"""
+        @param dirName: Name of the directory with the samples
+        @param postfixes: list of possible extensions to a field name of the form
+        name_postfix to help splitting such field names.
+        @param prefixes: list of possible extensions to a field name of the form
+        prefix_name to help splitting such field names"""
 
         self.dir=path.join(case,dirName)
         self.times=[]
 
+        self.prefixes=prefixes
+        self.postfixes=postfixes
+
         for d in listdir(self.dir):
             if path.isdir(path.join(self.dir,d)):
                 try:
-                    v=float(d)
+                    float(d)
                     self.times.append(d)
-                except ValueError,e:
+                except ValueError:
                     pass
 
         self.times.sort(self.sorttimes)
@@ -32,11 +44,17 @@ class SampleDirectory(object):
 
     def __iter__(self):
         for t in self.times:
-            yield SampleTime(self.dir,t)
+            yield SampleTime(self.dir,
+                             t,
+                             prefixes=self.prefixes,
+                             postfixes=self.postfixes)
 
     def __getitem__(self,time):
         if time in self:
-            return SampleTime(self.dir,time)
+            return SampleTime(self.dir,
+                              time,
+                              prefixes=self.prefixes,
+                              postfixes=self.postfixes)
         else:
             raise KeyError,time
 
@@ -112,15 +130,30 @@ class SampleDirectory(object):
 class SampleTime(object):
     """A directory with one sampled time"""
 
-    def __init__(self,sDir,time):
+    def __init__(self,
+                 sDir,
+                 time,
+                 postfixes=[],
+                 prefixes=[]):
         """@param sDir: The sample-dir
-        @param time: the timename"""
+        @param time: the timename
+        @param postfixes: list of possible extensions to a field name of the form
+        name_postfix to help splitting such field names.
+        @param prefixes: list of possible extensions to a field name of the form
+        prefix_name to help splitting such field names"""
 
         self.dir=path.join(sDir,time)
         self.lines=[]
         self.values=[]
         
+        self.prefixes=prefixes
+        self.postfixes=postfixes
+
+        self.__valueNames=None
+
         for f in listdir(self.dir):
+            if f[0]=='.' or f[-1]=='~' or f.find(".")<0:
+                continue
             nm=self.extractLine(f)
             vals=self.extractValues(f)
             if nm not in self.lines:
@@ -140,10 +173,28 @@ class SampleTime(object):
 
     def extractValues(self,fName):
         """Extracts the names of the contained Values from a filename"""
-        tmp=fName.split("_")[1:]
-        tmp[-1]=tmp[-1].split(".")[0]
-        
-        return tmp                            
+
+        def preUnder(m):
+            return "&"+m.group(1)+m.group(2)
+        def postUnder(m):
+            return m.group(1)+m.group(2)+"&"
+
+        for p in self.prefixes:
+            fName=re.sub("([_&.]|^)("+p+")_",postUnder,fName)
+        for p in self.postfixes:
+            fName=re.sub("_("+p+")([_&.]|$)",preUnder,fName)
+
+        self.__valueNames=[]
+        try:
+            tmp=fName.split("_")[1:]
+            tmp[-1]=tmp[-1].split(".")[0]
+
+            for t in tmp:
+                self.__valueNames.append(t.replace("&","_"))
+        except IndexError:
+            pass
+            
+        return self.__valueNames       
 
     def __getitem__(self,key):
         """Get the data for a value on a specific line
@@ -288,16 +339,20 @@ class SampleData(object):
         else:
             return self.data
 
-    def __call__(self):
+    def __call__(self,
+                 scaleX=1.,
+                 scaleData=1,
+                 offsetData=0,
+                 offsetX=0):
         """Return the data as SpreadsheetData-object"""
         
         data=[]
         if self.isVector():
             for i,c in enumerate(self.col0):
-                data.append([c]+list(self.data[i]))
+                data.append([scaleX*c+offsetX]+[scaleData*v+offsetData for v in self.data[i]])
         else:
             for i,c in enumerate(self.col0):
-                data.append([c,self.data[i]])
+                data.append([scaleX*c+offsetX,scaleData*self.data[i]+offsetData])
 
         names=["col0"]
         if self.isVector():

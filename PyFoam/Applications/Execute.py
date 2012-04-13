@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Execute.py 3501 2008-08-03T18:40:52.402178Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Execute.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamExecute
 """
@@ -9,8 +9,8 @@ from subprocess import call
 
 class Execute(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-        Runs a command, but first switches the environment to a specific
+        description="""\
+Runs a command, but first switches the environment to a specific
 OpenFOAM-version. Is of use for using wmake for a specific version
         """
         

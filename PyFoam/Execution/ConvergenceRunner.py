@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/ConvergenceRunner.py 5655 2009-09-28T18:16:31.683539Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/ConvergenceRunner.py 7636 2011-11-30T13:54:29.838641Z bgschaid  $ 
 """Stop solver at convergence"""
 
 from AnalyzedRunner import AnalyzedRunner
@@ -24,6 +24,7 @@ class ConvergenceRunner(AnalyzedRunner):
                  restart=False,
                  compressLog=False,
                  noLog=False,
+                 logTail=None,
                  remark=None,
                  jobId=None):
         """See AnalyzedRunner"""
@@ -37,6 +38,7 @@ class ConvergenceRunner(AnalyzedRunner):
                                 compressLog=compressLog,
                                 restart=restart,
                                 noLog=noLog,
+                                logTail=logTail,
                                 remark=remark,
                                 jobId=jobId)
         

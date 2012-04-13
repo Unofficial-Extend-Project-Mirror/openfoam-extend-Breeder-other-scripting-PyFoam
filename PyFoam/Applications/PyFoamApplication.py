@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PyFoamApplication.py 7393 2011-03-29T14:55:03.425417Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PyFoamApplication.py 7870 2012-02-15T17:53:40.344304Z bgschaid  $ 
 """Base class for pyFoam-applications
 
 Classes can also be called with a command-line string"""
@@ -18,6 +18,23 @@ format.getConfigFormat("warn")
 
 import sys
 from os import path,getcwd,environ
+from copy import deepcopy
+
+def pyFoamExceptionHook(type,value,tb):
+    if hasattr(sys,'ps1'):
+        warning("Interactive mode. No debugger")
+        sys.__excepthook__(type,value,tb)
+    elif not (sys.stderr.isatty() and sys.stdin.isatty() and sys.stdout.isatty()):
+        warning("Not on a terminal. No debugger")
+        sys.__excepthook__(type,value,tb)
+    elif issubclass(type,SyntaxError):
+        warning("Syntax error. No debugger")
+        sys.__excepthook__(type,value,tb)
+    else:
+        import traceback,pdb
+        traceback.print_exception(type,value,tb)
+        print
+        pdb.pm()
 
 class PyFoamApplication(object):
     def __init__(self,
@@ -27,7 +44,8 @@ class PyFoamApplication(object):
                  interspersed=False,
                  nr=None,
                  changeVersion=True,
-                 exactNr=True):
+                 exactNr=True,
+                 inputApp=None):
         """
         @param description: description of the command
         @param usage: Usage
@@ -36,6 +54,7 @@ class PyFoamApplication(object):
         @param nr: Number of required arguments
         @param changeVersion: May this application change the version of OF used?
         @param exactNr: Must not have more than the required number of arguments
+        @param inputApp: Application with input data. Used to allow a 'pipe-like' behaviour if the class is used from a Script
         """
         self.parser=FoamOptionParser(args=args,
                                      description=description,
@@ -43,6 +62,10 @@ class PyFoamApplication(object):
                                      interspersed=interspersed)
         self.generalOpts=None
         
+        self.__appData={}
+        if inputApp:
+            self.__appData["inputData"]=inputApp.getData()
+            
         grp=OptionGroup(self.parser,
                         "Default",
                         "Options common to all PyFoam-applications")
@@ -109,6 +132,27 @@ class PyFoamApplication(object):
                        default=False,
                        action="store_true",
                        help="Prints a traceback when an error is encountered (for debugging)")
+        grp.add_option("--interactive-debugger",
+                       dest="interactiveDebug",
+                       default=False,
+                       action="store_true",
+                       help="In case of an exception start the interactive debugger PDB. Also implies --traceback-on-error")
+        grp.add_option("--dump-application-data",
+                       dest="dumpAppData",
+                       default=False,
+                       action="store_true",
+                       help="Print the dictionary with the generated application data after running")
+        grp.add_option("--pickle-application-data",
+                       dest="pickleApplicationData",
+                       default=None,
+                       action="store",
+                       type="string",
+                       help="""\
+Write a pickled version of the application data to a file. If the
+filename given is 'stdout' then the pickled data is written to
+stdout. The usual standard output is then captured and added to the
+application data as an entry 'stdout' (same for 'stderr'). Be careful
+with these option for commands that generate a lot of output""")
 
         self.parser.add_option_group(grp)
 
@@ -116,6 +160,10 @@ class PyFoamApplication(object):
         self.parser.parse(nr=nr,exactNr=exactNr)
         self.opts=self.parser.getOptions()
 
+        if self.opts.interactiveDebug:
+            sys.excepthook=pyFoamExceptionHook
+            self.opts.traceback=True
+            
         if self.opts.psyco:
             try:
                 import psyco
@@ -150,16 +198,82 @@ class PyFoamApplication(object):
             stats.strip_dirs()
             stats.sort_stats('time','calls')
             stats.print_stats(20)
+            
+            self.parser.restoreEnvironment()
         else:
             try:
+                if self.opts.pickleApplicationData=="stdout":
+                    # Redirect output to memory
+                    import StringIO
+                    oldStdout=sys.stdout
+                    oldStderr=sys.stderr
+                    sys.stdout=StringIO.StringIO()
+                    sys.stderr=StringIO.StringIO()
+
                 result=self.run()
+
+                # do this at the earliest possible moment
+                self.parser.restoreEnvironment()
+
+                if self.opts.pickleApplicationData=="stdout":
+                    # restore stdout
+                    self.__appData["stdout"]=sys.stdout.getvalue()
+                    self.__appData["stderr"]=sys.stderr.getvalue()
+                    sys.stdout=oldStdout
+                    sys.stderr=oldStderr
+
+                if self.opts.pickleApplicationData:
+                    import cPickle as pickle
+                    if self.opts.pickleApplicationData=="stdout":
+                        pick=pickle.Pickler(sys.stdout)
+                    else:
+                        pick=pickle.Pickler(open(self.opts.pickleApplicationData,'w'))
+                    pick.dump(self.__appData)
+                    del pick
+                if self.opts.dumpAppData:
+                    import pprint
+                    print "Application data:"
+                    printer=pprint.PrettyPrinter()
+                    printer.pprint(self.__appData)
+
                 return result
             except FatalErrorPyFoamException,e:
                 if self.opts.traceback:
                     raise
                 else:
                     self.error(e.descr)
-                
+             
+    def __getitem__(self,key):
+        """Get application data"""
+        try:
+            return self.__appData[key]
+        except KeyError:
+            print "available keys:",self.__appData.keys()
+            raise
+
+    def __iter__(self):
+        """Iterate over the application data"""
+        for k in self.__appData:
+            yield k
+
+    def iterkeys(self):
+        return self.__appData.iterkeys()
+
+    def iteritems(self):
+        return self.__appData.iteritems()
+
+    def getData(self):
+        """Get the application data"""
+        return deepcopy(self.__appData)
+    
+    def setData(self,data):
+        """Set the application data
+
+        @param data: dictionary whose entries will be added to the
+        application data (possibly overwriting old entries of the same name)"""
+        for k,v in data.iteritems():
+            self.__appData[k]=deepcopy(v)
+            
     def ensureGeneralOptions(self):
         if self.generalOpts==None:
             self.generalOpts=OptionGroup(self.parser,

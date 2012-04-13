@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotWatcher.py 6675 2010-06-05T12:42:37.337813Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotWatcher.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Class that implements pyFoamPlotWatcher
 """
@@ -17,11 +17,11 @@ class PlotWatcher(PyFoamApplication,
                   CommonPlotOptions,
                   CommonPlotLines):
     def __init__(self,args=None):
-        description="""
-        Gets the name of a logfile which is assumed to be the output of a
-        OpenFOAM-solver. Parses the logfile for information about the
-        convergence of the solver and generates gnuplot-graphs. Watches the
-        file until interrupted.
+        description="""\
+Gets the name of a logfile which is assumed to be the output of a
+OpenFOAM-solver. Parses the logfile for information about the
+convergence of the solver and generates gnuplot-graphs. Watches the
+file until interrupted.
         """
 
         CommonPlotOptions.__init__(self,persist=False)
@@ -125,6 +125,7 @@ class PlotWatcher(PyFoamApplication,
                            end=self.opts.end,
                            singleFile=self.opts.singleDataFilesOnly,
                            replotFrequency=self.opts.replotFrequency,
+                           writePickled=self.opts.writePickled,
                            plottingImplementation=self.opts.implementation,
                            solverNotRunning=self.opts.solverNotRunning)
 

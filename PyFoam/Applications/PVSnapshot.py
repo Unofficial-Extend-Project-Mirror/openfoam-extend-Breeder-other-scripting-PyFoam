@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PVSnapshot.py 7399 2011-04-03T18:50:46.298018Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PVSnapshot.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Class that implements pyFoamPVSnapshot
 """
@@ -22,17 +22,18 @@ import sys,string
 class PVSnapshot(PyFoamApplication,
                  CommonSelectTimesteps ):
     def __init__(self,args=None):
-        description="""
-Generates snapshots of an OpenFOAM-case and a predefined paraview-State-File
-using the PV3FoamReader that comes with OpenFOAM.
+        description="""\
+Generates snapshots of an OpenFOAM-case and a predefined
+paraview-State-File using the PV3FoamReader that comes with OpenFOAM.
 
-The state-file can be generated using a different case (the script adjusts
-it before using) but the original case has to have a similar structure to the
-current one. Also exactly one PV3Reader has to be used in the state-file (this
-requirement is fullfilled if the StateFile was generated using paraFoam)
+The state-file can be generated using a different case (the script
+adjusts it before using) but the original case has to have a similar
+structure to the current one. Also exactly one PV3Reader has to be
+used in the state-file (this requirement is fullfilled if the
+StateFile was generated using paraFoam)
 
-In TextSources the string "%(casename)s" gets replaced by the casename. Additional
-replacements can be specified
+In TextSources the string "%(casename)s" gets replaced by the
+casename. Additional replacements can be specified
 """
         CommonSelectTimesteps.__init__(self)
         

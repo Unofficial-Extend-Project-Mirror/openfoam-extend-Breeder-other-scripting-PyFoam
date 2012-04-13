@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/LogLineAnalyzer.py 7013 2010-11-21T22:22:06.604864Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/LogLineAnalyzer.py 7656 2012-01-06T14:43:20.069830Z bgschaid  $ 
 """Base class for analyzing lines"""
 
 from PyFoam.Error import error
@@ -68,3 +68,9 @@ class LogLineAnalyzer(object):
         """Hook to let every analyzer give its stuff back when the analysis has ended"""
         pass
     
+    def getCurrentData(self):
+        """Give back the current analyzed data in a dictionary
+        
+        To be overwritten by subclasses"""
+
+        return {}

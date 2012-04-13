@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PVLoadState.py 4474 2009-01-30T13:01:26.935403Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PVLoadState.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Class that implements pyFoamPVLoadState
 """
@@ -16,14 +16,16 @@ import sys,string
 
 class PVLoadState(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-Starts paraview with an OpenFOAM-case and a predefined paraview-State-File
-modifieing the state-File in such a way that it is usable with the case
+        description="""\
+Starts paraview with an OpenFOAM-case and a predefined
+paraview-State-File modifieing the state-File in such a way that it is
+usable with the case
 
-The state-file can be generated using a different case (the script adjusts
-it before using) but the original case has to have a similar structure to the
-current one. Also exactly one PV3Reader has to be used in the state-file (this
-requirement is fullfilled if the StateFile was generated using paraFoam)
+The state-file can be generated using a different case (the script
+adjusts it before using) but the original case has to have a similar
+structure to the current one. Also exactly one PV3Reader has to be
+used in the state-file (this requirement is fullfilled if the
+StateFile was generated using paraFoam)
 """
         PyFoamApplication.__init__(self,
                                    args=args,

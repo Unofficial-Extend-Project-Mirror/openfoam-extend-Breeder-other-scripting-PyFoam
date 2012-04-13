@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Runner.py 7319 2011-03-03T23:10:51.400635Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Runner.py 7722 2012-01-18T17:50:53.943725Z bgschaid  $ 
 """
 Application class that implements pyFoamRunner
 """
@@ -16,6 +16,7 @@ from CommonMultiRegion import CommonMultiRegion
 from CommonPlotLines import CommonPlotLines
 from CommonClearCase import CommonClearCase
 from CommonReportUsage import CommonReportUsage
+from CommonReportRunnerData import CommonReportRunnerData
 from CommonWriteAllTrigger import CommonWriteAllTrigger
 from CommonLibFunctionTrigger import CommonLibFunctionTrigger
 from CommonStandardOutput import CommonStandardOutput
@@ -33,20 +34,21 @@ class Runner(PyFoamApplication,
              CommonClearCase,
              CommonRestart,
              CommonReportUsage,
+             CommonReportRunnerData,
              CommonMultiRegion,
              CommonParallel,
              CommonServer,
              CommonStandardOutput,
              CommonVCSCommit):
     def __init__(self,args=None):
-        description="""
-        Runs an OpenFoam solver.  Needs the usual 3 arguments (<solver>
-        <directory> <case>) and passes them on (plus additional arguments).
-        Output is sent to stdout and a logfile inside the case directory
-        (PyFoamSolver.logfile) The Directory PyFoamSolver.analyzed contains
-        this information: a) Residuals and other information of the linear
-        solvers b Execution time c) continuity information d) bounding of
-        variables
+        description="""\
+Runs an OpenFoam solver.  Needs the usual 3 arguments (<solver>
+<directory> <case>) and passes them on (plus additional arguments).
+Output is sent to stdout and a logfile inside the case directory
+(PyFoamSolver.logfile) The Directory PyFoamSolver.analyzed contains
+this information: a) Residuals and other information of the linear
+solvers b Execution time c) continuity information d) bounding of
+variables
         """
 
         CommonPlotLines.__init__(self)        
@@ -58,6 +60,7 @@ class Runner(PyFoamApplication,
     def addOptions(self):
         CommonClearCase.addOptions(self)
         CommonReportUsage.addOptions(self)
+        CommonReportRunnerData.addOptions(self)
         CommonRestart.addOptions(self)        
         CommonStandardOutput.addOptions(self)
         CommonParallel.addOptions(self)
@@ -103,13 +106,14 @@ class Runner(PyFoamApplication,
                                                    doFiles=self.opts.writeFiles,
                                                    singleFile=self.opts.singleDataFilesOnly,
                                                    doTimelines=True),
-                               silent=self.opts.progress,
+                               silent=self.opts.progress or self.opts.silent,
                                argv=args,
                                server=self.opts.server,
                                lam=lam,
                                restart=self.opts.restart,
                                logname=self.opts.logname,
                                compressLog=self.opts.compress,
+                               logTail=self.opts.logTail,
                                noLog=self.opts.noLog,
                                remark=self.opts.remark,
                                jobId=self.opts.jobId)
@@ -122,12 +126,17 @@ class Runner(PyFoamApplication,
 
             run.start()
 
+            if len(regionNames)>1:
+                self.setData({theRegion:run.data})
+            else:
+                self.setData(run.data)
+
             self.reportUsage(run)
+            self.reportRunnerData(run)
 
             if theRegion!=None:
                 print "Syncing into master case"
                 regions.resync(theRegion)
-
 
         if regions!=None:
             if not self.opts.keeppseudo:

@@ -15,12 +15,7 @@ particularly gnuplot-related.
 """
 
 import string
-try:
-    import numpy
-except ImportError:
-    import Numeric as numpy
-    numpy.float32=numpy.Float32
-    numpy.float_=numpy.Float
+import numpy
     
 def float_array(m):
     """Return the argument as a numpy array of type at least 'Float32'.

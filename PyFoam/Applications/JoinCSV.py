@@ -10,9 +10,9 @@ from os import path
 
 class JoinCSV(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-Join together two or more CSV-files. Data is resampled to fit
-the timescale of the the first CSV-file
+        description="""\
+Join together two or more CSV-files. Data is resampled to fit the
+timescale of the the first CSV-file
 """
         PyFoamApplication.__init__(self,
                                    args=args,

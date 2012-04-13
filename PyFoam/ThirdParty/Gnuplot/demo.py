@@ -13,11 +13,8 @@ the Gnuplot package, see test.py.
 
 """
 
-try:
-    from numpy import *
-except ImportError:
-    from Numeric import *
-    newaxis=NewAxis
+from numpy import *
+
 # If the package has been installed correctly, this should work:
 import Gnuplot, Gnuplot.funcutils
 

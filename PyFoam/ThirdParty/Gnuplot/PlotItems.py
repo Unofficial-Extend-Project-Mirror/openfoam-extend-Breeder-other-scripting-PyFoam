@@ -21,11 +21,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-try:
-    import numpy
-except ImportError:
-    import Numeric as numpy
-    numpy.newaxis=numpy.NewAxis
+import numpy
     
 import gp, utils, Errors
 

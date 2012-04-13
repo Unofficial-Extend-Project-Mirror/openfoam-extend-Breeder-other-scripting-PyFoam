@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PotentialRunner.py 7319 2011-03-03T23:10:51.400635Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PotentialRunner.py 7722 2012-01-18T17:50:53.943725Z bgschaid  $ 
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -28,8 +28,9 @@ class PotentialRunner(PyFoamApplication,
                       CommonParallel,
                       CommonVCSCommit):
     def __init__(self,args=None):
-        description="""
-Runs the potentialFoam solver on a case to get a decent initial condition.
+        description="""\
+Runs the potentialFoam solver on a case to get a decent initial
+condition.
 
 Copies the current fields for U and p to backup-files.
         """
@@ -115,8 +116,9 @@ Copies the current fields for U and p to backup-files.
                         server=self.opts.server,
                         logname=self.opts.logname,
                         compressLog=self.opts.compress,
-                        silent=self.opts.progress,
+                        silent=self.opts.progress or self.opts.silent,
                         lam=lam,
+                        logTail=self.opts.logTail,
                         noLog=self.opts.noLog)
 
         print "Setting system-directory for potentialFoam"
@@ -132,6 +134,8 @@ Copies the current fields for U and p to backup-files.
         
         run.start()
 
+        self.setData(run.data)
+
         self.addToCaseLog(cName,"Ending")
 
 import re
@@ -142,6 +146,8 @@ class PotentialTrigger:
         self.solution=ParsedParameterFile(path.join(sol.systemDir(),"fvSolution"),backup=True)
         self.schemes=ParsedParameterFile(path.join(sol.systemDir(),"fvSchemes"),backup=True)
         self.control=ParsedParameterFile(path.join(sol.systemDir(),"controlDict"),backup=True)
+        self.controlOrig=ParsedParameterFile(path.join(sol.systemDir(),"controlDict"),backup=False)
+        
         pre=environ["FOAM_TUTORIALS"]
         if not oldTutorialStructure():
             pre=path.join(pre,"basic")
@@ -180,7 +186,13 @@ class PotentialTrigger:
                     
             self.schemes.content=ParsedParameterFile(path.join(pot.systemDir(),"fvSchemes"),backup=False).content
             self.control.content=ParsedParameterFile(path.join(pot.systemDir(),"controlDict"),backup=False).content
-            
+            if "functions" in self.controlOrig:
+                print "Copying functions over"
+                self.control["functions"]=self.controlOrig["functions"]
+            if "libs" in self.controlOrig:
+                print "Copying libs over"
+                self.control["libs"]=self.controlOrig["libs"]
+                
             self.solution.writeFile()
             self.schemes.writeFile()
             self.control.writeFile()

@@ -92,6 +92,13 @@ class FoamStringParserTest(unittest.TestCase):
         p1=FoamStringParser('test "der name";')
         self.assertEqual(p1["test"][1:-1],"der name")
 
+    def testParseMultilineString(self):
+        p1=FoamStringParser("""test #{
+der name
+#};""")
+        self.assertEqual(p1["test"][1:-1],"der name")
+        self.assertEqual(p1["test"].count('\n'),2)
+
     def testParseWord(self):
         p1=FoamStringParser('test  name;')
         self.assertEqual(p1["test"],"name")
@@ -154,6 +161,16 @@ class FoamStringParserTest(unittest.TestCase):
         
     def testDataList3(self):
         p1=FoamStringParser("test (5 4 (2 3 4 5));")
+        self.assertEqual(type(p1["test"]),list)
+        self.assertEqual(len(p1["test"]),2)
+        
+    def testDataListFOType(self):
+        p1=FoamStringParser("test ( fo1 {a 2;});")
+        self.assertEqual(type(p1["test"]),list)
+        self.assertEqual(len(p1["test"]),2)
+        
+    def testDataListFOTypeExtraSemicolon(self):
+        p1=FoamStringParser("test ( fo1 {a 2;};);")
         self.assertEqual(type(p1["test"]),list)
         self.assertEqual(len(p1["test"]),2)
         
@@ -235,6 +252,14 @@ class FoamStringParserTest(unittest.TestCase):
         This too */
         test dings 2;
         /* Here goes the next comment */""")
+        self.assertEqual(str(p),"test dings     2 ;\n")
+
+    def testNestedComment(self):
+        p=FoamStringParser("""
+        /* this should never be read
+        /* that is never there */
+        This too */
+        test dings 2;""")
         self.assertEqual(str(p),"test dings     2 ;\n")
 
     def testCommentOutElements(self):
@@ -510,3 +535,154 @@ class ParsedParameterFileCodeStreamTest(unittest.TestCase):
         
 if foamVersionNumber()>=(2,):
     theSuite.addTest(unittest.makeSuite(ParsedParameterFileCodeStreamTest,"test"))
+
+class ParsedParameterFileRedirectDictionary(unittest.TestCase):
+    def setUp(self):
+        self.data="""
+dictA {
+        a 1;
+        b 2;
+        c 3;
+}
+dictB {
+        $dictA;
+        
+        a 4;
+        d 5;
+}
+dictC {
+        a 6;
+        $dictB;
+        d 7;
+        e 8;
+        c 9;
+}
+        """
+
+    def tearDown(self):
+        pass
+
+    def testExistsRedirect(self):
+        data=FoamStringParser(
+            self.data,
+            doMacroExpansion=True)
+        self.assertEqual("a" in data["dictA"],True)
+        self.assertEqual("b" in data["dictC"],True)
+
+        data=FoamStringParser(
+            self.data,
+            doMacroExpansion=False)
+        self.assertEqual("a" in data["dictA"],True)
+        self.assertEqual("b" in data["dictC"],False)
+
+    def testReadRedirect(self):
+        data=FoamStringParser(
+            self.data,
+            doMacroExpansion=True)
+        self.assertEqual(data["dictA"]["a"],1)
+        self.assertEqual(data["dictB"]["a"],4)
+        self.assertEqual(data["dictC"]["a"],6)
+        
+        self.assertEqual(data["dictA"]["b"],2)
+        self.assertEqual(data["dictB"]["b"],2)
+        self.assertEqual(data["dictC"]["b"],2)
+
+        self.assertEqual(data["dictB"]["d"],5)
+        self.assertEqual(data["dictC"]["d"],7)
+        
+        self.assertEqual(data["dictA"]["c"],3)
+        self.assertEqual(data["dictB"]["c"],3)
+        self.assertEqual(data["dictC"]["c"],9)
+
+    def testWriteRedirect(self):
+        data=FoamStringParser(
+            self.data,
+            doMacroExpansion=True)
+        self.assertEqual(data["dictA"]["a"],1)
+        self.assertEqual(data["dictB"]["a"],4)
+        self.assertEqual(data["dictC"]["a"],6)
+        data["dictC"]["a"]=16
+        self.assertEqual(data["dictA"]["a"],1)
+        self.assertEqual(data["dictB"]["a"],4)
+        self.assertEqual(data["dictC"]["a"],16)
+        data["dictA"]["f"]=17
+        self.assertEqual(data["dictA"]["f"],17)
+        self.assertEqual(data["dictA"]["f"],17)
+        self.assertEqual(data["dictA"]["f"],17)
+        
+theSuite.addTest(unittest.makeSuite(ParsedParameterFileRedirectDictionary,"test"))
+
+class ParsedParameterFileDictionaryNested(unittest.TestCase):
+    def setUp(self):
+        self.data="""
+f 9;
+
+dictA {
+        a 1;
+        b 2;
+        c 3;
+        dictB {
+               a 4;
+               d $c;
+               dictC {
+                     d 7;
+                     dictD {
+                           e $d;
+                           c $a;
+                           g $f;
+        }}}
+}
+        """
+        
+    def tearDown(self):
+        pass
+
+    def testNestedValues(self):
+        data=FoamStringParser(
+            self.data,
+            doMacroExpansion=True)
+        self.assertEqual(
+            data["dictA"]["dictB"]["d"],
+            data["dictA"]["c"])
+        self.assertEqual(
+            data["dictA"]["dictB"]["dictC"]["dictD"]["g"],
+            data["f"])
+        self.assertEqual(
+            data["dictA"]["dictB"]["dictC"]["dictD"]["c"],
+            data["dictA"]["dictB"]["a"])
+        self.assertEqual(
+            data["dictA"]["dictB"]["dictC"]["dictD"]["e"],
+            data["dictA"]["dictB"]["dictC"]["d"])
+        
+theSuite.addTest(unittest.makeSuite(ParsedParameterFileDictionaryNested,"test"))
+
+class ParsedParameterFileDictionaryNestedCopy(unittest.TestCase):
+    def setUp(self):
+        self.data="""
+
+dictA {
+        a 1;
+        b 2;
+        c 3;
+}
+        
+dictB {
+        a 4;
+        d $dictA;
+}
+        """
+        
+    def tearDown(self):
+        pass
+
+    def testNestedValues(self):
+        data=FoamStringParser(
+            self.data,
+            doMacroExpansion=True)
+        self.assertEqual(data["dictA"]["a"],data["dictB"]["d"]["a"])
+        data["dictB"]["d"]["a"]=42
+        self.assertEqual(data["dictA"]["a"],1)
+        self.assertEqual(42,data["dictB"]["d"]["a"])
+        
+theSuite.addTest(unittest.makeSuite(ParsedParameterFileDictionaryNestedCopy,"test"))
+        

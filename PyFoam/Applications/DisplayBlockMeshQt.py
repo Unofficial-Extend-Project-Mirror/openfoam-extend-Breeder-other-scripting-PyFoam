@@ -16,11 +16,14 @@ def doImports():
         global QtGui,QtCore
         from PyQt4 import QtGui,QtCore        
         global vtk
+
+        global usedVTK
+
         try:
             import vtk
-            print "Using system-VTK"
+            usedVTK="Using system-VTK"
         except ImportError:
-            print "Trying VTK implementation from Paraview"
+            usedVTK="Trying VTK implementation from Paraview"
             from paraview import vtk
         global QVTKRenderWindowInteractor
         from vtk.qt4 import QVTKRenderWindowInteractor
@@ -728,22 +731,24 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         
 class DisplayBlockMesh(PyFoamApplicationQt4):
     def __init__(self):
-        description="""
-Reads the contents of a blockMeshDict-file and displays the
-vertices as spheres (with numbers). The blocks are sketched by
-lines. One block can be seceted with a slider. It will be
-displayed as a green cube with the local directions x1,x2 and
-x3. Also a patch that is selected by a slider will be sketched
-by blue squares
+        description="""\
+Reads the contents of a blockMeshDict-file and displays the vertices
+as spheres (with numbers). The blocks are sketched by lines. One block
+can be seceted with a slider. It will be displayed as a green cube
+with the local directions x1,x2 and x3. Also a patch that is selected
+by a slider will be sketched by blue squares
 
 This is a new version with a QT-GUI
         """
+
         super(DisplayBlockMesh,self).__init__(description=description,
                                               usage="%prog [options] <blockMeshDict>",
                                               interspersed=True,
                                               nr=1)
 
     def setupGUI(self):
+        print usedVTK
+
         bmFile=self.parser.getArgs()[0]
         if not path.exists(bmFile):
             self.error(bmFile,"not found")

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ClusterTester.py 4036 2008-10-30T15:07:24.059047Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ClusterTester.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamClusterTester
 """
@@ -22,10 +22,10 @@ from CommonParallel import CommonParallel
 class ClusterTester(PyFoamApplication,
                     CommonParallel):
     def __init__(self,args=None):
-        description="""
-        Is used to test Cluster-Scripts before they are submitted to the
-cluster. It tries to resemble the environment the script will find. Cluster in
-this context means the Sun Grid Engine
+        description="""\
+Is used to test Cluster-Scripts before they are submitted to the
+cluster. It tries to resemble the environment the script will
+find. Cluster in this context means the Sun Grid Engine
         """
         
         PyFoamApplication.__init__(self,

@@ -1,0 +1,5 @@
+deltaP{
+	expr "Expression pressureDiff on inlet:  average=(%f%)";
+	name deltaP;
+	titles (avg);
+}

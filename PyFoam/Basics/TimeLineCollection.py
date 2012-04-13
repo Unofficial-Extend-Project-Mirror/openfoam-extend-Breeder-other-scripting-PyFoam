@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/TimeLineCollection.py 7328 2011-03-06T20:34:24.030569Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/TimeLineCollection.py 7657 2012-01-06T15:57:58.804712Z bgschaid  $ 
 """Collection of array of timelines"""
 
 from PyFoam.Error import error
@@ -49,7 +49,7 @@ class TimeLinesRegistry(object):
         """Makes sure that the data about the timelines is to be transfered via XMLRPC"""
         
         transmissionLock.acquire()
-
+        
         lst={}
         for i,p in self.lines.iteritems():
             slaves=[]
@@ -420,3 +420,15 @@ class TimeLineCollection(object):
 
         return SpreadsheetData(names=names,data=numpy.asarray(data).transpose())
     
+    def getLatestData(self):
+        """Return a dictionary with the latest values from all data sets"""
+        
+        result={}
+
+        for n,d in self.values.iteritems():
+            if self.lastValid[n] or len(d)<2:
+                result[n]=d[-1]
+            else:
+                result[n]=d[-2]
+
+        return result

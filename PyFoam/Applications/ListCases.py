@@ -17,10 +17,10 @@ from PyFoam import configuration
 
 class ListCases(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-List the valid OpenFOAM-cases in a number of directories along with some
-basic information (number of timesteps, last timestep, etc). Currently
-doesn't honor the parallel data
+        description="""\
+List the valid OpenFOAM-cases in a number of directories along with
+some basic information (number of timesteps, last timestep,
+etc). Currently doesn't honor the parallel data
 """
         PyFoamApplication.__init__(self,
                                    args=args,

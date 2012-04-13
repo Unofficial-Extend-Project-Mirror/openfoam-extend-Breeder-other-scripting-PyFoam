@@ -10,10 +10,10 @@ from os import path
 
 class ConvertToCSV(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-Takes a plain file with column-oriented data and converts it to a csv-file.
-If more than one file are specified, they are joined according to the first
-column.
+        description="""\
+Takes a plain file with column-oriented data and converts it to a
+csv-file.  If more than one file are specified, they are joined
+according to the first column.
 
 Note: the first file determines the resolution of the time-axis
 """
@@ -36,6 +36,11 @@ Note: the first file determines the resolution of the time-axis
                         dest="time",
                         default=None,
                         help="Name of the time column")
+        data.add_option("--column-names",
+                        action="append",
+                        default=[],
+                        dest="columns",
+                        help="The columns (names) which should be copied to the CSV. All if unset")
         
         how=OptionGroup(self.parser,
                          "How",
@@ -65,15 +70,18 @@ Note: the first file determines the resolution of the time-axis
         sources=self.parser.getArgs()[0:-1]
         
         data=SpreadsheetData(txtName=sources[0],
+                             timeName=self.opts.time,
+                             validData=self.opts.columns,
                              title=path.splitext(path.basename(sources[0]))[0])
+
         if self.opts.time==None:
             self.opts.time=data.names()[0]
-            
+
         for s in sources[1:]:
             addition=path.splitext(path.basename(s))[0]
             sData=SpreadsheetData(txtName=s)
             for n in sData.names():
-                if n!=self.opts.time:
+                if n!=self.opts.time and (self.opts.columns==[] or n in self.opts.columns):
                     d=data.resample(sData,
                                     n,
                                     time=self.opts.time,

@@ -134,7 +134,7 @@ class CustomPlotInfo(object):
         return result
     
     
-def readCustomPlotInfo(rawData):
+def readCustomPlotInfo(rawData,useName=None):
     """Determines which of the three possible formats for custom-plotting is used
     and returns a list of CustomPlotInfo-objects
     @param rawData: a string that contains the raw data"""
@@ -147,8 +147,16 @@ def readCustomPlotInfo(rawData):
         for k,d in data.data.iteritems():
             info.append(CustomPlotInfo(d,name=k))
     except PyFoamParserError:
-        for l in rawData.split('\n'):
+        for i,l in enumerate(rawData.split('\n')):
             if len(l)>0:
-                info.append(CustomPlotInfo(l))
+                name=useName
+                if i>0 and name!=None:
+                    name+=("_%d" % i)
+                info.append(CustomPlotInfo(l,name=name))
             
     return info
+
+def resetCustomCounter():
+    """Reset the counter. Use with care"""
+    CustomPlotInfo.nr=1
+    

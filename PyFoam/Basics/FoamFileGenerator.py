@@ -1,8 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/FoamFileGenerator.py 7522 2011-07-14T22:29:37.344800Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/FoamFileGenerator.py 7949 2012-03-29T22:27:54.412182Z bgschaid  $ 
 """Transform a Python data-structure into a OpenFOAM-File-Representation"""
 
 from PyFoam.Error import error,PyFoamException
-from PyFoam.Basics.DataStructures import Vector,Field,Dimension,TupleProxy,DictProxy,Tensor,SymmTensor,Unparsed,UnparsedList,Codestream
+from PyFoam.Basics.DataStructures import Vector,Field,Dimension,TupleProxy,DictProxy,Tensor,SymmTensor,Unparsed,UnparsedList,Codestream,DictRedirection
 
 import string
 
@@ -72,10 +72,13 @@ class FoamFileGenerator(object):
             order.sort()
             
         for k in order:
-            try:
-                v=dic[k]
-            except KeyError:
-                v=dic.getRegexpValue(k)
+            if type(k)==DictRedirection:
+                v=k
+            else:    
+                try:
+                    v=dic[k]
+                except KeyError:
+                    v=dic.getRegexpValue(k)
                 
             end="\n"
             if type(dic)==DictProxy:
@@ -88,10 +91,10 @@ class FoamFileGenerator(object):
                 s+=v
                 continue
             
-            if k.find("anonymValue")==0:
+            if str(k).find("anonymValue")==0:
                 k=""
                 
-            s+=(" "*indent)+k
+            s+=(" "*indent)+str(k)
             if type(v)in [unicode,str]:
                 s+=" "+v+";"+end
             elif type(v) in [dict,DictProxy]:
@@ -122,6 +125,8 @@ class FoamFileGenerator(object):
                 s+=" "+str(v)+";"+end
             elif v==None:
                 s+=" /* empty */ ;"+end
+            elif type(v)==DictRedirection:
+                s+=";"+end
             else:
                 error("Unhandled type",type(v)," for",v)
         return s

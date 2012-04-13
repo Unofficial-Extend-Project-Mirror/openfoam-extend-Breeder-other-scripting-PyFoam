@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ReadDictionary.py 4365 2009-01-05T19:43:50.269309Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ReadDictionary.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamReadDictionary
 """
@@ -11,11 +11,11 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 class ReadDictionary(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-Reads a value from a Foam-Dictionary and prints it to the screen.
-The description of the value is word. If the value is
-non-atomic (a list or a dictionary) it is output in Python-notation.
-Parts of the expression can be accessed by using the Python-notation for accessing
+        description="""\
+Reads a value from a Foam-Dictionary and prints it to the screen.  The
+description of the value is word. If the value is non-atomic (a list
+or a dictionary) it is output in Python-notation.  Parts of the
+expression can be accessed by using the Python-notation for accessing
 sub-expressions.
 
 Example of usage:

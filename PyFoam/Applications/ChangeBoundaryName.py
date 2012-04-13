@@ -17,8 +17,9 @@ from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
 
 class ChangeBoundaryName(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
-Changes the name of a boundary in the boundary-file. Also if a time-step is specified 
+        description="""\
+Changes the name of a boundary in the boundary-file. Also if a
+time-step is specified
         """
         PyFoamApplication.__init__(self,args=args,
                                    description=description,

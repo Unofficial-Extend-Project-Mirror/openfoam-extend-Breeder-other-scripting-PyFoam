@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/GnuplotRunner.py 6675 2010-06-05T12:42:37.337813Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/GnuplotRunner.py 7636 2011-11-30T13:54:29.838641Z bgschaid  $ 
 """Runner that outputs the residuals of the linear solver with Gnuplot"""
 
 from StepAnalyzedCommon import StepAnalyzedCommon
@@ -36,6 +36,7 @@ class GnuplotCommon(StepAnalyzedCommon):
                  start=None,
                  end=None,
                  singleFile=False,
+                 writePickled=True,
                  plottingImplementation=None):
         """
         TODO: Docu
@@ -48,6 +49,7 @@ class GnuplotCommon(StepAnalyzedCommon):
                                                         singleFile=singleFile,
                                                         startTime=start,
                                                         endTime=end),
+                                    writePickled=writePickled,
                                     smallestFreq=smallestFreq)
         
         self.startTime=start
@@ -119,7 +121,9 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                  logname=None,
                  compressLog=False,
                  noLog=False,
+                 logTail=None,
                  singleFile=False,
+                 writePickled=True,
                  plottingImplementation=None,
                  remark=None,
                  jobId=None):
@@ -135,6 +139,7 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                              logname=logname,
                              compressLog=compressLog,
                              noLog=noLog,
+                             logTail=logTail,
                              remark=remark,
                              jobId=jobId)
         GnuplotCommon.__init__(self,
@@ -156,6 +161,7 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                                raiseit=raiseit,
                                progress=progress,
                                singleFile=singleFile,
+                               writePickled=writePickled,
                                plottingImplementation=plottingImplementation)
         self.steady=steady
         if self.steady:
@@ -201,6 +207,7 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
                  start=None,
                  end=None,
                  singleFile=False,
+                 writePickled=True,
                  plottingImplementation=None,
                  solverNotRunning=False):
         """@param smallestFreq: smallest Frequency of output
@@ -232,6 +239,7 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
                                start=start,
                                end=end,
                                singleFile=singleFile,
+                               writePickled=writePickled,
                                plottingImplementation=plottingImplementation)
 
         self.hasPlotted=False

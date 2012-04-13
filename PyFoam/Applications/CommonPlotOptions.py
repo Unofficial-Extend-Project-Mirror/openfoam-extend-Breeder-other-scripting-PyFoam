@@ -21,7 +21,7 @@ class CommonPlotOptions(object):
                                type="float",
                                dest="frequency",
                                default=1.,
-                               help="The frequency with which output should be generated (in seconds)")
+                               help="The frequency with which output should be generated (in seconds). Default: %default")
         behaveGroup.add_option("--persist",
                                action="store_true",
                                dest="persist",
@@ -63,6 +63,12 @@ class CommonPlotOptions(object):
                                default=None,
                                dest="hardcopyPrefix",
                                help="Prefix for the hardcopy-files")
+        
+        writeDGroup.add_option("--no-pickled-file",
+                               action="store_false",
+                               default=True,
+                               dest="writePickled",
+                               help="Do not write a pickled file with the plot data")
         
         self.parser.add_option_group(writeDGroup)
         

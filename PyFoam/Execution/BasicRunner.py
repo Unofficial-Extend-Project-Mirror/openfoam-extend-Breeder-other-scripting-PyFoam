@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/BasicRunner.py 7361 2011-03-17T09:41:49.879693Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/BasicRunner.py 7901 2012-03-08T16:14:41.526931Z bgschaid  $ 
 """Run a OpenFOAM command"""
 
 import sys
@@ -55,6 +55,7 @@ class BasicRunner(object):
                  server=False,
                  restart=False,
                  noLog=False,
+                 logTail=None,
                  remark=None,
                  jobId=None,
                  writeState=True):
@@ -67,6 +68,7 @@ class BasicRunner(object):
         @param server: Whether or not to start the network-server
         @type lam: PyFoam.Execution.ParallelExecution.LAMMachine
         @param noLog: Don't output a log file
+        @param logTail: only the last lines of the log should be written
         @param remark: User defined remark about the job
         @param jobId: Job ID of the controlling system (Queueing system)
         @param writeState: Write the state to some files in the case"""
@@ -113,7 +115,15 @@ class BasicRunner(object):
         self.cmd=string.join(self.argv," ")
         foamLogger().info("Starting: "+self.cmd+" in "+path.abspath(path.curdir))
         self.logFile=path.join(self.dir,logname+".logfile")
+        
         self.noLog=noLog
+        self.logTail=logTail
+        if self.logTail:
+            if self.noLog:
+                warning("Log tail",self.logTail,"and no-log specified. Using logTail")
+            self.noLog=True
+            self.lastLines=[]
+            
         self.compressLog=compressLog
         if self.compressLog:
             self.logFile+=".gz"
@@ -163,10 +173,31 @@ class BasicRunner(object):
 
         self.remark=remark
         self.jobId=jobId
+
+        self.data={"lines":0L}
+        self.data["logfile"]=self.logFile
+        
+    def appendTailLine(self,line):
+        """Append lines to the tail of the log"""
+        if len(self.lastLines)>10*self.logTail:
+            # truncate the lines, but not too often
+            self.lastLines=self.lastLines[-self.logTail:]
+            self.writeTailLog()
+            
+        self.lastLines.append(line+"\n")
+
+    def writeTailLog(self):
+        """Write the last lines to the log"""
+        fh=open(self.logFile,"w")
+        if len(self.lastLines)<=self.logTail:
+            fh.writelines(self.lastLines)
+        else:
+            fh.writelines(self.lastLines[-self.logTail:])
+        fh.close()
         
     def start(self):
         """starts the command and stays with it till the end"""
-        
+
         self.started=True
         if not self.noLog:
             if self.compressLog:
@@ -191,19 +222,22 @@ class BasicRunner(object):
                     break
 
                 line=self.run.getLine()
+                self.data["lines"]+=1
                 self.lastLogLineSeen=time()
                 self.writeLastSeen()
 
                 tmp=check.getTime(line)
                 if check.controlDictRead(line):
                     if self.writeRequested:
-                        warning("Preparing to reset controlDict to old glory")
-                        Timer(config().getfloat("Execution","controlDictRestoreWait",default=30.),
+                        duration=config().getfloat("Execution","controlDictRestoreWait",default=30.)
+                        warning("Preparing to reset controlDict to old glory in",duration,"seconds")
+                        Timer(duration,
                               restoreControlDict,
                               args=[self.controlDict,self]).start()
                         self.writeRequested=False
                         
                 if tmp!=None:
+                    self.data["time"]=tmp
                     self.nowTime=tmp
                     self.writeTheState("Running",always=False)
                     self.writeNowTime()
@@ -211,6 +245,10 @@ class BasicRunner(object):
                     if self.createTime==None:
                         # necessary because interFoam reports no creation time
                         self.createTime=tmp
+                    try:
+                        self.data["stepNr"]+=1
+                    except KeyError:
+                        self.data["stepNr"]=1L
                         
                 tmp=check.getCreateTime(line)
                 if tmp!=None:
@@ -238,7 +276,11 @@ class BasicRunner(object):
 
                 if line.find("FOAM Warning")>=0:
                     self.warnings+=1
-
+                    try:
+                        self.data["warnings"]+=1
+                    except KeyError:
+                        self.data["warnings"]=1
+                        
                 if self.server!=None:
                     self.server._insertLine(line)
                 
@@ -247,6 +289,8 @@ class BasicRunner(object):
                 if not self.noLog:
                     fh.write(line+"\n")
                     fh.flush()
+                elif self.logTail:
+                    self.appendTailLine(line)
                     
             except KeyboardInterrupt,e:
                 foamLogger().warning("Keyboard Interrupt")
@@ -266,13 +310,19 @@ class BasicRunner(object):
 
         if not self.noLog:        
             fh.close()
-        
+        elif self.logTail:
+            self.writeTailLog()
+            
         if self.server!=None:
             self.server.deregister()
             self.server.kill()
             
         foamLogger().info("Finished")
 
+        self.data["OK"]=self.runOK()
+        
+        return self.data
+    
     def writeToStateFile(self,fName,message):
         """Write a message to a state file"""
         if self.writeState:
@@ -364,14 +414,15 @@ class BasicRunnerCheck(object):
     floatRegExp="[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?"
 
     def __init__(self):
-        self.timeExpr=re.compile("^Time = (%f%)$".replace("%f%",self.floatRegExp))
+        #        self.timeExpr=re.compile("^Time = (%f%)$".replace("%f%",self.floatRegExp))
+        self.timeExpr=config().getRegexp("SolverOutput","timeregexp")     
         self.createExpr=re.compile("^Create mesh for time = (%f%)$".replace("%f%",self.floatRegExp))
         
     def getTime(self,line):
         """Does this line contain time information?"""
         m=self.timeExpr.match(line)
         if m:
-            return float(m.group(1))
+            return float(m.group(2))
         else:
             return None
         

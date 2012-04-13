@@ -48,6 +48,8 @@ class TimelineDirectory(object):
         self.values=[]
         self.vectors=[]
         for v in listdir(self.dir):
+            if v[0]=='.':
+                continue # Skip dot-files
             self.values.append(v)
             if TimelineValue(self.dir,v,self.usedTime).isVector:
                 self.vectors.append(v)

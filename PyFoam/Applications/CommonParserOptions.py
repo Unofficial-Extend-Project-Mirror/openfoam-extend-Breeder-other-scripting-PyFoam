@@ -54,4 +54,11 @@ class CommonParserOptions(object):
                           dest="doMacros",
                           help="Expand macros with $ and #")
 
+
+        parser.add_option("--no-preserve-comments",
+                          action="store_false",
+                          default=True,
+                          dest="preserveComments",
+                          help="Don't preserve comments when parsing")
+
         

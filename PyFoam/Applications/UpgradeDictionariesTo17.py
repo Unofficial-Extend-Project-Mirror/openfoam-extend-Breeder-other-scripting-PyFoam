@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpgradeDictionariesTo17.py 7548 2011-07-20T21:43:14.778950Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpgradeDictionariesTo17.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamUpgradeDictionariesTo17
 """
@@ -84,9 +84,9 @@ class UpgradeDictionariesTo17(PyFoamApplication):
                  args=None,
                  description=None):
         if not description:
-            description="""
-Examines dictionaries in a case and tries to upgrade them to a form that is
-compatible with OpenFOAM 1.7
+            description="""\
+Examines dictionaries in a case and tries to upgrade them to a form
+that is compatible with OpenFOAM 1.7
         """
         
         self.dicts=[]

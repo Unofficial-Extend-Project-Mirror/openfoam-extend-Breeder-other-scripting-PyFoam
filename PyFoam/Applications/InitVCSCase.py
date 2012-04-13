@@ -10,6 +10,7 @@ from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.Basics.GeneralVCSInterface import getVCS
 
 from os import path
+from glob import glob
 
 ruleList=[(False,".*\\.gz$"),
           (False,".+~$")]
@@ -22,7 +23,7 @@ def addRegexpExclude(option,opt,value,parser,*args,**kwargs):
 
 class InitVCSCase(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
+        description="""\
 This utility initializes a Version Control System (VCS) in an
 OpenFOAM-directory. Certain parts of PyFoam take advantages of this.
 
@@ -107,8 +108,22 @@ Currenty only Mercurial is supported as a VCS-backend
 
         vcsInter.addPath(path.join(sol.name,"constant"),rules=ruleList)
         vcsInter.addPath(path.join(sol.name,"system"),rules=ruleList)
-        vcsInter.addPath(sol.initialDir(),rules=ruleList)
-        vcsInter.addPath(path.join(sol.name,"customRegexp"),rules=ruleList)
+        if sol.initialDir()!=None:
+            vcsInter.addPath(sol.initialDir(),rules=ruleList)
+        else:
+            self.warning("No initial-directory found")
+
+        # special PyFoam-files
+        for f in ["customRegexp","LocalConfigPyFoam"]:
+            p=path.join(sol.name,f)
+            if path.exists(p):
+                vcsInter.addPath(p,rules=ruleList)
+
+        # Add the usual files from the tutorials
+        for g in ["Allrun*","Allclean*"]:
+            for f in glob(path.join(sol.name,g)):
+                vcsInter.addPath(f,rules=ruleList)
+                
         for a in self.opts.additional:
             vcsInter.addPath(a,rules=ruleList)
             

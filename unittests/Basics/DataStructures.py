@@ -2,7 +2,7 @@
 import unittest
 import math
 
-from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,TupleProxy,DictProxy,Tensor,SymmTensor
+from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,TupleProxy,DictProxy,Tensor,SymmTensor,Codestream
 
 theSuite=unittest.TestSuite()
 
@@ -174,4 +174,21 @@ class FieldTest(unittest.TestCase):
         self.assertEqual(sum(v),s+1)
         
 theSuite.addTest(unittest.makeSuite(FieldTest,"test"))
+
+class CodeStreamTest(unittest.TestCase):
+    def testString(self):
+        c=Codestream("nix")
+        self.assertEqual(c[1],"i")
+
+    def testMultiline(self):
+        c=Codestream("""nix
+        da""")
+        self.assertEqual(c.count("\n"),1)
+
+    def testCompare(self):
+        s="Original text"
+        c=Codestream(s)
+        self.assertEqual(c,s)
+        
+theSuite.addTest(unittest.makeSuite(CodeStreamTest,"test"))
 

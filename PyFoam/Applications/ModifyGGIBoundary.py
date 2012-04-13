@@ -17,7 +17,7 @@ import re
 
 class ModifyGGIBoundary(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Modify GGI boundary condition parameters
 """
         PyFoamApplication.__init__(self,

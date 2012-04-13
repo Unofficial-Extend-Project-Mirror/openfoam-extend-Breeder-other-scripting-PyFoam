@@ -27,15 +27,13 @@ def doImports():
         
 class DisplayBlockMesh(PyFoamApplication):
     def __init__(self):
-        description="""
-Reads the contents of a blockMeshDict-file and displays the
-vertices as spheres (with numbers). The blocks are sketched by
-lines. One block can be seceted with a slider. It will be
-displayed as a green cube with the local directions x1,x2 and
-x3. Also a patch that is selected by a slider will be sketched
-by blue squares.
-This implementation uses Tkinter and is no longer activly developed.
-Use the QT-version.
+        description="""\
+Reads the contents of a blockMeshDict-file and displays the vertices
+as spheres (with numbers). The blocks are sketched by lines. One block
+can be seceted with a slider. It will be displayed as a green cube
+with the local directions x1,x2 and x3. Also a patch that is selected
+by a slider will be sketched by blue squares.  This implementation
+uses Tkinter and is no longer activly developed.  Use the QT-version.
         """
         PyFoamApplication.__init__(self,
                                    description=description,

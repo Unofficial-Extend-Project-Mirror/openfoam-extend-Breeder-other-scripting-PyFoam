@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Comparator.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Comparator.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamComparator
 """
@@ -30,7 +30,7 @@ from Decomposer import Decomposer
 
 class Comparator(PyFoamApplication):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Reads an XML-file that specifies a base case and a parameter-variation
 and executes all the variations of that case
         """

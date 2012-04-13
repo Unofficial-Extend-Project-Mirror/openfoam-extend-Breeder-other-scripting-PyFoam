@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CompareDictionary.py 7134 2011-01-20T09:22:01.720659Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CompareDictionary.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
 """
 Application class that implements pyFoamCompareDictionary.py
 """
@@ -27,13 +27,13 @@ f.getConfigFormat("error",shortName="name")
 class CompareDictionary(PyFoamApplication,
                         CommonParserOptions):
     def __init__(self,args=None):
-        description="""
+        description="""\
 Takes two dictionary and compares them semantically (by looking at the
 structure, not the textual representation. If the dictionaries do not
 have the same name, it looks for the destination file by searching the
-equivalent place in the destination case. If more than two files are specified
-then the last name is assumed to be a directory and all the equivalents to the
-other files are searched there.
+equivalent place in the destination case. If more than two files are
+specified then the last name is assumed to be a directory and all the
+equivalents to the other files are searched there.
         """
         
         PyFoamApplication.__init__(self,

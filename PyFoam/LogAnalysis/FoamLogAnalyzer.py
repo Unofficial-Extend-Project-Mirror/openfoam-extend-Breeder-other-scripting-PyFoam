@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/FoamLogAnalyzer.py 7013 2010-11-21T22:22:06.604864Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/FoamLogAnalyzer.py 7656 2012-01-06T14:43:20.069830Z bgschaid  $ 
 """Analyze OpenFOAM logs"""
 
 from TimeLineAnalyzer import TimeLineAnalyzer
@@ -8,6 +8,8 @@ from PyFoam.Error import error
 from PyFoam.Basics.ProgressOutput import ProgressOutput
 
 from sys import stdout
+
+from copy import deepcopy
 
 class FoamLogAnalyzer(object):
     """Base class for all analyzers
@@ -41,7 +43,21 @@ class FoamLogAnalyzer(object):
         for a in self.analyzers.values():
             a.tearDown()
             a.setParent(None)
-            
+    
+    def collectData(self):
+        """Collect dictionaries of collected data (current state)
+        from the analyzers
+        @return: the dictionary"""
+
+        result={}
+
+        for nm in self.analyzers:
+            data=self.analyzers[nm].getCurrentData()
+            if len(data)>0:
+                result[nm]=data
+
+        return result
+
     def setTime(self,time):
         """Sets the time and alert all the LineAnalyzers that the time has changed
         @param time: the new value of the time
@@ -56,6 +72,15 @@ class FoamLogAnalyzer(object):
             for nm in self.analyzers:
                 self.analyzers[nm].timeChanged()
             self.checkTriggers()
+
+            data=self.collectData()
+            for listener in self.timeListeners:
+                try:
+                    # make sure everyone gets a separate copy
+                    listener.setDataSet(deepcopy(data))
+                except AttributeError:
+                    # seems that the listener doesn't want the data
+                    pass
 
     def writeProgress(self,msg):
         """Write a message to the progress output"""

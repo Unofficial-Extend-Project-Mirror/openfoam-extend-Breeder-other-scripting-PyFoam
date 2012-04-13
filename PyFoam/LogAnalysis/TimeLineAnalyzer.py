@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/TimeLineAnalyzer.py 7013 2010-11-21T22:22:06.604864Z bgschaid  $ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/TimeLineAnalyzer.py 7880 2012-02-23T20:00:16.529769Z bgschaid  $ 
 """Analyze Line for Time"""
 
 import re
@@ -21,17 +21,29 @@ class TimeLineAnalyzer(LogLineAnalyzer):
         """
         LogLineAnalyzer.__init__(self)
         self.exp=re.compile(conf().get("SolverOutput","timeRegExp"))
+        
+        self.fallback=re.compile("^(Time =|Iteration:) (.+)$")
+        self.tryFallback=True
+        
         self.progress=progress
-            
+
+    def notifyNewTime(self,m):
+        try:
+            self.notify(float(m.group(2)))
+            if self.progress and type(self.parent.time)==float:
+                self.writeProgress("t = %10g" % self.parent.time)
+
+        except ValueError:
+            pass
+        
     def doAnalysis(self,line):
         m=self.exp.match(line)
         if m!=None:
-            try:
-                self.notify(float(m.group(2)))
-                if self.progress and type(self.parent.time)==float:
-                    self.writeProgress("t = %10g" % self.parent.time)
-                
-            except ValueError:
-                pass
+            self.tryFallback=False
+            self.notifyNewTime(m)
 
-            
+        if self.tryFallback:
+            # this is for cases that use a different regular expression for the time
+            m=self.fallback.match(line)
+            if m!=None:
+                self.notifyNewTime(m)
