@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/SimpleLineAnalyzer.py 5717 2009-10-12T21:41:13.626022Z bgschaid  $ 
+#  ICE Revision: $Id: SimpleLineAnalyzer.py 12753 2013-01-03 23:08:03Z bgschaid $
 """Do analysis for simple expressions"""
 
 import re
@@ -6,7 +6,7 @@ import re
 # from FileLineAnalyzer import FileLineAnalyzer
 # from TimeLineLineAnalyzer import TimeLineLineAnalyzer
 
-from GeneralLineAnalyzer import GeneralLineAnalyzer
+from .GeneralLineAnalyzer import GeneralLineAnalyzer
 
 class GeneralSimpleLineAnalyzer(GeneralLineAnalyzer):
     """Parses lines for an arbitrary regular expression
@@ -43,13 +43,13 @@ class GeneralSimpleLineAnalyzer(GeneralLineAnalyzer):
         self.idList=idList
         self.strExp=exp
         self.exp=re.compile(self.strExp)
-        
+
     def addToFiles(self,match):
         tm=self.parent.getTime()
         if tm=="":
             return
 
-        name=self.name
+        name=self.fName(self.name)
         fdata=match.groups()
         if self.idNr!=None:
             ID=match.group(self.idNr)
@@ -66,17 +66,17 @@ class GeneralSimpleLineAnalyzer(GeneralLineAnalyzer):
         mLen=len(match.groups())
         ids=self.idList
         if ids==None:
-            ids=range(mLen)
+            ids=list(range(mLen))
         for i in range(len(ids)):
             ID=ids[i]
             if ID>=mLen:
                 continue
-            name="%s_%d" % (self.name,ID)
+            name=self.fName("%s_%d" % (self.name,ID))
             if i<len(self.titles):
                 name=self.titles[i]
             data=match.groups()[ID]
             self.lines.setValue(name,data)
-        
+
 class SimpleLineAnalyzer(GeneralSimpleLineAnalyzer):
     """Parses lines for an arbitrary regular expression
 
@@ -100,3 +100,5 @@ class TimeLineSimpleLineAnalyzer(GeneralSimpleLineAnalyzer):
         @param titles: titles for the data items"""
 
         GeneralSimpleLineAnalyzer.__init__(self,name,exp,idNr=idList,titles=titles,doFiles=False)
+
+# Should work with Python3 and Python2

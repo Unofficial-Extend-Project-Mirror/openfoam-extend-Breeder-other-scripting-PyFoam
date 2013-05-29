@@ -23,7 +23,7 @@ class SurfaceDirectory(object):
                 try:
                     v=float(d)
                     self.times.append(d)
-                except ValueError,e:
+                except ValueError:
                     pass
 
         self.times.sort(self.sorttimes)
@@ -36,11 +36,11 @@ class SurfaceDirectory(object):
         if time in self:
             return SurfaceTime(self.dir,time)
         else:
-            raise KeyError,time
+            raise KeyError(time)
 
     def __contains__(self,time):
         return time in self.times
-    
+
     def sorttimes(self,x,y):
         """Sort function for the solution files"""
         if(float(x)==float(y)):
@@ -54,7 +54,7 @@ class SurfaceDirectory(object):
         """Returns all the found surfaces"""
 
         surfaces=[]
-        
+
         for t in self:
             for l in t.surfaces:
                 if l not in surfaces:
@@ -65,9 +65,9 @@ class SurfaceDirectory(object):
 
     def values(self):
         """Returns all the found surface values"""
-        
+
         values=[]
-        
+
         for t in self:
             for v in t.values:
                 if v not in values:
@@ -84,14 +84,14 @@ class SurfaceDirectory(object):
         if unspecified
         @param time: times for which the surfaces are to be got. All
         if unspecified"""
-        
+
         if surface==None:
             surface=self.surfaces()
         if value==None:
-            value=self.values()
+            value=list(self.values())
         if time==None:
             time=self.times
-            
+
         sets=[]
 
         for t in time:
@@ -102,7 +102,7 @@ class SurfaceDirectory(object):
                         sets.append(d)
                     except KeyError:
                         pass
-            
+
         return sets
 
 def extractSurface(fName):
@@ -125,7 +125,7 @@ class SurfaceTime(object):
         self.surfaces=[]
         self.values=[]
         self.time=time
-        
+
         for pth in glob(path.join(self.dir,"*.vtk")):
             f=path.basename(pth)
             nm=extractSurface(f)
@@ -139,7 +139,7 @@ class SurfaceTime(object):
         self.values.sort()
 
         self.cache={}
-        
+
     def __getitem__(self,key):
         """Get the data for a value on a specific line
         @param key: A tuple with the surface-name and the value-name
@@ -147,10 +147,10 @@ class SurfaceTime(object):
 
         if key in self.cache:
             return self.cache[key]
-        
+
         surface,val=key
         if surface not in self.surfaces or val not in self.values:
-            raise KeyError,key
+            raise KeyError(key)
 
         fName=None
 
@@ -162,8 +162,9 @@ class SurfaceTime(object):
 
         if fName==None:
             error("Can't find a file for the surface",line,"and the value",val,"in the directory",self.dir)
-                
+
         self.cache[key]=(path.join(self.dir,fName),self.time,surface,val)
 
         return self.cache[key]
-    
+
+# Should work with Python3 and Python2

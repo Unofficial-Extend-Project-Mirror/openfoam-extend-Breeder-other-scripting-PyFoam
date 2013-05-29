@@ -1,0 +1,51 @@
+0.2.0 (2010-06-15)
+  Update notice from 0.1.x:
+    no changes to your templates should be necessary,
+    and you only need to modify your Python-code if you have used
+    the classes StringLoader, FileLoader, PseudoSandbox, TemplateEval
+    or TemplateBase directly.
+
+  - added functionality:
+    - variables can now be set in the template ("EvalPseudoSandbox.f_setvar()")
+    - "dummy-import" ("EvalPseudoSandbox.f_import()")
+    - modularized for better extensibility
+
+  - Python-code syntax changes:
+    - renamed class StringLoader to LoaderString
+    - renamed class FileLoader to LoaderFile
+    - unified PseudoSandbox + TemplateEval in EvalPseudoSandbox
+    - changed parameter-order of TemplateBase
+
+  - template-syntax minor improvements:
+    - check that macro-names are \w+
+    - comments (#!...) are now allowed after multi-line-block-tags
+
+  - fixed a minor bug which caused that a function registered in one
+    eval-sandbox-instance was available in all instances
+
+  - review, documentation, cleanup
+
+0.1.5 (2009-01-20)
+  - fixed a bug (in the parser) which caused that "#!" at the end-of-line
+    directly before a single-line-block at the beginning of the next line
+    did not remove the newline
+    (single-line-blocks now only consume [ \t] instead of \s as P<sSpace>)
+
+0.1.4 (2008-12-21)
+  - fixed a bug (in the parser) which caused that substitutions/blocks at the
+    beginning of a template after some whitespace raised an exception
+
+0.1.3 (2008-12-20)
+  - fixed a bug (in the parser) which caused that empty macros raised an
+    exception
+
+0.1.2 (2008-12-19)
+  - fixed a problem which caused that single-line-blocks did not work
+    after some spaces at the beginning of a line
+  - documentation update
+  - removed template.txt/template.html from release
+  - files renamed according to the "Software Release Practice HOWTO"
+
+0.1 (2008-12-14)
+  - initial release
+

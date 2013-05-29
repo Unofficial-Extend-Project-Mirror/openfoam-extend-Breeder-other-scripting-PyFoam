@@ -1,16 +1,19 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/ParsedParameterFile.py 7947 2012-03-29T21:47:16.093247Z bgschaid  $ 
+#  ICE Revision: $Id: ParsedParameterFile.py 12791 2013-02-05 13:40:06Z bgschaid $
 """Parameter file is read into memory and modified there"""
 
-from FileBasis import FileBasisBackup
+from PyFoam.RunDictionary.FileBasis import FileBasisBackup
 from PyFoam.Basics.PlyParser import PlyParser
 from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator
 
-from PyFoam.Basics.DataStructures import Vector,Field,Dimension,DictProxy,TupleProxy,Tensor,SymmTensor,Unparsed,UnparsedList,Codestream,DictRedirection
+from PyFoam.Basics.DataStructures import Vector,Field,Dimension,DictProxy,TupleProxy,Tensor,SymmTensor,Unparsed,UnparsedList,Codestream,DictRedirection,BinaryBlob,BinaryList
 
 from PyFoam.Error import error,warning,FatalErrorPyFoamException
 
 from os import path
 from copy import deepcopy
+import sys
+
+from PyFoam.ThirdParty.six import print_,integer_types,iteritems
 
 class ParsedParameterFile(FileBasisBackup):
     """ Parameterfile whose complete representation is read into
@@ -27,10 +30,12 @@ class ParsedParameterFile(FileBasisBackup):
                  preserveComments=True,
                  noHeader=False,
                  binaryMode=False,
+                 treatBinaryAsASCII=False,
                  noBody=False,
                  doMacroExpansion=False,
                  dontRead=False,
                  noVectorOrTensor=False,
+                 dictStack=None,
                  createZipped=True,
                  longListOutputThreshold=20):
         """@param name: The name of the parameter file
@@ -40,7 +45,9 @@ class ParsedParameterFile(FileBasisBackup):
         @param listDictWithHeader: the file only contains a list and a header
         @param listLengthUnparsed: Lists longer than that length are not parsed
         @param binaryMode: Parse long lists in binary mode (to be overridden by
-        the settings in the header
+        the settings in the header).
+        @param treatBinaryAsASCII: even if the header says that this is a
+        binary file treat it like an ASCII-file
         @param noHeader: don't expect a header
         @param noBody: don't read the body of the file (only the header)
         @param doMacroExpansion: expand #include and $var
@@ -49,6 +56,7 @@ class ParsedParameterFile(FileBasisBackup):
         @param dontRead: Do not read the file during construction
         @param longListOutputThreshold: Lists that are longer than this are
         prefixed with a length
+        @param dictStack: dictionary stack for lookup (only used for include)
         """
 
         self.noHeader=noHeader
@@ -64,33 +72,62 @@ class ParsedParameterFile(FileBasisBackup):
         self.listLengthUnparsed=listLengthUnparsed
         self.doMacros=doMacroExpansion
         self.preserveComments=preserveComments
-        self.noVectorOrTensor=noVectorOrTensor        
+        self.noVectorOrTensor=noVectorOrTensor
         self.header=None
         self.content=None
         self.longListOutputThreshold=longListOutputThreshold
         self.binaryMode=binaryMode
-        
+        self.treatBinaryAsASCII=treatBinaryAsASCII
+        self.lastDecoration=""
+        self.dictStack=dictStack
+
         if not dontRead:
             self.readFile()
 
     def parse(self,content):
         """Constructs a representation of the file"""
-        parser=FoamFileParser(content,
-                              debug=self.debug,
-                              fName=self.name,
-                              boundaryDict=self.boundaryDict,
-                              listDict=self.listDict,
-                              listDictWithHeader=self.listDictWithHeader,
-                              listLengthUnparsed=self.listLengthUnparsed,
-                              noHeader=self.noHeader,
-                              noBody=self.noBody,
-                              preserveComments=self.preserveComments,
-                              binaryMode=self.binaryMode,
-                              noVectorOrTensor=self.noVectorOrTensor,
-                              doMacroExpansion=self.doMacros)
-        
+        try:
+            parser=FoamFileParser(content,
+                                  debug=self.debug,
+                                  fName=self.name,
+                                  boundaryDict=self.boundaryDict,
+                                  listDict=self.listDict,
+                                  listDictWithHeader=self.listDictWithHeader,
+                                  listLengthUnparsed=self.listLengthUnparsed,
+                                  noHeader=self.noHeader,
+                                  noBody=self.noBody,
+                                  preserveComments=self.preserveComments,
+                                  binaryMode=self.binaryMode,
+                                  treatBinaryAsASCII=self.treatBinaryAsASCII,
+                                  noVectorOrTensor=self.noVectorOrTensor,
+                                  dictStack=self.dictStack,
+                                  doMacroExpansion=self.doMacros)
+        except BinaryParserError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+            if not self.treatBinaryAsASCII:
+                # Retrying in ASCII-mode although the file thinks it is binary
+                parser=FoamFileParser(content,
+                                      debug=self.debug,
+                                      fName=self.name,
+                                      boundaryDict=self.boundaryDict,
+                                      listDict=self.listDict,
+                                      listDictWithHeader=self.listDictWithHeader,
+                                      listLengthUnparsed=self.listLengthUnparsed,
+                                      noHeader=self.noHeader,
+                                      noBody=self.noBody,
+                                      preserveComments=self.preserveComments,
+                                      binaryMode=self.binaryMode,
+                                      treatBinaryAsASCII=True,
+                                      noVectorOrTensor=self.noVectorOrTensor,
+                                      dictStack=self.dictStack,
+                                      doMacroExpansion=self.doMacros)
+            else:
+                raise e
+
         self.content=parser.getData()
         self.header=parser.getHeader()
+        self.lastDecoration=parser._decorationBuffer
+
         return self.content
 
     def __contains__(self,key):
@@ -111,11 +148,11 @@ class ParsedParameterFile(FileBasisBackup):
     def __iter__(self):
         for key in self.content:
             yield key
-            
+
     def __str__(self):
         """Generates a string from the contents in memory
         Used to be called makeString"""
-        
+
         string="// -*- C++ -*-\n// File generated by PyFoam - sorry for the ugliness\n\n"
 
         generator=FoamFileGenerator(self.content,
@@ -123,7 +160,19 @@ class ParsedParameterFile(FileBasisBackup):
                                     longListThreshold=self.longListOutputThreshold)
         string+=generator.makeString(firstLevel=True)
 
+        if len(self.lastDecoration)>0:
+            string+="\n\n"+self.lastDecoration
+
         return string
+
+    def getValueDict(self):
+        """Get a dictionary with the values with the decorators removed"""
+        result={}
+        if self.content:
+            for k in self.content:
+                if type(k) not in integer_types:
+                    result[k]=self.content[k]
+        return result
 
 class WriteParameterFile(ParsedParameterFile):
     """A specialization that is used to only write to the file"""
@@ -141,8 +190,8 @@ class WriteParameterFile(ParsedParameterFile):
 
         if objectName==None:
             objectName=path.basename(name)
-            
-        self.content={}
+
+        self.content=DictProxy()
         self.header={"version":"2.0",
                      "format":"ascii",
                      "class":className,
@@ -154,7 +203,7 @@ class Enumerate(object):
             setattr(self, name, number)
 
 inputModes=Enumerate(["merge","error","warn","protect","overwrite","default"])
-        
+
 class FoamFileParser(PlyParser):
     """Class that parses a string that contains the contents of an
     OpenFOAM-file and builds a nested structure of directories and
@@ -174,8 +223,10 @@ class FoamFileParser(PlyParser):
                  listDictWithHeader=False,
                  listLengthUnparsed=None,
                  binaryMode=False,
+                 treatBinaryAsASCII=False,
                  duplicateCheck=False,
                  noVectorOrTensor=False,
+                 dictStack=None,
                  duplicateFail=True):
         """@param content: the string to be parsed
         @param fName: Name of the actual file (if any)
@@ -185,6 +236,7 @@ class FoamFileParser(PlyParser):
         @param duplicateFail: Fail if a duplicate is discovered"""
 
         self.binaryMode=binaryMode
+        self.treatBinaryAsASCII=treatBinaryAsASCII
         self.fName=fName
         self.data=None
         self.header=None
@@ -195,28 +247,34 @@ class FoamFileParser(PlyParser):
         self.preserveNewLines=preserveNewlines
         self.duplicateCheck=duplicateCheck
         self.duplicateFail=duplicateFail
-        self.noVectorOrTensor=noVectorOrTensor        
+        self.noVectorOrTensor=noVectorOrTensor
+        self.inHeader=True
+        self.inBinary=False
 
         # Make sure that the first comment is discarded
         self.collectDecorations=False
         self.inputMode=inputModes.merge
-        
+
         self._decorationBuffer=""
-        
+
         startCnt=0
-        
-        self.dictStack=[DictProxy()]
-        
+
+        self.dictStack=dictStack
+        if self.dictStack==None:
+            self.dictStack=[DictProxy()]
+
         if noBody:
             self.start='noBody'
             startCnt+=1
-            
+
         if noHeader:
+            self.inHeader=False
             self.start='noHeader'
             startCnt+=1
             self.collectDecorations=True
-            
+
         if listDict:
+            self.inHeader=False
             self.start='pureList'
             startCnt+=1
             self.dictStack=[]
@@ -232,7 +290,7 @@ class FoamFileParser(PlyParser):
 
         if startCnt>1:
             error("Only one start symbol can be specified.",startCnt,"are specified")
-            
+
         PlyParser.__init__(self,debug=debug)
 
         #sys.setrecursionlimit(50000)
@@ -257,7 +315,7 @@ class FoamFileParser(PlyParser):
     def __iter__(self):
         for key in self.data:
             yield key
-            
+
 ##    def __len__(self):
 ##        if self.data==None:
 ##            return 0
@@ -274,11 +332,11 @@ class FoamFileParser(PlyParser):
     def addCommentToDecorations(self,text):
         if self.preserveComments:
             self.addToDecoration(text)
-            
+
     def addNewlinesToDecorations(self,text):
         if self.preserveNewLines:
             self.addToDecoration(text)
-            
+
     def getDecoration(self):
         tmp=self._decorationBuffer
         self.resetDecoration()
@@ -286,13 +344,13 @@ class FoamFileParser(PlyParser):
             if tmp[-1]=='\n':
                 tmp=tmp[:-1]
         return tmp
-    
+
     def directory(self):
         if self.fName==None:
             return path.curdir
         else:
             return path.dirname(self.fName)
-        
+
     def getData(self):
         """ Get the data structure"""
         return self.data
@@ -303,18 +361,18 @@ class FoamFileParser(PlyParser):
 
     def printContext(self,c,ind):
         """Prints the context of the current index"""
-        print "------"
-        print c[max(0,ind-100):max(0,ind-1)]
-        print "------"
-        print ">",c[ind-1],"<"
-        print "------"
-        print c[min(len(c),ind):min(len(c),ind+100)]
-        print "------"
+        print_("------")
+        print_(c[max(0,ind-100):max(0,ind-1)])
+        print_("------")
+        print_(">",c[ind-1],"<")
+        print_("------")
+        print_(c[min(len(c),ind):min(len(c),ind+100)])
+        print_("------")
 
     def parserError(self,text,c,ind):
         """Prints the error message of the parser and exit"""
-        print "PARSER ERROR:",text
-        print "On index",ind
+        print_("PARSER ERROR:",text)
+        print_("On index",ind)
         self.printContext(c,ind)
         raise PyFoamParserError("Unspecified")
 
@@ -331,12 +389,12 @@ class FoamFileParser(PlyParser):
                 else:
                     isAllPreList=False
                     break
-        
+
         if isAllPreList:
             return orig[1::2]
         else:
             return orig
-        
+
     tokens = (
         'NAME',
         'ICONST',
@@ -362,6 +420,7 @@ class FoamFileParser(PlyParser):
         'KANALGITTER',
         'CODESTART',
         'CODEEND',
+        'BINARYBLOB',
     )
 
     reserved = {
@@ -384,13 +443,14 @@ class FoamFileParser(PlyParser):
         ('unparsed', 'exclusive'),
         ('codestream', 'exclusive'),
         ('mlcomment', 'exclusive'),
+        ('binaryblob', 'exclusive'),
         )
 
     def t_unparsed_left(self,t):
         r'\('
         t.lexer.level+=1
         #        print "left",t.lexer.level,
-        
+
     def t_unparsed_right(self,t):
         r'\)'
         t.lexer.level-=1
@@ -401,15 +461,45 @@ class FoamFileParser(PlyParser):
             t.lexer.lexpos-=1
             t.type = "UNPARSEDCHUNK"
             t.lexer.lineno += t.value.count('\n')
-            t.lexer.begin('INITIAL')           
+            t.lexer.begin('INITIAL')
             return t
 
     t_unparsed_ignore = ' \t\n0123456789.-+e'
 
     def t_unparsed_error(self,t):
-        print "Error",t.lexer.lexdata[t.lexer.lexpos]
+        print_("Error",t.lexer.lexdata[t.lexer.lexpos])
         t.lexer.skip(1)
-    
+
+    t_binaryblob_ignore = ''
+
+    def t_binaryblob_close(self,t):
+        r"\)"
+        size=t.lexer.lexpos-t.lexer.binary_start-1
+#        print size,ord(t.lexer.lexdata[t.lexer.lexpos-1]),ord(t.lexer.lexdata[t.lexer.lexpos]),ord(t.lexer.lexdata[t.lexer.lexpos+1])
+#        print size,ord(t.lexer.lexdata[t.lexer.binary_start-1]),ord(t.lexer.lexdata[t.lexer.binary_start])
+#        print size % (t.lexer.binary_listlen), len(t.lexer.lexdata)
+        if (size % t.lexer.binary_listlen)==0:
+            # length of blob is multiple of the listlength
+            nextChar=t.lexer.lexdata[t.lexer.lexpos]
+            nextNextChar=t.lexer.lexdata[t.lexer.lexpos+1]
+            if (nextChar in [';','\n'] and nextNextChar=='\n'):
+                t.value = t.lexer.lexdata[t.lexer.binary_start:t.lexer.lexpos-1]
+                assert(len(t.value)%t.lexer.binary_listlen == 0)
+                t.lexer.lexpos-=1
+                t.type = "BINARYBLOB"
+                t.lexer.lineno += t.value.count('\n')
+                t.lexer.begin('INITIAL')
+                self.inBinary=False
+                return t
+
+    def t_binaryblob_throwaway(self,t):
+        r'[^\)]'
+        pass
+
+    def t_binaryblob_error(self,t):
+        print_("Error",t.lexer.lexdata[t.lexer.lexpos])
+        t.lexer.skip(1)
+
     def t_codestream_end(self,t):
         r"\#\}"
         t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos-2]
@@ -424,11 +514,11 @@ class FoamFileParser(PlyParser):
     def t_codestream_throwaway(self,t):
         r'[^#]'
         pass
-    
+
     def t_codestream_error(self,t):
-        print "Error",t.lexer.lexdata[t.lexer.lexpos]
+        print_("Error",t.lexer.lexdata[t.lexer.lexpos])
         t.lexer.skip(1)
-    
+
     def t_NAME(self,t):
         r'[a-zA-Z_][+\-<>(),.\*|a-zA-Z_0-9&%:]*'
         t.type=self.reserved.get(t.value,'NAME')
@@ -437,7 +527,7 @@ class FoamFileParser(PlyParser):
                 # Give back the last ) because it propably belongs to a list
                 t.value=t.value[:-1]
                 t.lexer.lexpos-=1
-                
+
         return t
 
     def t_SUBSTITUITION(self,t):
@@ -454,9 +544,9 @@ class FoamFileParser(PlyParser):
     t_CODESTART = r'\#\{'
 
     t_CODEEND = r'\#\}'
-    
+
     t_KANALGITTER = r'\#'
-    
+
     t_ICONST = r'(-|)\d+([uU]|[lL]|[uU][lL]|[lL][uU])?'
 
     t_FCONST = r'(-|)((\d+)(\.\d*)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+))([lL]|[fF])?'
@@ -476,7 +566,8 @@ class FoamFileParser(PlyParser):
         if next>=0:
             line=t.lexer.lexdata[now:next]
             pos=line.find("=")
-            if pos>=0:
+
+            if pos>=0 and not self.binaryMode:
                 if ((line.find("//")>=0 and line.find("//")<pos)) or (line.find("/*")>=0 and line.find("/*")<pos) or (line.find('"')>=0 and line.find('"')<pos):
                     return
                 t.value = line
@@ -485,7 +576,7 @@ class FoamFileParser(PlyParser):
                 t.lexer.lexpos = next
                 return t
         #        self.addNewlinesToDecorations(t.value)
-            
+
     # C++ comment (ignore)
     def t_ccode_comment(self,t):
         r'//.*'
@@ -497,11 +588,11 @@ class FoamFileParser(PlyParser):
         t.lexer.begin('mlcomment')
         self.mllevel=1
         self.mlcomment_start = t.lexer.lexpos-2
-        
+
     def t_mlcomment_newlevel(self,t):
         r'/\*'
         self.mllevel+=1
-        
+
     def t_mlcomment_endcomment(self,t):
         r'\*/'
         self.mllevel-=1
@@ -510,21 +601,25 @@ class FoamFileParser(PlyParser):
             mlcomment=t.lexer.lexdata[self.mlcomment_start:t.lexer.lexpos]
             t.lexer.lineno += mlcomment.count('\n')
             self.addCommentToDecorations(mlcomment)
-            
+
     def t_mlcomment_throwaway(self,t):
         r'[^\*]'
         pass
-    
+
     t_mlcomment_ignore = ''
 
     def t_mlcomment_error(self,t):
         if t.lexer.lexdata[t.lexer.lexpos]!="*":
-            print "Error",t.lexer.lexdata[t.lexer.lexpos]
+            print_("Error",t.lexer.lexdata[t.lexer.lexpos])
         t.lexer.skip(1)
-                
+
     # Error handling rule
     def t_error(self,t):
-        raise PyFoamParserError("Illegal character '%s'" % t.value[0])
+        msg="Illegal character '%s' in line %d (pos: %d)" % (
+            t.value[0],
+            t.lexer.lineno,
+            t.lexer.lexpos)
+        raise PyFoamParserError(msg)
         #        t.lexer.skip(1) # the old days when illegal characters were accepted
 
     def p_global(self,p):
@@ -534,7 +629,8 @@ class FoamFileParser(PlyParser):
     def p_gotHeader(self,p):
         'gotHeader :'
         p.lexer.lexpos=len(p.lexer.lexdata)
-        
+        self.inHeader=False
+
     def p_noBody(self,p):
         ''' noBody : FOAMFILE '{' dictbody gotHeader '}' '''
         p[0] = ( p[3] , {} )
@@ -547,10 +643,18 @@ class FoamFileParser(PlyParser):
         'pureList : list'
         p[0] = ( None , p[1] )
 
+    def p_onlyListOrPList(self,p):
+        '''onlyListOrPList : list
+                           | prelist '''
+        p[0]=p[1]
+
     def p_pureListWithHeader(self,p):
-        '''pureListWithHeader : header list
-                              | header prelist '''
+        '''pureListWithHeader : header onlyListOrPList'''
         p[0] = ( p[1] , p[2] )
+
+    def p_afterHeader(self,p):
+        'afterHeader :'
+        pass
 
     def p_boundaryDict(self,p):
         '''boundaryDict : header list
@@ -560,16 +664,21 @@ class FoamFileParser(PlyParser):
 
     def p_header(self,p):
         'header : FOAMFILE dictionary'
+        self.inHeader=False
         p[0] = p[2]
-        if p[0]["format"]=="binary":
-            self.binaryMode=True
-            raise FatalErrorPyFoamException("Can not parse binary files. It is not implemented")
-        elif p[0]["format"]=="ascii":
-            self.binaryMode=False
-        else:
-            raise FatalErrorPyFoamException("Don't know how to parse file format",p[0]["format"])
+
+        # if p[0]["format"]=="binary":
+        #     if not self.treatBinaryAsASCII:
+        #         self.binaryMode=True
+        #     else:
+        #         self.binaryMode=False
+        # elif p[0]["format"]=="ascii":
+        #     self.binaryMode=False
+        # else:
+        #     raise FatalErrorPyFoamException("Don't know how to parse file format",p[0]["format"])
+
         self.collectDecorations=True
- 
+
     def p_macro(self,p):
         '''macro : KANALGITTER include
                  | KANALGITTER inputMode
@@ -577,7 +686,7 @@ class FoamFileParser(PlyParser):
         p[0] = p[1]+p[2]+"\n"
         if self.doMacros:
             p[0]="// "+p[0]
-            
+
     def p_include(self,p):
         '''include : INCLUDE SCONST
                    | INCLUDEIFPRESENT SCONST'''
@@ -589,13 +698,16 @@ class FoamFileParser(PlyParser):
             if read and not path.exists(fName):
                 raise PyFoamParserError("The included file "+fName+" does not exist")
             if read:
-                data=ParsedParameterFile(fName,noHeader=True)
+                data=ParsedParameterFile(fName,
+                                         noHeader=True,
+                                         dictStack=self.dictStack,
+                                         doMacroExpansion=self.doMacros)
                 into=self.dictStack[-1]
                 for k in data:
                     into[k]=data[k]
-            
+
         p[0] = p[1] + " " + p[2]
-        
+
     def p_inputMode(self,p):
         '''inputMode : INPUTMODE ERROR
                      | INPUTMODE WARN
@@ -605,7 +717,7 @@ class FoamFileParser(PlyParser):
                      | INPUTMODE OVERWRITE'''
         p[0] = p[1] + " " + p[2]
         self.inputMode=getattr(inputModes,p[2])
-        
+
     def p_remove(self,p):
         '''remove : REMOVE word
                   | REMOVE wlist'''
@@ -617,11 +729,11 @@ class FoamFileParser(PlyParser):
             for w in p[2]:
                 p[0]+=w+" "
             p[0]+=")"
-            
+
     def p_integer(self,p):
         '''integer : ICONST'''
         p[0] = int(p[1])
-        
+
     def p_float(self,p):
         '''integer : FCONST'''
         p[0] = float(p[1])
@@ -629,11 +741,11 @@ class FoamFileParser(PlyParser):
     def p_enter_dict(self,p):
         '''enter_dict :'''
         self.dictStack.append(DictProxy())
-    
+
     def p_exit_dict(self,p):
         '''exit_dict :'''
         p[0]=self.dictStack.pop()
-    
+
     def p_dictionary(self,p):
         '''dictionary : '{' enter_dict dictbody '}' exit_dict
                       | '{' '}' '''
@@ -675,11 +787,11 @@ class FoamFileParser(PlyParser):
                     else:
                         p[0][p[1][0]]=p[1][1]
 
-                    
+
     def p_list(self,p):
         '''list : '(' itemlist ')' '''
         p[0] = self.condenseAllPreFixLists(p[2])
-        if not self.noVectorOrTensor and ( 
+        if not self.noVectorOrTensor and (
             len(p[2])==3 or len(p[2])==9 or len(p[2])==6):
             isVector=True
             for i in p[2]:
@@ -689,23 +801,32 @@ class FoamFileParser(PlyParser):
                     isVector=False
             if isVector:
                 if len(p[2])==3:
-                    p[0]=apply(Vector,p[2])
+                    p[0]=Vector(*p[2])
                 elif len(p[2])==9:
-                    p[0]=apply(Tensor,p[2])                    
+                    p[0]=Tensor(*p[2])
                 else:
-                    p[0]=apply(SymmTensor,p[2])                    
-                
+                    p[0]=SymmTensor(*p[2])
+
     def p_wlist(self,p):
         '''wlist : '(' wordlist ')' '''
         p[0] = p[2]
-        
+
     def p_unparsed(self,p):
         '''unparsed : UNPARSEDCHUNK'''
         p[0] = Unparsed(p[1])
-        
+
+    def p_binaryblob(self,p):
+        '''binaryblob : BINARYBLOB'''
+        p[0] = BinaryBlob(p[1])
+
     def p_prelist_seen(self,p):
         '''prelist_seen : '''
-        if self.listLengthUnparsed!=None:
+        if self.binaryMode:
+                p.lexer.begin('binaryblob')
+                p.lexer.binary_start = p.lexer.lexpos
+                p.lexer.binary_listlen = p[-1]
+                self.inBinary=True
+        elif self.listLengthUnparsed!=None:
             if int(p[-1])>=self.listLengthUnparsed:
                 p.lexer.begin('unparsed')
                 p.lexer.level=0
@@ -714,18 +835,21 @@ class FoamFileParser(PlyParser):
     def p_codestream(self,p):
         '''codestream : codeSeen CODESTART CODESTREAMCHUNK CODEEND '''
         p[0] = Codestream(p[3])
-        
+
     def p_codeSeen(self,p):
         '''codeSeen : '''
         p.lexer.begin('codestream')
         p.lexer.level=0
         p.lexer.code_start = p.lexer.lexpos
-        
+
     def p_prelist(self,p):
         '''prelist : integer prelist_seen '(' itemlist ')'
+                   | integer prelist_seen '(' binaryblob ')'
                    | integer prelist_seen '(' unparsed ')' '''
         if type(p[4])==Unparsed:
             p[0] = UnparsedList(int(p[1]),p[4].data)
+        elif type(p[4])==BinaryBlob:
+            p[0] = BinaryList(int(p[1]),p[4].data)
         else:
             p[0] = self.condenseAllPreFixLists(p[4])
 
@@ -742,7 +866,7 @@ class FoamFileParser(PlyParser):
             p[0]=p[1]
             if p[2]!=';':
                 p[0].append(p[2])
-                
+
     def p_wordlist(self,p):
         '''wordlist : wordlist word
                     | word '''
@@ -785,7 +909,7 @@ class FoamFileParser(PlyParser):
         '''dictkey : word
                    | SCONST'''
         p[0]=p[1]
-        
+
     def p_dictline(self,p):
         '''dictline : dictkey dictitem ';'
                     | dictkey list ';'
@@ -795,6 +919,17 @@ class FoamFileParser(PlyParser):
                     | substitution ';'
                     | dictkey codestream ';'
                     | dictkey dictionary'''
+        if len(p)==4 and self.inHeader and p[1]=="format" and type(p[2])==str:
+            if p[2]=="binary":
+                if not self.treatBinaryAsASCII:
+                    self.binaryMode=True
+                else:
+                    self.binaryMode=False
+            elif p[2]=="ascii":
+                self.binaryMode=False
+            else:
+                raise FatalErrorPyFoamException("Don't know how to parse file format",p[0]["format"])
+
         if len(p)==4 and type(p[2])==list:
             # remove the prefix from long lists (if present)
             doAgain=True
@@ -809,18 +944,18 @@ class FoamFileParser(PlyParser):
                                 tmp.pop()
                             tmp.extend(nix)
                             doAgain=True
-                            break            
+                            break
         if len(p)==4:
             p[0] = ( p[1] , p[2] )
         elif len(p)==3:
             if p[2]==';':
                 p[0]= (p[1],'')
             else:
-                p[0] = ( p[1] , p[2] )            
+                p[0] = ( p[1] , p[2] )
         else:
             p[0] = ( self.emptyCnt , p[1] )
             self.emptyCnt+=1
-            
+
     def p_number(self,p):
         '''number : integer
                   | FCONST'''
@@ -832,29 +967,29 @@ class FoamFileParser(PlyParser):
         result=p[2:-1]
         if len(result)==5:
             result+=[0,0]
-            
-        p[0]=apply(Dimension,result)
+
+        p[0]=Dimension(*result)
 
     def p_vector(self,p):
         '''vector : '(' number number number ')' '''
         if self.noVectorOrTensor:
             p[0]=p[2:5]
         else:
-            p[0]=apply(Vector,p[2:5])
+            p[0]=Vector(*p[2:5])
 
     def p_tensor(self,p):
         '''tensor : '(' number number number number number number number number number ')' '''
         if self.noVectorOrTensor:
             p[0]=p[2:11]
         else:
-            p[0]=apply(Tensor,p[2:11])
+            p[0]=Tensor(*p[2:11])
 
     def p_symmtensor(self,p):
         '''symmtensor : '(' number number number number number number ')' '''
         if self.noVectorOrTensor:
             p[0]=p[2:8]
         else:
-            p[0]=apply(SymmTensor,p[2:8])
+            p[0]=SymmTensor(*p[2:8])
 
     def p_fieldvalue_uniform(self,p):
         '''fieldvalue : UNIFORM number
@@ -865,8 +1000,12 @@ class FoamFileParser(PlyParser):
 
     def p_fieldvalue_nonuniform(self,p):
         '''fieldvalue : NONUNIFORM NAME list
+                      | NONUNIFORM prelist
                       | NONUNIFORM NAME prelist'''
-        p[0] = Field(p[3],name=p[2])
+        if len(p)==4:
+            p[0] = Field(p[3],name=p[2])
+        else:
+            p[0] = Field(p[2])
 
     def p_dictitem(self,p):
         '''dictitem : longitem
@@ -919,7 +1058,10 @@ class FoamFileParser(PlyParser):
         pass
 
     def p_error(self,p):
-        raise PyFoamParserError("Syntax error at token", p) # .type, p.lineno
+        if self.inBinary:
+            raise BinaryParserError("Problem reading binary", p) # .type, p.lineno
+        else:
+            raise PyFoamParserError("Syntax error at token", p) # .type, p.lineno
         # Just discard the token and tell the parser it's okay.
         # self.yacc.errok()
 
@@ -935,17 +1077,23 @@ class PyFoamParserError(FatalErrorPyFoamException):
             val=self.data.value
             if len(val)>100:
                 val=val[:40]+" .... "+val[-40:]
-                
+
             result+=" @ %r (Type: %s ) in line %d at position %d" % (val,
                                                                      self.data.type,
                                                                      self.data.lineno,
                                                                      self.data.lexpos)
-        
+        else:
+            result+=" NONE"
+
         return result
-    
+
     def __repr__(self):
         return str(self)
-    
+
+class BinaryParserError(PyFoamParserError):
+    def __init__(self,descr,data=None):
+        PyFoamParserError.__init__(self,descr,data)
+
 class FoamStringParser(FoamFileParser):
     """Convenience class that parses only a headerless OpenFOAM dictionary"""
 
@@ -973,20 +1121,29 @@ class FoamStringParser(FoamFileParser):
 
     def __str__(self):
         return str(FoamFileGenerator(self.data))
-                   
+
 class ParsedBoundaryDict(ParsedParameterFile):
     """Convenience class that parses only a OpenFOAM polyMesh-boundaries file"""
 
-    def __init__(self,name,backup=False,debug=False):
+    def __init__(self,
+                 name,
+                 treatBinaryAsASCII=False,
+                 backup=False,
+                 debug=False):
         """@param name: The name of the parameter file
         @param backup: create a backup-copy of the file"""
 
-        ParsedParameterFile.__init__(self,name,backup=backup,debug=debug,boundaryDict=True)
+        ParsedParameterFile.__init__(self,
+                                     name,
+                                     backup=backup,
+                                     treatBinaryAsASCII=treatBinaryAsASCII,
+                                     debug=debug,
+                                     boundaryDict=True)
 
     def parse(self,content):
         """Constructs a representation of the file"""
         temp=ParsedParameterFile.parse(self,content)
-        self.content={}
+        self.content=DictProxy()
         for i in range(0,len(temp),2):
             self.content[temp[i]]=temp[i+1]
         return self.content
@@ -994,7 +1151,7 @@ class ParsedBoundaryDict(ParsedParameterFile):
     def __str__(self):
         string="// File generated by PyFoam - sorry for the ugliness\n\n"
         temp=[]
-        for k,v in self.content.iteritems():
+        for k,v in iteritems(self.content):
             temp.append((k,v))
 
         temp.sort(lambda x,y:cmp(int(x[1]["startFace"]),int(y[1]["startFace"])))
@@ -1004,24 +1161,25 @@ class ParsedBoundaryDict(ParsedParameterFile):
         for b in temp:
             temp2.append(b[0])
             temp2.append(b[1])
-            
+
         generator=FoamFileGenerator(temp2,header=self.header)
         string+=str(generator)
 
         return string
-        
+
 class ParsedFileHeader(ParsedParameterFile):
     """Only parse the header of a file"""
 
     def __init__(self,name):
         ParsedParameterFile.__init__(self,name,backup=False,noBody=True)
-        
+
     def __getitem__(self,name):
         return self.header[name]
-    
+
     def __contains__(self,name):
         return name in self.header
-    
+
     def __len__(self):
         return len(self.header)
-    
+
+# Should work with Python3 and Python2

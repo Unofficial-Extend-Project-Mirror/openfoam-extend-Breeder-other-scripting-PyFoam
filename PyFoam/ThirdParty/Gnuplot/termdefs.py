@@ -29,8 +29,9 @@ keyword arguments and build the 'set terminal' command.
 
 import types
 
-import gp, Errors
+from . import gp, Errors
 
+from PyFoam.ThirdParty.six import string_types
 
 class Arg:
     """Process terminal subargs and return a command fragment.
@@ -136,7 +137,7 @@ class StringArg(ArgOneParam):
 
         if k is None:
             return None
-        elif type(k) is not types.StringType:
+        elif not isinstance(k,string_types):
             raise Errors.OptionError(
                 'Option %s must be a string' % (self.argname,))
         else:
@@ -172,7 +173,7 @@ class BareStringArg(ArgOneParam):
             retval = []
             if self.fixedword is not None:
                 retval.append(self.fixedword)
-            if type(k) in (types.TupleType, types.ListType):
+            if type(k) in (tuple,list):
                 for i in k:
                     retval.append(str(i))
             else:
@@ -477,3 +478,5 @@ terminal_opts['svg'] = [
     KeywordOrBooleanArg(options=['enhanced', 'noenhanced']),
     StringArg(argname='fontfile', fixedword='fontfile'),
     ]
+
+# Should work with Python3 and Python2

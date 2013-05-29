@@ -137,7 +137,7 @@ Restrictions:
     commands to gnuplot manually::
 
         g = Gnuplot.Gnuplot()
-        g('set data style linespoints')
+        g('set stype data linespoints')
         g('set pointsize 5')
 
  -  There is no provision for missing data points in array data (which
@@ -161,14 +161,14 @@ __version__ = '1.8'
 # Other modules that should be loaded for 'from Gnuplot import *':
 __all__ = ['utils', 'funcutils', ]
 
-from gp import GnuplotOpts, GnuplotProcess, test_persist
-from Errors import Error, OptionError, DataError
-from PlotItems import PlotItem, Func, File, Data, GridData
-from _Gnuplot import Gnuplot
+from .gp import GnuplotOpts, GnuplotProcess, test_persist
+from .Errors import Error, OptionError, DataError
+from .PlotItems import PlotItem, Func, File, Data, GridData
+from ._Gnuplot import Gnuplot
 
 
 if __name__ == '__main__':
-    import demo
+    from . import demo
     demo.demo()
 
-
+# Should work with Python3 and Python2

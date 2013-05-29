@@ -1,12 +1,12 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionFile.py 6755 2010-07-19T21:46:50.519125Z bgschaid  $ 
+#  ICE Revision: $Id: SolutionFile.py 12748 2013-01-03 23:07:08Z bgschaid $
 """ Working with solutions """
 
 import re,os
 from os import path
 
 from PyFoam.Basics.LineReader import LineReader
-from FileBasis import FileBasis
-from ParsedParameterFile import ParsedParameterFile
+from PyFoam.RunDictionary.FileBasis import FileBasis
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 class SolutionFile(FileBasis):
     """ Solution data file
@@ -17,14 +17,14 @@ class SolutionFile(FileBasis):
         Currently this can only handle uniform field values (and never
         will handle more because the ParsedParameterFile-class does a
         much better job)"""
-    
+
     def __init__(self,directory,name):
         """ @param directory: name of the directory containing the solutions
         for a specific time
         @param name: name of the field."""
-        
+
         FileBasis.__init__(self,path.abspath(path.join(directory,name)))
-        
+
     def dimensionPattern(self):
         """pattern for the dimension string"""
         return re.compile("^dimensions +\[(.+)\]\s*;")
@@ -55,17 +55,17 @@ class SolutionFile(FileBasis):
         name - the name of the boundary patch"""
         exp=self.valuePattern()
         erg=""
-        
+
         l=LineReader()
         self.openFile()
 
         self.goTo(l,"boundaryField")
         self.goTo(l,name)
-        
+
         m=self.goMatch(l,exp)
         if m!=None:
             erg=m.group(1)
-        
+
         self.closeFile()
         return erg
 
@@ -85,28 +85,28 @@ class SolutionFile(FileBasis):
         self.goTo(l,name,out=fh,echoLast=True)
 
         m=self.goMatch(l,exp,out=fh,stop=self.stopPattern())
-        
+
         if m!=None:
             if type(m)==str:
-                fh.write("value uniform "+str(newval)+"; "+self.addedString+"\n")
-                fh.write(l.line+"\n")
+                self.writeEncoded(fh,"value uniform "+str(newval)+"; "+self.addedString+"\n")
+                self.writeEncoded(fh,l.line+"\n")
             else:
-                fh.write(self.removedString+l.line+"\n")
-                fh.write("value uniform "+str(newval)+"; "+self.addedString+"\n")
+                self.writeEncoded(fh,self.removedString+l.line+"\n")
+                self.writeEncoded(fh,"value uniform "+str(newval)+"; "+self.addedString+"\n")
         else:
-            fh.write(l.line+"\n")
+            self.writeEncoded(fh,l.line+"\n")
 
         self.copyRest(l,fh)
 
         self.closeFile()
         fh.close()
         os.rename(fn,self.realName())
-        
+
     def readInternal(self):
         """read the value of the internal field"""
         exp=self.internalPattern()
         erg=""
-        
+
         l=LineReader()
         self.openFile()
 
@@ -118,12 +118,12 @@ class SolutionFile(FileBasis):
 
         self.closeFile()
         return erg
-    
+
     def readDimension(self):
         """read the dimension of the field"""
         exp=self.dimensionPattern()
         erg=""
-        
+
         l=LineReader()
         self.openFile()
 
@@ -143,10 +143,10 @@ class SolutionFile(FileBasis):
         dims=dim.split()
 
         result=""
-        
+
         for i in range(len(dims)):
             if float(dims[i])==1.:
-                result+=" "+units[i]            
+                result+=" "+units[i]
             elif float(dims[i])!=0.:
                 result+=" "+units[i]+"^"+dims[i]
 
@@ -154,14 +154,14 @@ class SolutionFile(FileBasis):
             result="1"
         else:
             result=result[1:]
-            
+
         return result
-    
+
     def readInternalUniform(self):
         """read the value of the internal field"""
         exp=self.internalPatternUniform()
         erg=""
-        
+
         l=LineReader()
         self.openFile()
 
@@ -177,32 +177,36 @@ class SolutionFile(FileBasis):
     def replaceInternal(self,newval):
         """overwrite the value of the internal field
 
-        newval - the new value"""        
+        newval - the new value"""
         exp=self.internalPatternGeneral()
- 
+
         l=LineReader()
         self.openFile()
 
         fh,fn=self.makeTemp()
 
         m=self.goMatch(l,exp,out=fh)
-        
+
         if m!=None:
-            fh.write(self.removedString+l.line+"\n")
-            fh.write("internalField uniform "+str(newval)+"; "+self.addedString+"\n")
+            self.writeEncoded(fh,self.removedString+l.line+"\n")
+            self.writeEncoded(fh,"internalField uniform "+str(newval)+"; "+self.addedString+"\n")
         else:
-            fh.write(l.line+"\n")
+            self.writeEncoded(fh,l.line+"\n")
 
         self.copyRest(l,fh)
 
         self.closeFile()
         fh.close()
         os.rename(fn,self.realName())
-      
+
     def getContent(self,
+                   treatBinaryAsASCII=False,
                    listLengthUnparsed=None,
                    doMacroExpansion=False):
         """Returns the parsed content of the file"""
         return ParsedParameterFile(self.name,
+                                   treatBinaryAsASCII=treatBinaryAsASCII,
                                    listLengthUnparsed=listLengthUnparsed,
                                    doMacroExpansion=doMacroExpansion)
+
+# Should work with Python3 and Python2

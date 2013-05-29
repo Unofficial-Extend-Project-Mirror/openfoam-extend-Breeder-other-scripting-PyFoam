@@ -9,11 +9,13 @@ Author:
 
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from os import path
 import sys
 import re
+
+from PyFoam.ThirdParty.six import print_
 
 class ModifyGGIBoundary(PyFoamApplication):
     def __init__(self,args=None):
@@ -59,7 +61,7 @@ Modify GGI boundary condition parameters
                                dest="separationOffset",
                                default=None,
                                help='separation offset for cyclicGgi')
-        
+
         self.parser.add_option("--test",
                                action="store_true",
                                default=False,
@@ -69,7 +71,7 @@ Modify GGI boundary condition parameters
     def run(self):
         fName=self.parser.getArgs()[0]
         bName=self.parser.getArgs()[1]
- 
+
         boundary=ParsedParameterFile(path.join(".",fName,"constant","polyMesh","boundary"),debug=False,boundaryDict=True)
 
         bnd=boundary.content
@@ -89,8 +91,8 @@ Modify GGI boundary condition parameters
                         shadowName=self.parser.getOptions().shadowName
                         val["shadowPatch"]=shadowName
                         if shadowName not in bnd:
-                            print "Warning:  Setting the shadowName option for patch",bName,": there is no patch called",shadowName
-                            print "          The boundary file was still modified for patch",bName
+                            print_("Warning:  Setting the shadowName option for patch",bName,": there is no patch called",shadowName)
+                            print_("          The boundary file was still modified for patch",bName)
 
                     if self.parser.getOptions().patchZoneName!=None:
                         val["zone"]=self.parser.getOptions().patchZoneName
@@ -108,14 +110,15 @@ Modify GGI boundary condition parameters
                         if self.parser.getOptions().separationOffset!=None:
                             val["separationOffset"]=self.parser.getOptions().separationOffset
                 else:
-                    print "Unsupported GGI type '",bcType,"' for patch",bName
+                    print_("Unsupported GGI type '",bcType,"' for patch",bName)
                 break
 
         if not found:
             self.error("Boundary",bName,"not found in",bnd[::2])
 
         if self.parser.getOptions().test:
-            print boundary
+            print_(boundary)
         else:
             boundary.writeFile()
 
+# Should work with Python3 and Python2

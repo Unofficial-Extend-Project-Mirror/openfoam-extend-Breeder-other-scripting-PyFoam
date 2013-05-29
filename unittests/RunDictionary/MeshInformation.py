@@ -8,28 +8,30 @@ from PyFoam.Error import PyFoamException
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 
-from os import path,environ,system
+from os import path,environ
+from shutil import rmtree
+from tempfile import mktemp
 
-from TimeDirectory import damBreakTutorial
+from .TimeDirectory import damBreakTutorial
 
 theSuite=unittest.TestSuite()
 
 class MeshInformationTest(unittest.TestCase):
     def setUp(self):
-        self.dest="/tmp/TestDamBreak"
+        self.dest=mktemp()
         SolutionDirectory(damBreakTutorial(),archive=None,paraviewLink=False).cloneCase(self.dest)
 
         if oldApp():
             pathSpec=[path.dirname(self.dest),path.basename(self.dest)]
         else:
             pathSpec=["-case",self.dest]
-            
+
         run=UtilityRunner(argv=["blockMesh"]+pathSpec,silent=True,server=False)
         run.start()
-        
+
     def tearDown(self):
-        system("rm -rf "+self.dest)
-    
+        rmtree(self.dest)
+
     def testBoundaryRead(self):
         mesh=MeshInformation(self.dest)
         self.assertEqual(mesh.nrOfFaces(),9176)
@@ -40,5 +42,7 @@ class MeshInformationTest(unittest.TestCase):
         except:
             if not oldApp():
                 self.fail()
-                
+
 theSuite.addTest(unittest.makeSuite(MeshInformationTest,"test"))
+
+# Should work with Python3 and Python2

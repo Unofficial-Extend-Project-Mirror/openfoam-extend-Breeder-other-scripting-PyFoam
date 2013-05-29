@@ -1,10 +1,11 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Error.py 7239 2011-02-23T17:26:11.661549Z bgschaid  $ 
+#  ICE Revision: $Id: Error.py 12688 2012-11-06 18:33:16Z bgschaid $
 """Standardized Error Messages"""
 
 import traceback
 import sys
 
 from PyFoam.Basics.TerminalFormatter import TerminalFormatter
+from PyFoam.ThirdParty.six import print_
 
 defaultFormat=TerminalFormatter()
 defaultFormat.getConfigFormat("error")
@@ -24,30 +25,32 @@ def getLine(up=0):
 def __common(format,standard,*text):
     """Common function for errors and Warnings"""
     info=getLine(up=2)
-    if format:
-         print >>sys.stderr,format,
-    print >>sys.stderr, "PyFoam",standard.upper(),"on line",info[1],"of file",info[0],":",
+    if format and sys.stderr.isatty():
+         print_(format, end=' ', file=sys.stderr)
+    print_("PyFoam",standard.upper(),"on line",info[1],"of file",info[0],":", end=' ', file=sys.stderr)
     for t in text:
-         print >>sys.stderr,t,
-    print >>sys.stderr,defaultFormat.reset
-    
+         print_(t, end=' ', file=sys.stderr)
+
+    if sys.stderr.isatty():
+        print_(defaultFormat.reset, file=sys.stderr)
+
 def warning(*text):
     """Prints a warning message with the occuring line number
     @param text: The error message"""
     __common(defaultFormat.warn,"Warning",*text)
-    
+
 def oldSchoolError(*text):
     """Prints an error message and aborts
     @param text: The error message"""
     __common(defaultFormat.error,"Fatal Error",*text)
     sys.exit(-1)
-    
+
 def error(*text):
     """Raises an error that might or might not get caught
     @param text: The error message"""
     #    __common(defaultFormat.error,"Fatal Error",*text)
     raise FatalErrorPyFoamException(*text)
-    
+
 def debug(*text):
     """Prints a debug message with the occuring line number
     @param text: The error message"""
@@ -69,7 +72,7 @@ class PyFoamException(Exception):
 
      def __str__(self):
           return "Problem in PyFoam: '"+self.descr+"'"
-          
+
 class FatalErrorPyFoamException(PyFoamException):
      """The PyFoam-exception that does not expect to be caught"""
 
@@ -81,4 +84,5 @@ class FatalErrorPyFoamException(PyFoamException):
 
      def __str__(self):
           return "FatalError in PyFoam: '"+self.descr+"'"
-          
+
+# Should work with Python3 and Python2

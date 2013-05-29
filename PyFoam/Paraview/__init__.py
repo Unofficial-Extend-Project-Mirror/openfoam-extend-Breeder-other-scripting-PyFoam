@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Paraview/__init__.py 6742 2010-07-06T10:08:29.831117Z bgschaid  $ 
+#  ICE Revision: $Id: __init__.py 12798 2013-03-04 10:41:53Z bgschaid $
 """ Paraview interaction
 
 Classes that help to interact with a Python-enabled paraFoam/paraview
@@ -9,11 +9,11 @@ try:
     from paraview import simple
 except ImportError:
     hasSimpleModule=False
-    
+
 # this import prevents python-source-tools that ude introspection from working
 # because it prevents import into a normal python
 from paraview import servermanager
-    
+
 from PyFoam.Error import warning
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
@@ -26,16 +26,22 @@ proxyManager=servermanager.ProxyManager()
 
 def version():
     """Tries to determine the paraview-version"""
-    return (proxyManager.GetVersionMajor(),
-            proxyManager.GetVersionMinor(),
-            proxyManager.GetVersionPatch())
+    try:
+        # old versions
+        return (proxyManager.GetVersionMajor(),
+                proxyManager.GetVersionMinor(),
+                proxyManager.GetVersionPatch())
+    except AttributeError:
+        return (servermanager.vtkSMProxyManager.GetVersionMajor(),
+                servermanager.vtkSMProxyManager.GetVersionMinor(),
+                servermanager.vtkSMProxyManager.GetVersionPatch())
 
 def paraFoamReader():
     """ Get the paraFoam reader.
     Currently only works if there is only one reader"""
 
     result=None
-    
+
     src=proxyManager.GetProxiesInGroup("sources")
 
     try:
@@ -54,7 +60,7 @@ def paraFoamReader():
                     result=src[s]
                 else:
                     warning("Found a second paraFoam-reader:",s)
-        
+
     if result==None:
         warning("No paraFoam-reader found")
 
@@ -69,9 +75,9 @@ def renderView():
     Currently just takes the first view"""
 
     result=None
-    
+
     src=proxyManager.GetProxiesInGroup("views")
-    
+
     for s in src:
         if result==None:
             result=src[s]
@@ -110,7 +116,7 @@ def caseDirectory():
         fName=path.dirname(paraFoamReader().FileName.GetData())
     except AttributeError:
         fName=path.dirname(paraFoamReader().FileName)
-        
+
     return SolutionDirectory(
         fName,
         archive=None,

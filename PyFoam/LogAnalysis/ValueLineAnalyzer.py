@@ -1,8 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/ValueLineAnalyzer.py 1906 2007-08-28T16:16:19.392553Z bgschaid  $ 
+#  ICE Revision: $Id: ValueLineAnalyzer.py 12762 2013-01-03 23:11:02Z bgschaid $
 """Do analysis for a line with values"""
 
-from FileLineAnalyzer import FileLineAnalyzer
-from  NameFinderLineAnalyzer import NameFinderLineAnalyzer
+from .FileLineAnalyzer import FileLineAnalyzer
+from .NameFinderLineAnalyzer import NameFinderLineAnalyzer
 
 class ValueLineAnalyzer(FileLineAnalyzer):
     """Parses lines for numeric values
@@ -18,13 +18,13 @@ class ValueLineAnalyzer(FileLineAnalyzer):
 
         self.name=name
         self.pre=pre
-                
+
     def doAnalysis(self,line):
         """Analyzes line and writes the data"""
         tm=self.parent.getTime()
         if tm=="":
             return
-        
+
         m=line.find(self.pre)
         if m>=0:
             rest=line[m+len(self.pre):]
@@ -35,7 +35,7 @@ class ValueLineAnalyzer(FileLineAnalyzer):
                     fdata+=(val,)
                 except ValueError:
                     pass
-                
+
             self.files.write(self.name,tm,fdata)
 
 class ValueNameFinderLineAnalyzer(NameFinderLineAnalyzer):
@@ -56,4 +56,5 @@ class ValueNameFinderLineAnalyzer(NameFinderLineAnalyzer):
 
     def callOnChange(self):
         self.val.setTitles(self.names)
-        
+
+# Should work with Python3 and Python2

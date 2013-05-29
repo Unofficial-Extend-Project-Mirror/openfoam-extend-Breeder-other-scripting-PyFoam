@@ -2,12 +2,14 @@
 Application-class that implements pyFoamCopyLastToFirst.py
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
 
 from PyFoam.Error import error
+
+from PyFoam.ThirdParty.six import print_
 
 class CopyLastToFirst(PyFoamApplication):
     def __init__(self,args=None):
@@ -61,7 +63,7 @@ of this script"""
     def run(self):
         if len(self.parser.getArgs())!=2:
             error("Need two arguments.",len(self.parser.getArgs()),"found")
-            
+
         sName=self.parser.getArgs()[0]
         dName=self.parser.getArgs()[1]
 
@@ -69,12 +71,12 @@ of this script"""
             include=["*"]
         else:
             include=self.opts.include
-            
+
         if self.opts.exclude==None:
             exclude=[]
         else:
             exclude=self.opts.exclude
-            
+
         source=SolutionDirectory(sName,archive=None,paraviewLink=False)
         dest=SolutionDirectory(dName,archive=None,paraviewLink=False)
 
@@ -82,7 +84,7 @@ of this script"""
         dDir=dest[0]
 
         if self.opts.verbose:
-            print "   Copying from source-time",sDir.baseName(),"to destination-time",dDir.baseName()
+            print_("   Copying from source-time",sDir.baseName(),"to destination-time",dDir.baseName())
 
         copied=dDir.copy(sDir,
                          include=include,exclude=exclude,
@@ -92,12 +94,13 @@ of this script"""
 
         if self.opts.verbose:
             if len(copied)>0:
-                print "  Copied the fields",
+                print_("  Copied the fields",end=" ")
                 for v in copied:
-                    print v,
-                print
+                    print_(v,end=" ")
+                print_()
             else:
-                print "  Nothing copied"
+                print_("  Nothing copied")
 
         self.addToCaseLog(dest.name,"From",sDir.name,"to",dDir.name)
 
+# Should work with Python3 and Python2

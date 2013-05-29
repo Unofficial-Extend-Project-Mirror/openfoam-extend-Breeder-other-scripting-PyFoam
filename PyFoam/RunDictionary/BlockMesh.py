@@ -1,10 +1,10 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/BlockMesh.py 4667 2009-02-28T22:46:13.716267Z bgschaid  $ 
+#  ICE Revision: $Id: BlockMesh.py 12762 2013-01-03 23:11:02Z bgschaid $
 """Manipulate a C{blockMeshDict}"""
 
 import re,os
 
 from PyFoam.Basics.LineReader import LineReader
-from FileBasis import FileBasisBackup
+from .FileBasis import FileBasisBackup
 
 class BlockMesh(FileBasisBackup):
     """Represents a C{blockMeshDict}-file"""
@@ -32,7 +32,7 @@ class BlockMesh(FileBasisBackup):
         hexPattern=re.compile("^(\s*hex\s*\(.+\)\s+\(\s*)(\d+)\s+(\d+)\s+(\d+)(\s*\).*)$")
 
         inBlock=False
-        
+
         l=LineReader()
         self.openFile()
 
@@ -47,7 +47,7 @@ class BlockMesh(FileBasisBackup):
             else:
                 if endPattern.match(l.line):
                     inBlock=False
-                else: 
+                else:
                     m=hexPattern.match(l.line)
                     if m!=None:
                         g=m.groups()
@@ -65,4 +65,5 @@ class BlockMesh(FileBasisBackup):
         self.closeFile()
         fh.close()
         os.rename(fn,self.name)
-        
+
+# Should work with Python3 and Python2

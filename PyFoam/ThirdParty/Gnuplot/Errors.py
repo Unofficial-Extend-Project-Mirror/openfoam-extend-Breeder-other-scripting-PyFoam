@@ -22,4 +22,4 @@ class DataError(Error):
     """Raised for data in the wrong format"""
     pass
 
-
+# Should work with Python3 and Python2

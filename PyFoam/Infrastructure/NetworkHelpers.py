@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/NetworkHelpers.py 1532 2007-06-29T11:15:55.577361Z bgschaid  $ 
+#  ICE Revision: $Id: NetworkHelpers.py 12758 2013-01-03 23:08:44Z bgschaid $
 """Helpers for the networking functionality"""
 
 import socket
@@ -6,8 +6,14 @@ import errno
 import time
 
 from PyFoam import configuration as config
+from PyFoam.ThirdParty.six import print_,PY3
 
-import xmlrpclib,xml
+if PY3:
+    import xmlrpc.client as xmlrpclib
+else:
+    import xmlrpclib
+
+import xml,sys
 
 def freeServerPort(start,length=1):
     """
@@ -23,7 +29,8 @@ def freeServerPort(start,length=1):
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind(('',p))
-        except socket.error,e:
+        except socket.error:
+            e = sys.exc_info()[1] # compatible with 2.x and 3.x
             if e[0]!=errno.EADDRINUSE:
                 #                sock.shutdown(2)
                 sock.close()
@@ -35,7 +42,7 @@ def freeServerPort(start,length=1):
             port=p
             break
 
-        
+
     return port
 
 def checkFoamServers(host,start,length=1):
@@ -54,7 +61,7 @@ def checkFoamServers(host,start,length=1):
 ##    except socket.herror,reason:
 ##        # no name for the host
 ##        return None
-    
+
     for p in range(start,start+length):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socket.setdefaulttimeout(config().getfloat("Network","socketTimeout"))
@@ -62,27 +69,30 @@ def checkFoamServers(host,start,length=1):
         try:
             sock.connect((host,p))
             sock.close()
-        except socket.error, reason:
+        except socket.error:
+            reason = sys.exc_info()[1] # compatible with 2.x and 3.x
             code=reason[0]
-            if code==errno.EHOSTUNREACH or code==errno.ENETUNREACH or code=="timed out" or code<0:
+            if code in [errno.EHOSTUNREACH,errno.ENETUNREACH,errno.ETIMEDOUT] or code=="timed out" or code<0:
                 # Host unreachable: no more scanning
                 return None
             elif code==errno.ECONNREFUSED:
                 # port does not exist
                 continue
             else:
-                print errno.errorcode[code]
+                print_(errno.errorcode[code])
                 raise reason
-        
+
         try:
             server=xmlrpclib.ServerProxy("http://%s:%d" % (host,p))
             ok=server.isFoamServer()
-        except xmlrpclib.ProtocolError, reason:
+        except xmlrpclib.ProtocolError:
             pass
-        except xml.parsers.expat.ExpatError, reason:
+        except xml.parsers.expat.ExpatError:
             pass
-        
+
         if ok:
             ports.append(p)
-        
+
     return ports
+
+# Should work with Python3 and Python2

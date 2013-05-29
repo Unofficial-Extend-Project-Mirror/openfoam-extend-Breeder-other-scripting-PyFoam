@@ -15,8 +15,15 @@ particularly gnuplot-related.
 """
 
 import string
-import numpy
-    
+try:
+    import numpy
+except ImportError:
+    # assume this is pypy and retry
+    import numpypy
+    import numpy
+
+from PyFoam.ThirdParty.six import print_
+
 def float_array(m):
     """Return the argument as a numpy array of type at least 'Float32'.
 
@@ -40,7 +47,7 @@ def float_array(m):
             return numpy.asarray(m, numpy.float_)
         except TypeError:
             # TBD: Need better handling of this error!
-            print "Fatal: array dimensions not equal!"
+            print_("Fatal: array dimensions not equal!")
             return None
 
 def write_array(f, set,
@@ -74,7 +81,7 @@ def write_array(f, set,
     if len(set.shape) == 1:
         (columns,) = set.shape
         assert columns > 0
-        fmt = string.join(['%s'] * columns, item_sep)
+        fmt = item_sep.join(['%s'] * columns)
         f.write(nest_prefix)
         f.write(fmt % tuple(set.tolist()))
         f.write(nest_suffix)
@@ -83,7 +90,7 @@ def write_array(f, set,
         # efficiency.
         (points, columns) = set.shape
         assert points > 0 and columns > 0
-        fmt = string.join(['%s'] * columns, item_sep)
+        fmt = item_sep.join(['%s'] * columns)
         f.write(nest_prefix + nest_prefix)
         f.write(fmt % tuple(set[0].tolist()))
         f.write(nest_suffix)
@@ -104,4 +111,4 @@ def write_array(f, set,
                         item_sep, nest_prefix, nest_suffix, nest_sep)
         f.write(nest_suffix)
 
-
+# Should work with Python3 and Python2

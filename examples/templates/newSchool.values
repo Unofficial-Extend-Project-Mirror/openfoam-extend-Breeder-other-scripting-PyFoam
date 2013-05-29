@@ -1,0 +1,7 @@
+y 2.5;
+
+vals {
+     x 2;
+     lst (a b c);
+     y "Don't panic";
+}

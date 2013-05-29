@@ -1,15 +1,17 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GeneralPlotTimelines.py 7077 2011-01-02T20:22:44.071809Z bgschaid  $ 
+#  ICE Revision: $Id: GeneralPlotTimelines.py 12747 2013-01-03 23:06:57Z bgschaid $
 """Plots a collection of timelines. General superclass for te other implementations"""
 
 from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo,CustomPlotInfo
 
 from PyFoam.Error import notImplemented
 
+from PyFoam.ThirdParty.six import iteritems
+
 class PlotLinesRegistry(object):
     """Collects references to GeneralPlotLines objects"""
 
     nr=1
-    
+
     def __init__(self):
         self.plots={}
 
@@ -23,7 +25,7 @@ class PlotLinesRegistry(object):
     def prepareForTransfer(self):
         """Makes sure that the data about the plots is to be transfered via XMLRPC"""
         lst={}
-        for i,p in self.plots.iteritems():
+        for i,p in iteritems(self.plots):
             lst[str(i)]={ "nr"   : i,
                      "spec" : p.spec.getDict(),
                      "id"   : p.spec.id,
@@ -35,12 +37,12 @@ _allPlots=PlotLinesRegistry()
 def allPlots():
     return _allPlots
 
-    
+
 class GeneralPlotTimelines(object):
     """This class defines the interface for specific implementations of plotting
 
     This class is moedelled after the Gnuplot-class from the Gnuplot-package"""
-    
+
     def __init__(self,
                  timelines,
                  custom,
@@ -64,12 +66,12 @@ class GeneralPlotTimelines(object):
         if registry==None:
             registry=allPlots()
         self.nr=registry.add(self)
-        
+
     def getNames(self):
         """Get the names of the data items"""
         names=[]
         tmp=self.data.getValueNames()
-                
+
         for n in tmp:
             addIt=True
             for f in self.forbidden:
@@ -79,7 +81,7 @@ class GeneralPlotTimelines(object):
             if addIt:
                 names.append(n)
         return names
-    
+
     def hasTimes(self):
         """Check whether this timeline contains any timesteps"""
         return len(self.data.getTimes())>0
@@ -87,14 +89,14 @@ class GeneralPlotTimelines(object):
     def hasData(self):
         """Check whether there is any plotable data"""
         return self.hasTimes() and len(self.getNames())>0
-    
+
     def redo(self):
         """Replot the timelines"""
         if not self.hasData():
             return
 
         self.preparePlot()
-        
+
         names=self.getNames()
         for n in names:
             title=n
@@ -107,7 +109,7 @@ class GeneralPlotTimelines(object):
                 lastValid=self.data.lastValid[title]
             times=self.data.getTimes(title)
             self.buildData(times,n,title,lastValid)
-                
+
         if len(names)>0 and len(times)>0:
             self.doReplot()
 
@@ -119,28 +121,28 @@ class GeneralPlotTimelines(object):
         @param lastValid: wether the last data entry is valid"""
 
         notImplemented(self,"buildData")
-        
+
     def preparePlot(self):
         """Prepare the plotting window"""
 
         notImplemented(self,"preparePlot")
-        
-    
+
+
     def doReplot(self):
         """Replot the whole data"""
 
         notImplemented(self,"doReplot")
-        
+
     def actualSetTitle(self,title):
         """Sets the title"""
 
         notImplemented(self,"actualSetTitle")
-        
+
     def setTitle(self,title):
         """Sets the title"""
         self.actualSetTitle(title)
         self.spec.theTitle=title
-        
+
     def setYLabel(self,title):
         """Sets the label on the first Y-Axis"""
 
@@ -158,3 +160,4 @@ class GeneralPlotTimelines(object):
 
         notImplemented(self,"doHardcopy")
 
+# Should work with Python3 and Python2

@@ -4,19 +4,22 @@ from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
 
 from os import path,environ,system
+from tempfile import mkdtemp
+from shutil import rmtree,copytree
 
-from TimeDirectory import damBreakTutorial
+from .TimeDirectory import damBreakTutorial
 
 theSuite=unittest.TestSuite()
 
 class SolutionDirectoryTest(unittest.TestCase):
     def setUp(self):
-        self.theFile="/tmp/test.damBreak"
-        system("cp -r "+damBreakTutorial()+" "+self.theFile)
-        
+        self.theDir=mkdtemp()
+        self.theFile=path.join(self.theDir,"damBreak")
+        copytree(damBreakTutorial(),self.theFile)
+
     def tearDown(self):
-        system("rm -rf "+self.theFile)
-    
+        rmtree(self.theDir)
+
     def testSolutionDirectoryBasicContainerStuff(self):
         test=SolutionDirectory(self.theFile)
         self.assertEqual(len(test),1)
@@ -45,6 +48,7 @@ class SolutionDirectoryTest(unittest.TestCase):
         self.assertEqual(len(test),1)
         del test[-1]
         self.assertEqual(len(test),0)
-        
+
 theSuite.addTest(unittest.makeSuite(SolutionDirectoryTest,"test"))
 
+# Should work with Python3 and Python2

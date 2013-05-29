@@ -16,14 +16,22 @@ behavior.
 
 import os, string, tempfile, types
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from PyFoam.ThirdParty.six.moves import StringIO
+from PyFoam.ThirdParty.six import string_types,integer_types
 
-import numpy
-    
-import gp, utils, Errors
+#try:
+#    from cStringIO import StringIO
+#except ImportError:
+#    from StringIO import StringIO
+
+try:
+    import numpy
+except ImportError:
+    # assume this is pypy and retry
+    import numpypy
+    import numpy
+
+from . import gp, utils, Errors
 
 
 class _unset:
@@ -139,7 +147,7 @@ class PlotItem:
 
         """
 
-        for (option, value) in keyw.items():
+        for (option, value) in list(keyw.items()):
             try:
                 setter = self._option_list[option]
             except KeyError:
@@ -155,7 +163,7 @@ class PlotItem:
 
         if value is None:
             self._options[option] = (value, default)
-        elif type(value) is types.StringType:
+        elif isinstance(value,string_types):
             self._options[option] = (value, fmt % value)
         else:
             Errors.OptionError('%s=%s' % (option, value,))
@@ -177,7 +185,7 @@ class PlotItem:
             (val,str) = self._options.get(opt, (None,None))
             if str is not None:
                 cmd.append(str)
-        return string.join(cmd)
+        return " ".join(cmd)
 
     def command(self):
         """Build the plot command to be sent to gnuplot.
@@ -188,7 +196,7 @@ class PlotItem:
 
         """
 
-        return string.join([
+        return " ".join([
             self.get_base_command_string(),
             self.get_command_option_string(),
             ])
@@ -309,9 +317,9 @@ class _FileItem(PlotItem):
     def set_option_colonsep(self, name, value):
         if value is None:
             self.clear_option(name)
-        elif type(value) in [types.StringType, types.IntType]:
+        elif isinstance(value,(string_types+integer_types)):
             self._options[name] = (value, '%s %s' % (name, value,))
-        elif type(value) is types.TupleType:
+        elif type(value) is tuple:
             subopts = []
             for subopt in value:
                 if subopt is None:
@@ -320,7 +328,7 @@ class _FileItem(PlotItem):
                     subopts.append(str(subopt))
             self._options[name] = (
                 value,
-                '%s %s' % (name, string.join(subopts, ':'),),
+                '%s %s' % (name, ":".join(subopts),),
                 )
         else:
             raise Errors.OptionError('%s=%s' % (name, value,))
@@ -498,7 +506,7 @@ def File(filename, **keyw):
 
     """
 
-    if type(filename) is not types.StringType:
+    if not isinstance(filename,string_types):
         raise Errors.OptionError(
             'Argument (%s) must be a filename' % (filename,)
             )
@@ -564,7 +572,7 @@ def Data(*data, **keyw):
     if 'cols' in keyw:
         cols = keyw['cols']
         del keyw['cols']
-        if isinstance(cols, types.IntType):
+        if isinstance(cols, integer_types):
             cols = (cols,)
         data = numpy.take(data, cols, -1)
 
@@ -749,4 +757,4 @@ def GridData(
         else:
             return _NewFileItem(content, **keyw)
 
-
+# Should work with Python3 and Python2

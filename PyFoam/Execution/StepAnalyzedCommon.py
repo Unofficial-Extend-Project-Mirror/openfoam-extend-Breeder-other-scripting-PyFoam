@@ -1,7 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/StepAnalyzedCommon.py 7587 2011-09-16T14:48:09.701859Z bgschaid  $ 
+#  ICE Revision: $Id: StepAnalyzedCommon.py 12566 2012-05-14 08:22:17Z bgschaid $ 
 """Common stuff for classes that do something at every timestep"""
 
-from AnalyzedCommon import AnalyzedCommon
+from PyFoam.ThirdParty.six import print_
+
+from PyFoam.Execution.AnalyzedCommon import AnalyzedCommon
 from time import time
 
 picklingFreqFactor=50
@@ -35,7 +37,9 @@ class StepAnalyzedCommon(AnalyzedCommon):
                 # store this to make sure that pickling is not the only thing we do
                 self.lastPickleDuration=time()-now
                 if self.lastPickleDuration*picklingFreqFactor>self.freq:
-                    print "Duration of pickling",self.lastPickleDuration,"too long. Extending frequency from",self.freq,"to",self.lastPickleDuration*picklingFreqFactor
+                    print_("Duration of pickling",self.lastPickleDuration,
+                           "too long. Extending frequency from",self.freq,
+                           "to",self.lastPickleDuration*picklingFreqFactor)
             self.oldtime=time()
             
     def timeHandle(self):

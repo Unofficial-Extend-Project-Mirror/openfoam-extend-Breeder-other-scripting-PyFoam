@@ -3,7 +3,7 @@ Application-class that implements pyFoamConvertToCSV.py
 """
 from optparse import OptionGroup
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.Basics.SpreadsheetData import SpreadsheetData
 
 from os import path
@@ -41,12 +41,12 @@ Note: the first file determines the resolution of the time-axis
                         default=[],
                         dest="columns",
                         help="The columns (names) which should be copied to the CSV. All if unset")
-        
+
         how=OptionGroup(self.parser,
                          "How",
                          "How the data should be joined")
         self.parser.add_option_group(how)
-        
+
         how.add_option("--force",
                        action="store_true",
                        dest="force",
@@ -62,13 +62,13 @@ Note: the first file determines the resolution of the time-axis
                        dest="delimiter",
                        default=',',
                        help="Delimiter to be used between the values. Default: %default")
-        
+
     def run(self):
         dest=self.parser.getArgs()[-1]
         if path.exists(dest) and not self.opts.force:
             self.error("CSV-file",dest,"exists already. Use --force to overwrite")
         sources=self.parser.getArgs()[0:-1]
-        
+
         data=SpreadsheetData(txtName=sources[0],
                              timeName=self.opts.time,
                              validData=self.opts.columns,
@@ -90,3 +90,5 @@ Note: the first file determines the resolution of the time-axis
 
         data.writeCSV(dest,
                       delimiter=self.opts.delimiter)
+
+# Should work with Python3 and Python2

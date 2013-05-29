@@ -1,15 +1,23 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/FromTemplate.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: FromTemplate.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamFromTemplate
 """
 
 import sys
 
-from PyFoamApplication import PyFoamApplication
+from optparse import OptionGroup
 
-from PyFoam.Basics.TemplateFile import TemplateFile
+from .PyFoamApplication import PyFoamApplication
 
-class FromTemplate(PyFoamApplication):
+from PyFoam.Basics.TemplateFile import TemplateFile,TemplateFileOldFormat
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+
+from .CommonPickledDataInput import CommonPickledDataInput
+
+from PyFoam.ThirdParty.six import print_
+
+class FromTemplate(PyFoamApplication,
+                   CommonPickledDataInput):
     def __init__(self,args=None):
         description="""\
 Generates a file from a template file. Usually the name of the
@@ -18,44 +26,179 @@ template file is the name of the file with the extension '.template'
 everything in the template file that is enclosed by $ $ with
 calculated expression. values are given in a Python-dictionary. Lines
 in the template file that start with $$ are used as definitons for
-intermediate expressions
+intermediate expressions.
+
+This format is used if the two arguments are used.  If the template
+file and the data is specified via options then a more advanced
+template format that allows branches and loops is used via the
+template-engine pyratemp (see
+http://www.simple-is-better.org/template/pyratemp.html). If data is
+read from a pickled-input then it looks for the keys "template" and "values" and
+uses these.
+
+In the new format expressions are delimited by |- at the start and -|
+at the end. These defaults can be changed
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
-                                   usage="%prog [options] <file> <vals>",
-                                   nr=2,
+                                   usage="%prog [options] (<file> <vals>|)",
+                                   nr=0,
                                    changeVersion=False,
-                                   interspersed=True)
-        
+                                   interspersed=True,
+                                   exactNr=False)
+
     def addOptions(self):
-        self.parser.add_option("--template-file",
-                               action="store",
-                               default=None,
-                               dest="template",
-                               help="Name 0f the template file")
-        
-        self.parser.add_option("--test",
-                               action="store_true",
-                               dest="test",
-                               default=False,
-                               help="Doesn't write to the file, but outputs the result on stdout")
-        
-    
+        CommonPickledDataInput.addOptions(self)
+
+        inputs=OptionGroup(self.parser,
+                           "Inputs",
+                           "Inputs for the templating process")
+        self.parser.add_option_group(inputs)
+
+        inputs.add_option("--template-file",
+                          action="store",
+                          default=None,
+                          dest="template",
+                          help="Name of the template file. Also overwrites the standard for the old format (<filename>.template). If this is set to 'stdin' then the template is read from the standard-input to allow using the pipe into it.")
+        inputs.add_option("--values-string",
+                          action="store",
+                          default=None,
+                          dest="values",
+                          help="String with the values that are to be inserted into the template as a dictionaty in Python-format. If specified this is the first choice")
+        inputs.add_option("--values-dictionary",
+                          action="store",
+                          default=None,
+                          dest="valuesDict",
+                          help="Name of a dictionary-file in OpenFOAM-format. If this is unspecified too then values are taken from the pickled-input")
+
+        outputs=OptionGroup(self.parser,
+                           "Outputs",
+                           "Outputs of the templating process")
+        self.parser.add_option_group(outputs)
+        outputs.add_option("--stdout",
+                           action="store_true",
+                           dest="stdout",
+                           default=False,
+                           help="Doesn't write to the file, but outputs the result on stdout")
+        outputs.add_option("--output-file",
+                           action="store",
+                           default=None,
+                           dest="outputFile",
+                           help="File to which the output will be written. Only for the new format")
+
+        tformat=OptionGroup(self.parser,
+                            "Format",
+                           "Specifying details about the format of the pyratemp-templates (new format)")
+        self.parser.add_option_group(tformat)
+        tformat.add_option("--expression-delimiter",
+                           action="store",
+                           default="|-",
+                           dest="expressionDelimiter",
+                           help="String that delimits an expression. At the end of the expression the reverse string is being used")
+        tformat.add_option("--assignment-line-start",
+                           action="store",
+                           default="$$",
+                           dest="assignmentLineStart",
+                           help="String at the start of a line that signifies that this is an assignment")
+
+        behaviour=OptionGroup(self.parser,
+                              "Behaviour",
+                              "The behaviour of the parser")
+        self.parser.add_option_group(behaviour)
+        behaviour.add_option("--tolerant-expression-evaluation",
+                             action="store_true",
+                             default=False,
+                             dest="tolerantRender",
+                             help="Instead of failing when encountering a problem during an evaluation a string with the error message is inserted into the output")
+        behaviour.add_option("--allow-exec-instead-of-assignment",
+                             action="store_true",
+                             default=False,
+                             dest="allowExec",
+                             help="Allows exectution of non-assignments in $$-lines. This is potentially unsafe as it allows 'import' and calling of external programs")
+
     def run(self):
-        fName=self.parser.getArgs()[0]
-        vals=eval(self.parser.getArgs()[1])
+        if self.opts.template=="stdin" and self.opts.pickledFileRead=="stdin":
+            self.error("Can't simultanously read pickled data and the tempalte from the standard input")
 
-        if self.opts.template==None:
-            template=fName+".template"
+        content=None
+        if self.opts.template=="stdin":
+            content=sys.stdin.read()
+        data=None
+        if self.opts.pickledFileRead:
+            data=self.readPickledData()
+        fName=None
+
+        if len(self.parser.getArgs())==2:
+            if self.opts.pickledFileRead:
+                self.error("old-format mode does not work with pickled input")
+            if self.opts.outputFile:
+                self.error("--output-file is not valid for the old format")
+            # old school implementation
+            fName=self.parser.getArgs()[0]
+            vals=eval(self.parser.getArgs()[1])
+            if type(vals)==str:
+                # fix a problem with certain shells
+                vals=eval(vals)
+
+            if self.opts.template==None:
+                template=fName+".template"
+            else:
+                template=self.opts.template
+
+            if content:
+                t=TemplateFileOldFormat(content=content)
+            else:
+                t=TemplateFileOldFormat(name=template)
+        elif len(self.parser.getArgs())==0:
+            if self.opts.values:
+                vals=eval(self.opts.values)
+            elif self.opts.valuesDict:
+                vals=ParsedParameterFile(self.opts.valuesDict,
+                                         noHeader=True,
+                                         doMacroExpansion=True).getValueDict()
+            elif data:
+                vals=data["values"]
+            else:
+                self.error("Either specify the values with --values-string or --values-dictionary or in the pickled input data")
+
+            if content:
+                t=TemplateFile(content=content,
+                               tolerantRender=self.opts.tolerantRender,
+                               allowExec=self.opts.allowExec,
+                               expressionDelimiter=self.opts.expressionDelimiter,
+                               assignmentLineStart=self.opts.assignmentLineStart)
+            elif data:
+                t=TemplateFile(content=data["template"],
+                               tolerantRender=self.opts.tolerantRender,
+                               allowExec=self.opts.allowExec,
+                               expressionDelimiter=self.opts.expressionDelimiter,
+                               assignmentLineStart=self.opts.assignmentLineStart)
+            elif self.opts.template:
+                t=TemplateFile(name=self.opts.template,
+                               tolerantRender=self.opts.tolerantRender,
+                               allowExec=self.opts.allowExec,
+                               expressionDelimiter=self.opts.expressionDelimiter,
+                               assignmentLineStart=self.opts.assignmentLineStart)
+            else:
+                self.error("Template unspecified")
+
+            if self.opts.outputFile:
+                fName=self.opts.outputFile
         else:
-            template=self.opts.template
+            self.error("Either specify 2 arguments (file and values) for old format or no arguments for the new format")
 
-        t=TemplateFile(name=template)
-
-        if self.opts.test:
-            print t.getString(vals)
+        if self.opts.stdout:
+            print_(t.getString(vals))
+        elif fName:
+            try:
+                t.writeToFile(fName,vals)
+            except (NameError,SyntaxError):
+                e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+                print_("While processing file",fName)
+                raise e
         else:
-            t.writeToFile(fName,vals)
-            
+            self.error("No destination for the output specified")
+
+# Should work with Python3 and Python2

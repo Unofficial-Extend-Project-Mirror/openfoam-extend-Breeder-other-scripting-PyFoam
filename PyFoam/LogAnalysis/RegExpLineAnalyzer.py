@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/RegExpLineAnalyzer.py 7014 2010-11-21T23:14:21.485436Z bgschaid  $ 
+#  ICE Revision: $Id: RegExpLineAnalyzer.py 12747 2013-01-03 23:06:57Z bgschaid $
 """Analyzes lines with regular expressions"""
 
 import re
 
-from GeneralLineAnalyzer import GeneralLineAnalyzer
+from .GeneralLineAnalyzer import GeneralLineAnalyzer
 
 class RegExpLineAnalyzer(GeneralLineAnalyzer):
     """Parses lines for an arbitrary regular expression
@@ -19,7 +19,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
     """
 
     floatRegExp="[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?"
-    
+
     def __init__(self,
                  name,
                  exp,
@@ -49,7 +49,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
                                      singleFile=singleFile,
                                      startTime=startTime,
                                      endTime=endTime)
-        
+
         self.name=name
         self.idNr=idNr
 
@@ -64,9 +64,9 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
         self.tm=self.parent.getTime()
         if self.tm=="":
             self.tm="-1e10"
-            
+
     def addToFiles(self,match):
-        name=self.name
+        name=self.fName(self.name)
         fdata=match.groups()
         if self.idNr!=None:
             ID=match.group(self.idNr)
@@ -82,7 +82,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
         self.files.write(name,self.tm,fdata)
 
     def addToTimelines(self,match):
-        name=self.name
+        name=self.fName(self.name)
         fdata=match.groups()
 
         prefix=""
@@ -90,7 +90,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
             ID=match.group(self.idNr)
             prefix=ID+"_"
             fdata=fdata[:self.idNr-1]+fdata[self.idNr:]
-        
+
         for i in range(len(fdata)):
             val=float(fdata[i])
             name=prefix+"value %d" % i
@@ -101,26 +101,26 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
                     name=prefix+str(self.titles[i])
 
             self.lines.setValue(name,val)
-        
+
     def sub(self,ID):
         """ get the data set for the identifier ID"""
-        if not self.data.has_key(ID):
+        if ID not in self.data:
             self.data[ID]={}
         return self.data[ID]
-    
+
     def getTimes(self,ID=None):
         """get the available time for the identifier ID"""
         if ID==None:
             ID=""
-        return self.sub(ID).keys()
+        return list(self.sub(ID).keys())
 
     def getIDs(self):
         """get a list of the available IDs"""
-        ids=self.data.keys()
+        ids=list(self.data.keys())
         if "" in ids:
             ids.remove("")
         return ids
-    
+
     def getLast(self,ID=None):
         """get the last time for the identifier ID"""
         times=self.getTimes(ID)
@@ -128,7 +128,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
             return max(times)
         else:
             return None
-        
+
     def getData(self,time=None,ID=None):
         """get a data value at a specific time for a specific ID"""
         if ID==None:
@@ -138,17 +138,17 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
             time=self.getLast(ID)
         else:
             time=float(time)
-            
+
         data=self.sub(ID)
-        
-        if data.has_key(time):
+
+        if time in data:
             return data[time]
         else:
             return None
-        
+
 class RegExpTimeLineLineAnalyzer(RegExpLineAnalyzer):
     """Class that stores results as timelines, too"""
-    
+
     def __init__(self,
                  name,
                  exp,
@@ -171,3 +171,4 @@ class RegExpTimeLineLineAnalyzer(RegExpLineAnalyzer):
                                     startTime=startTime,
                                     endTime=endTime)
 
+# Should work with Python3 and Python2

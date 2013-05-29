@@ -1,0 +1,362 @@
+# -*- mode: org -*-
+* Version 0.6.0 - 2013-03-14
+** Major changes
+*** Adaption to work with Python3
+    Sources are adapted so that =PyFoam= works with Python3 too. This
+    breaks support for Python 2.4 and earlier (possibly also Python
+    2.5)
+
+    Some of the Libraries in =PyFoam.ThirdParty= had to be adapted to
+    work with Python3:
+    - Gnuplot.py :: The original version 1.8 is quite old. It was
+                    adapted with the help of the =six=-library (see
+                    below) to work with Python2 and Python3 (inspired
+                    by
+                    [https://github.com/oblalex/gnuplot.py-py3k/commits/master]
+                    which is a pure port to Python3 without backwards
+                    compatibility)
+*** New ThirdParty-Libraries
+    - six :: Library that helps supporting Python 2 and Python 3 in
+             the same source code. Currently version 1.2 from
+             [https://bitbucket.org/gutworth/six] is used
+    - pyratemp :: Templating library to support the new templating
+                  format. Version 0.2.0 from
+                  [http://www.simple-is-better.org/template/pyratemp.html]
+                  is used
+*** Porting to =Windows=
+    Port to allow running PyFoam on Windows was done by Bruno Santos
+    of blueCAPE (bruno.santos@bluecape.com.pt)
+
+    Patch was originally posted at
+    http://sourceforge.net/apps/mantisbt/openfoam-extend/view.php?id=166
+
+    *Note*: many of PyFoam's features are not yet fully functional on
+    Windows.
+*** Experimental port to =pypy=
+    Sources are executed in =pypy= but it seems there are problems
+    with =numpy= and also with code like =for l in open(f).readlines()=
+** Third-Party
+*** Upgraded =ply= to 3.4
+    This brings virtually no changes. =README= with copyright
+    information has been added
+** Infrastructure
+*** Parameters can't be modified in =CTestRun= after initialization
+    This should help to avoid side-effects
+*** Treat timeouts in the =MetaServer= right
+    Due to a previous workaround timeouts when collecting information
+    about new machines was not treated correctly
+*** Add =execute=-method to =ClusterJob=
+    This allows the execution of a shell-script in the directory of
+    the case
+*** Add possibility to run specific modules before or after the solver
+    These modules are found in =PyFoam.Infrastructure.RunHooks=. Two
+    concrete implementations:
+    - =PrintMessageHook= :: to print a text to the terminal
+    - =SendToWebservice= :: encode an URL and send it to a webservice
+         (example for =pushover.net= added)
+    Hooks are automatically instantiated from the configuration data
+    (examples are hardcoded))
+*** Parameters added to the info about the run
+    The Runner-classes now have a parameter =parameters=. This data
+    (usually it would be a dictionary) is added verbatim to the run
+    info.
+
+    Most runner applications now have the possibility to add this
+    info.
+
+    Purpose of this facility is to identify different runs in the
+    database better.
+*** Parameter handling in =ClusterJob= extended
+    Parameter values are now handed to the actual job. Also a
+    dictionary with parameters can be handed to the constructor and
+    will be used in the relevant callbacks
+*** Run data written alongside =PickledPlots=
+    During the run whenever the =PickledPlots=-file is written a file
+    =pickledUnfinishedData= gets written. This has the current solver
+    data and is similar to =pickledData=.
+
+    Also a file =pickledStartData= gets written that has the data that
+    is available at the start of the run.
+*** =BasicRunner= collects error and warning texts
+    The runner collects
+    - at every warning the next 20 lines of the output until a total
+      of 500 lines is reached (this avoids filling disk and memory if
+      the solver produces too many warnings)
+    - All output from an error message until the end
+    And stores them in the application data
+** Library
+*** =TemplateFile= now uses =pyratemp=
+    The class =TempalteFile= now uses an enhanced templating
+    engine. The  old implementation is in the class
+    =TemplateFileOldFormat=
+*** Clearer error message in Application-classes
+    If used as classes (not as utilities) these classes print the
+    class name instead of the calling utilities name
+*** Output is only colored if it goes to the terminal
+    Error and warning messages don't decorate the output if it goes to
+    files or other non-terminal streams
+*** =error=-method of application classes now raises an exception
+    An exception is now raised by =self.error()=. This makes it easier
+    to handle such errors if the application class is used. The
+    exception is passed up until there is a "real" application
+*** =ParsedParameterFile= now knows how to handle binary files
+    When the format of a file is =binary= lists with a length prefix
+    are being read as binary blobs.
+
+    For reading the blobs a simple heuristics is used: a multiple of
+    the length in bytes is read. If the next character is a =)= and
+    the characters after that are a certain combination of characters
+    (newlines and =;=) then it is assumed that the blob has
+    ended. This may fail on certain occasions:
+    - if the combination of characters appears at these places
+    - if the objects inside the binary data are of different sizes
+    It would be hard to work around these restrictions without
+    reprogramming the full functionality of OpenFOAM
+*** =LabledReSTTable= for more flexible table generation
+    New class in the =RestructuredTextHelper= allows more flexible
+    generation of tables. Items are added with =column= and =row= and
+    if these don't exist in the first row/column the table is extended
+    appropriately
+*** Plotting classes now allow setting of =xlabel=
+    This is implemented for =Gnuplot= and =Matplotlib=. Default for
+    the label on the x-Axis is now "Time [s]"
+** Utilities
+*** =pyFoamFromTemplate.py= with new templating engine
+    The utility can now use the pyratemp-templating engine which
+    allows templates with loops, conditions and other  fancy stuff
+*** =pyFoamSamplePlot.py= allows using the reference data as basis for comparison
+    Instead of using the x-values from the original data the y-values
+    of the reference data can be used for comparing (with the
+    =--use-reference=-option)
+
+    Same for =pyFoamTimelimePlot.py=
+*** Scaling and offsets are now used in plots of =pyFoamSamplePlot.py=
+    If scales not equal to $1$ and offsets not equal to $0$ are
+    specified they are used in the =gnuplot=-output
+*** =pyFoamPrintData2DStatistics.py= prints relative average error
+    With the =--relative-average-error=-option
+*** Enhancements to =pyFoamVersion.py=
+    - More tolerant if no library was found
+    - Reports the location of the PyFoam-Library
+    - Checks whether utility version is consistent the library found
+*** =pyFoamRunner.py= allows hooks
+    Hooks can be added at the start and the end of a run
+*** =pyFoamRedoPlots.py= supports range for plots
+    Added =-end= and =-start=-option to select a range that should be
+    plotted.
+
+    Currently not working with the Matplotlib-implementation (only gnuplot)
+*** =pyFoamDisplayBlockMesh.py= no supports templates
+    If a file with values is specified then the utility assumes you're
+    editing a template file and will evaluate it before displaying it
+*** =pyFoamCaseReport.py= is tolerant towards binary files
+    New switch that makes the parser treat files that are declared
+    =binary= in the header as if they were =ascii=
+*** =pyFoamSamplePlot.py= and =pyFoamTimelinePlot.py= raise error if no plots are generated
+    This makes it easier to catch faulty specifications (or empty
+    timeline-files)
+*** =pyFoamSurfacePlot.py= can wait for a key
+    An option =--wait= has been added that makes the utility wait
+    before displaying the next picture
+*** =pyFoamEchoDictionary.py= is more flexible with binary files
+    Switch allows forcing it to read a binary File as an ASCII
+*** All utilities now have a switch that starts the debugger even with syntax-errors
+    Previously the option =--interactive-debug= only started the
+    debugger if the error was *no* syntax error. This is still the
+    default behavior, but can be overruled
+*** Utilities now can be killed with =USR1= and will give a traceback
+    The option =--catch-USR1-signal= now installs a signal-handler
+    that prints a traceback and finishes the run. If the interactive
+    debugger is enabled then it goes to the debugger-shell.
+
+    Option =--keyboard-interrupt-trace= triggers the same behaviour
+    for keyboard interrupts with =<Ctrl>-C=
+*** Switch to switch on *all* debug options
+    For the purpose of developing a switch =--i-am-a-developer= has
+    been added.
+*** Plotting utilities now allow specification of x-Axis label
+    With the option =xlabel= in the =customRegexp=-file the label on
+    the x-axis of the plot can be changed. Setting =ylabel= and
+    =y2label= (for the secondary axis) was already possible
+*** Metrics and compare for =pyFoamTimelinePlot.py= and =pyFoamSamplePlot.py= support time ranges
+    Now the options =--min-time= and =--max-time= are supported by
+    =--metrics= and =--compare=
+*** =pyFoamDisplayBlockMesh.py= allows graphical selection of blocks and patches
+    New addition by Marc Immer allows the graphical selection of
+    blocks and patches and adds them to the =blockMeshDict=
+*** =pyFoamCloneCase.py= and =pyFoamPackCase.py= accept additional parameters
+    The file =LocalConfigPyFoam= is read by these utilities and if
+    there is a parameter =addItem= in the section =Cloning= defined
+    then these files are cloned/packed automatically (no user
+    specification required)
+*** =pyFoamListCases.py= now calculates estimated end-times
+    Additional option to print the estimated end times. These can be
+    wrong if the case did not start from the =startTime= in the
+    =controlDict=.
+
+    Also now allows printing the end and the start-time according to
+    the =controlDict=
+** New features
+*** Different "phases" for multi-region solvers
+    Plots of type =phase= in =customRegexp= don't actually plot
+    anything. The set a phase-name that is used for subsequent values
+    (for instance to distinguish the different residuals)
+*** =pyFoamChangeBoundaryType.py= allows selection of region and time
+    Options =--region= and =--time-directory= added that allow
+    selecting different =boundary=-files
+*** New class for storing case data in a sqlite-database and associated utilities
+    The class =RunDatabase= stores the data from runs. Utility
+    =pyFoamAddCaseDataToDatabase.py= is one way to populate the
+    database. =pyFoamDumpRunDatabaseToCSV.py= allows dumping that
+    data to a file for further processing (in a spreadsheet for
+    instance)
+
+    Database can also be populated using a special post-run hook
+** Bugfixes
+*** Only binary packages of 1.x were found
+    Pattern had to start with 1 (now every digit is possible))
+*** Option group /Regular expressions/ was listed twice
+    No harm done. But fixed
+*** =--clear=-option for =pyFoamDecompose.py= not working
+    Reason was that =rmtree= does not allow wildcards. Fixed
+*** =pyFoamDisplayBlockmesh.py= not working with variable substitution
+    The =DictRedirect= would not convert to float. Fixed. Although it
+    might happen again for other data types
+*** Option =--function-object-data= of =pyFoamClearCase.py= not working with directories
+    The option was only implemented for the list-form of the
+    =functions= entry in =controlDict=
+
+    Now fixed to also work with the dictionary-form
+*** =nonuniform= of length 0 not correctly printed
+    Seems like the length was interpreted as the name of the
+    list. Fixed
+*** Building of pseudocases with =pyFoamRunner.py= broken
+    Only worked if no region was specified (= not at all). Fixed
+*** =pyFoamRedoPlot.py= did not correctly honor =--end= and =--start=
+    Plots were over the whole data range. This is now fix (also the
+    issue that =--end= alone did not work)
+*** =WriteParameterFile= does not preserve the order of additions
+    Contents was "only" set as a dictionary which does not preserve
+    the order in which entries are added. Replaced with a =DictProxy=
+*** Wrong number of arguments when using =TimelinePlot= in =positions=-mode
+    Problem that was introduced by changes in the =fields=-mode
+*** =ClusterJob= uses only =metis= for decomposition
+    For OpenFOAM-versions 1.6 and higher the automatic decomposition
+    used is now =scotch=
+*** =pyFoamSamplePlot.py= and =pyFoamTimelinePlot.py= produced no pictures for regions
+    As regions have their own subdirectories the =/= from the
+    directory name was inserted into the filename and if the
+    subdirectory did not exist =gnuplot= did not create the picture
+*** Barplots in =pyFoamTimelinePlot.py= not working if value is a vector
+    The base class didn't correctly handle the =(= and =)=. Fixed
+*** Mysterious deadlocks while plotting long logfiles
+    The problem was that during splitting the timeline data an exception was
+    raised. This exception was caught by another part of PyFoam. This
+    left a lock on the data structure locked and the next access to
+    the structure was held indefinitely. Fixed
+*** Scanning linear expressions form the block coupled solver failed
+    As there is a tuple of residuals the scanner did not analyze the
+    output of the output of the block-coupled solver from =1.6-ext=
+    correctly. This is now treated as a special case and each residual
+    is plotted separately (distinguished by a =[x]= with =x= being the
+    number of the component)
+*** =#include= not correctly working with macros in the included file
+    Macros =$var= were not correctly expanded. Fixed
+*** Macros not correctly expanded to strings
+    When being expanded to string form macros were not correctly
+    expanded
+*** =pyFoamPackCase.py= in the working directory produces 'invisible' tar
+    If the utility was used in the form
+: pyFoamPackCase.py .
+    then an 'invisible' tar =..tgz= was produced. Fixed
+*** String at the end of a linear solver output makes parsing fail
+    Reported in
+    [http://www.cfd-online.com/Forums/openfoam-solving/112278-pyfoam-struggles-adopted-solver-post403990.html]
+    the string is assumed to be part of the iteration number. Fixed
+*** Paraview utilities not working with higher Paraview versions
+    At least for PV 3.14 and 3.98 the way the version number is
+    determined has changed and the PV-utilities failed. This has been
+    fixed but is untested with old versions
+*** Camera settings not honored with =pyFoamPVSnapshot.py=
+    For the first rendered view Paraview automatically resets the
+    camera. This has now been switched off (so the snapshot is
+    rendered correctly)
+* Version 0.5.7 - 2012-04-13
+** Parser improvements
+   - Problem with nested comments
+   - Parse code streams
+   - Preserving of comments can be switched off
+   - Ignore extra semicolons
+   - Allows parsing lists of length 3 and 9 as lists and not as
+     vectors and tensors
+   - "lookup redirection" in OF-dictionaries now works
+** Utility improvements
+   - pyFoamSamplePlot.py stops if the same directory is compared
+   - pyFoamSamplePlot.py shows the location of the biggest difference
+   - pyFoamSamplePlot.py allows only same ranges for comparisons
+   - Generation of pickled-files can be switched of for runner-utilities
+   - Frequency with which the pickled file is written is adapted (so
+     that it doesn't use ALL the CPU-time)
+   - pyFoamVersion.py improved (Version of Python is checked etc)
+   - pyFoamRedoPlot.py: fixed parameter checking
+   - pyFoamPotentialRunner.py: temporarily disable libs and functions
+   - Only write last N loglines from Runner-utility
+   - pyFoamClearCase.py: allow local specification of additional files
+     that should be cleared
+   - Runner utilities can report data about the run
+   - pyFoamConvertToCSV.py now allows selection of columns
+   - Utilities for quantative analysis now can return data
+   - Utilities for quantative now correctly return data for multiple places
+   - pyFoamSamplePlot.py now allows specification of valid variable pre and
+     postfixes to allow correct parsing of variable names with a _
+   - endTime can be specified by the runner-utilities
+   - Utilities now allow piping (using pickled data)
+   - pyFoamSamplePlot.py now allows the specification of a reference time
+   - Nomenclature of pyFoamSamplePlot.py and pyFoamTimelinePlots.py
+     now similar (both call it fields)
+   - pyFoamDecompose.py now can use the -region-option ifthe
+     OF-version is right
+   - Forcing debug-mode fixed for older OF-versions
+   - pyFoamDecomposer.py now accepts globalFaceZones in Python or
+     OpenFOAM-syntax
+   - Plot-utilities now don't interpret _ in names not as LaTeX
+** New Utilities
+   - pyFoamEchoPickledApplicationData to output pickled data
+   - pyFoamPrintData2DStatistics.py to output data from comparisons
+   - pyFoamBuildHelper.py to build project and its prerequisites (work
+     in progress)
+   - pyFoamCreateModuleFile.py to create files for
+     http://modules.sourceforge.net/ (by Martin Beaudoin)
+   - pyFoamSTLUtility.py to join STL-files
+** Library improvements
+   - stabler comparisons
+   - Paraview-Utilities work with 1.x and 2.x
+   - Runner classes return a dictionary with data
+   - TimelineDirectory ignores dot-files
+   - Application-objects can now be used like dictionaries to access
+     data
+   - New class TableData for simple data tables
+   - New class Data2DStatistics for statistics about tables
+   - new class CTestRun as basis for automated testing
+   - FoamOptionParser now resets environment variables so that
+     application-classes can call other application classes
+   - Improvements to HgInterface
+   - Additional VCS-subclasses for git, svn and svk (implementation
+     only as needed)
+   - SolutionDir now uses 0.org as initial directory if no valid
+     initial directory is present (this affects clearing and cloning)
+   - FoamFileGenerator now more flexible for long lists
+   - ParsedBlockMeshDict now doesn't introduce prefixes for 'long' lists
+** Removed utilities
+   - pyFoamAPoMaFoX.py
+   - pyFoamPlotResiduals.py
+** Thirdparty
+   - Got rid of Numeric-support in Gnuplot-library
+** Other
+   - script to generate man-pages for the utilities
+   - Paraview3-example probeDisplay.py now renamed to
+     probeAndSetDisplay.py and reads sampledSets from controlDict and
+     sampleDict
+* Older Versions
+  The changes for older versions can be found on
+  [[http://openfoamwiki.net/index.php/Contrib_PyFoam#History][the Wiki-page]]

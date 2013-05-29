@@ -1,10 +1,13 @@
 recursive-include doc *
-recursive-include examples *.py 
-recursive-include examples *.pfcb 
+recursive-include examples *.py
+recursive-include examples *.pfcb
 recursive-include examples/data *.cfg
-recursive-include test *.py 
-recursive-include unittests *.py 
+recursive-include test *.py
+recursive-include unittests *.py
 recursive-include contrib *
 global-exclude *~
 prune */.svn
 prune */*/.svn
+include ReleaseNotes
+include README
+include COPYING

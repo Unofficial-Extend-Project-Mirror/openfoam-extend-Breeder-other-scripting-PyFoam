@@ -1,17 +1,19 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/EchoDictionary.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: EchoDictionary.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamEchoDictionary
 """
 
 import sys,re
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
-from CommonParserOptions import CommonParserOptions
+from .CommonParserOptions import CommonParserOptions
 
 from PyFoam.Error import PyFoamException
+
+from PyFoam.ThirdParty.six import print_
 
 class EchoDictionary(PyFoamApplication,
                      CommonParserOptions):
@@ -20,7 +22,7 @@ class EchoDictionary(PyFoamApplication,
 Reads a Foam-Dictionary and prints it to the screen. Mainly for
 reformatting unformated dictionaries and debugging the parser
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -28,10 +30,10 @@ reformatting unformated dictionaries and debugging the parser
                                    nr=1,
                                    changeVersion=False,
                                    interspersed=True)
-        
+
     def addOptions(self):
         CommonParserOptions.addOptions(self)
-    
+
     def run(self):
         fName=self.parser.getArgs()[0]
         try:
@@ -44,9 +46,12 @@ reformatting unformated dictionaries and debugging the parser
                                          boundaryDict=self.opts.boundaryDict,
                                          listDict=self.opts.listDict,
                                          listDictWithHeader=self.opts.listDictWithHeader,
+                                         treatBinaryAsASCII=self.opts.treatBinaryAsASCII,
                                          doMacroExpansion=self.opts.doMacros)
-        except IOError,e:
+        except IOError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             self.error("Problem with file",fName,":",e)
-        
-        print dictFile
-            
+
+        print_(dictFile)
+
+# Should work with Python3 and Python2

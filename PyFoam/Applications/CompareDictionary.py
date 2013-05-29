@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CompareDictionary.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: CompareDictionary.py 12763 2013-01-08 17:56:07Z bgschaid $
 """
 Application class that implements pyFoamCompareDictionary.py
 """
@@ -6,7 +6,9 @@ Application class that implements pyFoamCompareDictionary.py
 import re
 from os import path
 
-from PyFoamApplication import PyFoamApplication
+import sys
+
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,PyFoamParserError
 from PyFoam.Basics.DataStructures import DictProxy,Dimension,Tensor,SymmTensor,Vector,Field,TupleProxy
@@ -14,9 +16,11 @@ from PyFoam.Basics.FoamFileGenerator import makeString
 
 from PyFoam.Error import error,warning
 
-from CommonParserOptions import CommonParserOptions
+from .CommonParserOptions import CommonParserOptions
 
 from PyFoam.Basics.TerminalFormatter import TerminalFormatter
+
+from PyFoam.ThirdParty.six import print_,integer_types
 
 f=TerminalFormatter()
 f.getConfigFormat("source",shortName="src")
@@ -35,7 +39,7 @@ equivalent place in the destination case. If more than two files are
 specified then the last name is assumed to be a directory and all the
 equivalents to the other files are searched there.
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -43,7 +47,7 @@ equivalents to the other files are searched there.
                                    nr=2,
                                    exactNr=False,
                                    interspersed=True)
-        
+
     def addOptions(self):
         self.parser.add_option("--not-equal",
                                action="store_true",
@@ -63,9 +67,9 @@ equivalents to the other files are searched there.
                                help="Fields that are longer than this won't be parsed, but read into memory (and compared as strings)")
 
         CommonParserOptions.addOptions(self)
-        
 
-    
+
+
     def run(self):
         sFiles=self.parser.getArgs()[0:-1]
         dFile=path.abspath(self.parser.getArgs()[-1])
@@ -73,9 +77,9 @@ equivalents to the other files are searched there.
         for s in sFiles:
             sName=path.abspath(s)
             dName=dFile
-            
+
             if len(s)>1:
-                print f.name+"Source file",sName,f.reset
+                print_(f.name+"Source file",sName,f.reset)
             try:
                 source=ParsedParameterFile(sName,
                                            backup=False,
@@ -86,13 +90,15 @@ equivalents to the other files are searched there.
                                            boundaryDict=self.opts.boundaryDict,
                                            listDict=self.opts.listDict,
                                            listDictWithHeader=self.opts.listDictWithHeader)
-            except IOError,e:
+            except IOError:
+                e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
                 self.warning("Problem with file",sName,":",e)
                 continue
-            except PyFoamParserError,e:
+            except PyFoamParserError:
+                e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
                 self.warning("Parser problem with",sName,":",e)
                 continue
-            
+
             found=False
 
             if path.isfile(sName) and path.isfile(dName):
@@ -101,7 +107,7 @@ equivalents to the other files are searched there.
             if not found and not self.opts.notequal and path.basename(sName)!=path.basename(dName):
                 parts=sName.split(path.sep)
                 for i in range(len(parts)):
-                    tmp=apply(path.join,[dName]+parts[-(i+1):])
+                    tmp=path.join(*[dName]+parts[-(i+1):])
 
                     if path.exists(tmp):
                         found=True
@@ -125,7 +131,8 @@ equivalents to the other files are searched there.
                                          boundaryDict=self.opts.boundaryDict,
                                          listDict=self.opts.listDict,
                                          listDictWithHeader=self.opts.listDictWithHeader)
-            except IOError,e:
+            except IOError:
+                e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
                 self.error("Problem with file",dName,":",e)
 
             self.pling=False
@@ -136,8 +143,8 @@ equivalents to the other files are searched there.
                 self.compareIterable(source.content,dest.content,1,path.basename(sName))
 
             if not self.pling:
-                print "\nNo differences found"
-            
+                print_("\nNo differences found")
+
     def dictString(self,path,name):
         return "%s[%s]" % (path,name)
 
@@ -146,72 +153,73 @@ equivalents to the other files are searched there.
 
     def compare(self,src,dst,depth,name):
         if type(src)!=type(dst):
-            print f.diff+">><<",name,": Types differ"+f.reset+"\n+"+f.src+">>Source:"+f.reset+"\n",makeString(src),"\n"+f.dst+"<<Destination:"+f.reset+"\n",makeString(dst)+f.reset
+            print_(f.diff+">><<",name,": Types differ"+f.reset+"\n+"+f.src+">>Source:"+f.reset+"\n",makeString(src),"\n"+f.dst+"<<Destination:"+f.reset+"\n",makeString(dst)+f.reset)
             self.pling=True
         elif type(src) in [tuple,list,TupleProxy]:
             self.compareIterable(src,dst,depth,name)
-        elif type(src) in [str,float,int,long,type(None)]:
+        elif isinstance(src,(str,float)+integer_types) or src==None:
             self.comparePrimitive(src,dst,depth,name)
         elif src.__class__ in [Dimension,Tensor,SymmTensor,Vector]:
-            self.comparePrimitive(src,dst,depth,name)            
+            self.comparePrimitive(src,dst,depth,name)
         elif src.__class__==Field:
-            self.compareField(src,dst,depth,name)            
+            self.compareField(src,dst,depth,name)
         elif type(src) in [DictProxy,dict]:
-            self.compareDict(src,dst,depth,name)            
+            self.compareDict(src,dst,depth,name)
         else:
             warning("Type of",name,"=",type(src),"unknown")
             if self.opts.debug:
                 try:
-                    print "Class of",name,"=",src.__class__,"unknown"
+                    print_("Class of",name,"=",src.__class__,"unknown")
                 except:
                     pass
-                
+
     def compareField(self,src,dst,depth,name):
         if src!=dst:
             self.pling=True
-            print f.diff+">><< Field",name,": Differs"+f.reset+"\n"+f.src+">>Source:"+f.reset+"\n",
+            print_(f.diff+">><< Field",name,": Differs"+f.reset+"\n"+f.src+">>Source:"+f.reset+"\n",end=" ")
             if src.uniform:
-                print src
+                print_(src)
             else:
-                print "nonuniform - field not printed"
-            print f.dst+"<<Destination:"+f.reset+"\n",
+                print_("nonuniform - field not printed")
+            print_(f.dst+"<<Destination:"+f.reset+"\n",end=" ")
             if dst.uniform:
-                print dst
+                print_(dst)
             else:
-                print "nonuniform - field not printed"
-            
+                print_("nonuniform - field not printed")
+
     def comparePrimitive(self,src,dst,depth,name):
         if src!=dst:
-            print f.diff+">><<",name,": Differs"+f.reset+"\n"+f.src+">>Source:"+f.reset+"\n",src,"\n"+f.dst+"<<Destination:"+f.reset+"\n",dst
+            print_(f.diff+">><<",name,": Differs"+f.reset+"\n"+f.src+">>Source:"+f.reset+"\n",src,"\n"+f.dst+"<<Destination:"+f.reset+"\n",dst)
             self.pling=True
-            
+
     def compareIterable(self,src,dst,depth,name):
         nr=min(len(src),len(dst))
-        
+
         for i in range(nr):
             if self.opts.debug:
-                print "Comparing",self.iterString(name,i)
+                print_("Comparing",self.iterString(name,i))
             self.compare(src[i],dst[i],depth+1,self.iterString(name,i))
-            
+
         if nr<len(src):
-            print f.src+">>>>",self.iterString(name,nr),"to",self.iterString(name,len(src)-1),"missing from destination\n"+f.reset,makeString(src[nr:])
+            print_(f.src+">>>>",self.iterString(name,nr),"to",self.iterString(name,len(src)-1),"missing from destination\n"+f.reset,makeString(src[nr:]))
             self.pling=True
         elif nr<len(dst):
-            print f.dst+"<<<<",self.iterString(name,nr),"to",self.iterString(name,len(dst)-1),"missing from source\n"+f.reset,makeString(dst[nr:])
+            print_(f.dst+"<<<<",self.iterString(name,nr),"to",self.iterString(name,len(dst)-1),"missing from source\n"+f.reset,makeString(dst[nr:]))
             self.pling=True
-            
+
     def compareDict(self,src,dst,depth,name):
         for n in src:
             if not n in dst:
-                print f.src+">>>>",self.dictString(name,n),": Missing from destination\n"+f.reset,makeString(src[n])
+                print_(f.src+">>>>",self.dictString(name,n),": Missing from destination\n"+f.reset,makeString(src[n]))
                 self.pling=True
             else:
                 if self.opts.debug:
-                    print "Comparing",self.dictString(name,n)
+                    print_("Comparing",self.dictString(name,n))
                 self.compare(src[n],dst[n],depth+1,self.dictString(name,n))
-                
+
         for n in dst:
             if not n in src:
-                print f.dst+"<<<<",self.dictString(name,n),": Missing from source\n"+f.reset,makeString(dst[n])
+                print_(f.dst+"<<<<",self.dictString(name,n),": Missing from source\n"+f.reset,makeString(dst[n]))
                 self.pling=True
-                
+
+# Should work with Python3 and Python2

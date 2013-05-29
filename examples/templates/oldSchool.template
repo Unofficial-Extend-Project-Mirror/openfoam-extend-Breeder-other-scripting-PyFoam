@@ -1,0 +1,6 @@
+// Test the old template syntax
+
+$$ y=2
+$$ x=2+y
+
+sinX $sin(x)$

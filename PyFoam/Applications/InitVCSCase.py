@@ -3,7 +3,7 @@ Application-class that implements pyFoamInitVCSCase.py
 """
 from optparse import OptionGroup
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
@@ -17,7 +17,7 @@ ruleList=[(False,".*\\.gz$"),
 
 def addRegexpInclude(option,opt,value,parser,*args,**kwargs):
     ruleList.append((True,value))
-    
+
 def addRegexpExclude(option,opt,value,parser,*args,**kwargs):
     ruleList.append((False,value))
 
@@ -43,7 +43,7 @@ Currenty only Mercurial is supported as a VCS-backend
                          "What",
                          "What should be added to version control")
         self.parser.add_option_group(what)
-        
+
         what.add_option("--include-files",
                         action="callback",
                         callback=addRegexpInclude,
@@ -64,7 +64,7 @@ Currenty only Mercurial is supported as a VCS-backend
                         "VCS System",
                         "Control the source-control system")
         self.parser.add_option_group(vcs)
-        
+
         vcs.add_option("--no-init",
                        action="store_false",
                        default=True,
@@ -96,7 +96,7 @@ Currenty only Mercurial is supported as a VCS-backend
         if not self.opts.init:
             vcs=sol.determineVCS()
             if vcs==None:
-                self.error("not under version control")                
+                self.error("not under version control")
             if not vcs in self.vcsChoices:
                 self.error("Unsupported VCS",vcs)
         else:
@@ -123,8 +123,10 @@ Currenty only Mercurial is supported as a VCS-backend
         for g in ["Allrun*","Allclean*"]:
             for f in glob(path.join(sol.name,g)):
                 vcsInter.addPath(f,rules=ruleList)
-                
+
         for a in self.opts.additional:
             vcsInter.addPath(a,rules=ruleList)
-            
+
         vcsInter.commit(self.opts.commitMessage)
+
+# Should work with Python3 and Python2

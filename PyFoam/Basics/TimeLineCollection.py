@@ -1,10 +1,13 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/TimeLineCollection.py 7657 2012-01-06T15:57:58.804712Z bgschaid  $ 
+#  ICE Revision: $Id: TimeLineCollection.py 12774 2013-01-23 17:43:56Z bgschaid $
 """Collection of array of timelines"""
 
 from PyFoam.Error import error
 from math import ceil
 from copy import deepcopy
 from threading import Lock
+import sys
+
+from PyFoam.ThirdParty.six import print_,iteritems
 
 transmissionLock=Lock()
 
@@ -23,7 +26,7 @@ class TimeLinesRegistry(object):
     """Collects references to TimeLineCollection objects"""
 
     nr=1
-    
+
     def __init__(self):
         self.lines={}
 
@@ -31,7 +34,7 @@ class TimeLinesRegistry(object):
         if nr:
             if nr in self.lines:
                 error("Number",nr,"already existing")
-            TimeLinesRegistry.nr=max(nr+1,TimeLinesRegistry)    
+            TimeLinesRegistry.nr=max(nr+1,TimeLinesRegistry)
         else:
             nr=TimeLinesRegistry.nr
             TimeLinesRegistry.nr+=1
@@ -43,19 +46,19 @@ class TimeLinesRegistry(object):
         try:
             return self.lines[nr]
         except KeyError:
-            error(nr,"not a known data set:",self.lines.keys())
-        
+            error(nr,"not a known data set:",list(self.lines.keys()))
+
     def prepareForTransfer(self):
         """Makes sure that the data about the timelines is to be transfered via XMLRPC"""
-        
+
         transmissionLock.acquire()
-        
+
         lst={}
-        for i,p in self.lines.iteritems():
+        for i,p in iteritems(self.lines):
             slaves=[]
             for s in p.slaves:
                 slaves.append(s.lineNr)
-                
+
             lst[str(i)]={ "nr"    : i,
                      "times" : deepcopy(p.times),
                      "values": deepcopy(p.values),
@@ -69,7 +72,7 @@ class TimeLinesRegistry(object):
     def resolveSlaves(self):
         """Looks through all the registered lines and replaces integers with
         the actual registered line"""
-        for i,p in self.lines.iteritems():
+        for i,p in iteritems(self.lines):
             if len(p.slaves)>0:
                 slaves=[]
                 for s in p.slaves:
@@ -77,11 +80,11 @@ class TimeLinesRegistry(object):
                         try:
                             slaves.append(self.lines[s])
                         except KeyError:
-                            error(s,"not a known data set:",self.lines.keys())
+                            error(s,"not a known data set:",list(self.lines.keys()))
                     else:
                         slaves.append(s)
                 p.slaves=slaves
-                
+
 _allLines=TimeLinesRegistry()
 
 def allLines():
@@ -90,7 +93,7 @@ def allLines():
 class TimeLineCollection(object):
 
     possibleAccumulations=["first", "last", "min", "max", "average", "sum","count"]
-    
+
     def __init__(self,
                  deflt=0.,
                  extendCopy=False,
@@ -110,7 +113,7 @@ class TimeLineCollection(object):
         @param preloadData: a dictionary with a dictionary to initialize the values
         @param accumulation: if more than one value is given at any time-step, how to accumulate them (possible values: "first", "last", "min", "max", "average", "sum","count")
         """
-        
+
         self.cTime=None
         self.times=[]
         self.values={}
@@ -143,7 +146,7 @@ class TimeLineCollection(object):
                 self.lastValid=preloadData["lastValid"]
             else:
                 self.resetValid(val=True)
-                
+
         if registry==None:
             registry=allLines()
         self.lineNr=registry.add(self,self.lineNr)
@@ -158,11 +161,11 @@ class TimeLineCollection(object):
 
     def nrValid(self):
         """Helper function that gets the number of valid values"""
-        nr=self.lastValid.values().count(True)
+        nr=list(self.lastValid.values()).count(True)
         for s in self.slaves:
             nr+=s.nrValid()
         return nr
-    
+
     def addSlave(self,slave):
         """Adds a slave time-line-collection"""
         self.slaves.append(slave)
@@ -170,7 +173,7 @@ class TimeLineCollection(object):
                            splitFun=self.fun,
                            advancedSplit=self.advancedSplit,
                            noEmptyTime=self.noEmptyTime)
-        
+
     def setAccumulator(self,name,accu):
         """Sets a special accumulator fopr a timeline
         @param name: Name of the timeline
@@ -178,10 +181,10 @@ class TimeLineCollection(object):
         if not (accu in TimeLineCollection.possibleAccumulations):
             error("Value",accu,"not in list of possible values:",TimeLineCollection.possibleAccumulations,"When setting for",name)
         self.accumulations[name]=accu
-        
+
     def setSplitting(self,splitThres=None,splitFun=None,advancedSplit=False,noEmptyTime=True):
         """Sets the parameters for splitting"""
-        
+
         self.advancedSplit = advancedSplit
         if self.advancedSplit:
             self.splitLevels = []
@@ -207,7 +210,7 @@ class TimeLineCollection(object):
     def setExtend(self,mode):
         """@param mode: whether or not to extend the timeline by copying or setting the default value"""
         self.extendCopy=mode
-        
+
     def nr(self):
         """Number of elements in timelines"""
         return len(self.times)
@@ -216,12 +219,12 @@ class TimeLineCollection(object):
         """Sets the time. If time is new all the timelines are extended
         @param time: the new current time
         @param noLock: do not acquire the lock that ensures consistent data transmission"""
-        
+
         if not noLock:
             transmissionLock.acquire()
 
         dTime=float(time)
-        
+
         if dTime!=self.cTime:
             self.cTime=dTime
             append=True
@@ -230,7 +233,7 @@ class TimeLineCollection(object):
                     append=False
             if append:
                 self.times.append(self.cTime)
-                for v in self.values.values():
+                for v in list(self.values.values()):
                     if len(v)>0 and self.extendCopy:
                         val=v[-1]
                     else:
@@ -239,13 +242,14 @@ class TimeLineCollection(object):
             else:
                 if len(self.times)>0:
                     self.times[-1]=self.cTime
-                
+
             self.resetValid()
-            
+
             if self.thres and append:
+              try:
                 if len(self.times)>=self.thres:
                     if self.advancedSplit:
-                        # Clumsy algorithm where the maximum and the minimum of a 
+                        # Clumsy algorithm where the maximum and the minimum of a
                         # data-window are preserved in that order
                         if len(self.splitLevels)<len(self.times):
                             self.splitLevels+=[0]*(len(self.times)-len(self.splitLevels))
@@ -256,10 +260,13 @@ class TimeLineCollection(object):
                         splitFrom=0
                         maxLevel=self.splitLevels[0]
                         for l in range(maxLevel):
-                            li=self.splitLevels.index(l)
-                            if li>=0 and li<splitTill/2:
-                                splitFrom=li
-                                break
+                             try:
+                                 li=self.splitLevels.index(l)
+                                 if li>=0 and li<splitTill/2:
+                                     splitFrom=li
+                                     break
+                             except ValueError:
+                                 pass
                         window=4
                         if ((splitTill-splitFrom)/window)!=0:
                             splitTill=splitFrom+window*int(ceil((splitTill-splitFrom)/float(window)))
@@ -270,7 +277,7 @@ class TimeLineCollection(object):
                         values={}
                         for k in self.values:
                             values[k]=self.values[k][:splitFrom]
-                            
+
                         for start in range(splitFrom,splitTill,window):
                             end=start+window-1
                             sTime=self.times[start]
@@ -303,10 +310,16 @@ class TimeLineCollection(object):
                             assert len(self.times)==len(self.values[k])
                     else:
                         self.times=self.split(self.times,min)
-                        for k in self.values.keys():
+                        for k in list(self.values.keys()):
                             self.values[k]=self.split(self.values[k],self.fun)
+              except Exception:
+                   e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+                   err, detail, tb = sys.exc_info()
+                   print_(e)
+                   error("Problem splitting",e)
+
             self.occured={}
-            
+
         for s in self.slaves:
             s.setTime(time,noLock=True,forceAppend=append)
 
@@ -325,7 +338,7 @@ class TimeLineCollection(object):
             newArray[i]=func(array[2*i],array[2*i+1])
 
         return newArray
-    
+
     def getTimes(self,name=None):
         """@return: A list of the time values"""
         tm=None
@@ -337,21 +350,21 @@ class TimeLineCollection(object):
                     tm=s.times
                     break
         return tm
-    
+
     def getValueNames(self):
         """@return: A list with the names of the safed values"""
-        names=self.values.keys()
+        names=list(self.values.keys())
         for i,s in enumerate(self.slaves):
             for n in s.getValueNames():
                 names.append("%s_slave%02d" % (n,i))
         return names
-    
+
     def getValues(self,name):
         """Gets a timeline
         @param name: Name of the timeline
         @return: List with the values"""
-        
-        if not self.values.has_key(name):
+
+        if name not in self.values:
             if len(self.slaves)>0:
                 if name.find("_slave")>0:
                     nr=int(name[-2:])
@@ -359,21 +372,22 @@ class TimeLineCollection(object):
                     return self.slaves[nr].getValues(nm)
             self.values[name]=self.nr()*[self.defaultValue]
         return self.values[name]
-            
+
     def setValue(self,name,value):
         """Sets the value of the last element in a timeline
         @param name: name of the timeline
         @param value: the last element"""
 
+        val=float(value)
+
         transmissionLock.acquire()
 
         data=self.getValues(name)
-        val=float(value)
         if len(data)>0:
             accu=self.accumulation
-            if not self.occured.has_key(name):
+            if name not in self.occured:
                 if accu=="count":
-                    newValue=1L
+                    newValue=1 # =1L
                 else:
                     newValue=val
                 self.occured[name]=1
@@ -399,36 +413,44 @@ class TimeLineCollection(object):
                     newValue=n+1
                 else:
                     error("Unimplemented accumulator",accu,"for",name)
-                    
+
             data[-1]=newValue
 
         self.lastValid[name]=True
-        
+
         transmissionLock.release()
 
     def getData(self):
         """Return the whole current data as a SpreadsheetData-object"""
 
-        from SpreadsheetData import SpreadsheetData
-        import numpy
-        
-        names=["time"]+self.values.keys()
+        from .SpreadsheetData import SpreadsheetData
+
+        try:
+            import numpy
+        except ImportError:
+            # assume this is pypy and retry
+            import numpypy
+            import numpy
+
+        names=["time"]+list(self.values.keys())
         data=[]
         data.append(self.times)
-        for k in self.values.keys():
+        for k in list(self.values.keys()):
             data.append(self.values[k])
 
         return SpreadsheetData(names=names,data=numpy.asarray(data).transpose())
-    
+
     def getLatestData(self):
         """Return a dictionary with the latest values from all data sets"""
-        
+
         result={}
 
-        for n,d in self.values.iteritems():
+        for n,d in iteritems(self.values):
             if self.lastValid[n] or len(d)<2:
                 result[n]=d[-1]
             else:
                 result[n]=d[-2]
 
         return result
+
+# Should work with Python3 and Python2

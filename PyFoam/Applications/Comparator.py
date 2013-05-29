@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Comparator.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: Comparator.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamComparator
 """
@@ -23,10 +23,12 @@ from PyFoam.LogAnalysis.BoundingLogAnalyzer import BoundingLogAnalyzer
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.Basics.CSVCollection import CSVCollection
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.FoamInformation import changeFoamVersion,injectVariables
 
-from Decomposer import Decomposer
+from .Decomposer import Decomposer
+
+from PyFoam.ThirdParty.six import print_,iteritems,exec_
 
 class Comparator(PyFoamApplication):
     def __init__(self,args=None):
@@ -34,12 +36,12 @@ class Comparator(PyFoamApplication):
 Reads an XML-file that specifies a base case and a parameter-variation
 and executes all the variations of that case
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
                                    usage="%prog [options] <xmlfile>",nr=1,interspersed=True)
-        
+
     def addOptions(self):
         solver=OptionGroup(self.parser,
                            "Solver",
@@ -53,49 +55,49 @@ and executes all the variations of that case
                            "Behaviour",
                            "What should be done and output")
         self.parser.add_option_group(behave)
-        
+
         behave.add_option("--test",
                           action="store_true",
                           default=False,
                           dest="test",
                           help="Only does the preparation steps but does not execute the actual solver an the end")
-        
+
         result.add_option("--removeOld",
                           action="store_true",
                           default=False,
                           dest="removeOld",
                           help="Remove the directories from an old run without asking")
-        
+
         result.add_option("--purge",
                           action="store_true",
                           default=False,
                           dest="purge",
                           help="Remove the case directories after evaluating")
-        
+
         result.add_option("--no-purge",
                           action="store_true",
                           default=False,
                           dest="nopurge",
                           help="Don't remove the case directories after evaluating")
-        
+
         solver.add_option("--steady",
                           action="store_true",
                           default=False,
                           dest="steady",
                           help="Only runs the solver until convergence")
-        
+
         behave.add_option("--showDictionary",
                           action="store_true",
                           default=False,
                           dest="showDict"
                           ,help="Shows the parameter-dictionary after the running of the solver")
-        
+
         solver.add_option("--no-server",
                           dest="server",
                           default=True,
                           action="store_false",
                           help="Don't start the process-control-server")
-        
+
     def run(self):
         fName=self.parser.getArgs()[0]
 
@@ -120,25 +122,25 @@ and executes all the variations of that case
             steady=eval(doc.getAttribute('steady'))
         if self.opts.steady:
             purge=self.opts.steady
-        
-        print " Parameters read OK "
-        print
+
+        print_(" Parameters read OK ")
+        print_()
 
         aLog=open(self.data.id+".overview","w")
         csv=CSVCollection(self.data.id+".csv")
-        
+
         rDir=self.data.id+".results"
         rmtree(rDir)
         mkdir(rDir)
 
         calculated=0
         format="%%0%dd" % len(str(len(self.data)))
-        
+
         for i in range(len(self.data)):
             runID=(format % i)
-            print >>aLog,runID,
+            print_(runID,end=" ",file=aLog)
             csv["ID"]=runID
-            
+
             use,para=self.data[i]
             para["template"]=self.data.template
             para["extension"]=self.data.extension
@@ -146,85 +148,85 @@ and executes all the variations of that case
 
             if use:
                 calculated+=1
-                
-            print "Executing Variation",i+1,"of",len(self.data),
+
+            print_("Executing Variation",i+1,"of",len(self.data),end=" ")
             if calculated!=i+1:
-                print "(",calculated,"actually calculated)"
+                print_("(",calculated,"actually calculated)")
             else:
-                print
-                
-            print "Parameters:",
-            for k,v in para.iteritems():
-                print "%s='%s' " % (k,v),
+                print_()
+
+            print_("Parameters:",end=" ")
+            for k,v in iteritems(para):
+                print_("%s='%s' " % (k,v),end=" ")
                 if v.find(" ")>=0 or v.find("\t")>=0:
                     v="'"+v+"'"
-                print >>aLog,v,
+                print_(v,end=" ",file=aLog)
                 csv[k]=v
-                
-            print
+
+            print_()
 
             if not use:
-                print "Skipping because not all conditions are satisfied"
+                print_("Skipping because not all conditions are satisfied")
                 csv.clear()
-                print 
+                print_()
                 continue
-            
+
             cName=("%s."+format) % (self.data.id, i)
             log=open(cName+".log","w")
-            
+
             para["case"]=cName
-            print "Case-directory:",cName
+            print_("Case-directory:",cName)
             para["results"]=path.join(rDir,runID)
-            print "Results directory:",para["results"]
+            print_("Results directory:",para["results"])
             mkdir(para["results"])
-            
+
             if path.exists(cName):
                 if self.opts.removeOld:
-                    print "   Removing old case-directory"
+                    print_("   Removing old case-directory")
                     rmtree(cName)
                 else:
                     error("Case-directory",cName,"exists")
 
-            print "   copying template"
+            print_("   copying template")
             out=copytree(self.data.template,cName)
-            print >>log,"---- Copying"
+            print_("---- Copying",file=log)
             for l in out:
-                print >>log,l,
-                
-            print "   preparing"
+                print_(l,end=" ",file=log)
+
+            print_("   preparing")
             ok,erg=self.data.prep.execute(para,log)
-            print >>aLog,ok,
+            print_(ok,end=" ",file=aLog)
             csv["prepare OK"]=ok
-            
+
             for i in range(len(erg)):
-                print >>aLog,erg[i],
+                print_(erg[i],end=" ",file=aLog)
                 csv["Prepare %02d" % i]=erg[i]
-                
+
             aLog.flush()
-                
+
             if self.opts.test:
-                print "   Skipping execution"
+                print_("   Skipping execution")
             else:
-                print "   running the solver"
+                print_("   running the solver")
                 sys.stdout.flush()
 
                 if steady:
                     runnerClass=ConvergenceRunner
                 else:
                     runnerClass=AnalyzedRunner
-                    
+
                 run=runnerClass(BoundingLogAnalyzer(doTimelines=True,progress=True),
                                 argv=[self.data.solver,".",cName],
                                 silent=True,
                                 lam=Command.parallel,
                                 server=self.opts.server)
-                
+
                 run.start()
                 ok=run.runOK()
                 if ok:
-                    print "   executed OK"
+                    print_("   executed OK")
                 else:
-                    print "   fatal error"
+                    print_("   fatal error")
 
                 for aName in run.listAnalyzers():
                     a=run.getAnalyzer(aName)
@@ -234,7 +236,7 @@ and executes all the variations of that case
                             if len(v)>0:
                                 para["result_"+aName+"_"+tit]=v[-1]
 
-                print >>aLog,run.runOK(),run.lastTime(),run.run.wallTime(),
+                print_(run.runOK(),run.lastTime(),run.run.wallTime(),end=" ",file=aLog)
                 csv["Run OK"]=run.runOK()
                 csv["End Time"]=run.lastTime()
                 csv["Wall Time"]=run.run.wallTime()
@@ -242,51 +244,51 @@ and executes all the variations of that case
                 csv["CPU Time"]=run.totalCpuTime()
                 csv["Wall Time First Step"]=run.firstClockTime()
                 csv["CPU Time First Step"]=run.firstCpuTime()
-                
+
                 para["endTime"]=run.lastTime()
                 para["runlog"]=run.logFile
 
                 if self.opts.showDict:
-                    print para
-                    
-                print "   evaluating results"
-                
+                    print_(para)
+
+                print_("   evaluating results")
+
                 ok,erg=self.data.post.execute(para,log)
 
                 if Command.parallel!=None:
-                    print "  Stoping LAM"
+                    print_("  Stoping LAM")
                     Command.parallel.stop()
                     Command.parallel=None
-                
+
                 if ok:
-                    print "  Evaluation OK",
+                    print_("  Evaluation OK",end=" ")
                 else:
-                    print "  Evaluation failed",
+                    print_("  Evaluation failed",end=" ")
 
                 if len(erg)>0:
-                    print ":",erg,
-                print
-                
-                print >>aLog,ok,
+                    print_(":",erg,end=" ")
+                print_()
+
+                print_(ok,end=" ",file=aLog)
                 for i in range(len(erg)):
-                    print >>aLog,erg[i],
+                    print_(erg[i],end=" ",file=aLog)
                     csv["Post %02d" % i]=erg[i]
-                    
+
             if purge:
-                print "   removing the case-directory"
+                print_("   removing the case-directory")
                 out=rmtree(cName)
-                print >>log,"---- Removing"
+                print_("---- Removing",file=log)
                 for l in out:
-                    print >>log,l,
+                    print_(l,end=" ",file=log)
 
             log.close()
-            print
-            print >>aLog
+            print_()
+            print_(file=log)
             aLog.flush()
             csv.write()
-            
+
         aLog.close()
-        
+
 class ComparatorData(object):
     """ The object that holds the actual data"""
 
@@ -297,7 +299,7 @@ class ComparatorData(object):
         self.name=doc.getAttribute("name")
         if self.name=="":
             error("No name for 'comparator' given")
-            
+
         base=doc.getElementsByTagName("base")
         if base.length!=1:
             error("One 'base'-element needed. Found",base.length)
@@ -306,7 +308,7 @@ class ComparatorData(object):
         self.vList=[]
         for v in doc.getElementsByTagName("variation"):
             self.vList.append(Variation(v))
-        
+
     def __parseBase(self,e):
         """@param e: The 'base'-element"""
 
@@ -338,7 +340,7 @@ class ComparatorData(object):
         if len(self.vList)==0:
             return 0
         else:
-            nr=1l
+            nr=1
             for v in self.vList:
                 nr*=len(v)
             return nr
@@ -354,18 +356,18 @@ class ComparatorData(object):
         for v in self.vList:
             if (tmp % len(v))!=0:
                 conditions.append(v.condition)
-                
+
             k,val=v[tmp % len(v)]
             result[k]=val
             tmp/=len(v)
-            
-        assert tmp==0        
+
+        assert tmp==0
 
         use=True
         for c in conditions:
             cond=replaceValues(c,result)
             use=use and eval(cond)
-            
+
         return use,result
 
 class CommandChain(object):
@@ -376,8 +378,8 @@ class CommandChain(object):
         for e in c.childNodes:
             if e.nodeType!=xml.dom.Node.ELEMENT_NODE:
                 continue
-            if not e.tagName in self.table.keys():
-                error("Tagname",e.tagName,"not in table of valid tags",self.table.keys())
+            if not e.tagName in list(self.table.keys()):
+                error("Tagname",e.tagName,"not in table of valid tags",list(self.table.keys()))
             self.commands.append(self.table[e.tagName](e))
 
     def execute(self,para,log):
@@ -389,11 +391,11 @@ class CommandChain(object):
         status=True
         for c in self.commands:
 
-            if c.doIt(para):            
+            if c.doIt(para):
                 ok,erg=c.execute(para,log)
             else:
                 ok,erg=True,[]
-                
+
             status=ok and status
             if erg!=None:
                 if type(erg)==list:
@@ -409,9 +411,9 @@ class CommandChain(object):
         for o in self.commands:
             if type(o)==typ:
                 return True
-            
+
         return False
-        
+
 class PreparationChain(CommandChain):
     """Chain of Preparation commands"""
     def __init__(self,c):
@@ -468,8 +470,8 @@ def replaceValues(orig,para):
         post=tmp[e:]
         mid=tmp[a+1:e-1]
 
-        if not mid in para.keys():
-            error("Key",mid,"not existing in keys",para.keys())
+        if not mid in list(para.keys()):
+            error("Key",mid,"not existing in keys",list(para.keys()))
 
         tmp=pre+para[mid]+post
 
@@ -480,7 +482,7 @@ def replaceValues(orig,para):
 class Command(object):
 
     parallel=None
-    
+
     """Abstract base class of all commands"""
     def __init__(self,c):
         self.data=c
@@ -489,12 +491,12 @@ class Command(object):
         cond=getNonEmpty(self.data,"condition",default="True")
         cond=replaceValues(cond,para)
         return eval(cond)
-    
+
     def execute(self,vals,log):
         """@param vals: Dictionary with the keywords
         @return: A boolean whether it completed successfully and a list with results (None if no results are generated)"""
         error("Execute not implemented for",type(self))
-    
+
 class GenericCommand(Command):
     """Executes a shell command"""
     def __init__(self,c):
@@ -503,20 +505,20 @@ class GenericCommand(Command):
 
     def execute(self,para,log):
         cmd=replaceValues(self.command,para)
-        print "     Executing ",cmd,
+        print_("     Executing ",cmd,end=" ")
         sys.stdout.flush()
         out=execute(cmd)
 
         if len(out)>0:
-            print " -->",len(out),"lines output"
+            print_(" -->",len(out),"lines output")
             for l in out:
-                print >>log,"---- Command:",cmd
-                print >>log,l,
+                print_("---- Command:",cmd,file=log)
+                print_(l,end=" ",file=log)
         else:
-            print
+            print_()
 
         return True,None
-    
+
 class DerivedCommand(Command):
     """Derives an additional value"""
     def __init__(self,c):
@@ -530,7 +532,7 @@ class DerivedCommand(Command):
             val=eval(tmp)
         except SyntaxError:
             error("Syntax error in",tmp)
-        print "     Setting",self.name,"to",val
+        print_("     Setting",self.name,"to",val)
         para[self.name]=str(val)
 
         return True,None
@@ -542,13 +544,13 @@ class DictionaryCommand(Command):
         self.key=getNonEmpty(c,"key")
 
     def execute(self,para,log):
-        if para.has_key(self.key):
+        if self.key in para:
             return True,para[self.key]
         else:
-            print "-----> ",self.key,"not in set of valid keys",para.keys()
-            print >>log,self.key,"not in set of valid keys of dictionary",para
+            print_("-----> ",self.key,"not in set of valid keys",list(para.keys()))
+            print_(self.key,"not in set of valid keys of dictionary",para,file=log)
             return False,None
-        
+
 class SetDictionaryCommand(Command):
     """Sets value in the chains dictionaries"""
     def __init__(self,c):
@@ -567,9 +569,9 @@ class FoamVersionCommand(Command):
         self.version=getNonEmpty(c,"version")
 
     def execute(self,para,log):
-        print "     Changing OpenFOAM-Version to",self.version
+        print_("     Changing OpenFOAM-Version to",self.version)
         changeFoamVersion(self.version)
-        
+
         return True,None
 
 class SetEnvironmentCommand(Command):
@@ -578,13 +580,13 @@ class SetEnvironmentCommand(Command):
         Command.__init__(self,c)
         self.var=getNonEmpty(c,"variable")
         self.val=getNonEmpty(c,"value")
-        
+
     def execute(self,para,log):
         val=replaceValues(self.val,para)
         var=replaceValues(self.var,para)
-        print "     Setting variable",var,"to",val
+        print_("     Setting variable",var,"to",val)
         environ[var]=val
-        
+
         return True,None
 
 class ChangeEnvironmentCommand(Command):
@@ -595,9 +597,9 @@ class ChangeEnvironmentCommand(Command):
 
     def execute(self,para,log):
         script=replaceValues(self.script,para)
-        print "     Changing environment variables by executing",script
+        print_("     Changing environment variables by executing",script)
         injectVariables(script)
-        
+
         return True,None
 
 class DecomposeCommand(Command):
@@ -612,16 +614,16 @@ class DecomposeCommand(Command):
         nr=int(replaceValues(self.cpus,para))
         machines=replaceValues(self.hostfile,para)
         options=replaceValues(self.options,para)
-        
+
         if nr>1:
-            print "     Decomposing for",nr,"CPUs"
+            print_("     Decomposing for",nr,"CPUs")
             Decomposer(args=[para['case'],str(nr)]+options.split()+["--silent"])
             Command.parallel=LAMMachine(nr=nr,machines=machines)
         else:
-            print "     No decomposition done"
+            print_("     No decomposition done")
 
         return True,None
-    
+
 class ReconstructCommand(Command):
     """Reconstructs a case and deleted the LAM"""
     def __init__(self,c):
@@ -632,7 +634,7 @@ class ReconstructCommand(Command):
 
     def execute(self,para,log):
         if Command.parallel!=None:
-            print "     Doing reconstruction"
+            print_("     Doing reconstruction")
             argv=["reconstructPar",".",para['case']]
             if self.onlyLatest:
                 argv.append("-latestTime")
@@ -640,7 +642,7 @@ class ReconstructCommand(Command):
             run.start()
             Command.parallel.stop()
         else:
-            print "     No reconstruction done"
+            print_("     No reconstruction done")
         Command.parallel=None
 
         return True,None
@@ -654,14 +656,14 @@ class FoamCommand(Command):
 
     def execute(self,para,log):
         argv=[self.utility,".",para['case']]+self.options.split()
-        print "     Executing",string.join(argv),
+        print_("     Executing",string.join(argv),end=" ")
         sys.stdout.flush()
         run=BasicRunner(argv,silent=True,lam=Command.parallel,logname=string.join(argv,"_"))
         run.start()
         if run.runOK():
-            print
+            print_()
         else:
-            print "---> there was a problem"
+            print_("---> there was a problem")
 
         return run.runOK(),None
 
@@ -673,7 +675,7 @@ class FoamUtilityCommand(FoamCommand):
 
     def execute(self,para,log):
         argv=[self.utility,".",para['case']]+self.options.split()
-        print "     Executing and analyzing",string.join(argv),
+        print_("     Executing and analyzing",string.join(argv),end=" ")
         sys.stdout.flush()
         run=UtilityRunner(argv,silent=True,lam=Command.parallel,logname=string.join(argv,"_"))
         run.add("data",self.regexp)
@@ -685,14 +687,14 @@ class FoamUtilityCommand(FoamCommand):
             for a in data:
                 result.append(a)
         if result==None:
-            print "no data",
+            print_("no data",end=" ")
         else:
-            print result,
-            
+            print_(result,end=" ")
+
         if run.runOK():
-            print
+            print_()
         else:
-            print "---> there was a problem"
+            print_("---> there was a problem")
 
         return run.runOK(),result
 
@@ -713,12 +715,14 @@ class SetterCommand(Command):
             val=dictFile[k]
         except KeyError:
             self.error("Key: ",k,"not existing in File",f)
-        except IOError,e:
+        except IOError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             self.error("Problem with file",k,":",e)
 
         try:
-            exec "dictFile[k]"+s+"=v"
-        except Exception,e:
+            exec_("dictFile[k]"+s+"=v")
+        except Exception:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             error("Problem with subexpression:",sys.exc_info()[0],":",e)
 
         dictFile.writeFile()
@@ -731,7 +735,7 @@ class FieldSetterCommand(SetterCommand):
         SetterCommand.__init__(self,c)
         self.field=c.getAttribute("field")
         self.filename=path.join("$case$","0",self.field)
-        
+
 class InitialCommand(FieldSetterCommand):
     """Sets an initial condition"""
     def __init__(self,c):
@@ -740,9 +744,9 @@ class InitialCommand(FieldSetterCommand):
         self.subexpression=""
 
     def execute(self,para,log):
-        print "     Setting initial condition for",self.field
+        print_("     Setting initial condition for",self.field)
         return FieldSetterCommand.execute(self,para,log)
-        
+
 class BoundaryCommand(FieldSetterCommand):
     """Sets a boundary condition"""
     def __init__(self,c):
@@ -754,11 +758,11 @@ class BoundaryCommand(FieldSetterCommand):
         if self.element=="":
             self.element="value"
         self.subexpression+="['"+self.element+"']"
-        
+
     def execute(self,para,log):
-        print "     Setting",self.element,"on",self.patch,"for",self.field
+        print_("     Setting",self.element,"on",self.patch,"for",self.field)
         return FieldSetterCommand.execute(self,para,log)
-        
+
 class DictWriteCommand(SetterCommand):
     """Writes a value to a dictionary"""
     def __init__(self,c):
@@ -771,7 +775,7 @@ class DictWriteCommand(SetterCommand):
         self.value=c.getAttribute("value")
 
     def execute(self,para,log):
-        print "     Manipulating",self.key,"in",self.dict
+        print_("     Manipulating",self.key,"in",self.dict)
         return SetterCommand.execute(self,para,log)
 
 class LastResultCommand(Command):
@@ -780,22 +784,22 @@ class LastResultCommand(Command):
         Command.__init__(self,c)
 
     def execute(self,para,log):
-        print "     Copy last result"
+        print_("     Copy last result")
         sol=SolutionDirectory(para["case"],archive=None)
         sol.addToClone(sol.getLast())
         sol.cloneCase(path.join(para["results"],para["id"]))
         return True,None
-        
+
 class CopyLogCommand(Command):
     """Copies the log file to the results"""
     def __init__(self,c):
         Command.__init__(self,c)
 
     def execute(self,para,log):
-        print "     Copy logfile"
+        print_("     Copy logfile")
         copyfile(para["runlog"],para["results"])
         return True,None
-    
+
 class Variation(object):
     """Represents one variation"""
 
@@ -821,6 +825,8 @@ class Variation(object):
     def __len__(self):
         """@return: number of values"""
         return len(self.values)
-    
+
     def __getitem__(self,key):
         return self.key,self.values[key]
+
+# Should work with Python3 and Python2

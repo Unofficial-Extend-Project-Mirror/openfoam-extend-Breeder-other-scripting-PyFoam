@@ -1,31 +1,32 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Runner.py 7722 2012-01-18T17:50:53.943725Z bgschaid  $ 
+#  ICE Revision: $Id: Runner.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamRunner
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.Execution.AnalyzedRunner import AnalyzedRunner
 from PyFoam.LogAnalysis.BoundingLogAnalyzer import BoundingLogAnalyzer
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.RegionCases import RegionCases
 
-from PyFoam.Error import warning,error
+from PyFoam.Error import warning
 
-from CommonMultiRegion import CommonMultiRegion
-from CommonPlotLines import CommonPlotLines
-from CommonClearCase import CommonClearCase
-from CommonReportUsage import CommonReportUsage
-from CommonReportRunnerData import CommonReportRunnerData
-from CommonWriteAllTrigger import CommonWriteAllTrigger
-from CommonLibFunctionTrigger import CommonLibFunctionTrigger
-from CommonStandardOutput import CommonStandardOutput
-from CommonParallel import CommonParallel
-from CommonRestart import CommonRestart
-from CommonServer import CommonServer
-from CommonVCSCommit import CommonVCSCommit
+from .CommonMultiRegion import CommonMultiRegion
+from .CommonPlotLines import CommonPlotLines
+from .CommonClearCase import CommonClearCase
+from .CommonReportUsage import CommonReportUsage
+from .CommonReportRunnerData import CommonReportRunnerData
+from .CommonWriteAllTrigger import CommonWriteAllTrigger
+from .CommonLibFunctionTrigger import CommonLibFunctionTrigger
+from .CommonStandardOutput import CommonStandardOutput
+from .CommonParallel import CommonParallel
+from .CommonRestart import CommonRestart
+from .CommonServer import CommonServer
+from .CommonVCSCommit import CommonVCSCommit
+from .CommonPrePostHooks import CommonPrePostHooks
 
-from os import path
+from PyFoam.ThirdParty.six import print_
 
 class Runner(PyFoamApplication,
              CommonPlotLines,
@@ -39,7 +40,8 @@ class Runner(PyFoamApplication,
              CommonParallel,
              CommonServer,
              CommonStandardOutput,
-             CommonVCSCommit):
+             CommonVCSCommit,
+             CommonPrePostHooks):
     def __init__(self,args=None):
         description="""\
 Runs an OpenFoam solver.  Needs the usual 3 arguments (<solver>
@@ -51,17 +53,17 @@ solvers b Execution time c) continuity information d) bounding of
 variables
         """
 
-        CommonPlotLines.__init__(self)        
+        CommonPlotLines.__init__(self)
         PyFoamApplication.__init__(self,
                                    exactNr=False,
                                    args=args,
                                    description=description)
-        
+
     def addOptions(self):
         CommonClearCase.addOptions(self)
         CommonReportUsage.addOptions(self)
         CommonReportRunnerData.addOptions(self)
-        CommonRestart.addOptions(self)        
+        CommonRestart.addOptions(self)
         CommonStandardOutput.addOptions(self)
         CommonParallel.addOptions(self)
         CommonPlotLines.addOptions(self)
@@ -70,27 +72,34 @@ variables
         CommonMultiRegion.addOptions(self)
         CommonServer.addOptions(self)
         CommonVCSCommit.addOptions(self)
-        
+        CommonPrePostHooks.addOptions(self)
+
     def run(self):
         if self.opts.keeppseudo and (not self.opts.regions and self.opts.region==None):
             warning("Option --keep-pseudocases only makes sense for multi-region-cases")
-        regionNames=[self.opts.region]
+
+        if self.opts.region:
+            regionNames=self.opts.region
+        else:
+            regionNames=[None]
+
         regions=None
 
         casePath=self.parser.casePath()
         self.checkCase(casePath)
         self.addLocalConfig(casePath)
-        
+
         self.addToCaseLog(casePath,"Starting")
+        self.prepareHooks()
 
         if self.opts.regions or self.opts.region!=None:
-            print "Building Pseudocases"
+            print_("Building Pseudocases")
             sol=SolutionDirectory(casePath,archive=None)
             regions=RegionCases(sol,clean=True)
-            
+
             if self.opts.regions:
                 regionNames=sol.getRegions()
-            
+
         self.processPlotLineOptions(autoPath=casePath)
 
         self.clearCase(SolutionDirectory(casePath,archive=None))
@@ -98,7 +107,7 @@ variables
         lam=self.getParallel(SolutionDirectory(casePath,archive=None))
 
         self.checkAndCommit(SolutionDirectory(casePath,archive=None))
-        
+
         for theRegion in regionNames:
             args=self.buildRegionArgv(casePath,theRegion)
             self.setLogname()
@@ -116,13 +125,15 @@ variables
                                logTail=self.opts.logTail,
                                noLog=self.opts.noLog,
                                remark=self.opts.remark,
+                               parameters=self.getRunParameters(),
                                jobId=self.opts.jobId)
 
             run.createPlots(customRegexp=self.lines_,
                             writeFiles=self.opts.writeFiles)
-            
+
             self.addWriteAllTrigger(run,SolutionDirectory(casePath,archive=None))
             self.addLibFunctionTrigger(run,SolutionDirectory(casePath,archive=None))
+            self.runPreHooks()
 
             run.start()
 
@@ -131,16 +142,18 @@ variables
             else:
                 self.setData(run.data)
 
+            self.runPostHooks()
+
             self.reportUsage(run)
             self.reportRunnerData(run)
 
             if theRegion!=None:
-                print "Syncing into master case"
+                print_("Syncing into master case")
                 regions.resync(theRegion)
 
         if regions!=None:
             if not self.opts.keeppseudo:
-                print "Removing pseudo-regions"
+                print_("Removing pseudo-regions")
                 regions.cleanAll()
             else:
                 for r in sol.getRegions():
@@ -148,4 +161,5 @@ variables
                         regions.clean(r)
 
         self.addToCaseLog(casePath,"Ended")
-        
+
+# Should work with Python3 and Python2

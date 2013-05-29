@@ -13,9 +13,11 @@ from PyFoam.Error import error,warning
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,FoamStringParser
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.FoamInformation import oldAppConvention as oldApp
-from CreateBoundaryPatches import CreateBoundaryPatches
+from .CreateBoundaryPatches import CreateBoundaryPatches
 from PyFoam import configuration as config
 from PyFoam.Basics.DataStructures import Vector
+
+from PyFoam.ThirdParty.six import exec_
 
 class CaseBuilderDescriptionList(object):
     """Gets a list of the case-builder files found in the current path"""
@@ -61,10 +63,10 @@ class ArgWrapper(object):
             if len(val)!=1:
                 return None
             else:
-                return map(str,val[0].getAttribute("values").split("|"))
+                return list(map(str,val[0].getAttribute("values").split("|")))
         else:
             return self.el.getAttribute(name)
-    
+
 class CaseBuilderFile(object):
     """
 This class reads an XML-file that describes how to build a case
@@ -73,7 +75,7 @@ and gives information about the case and if asked to builds the actual case
 
     def __init__(self,fName):
         """@param fName: the XML-file that describes how to build the case"""
-        
+
         dom=parse(fName)
         self.doc=dom.documentElement
 
@@ -82,7 +84,7 @@ and gives information about the case and if asked to builds the actual case
 
     def name(self):
         return self.doc.getAttribute("name")
-    
+
     def description(self):
         return self.doc.getAttribute("description")
 
@@ -92,13 +94,13 @@ and gives information about the case and if asked to builds the actual case
             return ht.firstChild.nodeValue
         else:
             return "<No help text>"
-        
+
     def argTree(self):
         return self.getSingleElement(self.doc,"arguments")
-    
+
     def varTree(self):
         return self.getSingleElement(self.doc,"variables",optional=True)
-        
+
     def filesTree(self):
         return self.getSingleElement(self.doc,"files")
 
@@ -119,7 +121,7 @@ and gives information about the case and if asked to builds the actual case
         if tmp=="":
             tmp="0"
         return tmp
-    
+
     def expandVars(self,orig,keys=None):
         orig=path.expanduser(orig)
         orig=path.expandvars(orig)
@@ -132,7 +134,7 @@ and gives information about the case and if asked to builds the actual case
 
         for a in self.boundaryTree().getElementsByTagName("boundary"):
             bounds.append(a.getAttribute("name"))
-            
+
         return bounds
 
     def boundaryPatterns(self):
@@ -140,7 +142,7 @@ and gives information about the case and if asked to builds the actual case
 
         for a in self.boundaryTree().getElementsByTagName("boundary"):
             bounds.append((a.getAttribute("name"),a.getAttribute("pattern")))
-            
+
         return bounds
 
     def boundaryPatternDict(self):
@@ -148,13 +150,13 @@ and gives information about the case and if asked to builds the actual case
         for nm,pat in self.boundaryPatterns():
             res[nm]=pat
         return res
-    
+
     def boundaryDescriptions(self):
         bounds={}
 
         for a in self.boundaryTree().getElementsByTagName("boundary"):
             bounds[a.getAttribute("name")]=a.getAttribute("description")
-            
+
         return bounds
 
     def argumentGroups(self):
@@ -162,7 +164,7 @@ and gives information about the case and if asked to builds the actual case
 
         for a in self.argTree().getElementsByTagName("argumentgroup"):
             args.append(a.getAttribute("name"))
-            
+
         return args
 
     def argumentGroupDescription(self):
@@ -170,7 +172,7 @@ and gives information about the case and if asked to builds the actual case
 
         for a in self.argTree().getElementsByTagName("argumentgroup"):
             args[a.getAttribute("name")]=a.getAttribute("description")
-            
+
         return args
 
     def arguments(self):
@@ -178,7 +180,7 @@ and gives information about the case and if asked to builds the actual case
 
         for a in self.argTree().getElementsByTagName("arg"):
             args.append(a.getAttribute("name"))
-            
+
         return args
 
     def argumentDict(self):
@@ -186,7 +188,7 @@ and gives information about the case and if asked to builds the actual case
 
         for a in self.argTree().getElementsByTagName("arg"):
             args[a.getAttribute("name")]=ArgWrapper(a)
-            
+
         return args
 
     def groupArguments(self,name=None):
@@ -195,7 +197,7 @@ and gives information about the case and if asked to builds the actual case
         belonging to no group are returned"""
 
         result=[]
-        
+
         for c in self.argTree().childNodes:
             if "tagName" in dir(c):
                 if c.tagName=="arg" and name==None:
@@ -206,13 +208,13 @@ and gives information about the case and if asked to builds the actual case
                             result.append(e.getAttribute("name"))
 
         return result
-    
+
     def argumentDescriptions(self):
         args={}
 
         for a in self.argTree().getElementsByTagName("arg"):
             args[a.getAttribute("name")]=a.getAttribute("description")
-            
+
         return args
 
     def argumentDefaults(self):
@@ -220,7 +222,7 @@ and gives information about the case and if asked to builds the actual case
 
         for a in self.argTree().getElementsByTagName("arg"):
             args[a.getAttribute("name")]=a.getAttribute("default")
-            
+
         return args
 
     def getSingleElement(self,parent,name,optional=False):
@@ -293,26 +295,26 @@ and gives information about the case and if asked to builds the actual case
                         if valid.hasAttribute("max"):
                             if float(arg)>float(valid.getAttribute("max")):
                                 msg="Must be smaller than "+valid.getAttribute("max")
-                                
+
                 elif script:
                     if script.getAttribute("plugin")!="python":
                         error("Only plugin-type 'python' is supported for variable",nm)
                     code=script.firstChild.nodeValue
                     arg=args[nm]
-                    exec code
+                    exec_(code)
                 if msg:
                     totalMsg+=nm+": "+msg+"   "
 
         if totalMsg=="":
             totalMsg=None
-            
+
         return totalMsg
 
     def calculateVariables(self,_args_):
         """Add derived variables to the argument dictionary"""
 
         for _a_ in _args_:
-            exec "%s = '%s'" % (_a_,_args_[_a_])
+            exec_("%s = '%s'" % (_a_,_args_[_a_]))
 
         if self.varTree():
             for _a_ in self.varTree().getElementsByTagName("var"):
@@ -321,20 +323,20 @@ and gives information about the case and if asked to builds the actual case
                     error("Variable",_nm_,"is needed for this routine to work")
 
                 if len(_a_.firstChild.nodeValue)>0:
-                    exec _a_.firstChild.nodeValue
-                    exec "_args_['"+_nm_+"']=str("+_nm_+")"
+                    exec_(_a_.firstChild.nodeValue)
+                    exec_("_args_['"+_nm_+"']=str("+_nm_+")")
 
         return _args_
-    
+
     def buildCase(self,cName,args):
         """Builds the case
         @param cName: The name of the case directory
         @param args: The arguments (as a dictionary)"""
 
         args=self.calculateVariables(args)
-        
+
         os.mkdir(cName)
-        
+
         for d in self.parameterTree().getElementsByTagName("directory"):
             dName=path.join(cName,d.getAttribute("name"))
             if not path.isdir(dName):
@@ -348,13 +350,13 @@ and gives information about the case and if asked to builds the actual case
                     for p in f.getElementsByTagName("parameter"):
                         pName=p.getAttribute("name")
                         pValue=self.expandVars(p.getAttribute("value"),args)
-                        exec "pf"+pName+"="+pValue
+                        exec_("pf"+pName+"="+pValue)
                     pf.writeFile()
 
         prep=self.getSingleElement(self.doc,"meshpreparation")
         util=prep.getElementsByTagName("utility")
         copy=self.getSingleElement(prep,"copy",optional=True)
-        
+
         if len(util)>0 and copy:
             error("Copy and utilitiy mesh preparation specified")
         elif len(util)>0:
@@ -377,7 +379,7 @@ and gives information about the case and if asked to builds the actual case
                              path.join(cName,"constant","polyMesh"))
         else:
             error("Neither copy nor utilitiy mesh preparation specified")
-            
+
         dName=path.join(cName,self.initialDir())
         if not path.isdir(dName):
             os.mkdir(dName)
@@ -386,12 +388,12 @@ and gives information about the case and if asked to builds the actual case
             dFile=path.join(dName,f.getAttribute("name"))
             shutil.copy(path.join(sName,f.getAttribute("name")),dFile)
             default=self.makeBC(self.getSingleElement(f,"defaultbc"),args)
-            
+
             CreateBoundaryPatches(args=["--fix-types",
                                         "--overwrite",
                                         "--clear",
                                         "--default="+default,
-                                        dFile]) 
+                                        dFile])
             bcDict={}
             bounds=self.boundaries()
             for b in f.getElementsByTagName("bc"):
@@ -399,17 +401,18 @@ and gives information about the case and if asked to builds the actual case
                 if nm not in bounds:
                     error("Boundary",nm,"not in list",bounds,"for field",f.getAttribute("name"))
                 bcDict[nm]=b
-                
+
             for name,pattern in self.boundaryPatterns():
                 if name in bcDict:
                     default=self.makeBC(bcDict[name],args)
                     CreateBoundaryPatches(args=["--filter="+pattern,
                                                 "--overwrite",
                                                 "--default="+default,
-                                                dFile]) 
+                                                dFile])
 
             ic=self.expandVars(self.getSingleElement(f,"ic").getAttribute("value"),args)
             pf=ParsedParameterFile(dFile)
             pf["internalField"]="uniform "+ic
             pf.writeFile()
-            
+
+# Should work with Python3 and Python2

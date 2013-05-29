@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/TableData.py 7786 2012-01-24T22:50:47.011292Z bgschaid  $ 
+#  ICE Revision: $Id: TableData.py 12749 2013-01-03 23:07:19Z bgschaid $
 """A simple object for table data where data is accessed with a tuple
 (rowLabel,colLabel)"""
 
@@ -9,7 +9,7 @@ class TableData(object):
     labels have to be known at creation time"""
 
     def __init__(self,rowLabels,columnLabels):
-	"""
+        """
 	@param rowLables: the names of the rows
         @param columnLabels: the names of the columns
 	"""
@@ -21,7 +21,7 @@ class TableData(object):
     def getIndex(self,labels):
         """Return the numeric indizes for these labels"""
         rowName,colName=labels
-        
+
         try:
             row=self.__rowLabels.index(rowName)
             col=self.__columnLabels.index(colName)
@@ -55,22 +55,22 @@ class TableData(object):
 
     def __str__(self):
         """The table as a restructured text object"""
-        
+
         tab=ReSTTable()
         tab[0]=[""]+self.__columnLabels
         tab.addLine(head=True)
         for i,l in enumerate(self.__data):
             tab[i+1]=[self.__rowLabels[i]]+l
-        
+
         return str(tab)
 
     def min(self):
         """Return the minimum of the data in the table"""
-        return min(map(min,self.__data))
+        return min(list(map(min,self.__data)))
 
     def max(self):
         """Return the maximum of the data in the table"""
-        return max(map(max,self.__data))
+        return max(list(map(max,self.__data)))
 
     def columns(self):
         """Iterate over the column names"""
@@ -82,3 +82,4 @@ class TableData(object):
         for c in self.__rowLabels:
             yield c
 
+# Should work with Python3 and Python2

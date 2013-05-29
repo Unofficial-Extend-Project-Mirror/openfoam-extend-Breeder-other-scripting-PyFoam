@@ -1,7 +1,7 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/ConvergenceRunner.py 7636 2011-11-30T13:54:29.838641Z bgschaid  $ 
+#  ICE Revision: $Id: ConvergenceRunner.py 12762 2013-01-03 23:11:02Z bgschaid $
 """Stop solver at convergence"""
 
-from AnalyzedRunner import AnalyzedRunner
+from .AnalyzedRunner import AnalyzedRunner
 from PyFoam.LogAnalysis.SteadyConvergedLineAnalyzer import SteadyConvergedLineAnalyzer
 
 class ConvergenceRunner(AnalyzedRunner):
@@ -14,7 +14,7 @@ class ConvergenceRunner(AnalyzedRunner):
     writeInterval 1;
 
     in the controlDict"""
-    
+
     def __init__(self,analyzer,
                  argv=None,
                  silent=False,
@@ -26,6 +26,7 @@ class ConvergenceRunner(AnalyzedRunner):
                  noLog=False,
                  logTail=None,
                  remark=None,
+                 parameters=None,
                  jobId=None):
         """See AnalyzedRunner"""
         AnalyzedRunner.__init__(self,
@@ -40,15 +41,16 @@ class ConvergenceRunner(AnalyzedRunner):
                                 noLog=noLog,
                                 logTail=logTail,
                                 remark=remark,
+                                parameters=parameters,
                                 jobId=jobId)
-        
+
         self.analyzer.addAnalyzer("Convergence",SteadyConvergedLineAnalyzer())
-        
+
     def lineHandle(self,line):
         """Not to be called: Stops the solver"""
         AnalyzedRunner.lineHandle(self,line)
 
         if not self.analyzer.goOn():
             self.stopGracefully()
-            
-        
+
+# Should work with Python3 and Python2

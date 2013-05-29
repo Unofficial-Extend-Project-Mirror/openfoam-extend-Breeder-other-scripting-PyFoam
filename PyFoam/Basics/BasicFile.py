@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/BasicFile.py 5789 2009-11-06T12:32:54.086322Z bgschaid  $ 
+#  ICE Revision: $Id: BasicFile.py 12747 2013-01-03 23:06:57Z bgschaid $
 """Basic file output"""
 
 class BasicFile(object):
@@ -6,28 +6,28 @@ class BasicFile(object):
 
     The format of the file is: one data-set per line
     Values are separated by tabs
-    
+
     The file is created the first time it is written"""
-    
+
     def __init__(self,name):
         """name - name of the file"""
         self.name=name
         self.isOpen=False
         self.handle=None
         self.append=False
-        
+
     def outputAtStart(self):
         """A hook for outputting stuff at the beginning of the file"""
         pass
-    
+
     def outputAtEnd(self):
         """A hook for outputting stuff at the end of the file"""
         pass
-    
+
     def outputAtLineEnd(self):
         """A hook for outputting stuff at the end of each line"""
         pass
-    
+
     def outputAtLineStart(self):
         """A hook for outputting stuff at the start of each line"""
         pass
@@ -35,11 +35,11 @@ class BasicFile(object):
     def callAtOpen(self):
         """A hook that gets called when the file is opened"""
         pass
-    
+
     def callAtClose(self):
         """A hook that gets called when the file is closed"""
         pass
-    
+
     def getHandle(self):
         """get the file-handle. File is created and opened if it
         wasn't opened before"""
@@ -52,7 +52,7 @@ class BasicFile(object):
             if not self.append:
                 self.outputAtStart()
             self.callAtOpen()
-            
+
         return self.handle
 
     def writeLine(self,data):
@@ -85,4 +85,6 @@ class BasicFile(object):
             self.handle.close()
             self.handle=None
             self.isOpen=False
-            
+
+
+# Should work with Python3 and Python2

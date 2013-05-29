@@ -1,7 +1,7 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/RegionCases.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
+#  ICE Revision: $Id: RegionCases.py 12762 2013-01-03 23:11:02Z bgschaid $
 """Pseudo-Cases for Regions, built from symlinks"""
 
-from SolutionDirectory import SolutionDirectory
+from .SolutionDirectory import SolutionDirectory
 from PyFoam.Error import error
 from glob import glob
 from PyFoam.Basics.Utilities import rmtree
@@ -10,7 +10,7 @@ from os import path,mkdir,symlink,unlink,listdir,renames
 
 class RegionCases:
     """Builds pseudocases for the regions"""
-    
+
     def __init__(self,sol,clean=False,processorDirs=True):
         """@param sol: solution directory
         @param clean: Remove old pseudo-cases"""
@@ -30,7 +30,7 @@ class RegionCases:
         for r in regions:
             rName=self.master.name+"."+r
             mkdir(rName)
-            
+
             mkdir(path.join(rName,"system"))
             for f in listdir(self.master.systemDir(region=r)):
                 self._mklink(self.master.name,r,"system",prefix=path.pardir,postfix=f)
@@ -38,7 +38,7 @@ class RegionCases:
                     path.join(rName,"system","controlDict"))
             symlink(path.join(path.pardir,path.pardir,self.master.name,"system","decomposeParDict"),
                     path.join(rName,"system","decomposeParDict"))
-            
+
             self._mklink(self.master.name,r,"constant")
             for t in self.master.getTimes():
                 self._mklink(self.master.name,r,t)
@@ -56,7 +56,7 @@ class RegionCases:
 
         for r in self.master.getRegions():
             self.resync(r)
-            
+
     def resync(self,region):
         """Update the master case from a region case
         @param region: Name of the region"""
@@ -84,7 +84,7 @@ class RegionCases:
                             src=path.join(path.pardir,path.pardir,path.pardir,"constant",region,f)
                             if not path.exists(dest):
                                 symlink(src,dest)
-        
+
     def _mklink(self,master,region,name,prefix="",postfix=""):
         """Makes a link from the master case to the pseudo-case
         @param master: Name of the master directory
@@ -99,20 +99,20 @@ class RegionCases:
             destname=path.join(destname,postfix)
 
         #        print srcname,"->",destname
-        
+
         symlink(srcname,destname)
 
         return path.exists(srcname)
-    
+
     def _rename(self,master,region,name,prefix="",processor=""):
-        """Moves a directory from 
+        """Moves a directory from
         @param master: Name of the master directory
         @param region: Name of one region
         @param name: Name of the directory to link
         @param prefix:  A prefix to the path"""
 
         rName=master+"."+region
-        
+
         if processor=="":
             destName=path.join(master,name,region)
             srcName=path.join(rName,name)
@@ -121,16 +121,18 @@ class RegionCases:
             destName=path.join(master,processor,name,region)
             srcName=path.join(rName,processor,name)
             prefix=path.join(path.pardir,path.pardir)
-            
+
         #       print srcName,"->",destName
 
         if not path.exists(destName):
             renames(srcName,destName)
             symlink(path.join(prefix,destName),srcName)
-        
+
     def cleanAll(self):
         for r in self.master.getRegions():
             self.clean(r)
 
     def clean(self,region):
         rmtree(self.master.name+"."+region,ignore_errors=True)
+
+# Should work with Python3 and Python2

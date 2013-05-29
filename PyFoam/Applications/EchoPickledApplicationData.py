@@ -1,15 +1,15 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/EchoPickledApplicationData.py 7716 2012-01-16T15:20:17.730519Z bgschaid  $ 
+#  ICE Revision: $Id: EchoPickledApplicationData.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamEchoPickledApplicationData
 """
 
 import sys,re
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
-from CommonPickledDataInput import CommonPickledDataInput
+from .CommonPickledDataInput import CommonPickledDataInput
 
 from PyFoam.Error import PyFoamException
 
@@ -20,7 +20,7 @@ class EchoPickledApplicationData(PyFoamApplication,
 and if asked for prints it. Mainly used for testing the exchange of
 data via pickled data
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -29,9 +29,11 @@ data via pickled data
                                    changeVersion=False,
                                    interspersed=True,
                                    inputApp=inputApp)
-        
+
     def addOptions(self):
         CommonPickledDataInput.addOptions(self)
-    
+
     def run(self):
         self.setData(self.readPickledData())
+
+# Should work with Python3 and Python2

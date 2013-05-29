@@ -1,9 +1,11 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CommonSelectTimesteps.py 6492 2010-04-20T11:17:07.894584Z bgschaid  $ 
+#  ICE Revision: $Id: CommonSelectTimesteps.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Class that implements common functionality for selecting timesteps
 """
 
 from optparse import OptionGroup
+
+from PyFoam.ThirdParty.six import print_
 
 class CommonSelectTimesteps(object):
     """
@@ -11,11 +13,11 @@ class CommonSelectTimesteps(object):
     """
     def __init__(self):
         pass
-    
+
     def addOptions(self,defaultUnique):
         """Add the necessary options
         @param defaultUnique: whether timesteps are unique by default"""
-        
+
         time=OptionGroup(self.parser,
                          "Time Specification",
                          "Which times should be processed")
@@ -47,7 +49,7 @@ class CommonSelectTimesteps(object):
                         action="store",
                         default=None,
                         help="Process all before this time")
-        
+
         if defaultUnique:
             time.add_option("--duplicate-times",
                             dest="unique",
@@ -60,7 +62,7 @@ class CommonSelectTimesteps(object):
                             action="store_true",
                             default=False,
                             help="Use each time-directory only once")
-        
+
         time.add_option("--show-times",
                         dest="showTimes",
                         action="store_true",
@@ -82,7 +84,7 @@ class CommonSelectTimesteps(object):
 
         if self.opts.parallelTimes:
             sol.setToParallel()
-            
+
         if self.opts.latest:
             self.opts.time.append(float(sol.getLast()))
         if self.opts.all:
@@ -99,9 +101,9 @@ class CommonSelectTimesteps(object):
                 tVal=float(t)
                 if tVal>=start and tVal<=end:
                     self.opts.time.append(tVal)
-                
+
         self.opts.time.sort()
-        
+
         times=[]
 
         for s in self.opts.time:
@@ -120,12 +122,14 @@ class CommonSelectTimesteps(object):
             if cnt>0:
                 self.warning("Removed",cnt,"duplicate times")
             times=tmp
-    
+
         if len(times)==0:
             self.warning("No valid times specified")
 
         if self.opts.showTimes:
-            print "Times in case:",sol.getTimes()
-            print "Used times:",times
-            
+            print_("Times in case:",sol.getTimes())
+            print_("Used times:",times)
+
         return times
+
+# Should work with Python3 and Python2

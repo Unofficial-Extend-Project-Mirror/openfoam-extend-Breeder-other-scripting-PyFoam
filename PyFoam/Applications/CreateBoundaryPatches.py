@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CreateBoundaryPatches.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: CreateBoundaryPatches.py 12763 2013-01-08 17:56:07Z bgschaid $
 """
 Application class that implements pyFoamCreateBoundaryPatches.py
 """
@@ -6,11 +6,15 @@ Application class that implements pyFoamCreateBoundaryPatches.py
 import re
 from os import path
 
-from PyFoamApplication import PyFoamApplication
+import sys
+
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.RunDictionary.BoundaryDict import BoundaryDict
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+
+from PyFoam.ThirdParty.six import print_
 
 class CreateBoundaryPatches(PyFoamApplication):
     def __init__(self,args=None):
@@ -19,7 +23,7 @@ Takes a field-file. Looks up the polyMesh/boundary-file of the case
 and adds the corresponding patches to the boundary field setting it to
 zeroGradient for all patches and walls
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -27,7 +31,7 @@ zeroGradient for all patches and walls
                                    changeVersion=False,
                                    nr=1,
                                    interspersed=True)
-        
+
     def addOptions(self):
         self.parser.add_option("--clear-unused",
                                action="store_true",
@@ -39,7 +43,7 @@ zeroGradient for all patches and walls
                                default=None,
                                dest="nocheck",
                                help="Doesn't check whether the boundary tests are consistent")
-        
+
         self.parser.add_option("--test",
                                action="store_true",
                                default=None,
@@ -81,49 +85,51 @@ zeroGradient for all patches and walls
 
         try:
             dictFile=ParsedParameterFile(fName,backup=False)
-        except IOError,e:
+        except IOError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             self.error("Problem with file",fName,":",e)
 
         fName=path.abspath(fName)
         case=path.dirname(path.dirname(fName))
         region=None
-        
+
         if not SolutionDirectory(case,archive=None,paraviewLink=False).isValid():
             # checking for a multi-region case
             case=path.dirname(case)
             region=path.basename(path.dirname(fName))
-            print case,region
+            print_(case,region)
             if region not in SolutionDirectory(case,archive=None,paraviewLink=False).getRegions():
                 self.error(region,"is not a valid region in the case",case)
-                
+
         if self.opts.filter==None:
             flter=re.compile(".+")
         else:
             flter=re.compile(self.opts.filter)
-            
+
         boundaries=dictFile["boundaryField"]
 
         try:
             bFile=BoundaryDict(case,region=region)
-        except IOError,e:
+        except IOError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             self.error("Problem reading the boundary file:",e)
-            
+
         if self.opts.clear:
-            for b in boundaries.keys():
+            for b in list(boundaries.keys()):
                 if b not in bFile.patches():
                     if self.opts.verbose:
-                        print "Deleting patch",b
+                        print_("Deleting patch",b)
                     del boundaries[b]
 
         if not self.opts.nocheck:
             for p in bFile.patches():
-                if boundaries.has_key(p):
+                if p in boundaries:
                     typ=boundaries[p]["type"]
                     pTyp=bFile[p]["type"]
                     if pTyp!="patch" and pTyp!="wall" and pTyp!=typ:
                         if self.opts.fixtypes:
                             if self.opts.verbose:
-                                print "Fixing wall/patch patch",p
+                                print_("Fixing wall/patch patch",p)
                             del boundaries[p]
                             continue
                         else:
@@ -131,26 +137,27 @@ zeroGradient for all patches and walls
                     if typ in ["symmetryPlane","empty","wedge","cyclic","processor"] and pTyp!=typ:
                         if self.opts.fixtypes:
                             if self.opts.verbose:
-                                print "Fixing special patch",p
+                                print_("Fixing special patch",p)
                             del boundaries[p]
                             continue
                         else:
                             self.error("Inconsistent type for ",p,": Is",typ,"but should be some kind of patch type")
-                        
+
         for p in bFile.patches():
-            if (not boundaries.has_key(p) or self.opts.overwrite) and flter.match(p):
+            if (not p in boundaries or self.opts.overwrite) and flter.match(p):
                 pTyp=bFile[p]["type"]
                 if pTyp!="patch" and pTyp!="wall":
                     tmp={"type":pTyp}
                 else:
                     tmp=eval(self.opts.default)
                 if self.opts.verbose:
-                    print "Writing",tmp,"to patch",p
+                    print_("Writing",tmp,"to patch",p)
                 boundaries[p]=tmp;
 
         if self.opts.test:
-            print str(dictFile)
+            print_(str(dictFile))
         else:
             dictFile.writeFile()
             self.addToCaseLog(case)
-    
+
+# Should work with Python3 and Python2

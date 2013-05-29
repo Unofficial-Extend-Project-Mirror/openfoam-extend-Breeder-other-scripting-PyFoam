@@ -1,0 +1,11 @@
+$$ x=2+y
+$$ import os
+$$ from platform import uname
+sinX |-sin(x)-|
+
+machine: |-uname()[1]-|
+
+<!--(for v in vals)-->
+$$ toPrint=str(vals[v])
+Key @!v!@ : <!--(for i in range(80-len(toPrint)-len(v)))--> <!--(end)--> @!toPrint!@
+<!--(end)-->

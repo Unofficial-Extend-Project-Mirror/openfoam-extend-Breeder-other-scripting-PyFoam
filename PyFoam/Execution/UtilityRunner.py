@@ -1,7 +1,7 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/UtilityRunner.py 7636 2011-11-30T13:54:29.838641Z bgschaid  $ 
+#  ICE Revision: $Id: UtilityRunner.py 12664 2012-08-27 09:04:34Z bgschaid $
 """Run a non-solver utility"""
 
-from AnalyzedRunner import AnalyzedRunner
+from PyFoam.Execution.AnalyzedRunner import AnalyzedRunner
 from PyFoam.LogAnalysis.UtilityAnalyzer import UtilityAnalyzer
 
 class UtilityRunner(AnalyzedRunner):
@@ -12,7 +12,7 @@ class UtilityRunner(AnalyzedRunner):
     Each RegEx has a name
 
     For each pattern group in the RegEx one data value is stored"""
-    
+
     def __init__(self,
                  argv=None,
                  silent=False,
@@ -23,6 +23,7 @@ class UtilityRunner(AnalyzedRunner):
                  noLog=False,
                  logTail=None,
                  remark=None,
+                 parameters=None,
                  lam=None,
                  jobId=None):
         """see BasicRunner"""
@@ -36,9 +37,10 @@ class UtilityRunner(AnalyzedRunner):
                                 noLog=noLog,
                                 logTail=logTail,
                                 remark=remark,
+                                parameters=parameters,
                                 lam=lam,
                                 jobId=jobId)
-        
+
     def add(self,name,exp,idNr=None):
         """adds a regular expression
 
@@ -64,4 +66,3 @@ class UtilityRunner(AnalyzedRunner):
     def getTimes(self,name,ID=None):
         """get a list of all the times that are available for ID"""
         return self.analyzer.getTimes(name,ID=ID)
-    

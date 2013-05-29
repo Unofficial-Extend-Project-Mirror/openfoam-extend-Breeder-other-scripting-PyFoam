@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/GnuplotRunner.py 7636 2011-11-30T13:54:29.838641Z bgschaid  $ 
+#  ICE Revision: $Id: GnuplotRunner.py 12753 2013-01-03 23:08:03Z bgschaid $
 """Runner that outputs the residuals of the linear solver with Gnuplot"""
 
-from StepAnalyzedCommon import StepAnalyzedCommon
-from BasicRunner import BasicRunner
-from BasicWatcher import BasicWatcher
+from .StepAnalyzedCommon import StepAnalyzedCommon
+from .BasicRunner import BasicRunner
+from .BasicWatcher import BasicWatcher
 
 from PyFoam.LogAnalysis.BoundingLogAnalyzer import BoundingLogAnalyzer
 from PyFoam.LogAnalysis.SteadyConvergedLineAnalyzer import SteadyConvergedLineAnalyzer
@@ -28,7 +28,7 @@ class GnuplotCommon(StepAnalyzedCommon):
                  plotDeltaT=False,
                  hardcopy=False,
                  hardcopyFormat="png",
-                 hardcopyPrefix=None,         
+                 hardcopyPrefix=None,
                  customRegexp=None,
                  writeFiles=False,
                  raiseit=False,
@@ -51,10 +51,10 @@ class GnuplotCommon(StepAnalyzedCommon):
                                                         endTime=end),
                                     writePickled=writePickled,
                                     smallestFreq=smallestFreq)
-        
+
         self.startTime=start
         self.endTime=end
-        
+
         self.plots=self.createPlots(persist=persist,
                                     raiseit=raiseit,
                                     start=start,
@@ -70,17 +70,17 @@ class GnuplotCommon(StepAnalyzedCommon):
                                     plotDeltaT=plotDeltaT,
                                     customRegexp=customRegexp,
                                     plottingImplementation=plottingImplementation)
-    
+
         self.hardcopy=hardcopy
         self.hardcopyFormat=hardcopyFormat
         self.hardcopyPrefix=hardcopyPrefix
-        
+
     def timeHandle(self):
         StepAnalyzedCommon.timeHandle(self)
-        
+
         for p in self.plots:
             self.plots[p].redo()
-            
+
     def stopHandle(self):
         StepAnalyzedCommon.stopHandle(self)
         self.timeHandle()
@@ -89,12 +89,12 @@ class GnuplotCommon(StepAnalyzedCommon):
                 prefix=self.hardcopyPrefix+"."
             else:
                 prefix=""
-                
+
             for p in self.plots:
                 if not self.plots[p].hasData():
                     continue
                 self.plots[p].doHardcopy(prefix+p,self.hardcopyFormat)
-            
+
 class GnuplotRunner(GnuplotCommon,BasicRunner):
     def __init__(self,
                  argv=None,
@@ -110,7 +110,7 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                  customRegexp=None,
                  hardcopy=False,
                  hardcopyFormat="png",
-                 hardcopyPrefix=None,         
+                 hardcopyPrefix=None,
                  writeFiles=False,
                  server=False,
                  lam=None,
@@ -126,6 +126,7 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                  writePickled=True,
                  plottingImplementation=None,
                  remark=None,
+                 parameters=None,
                  jobId=None):
         """@param smallestFreq: smallest Frequency of output
         @param persist: Gnuplot window persistst after run
@@ -141,6 +142,7 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                              noLog=noLog,
                              logTail=logTail,
                              remark=remark,
+                             parameters=parameters,
                              jobId=jobId)
         GnuplotCommon.__init__(self,
                                "Gnuplotting",
@@ -175,12 +177,12 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
         if self.steady:
             if not self.steadyAnalyzer.goOn():
                 self.stopGracefully()
-                
+
     def stopHandle(self):
         """Not to be called: Restores controlDict"""
         GnuplotCommon.stopHandle(self)
         BasicRunner.stopHandle(self)
-             
+
 class GnuplotWatcher(GnuplotCommon,BasicWatcher):
     def __init__(self,
                  logfile,
@@ -244,18 +246,18 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
 
         self.hasPlotted=False
         self.replotFrequency=replotFrequency
-        
+
     def startHandle(self):
         self.bakFreq=self.freq
         if self.endTime!=None:
             self.freq=1
         else:
             self.freq=self.replotFrequency
-        
+
     def tailingHandle(self):
         self.freq=self.bakFreq
         self.oldtime=0
-        
+
     def timeHandle(self):
         plotNow=True
         if not self.hasPlotted and self.endTime!=None:
@@ -269,5 +271,5 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
         if plotNow:
             for p in self.plots:
                 self.plots[p].redo()
-            
-        
+
+# Should work with Python3 and Python2

@@ -3,7 +3,7 @@ Application-class that implements pyFoamJoinCSV.py
 """
 from optparse import OptionGroup
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.Basics.SpreadsheetData import SpreadsheetData
 
 from os import path
@@ -33,12 +33,12 @@ timescale of the the first CSV-file
                         dest="time",
                         default=None,
                         help="Name of the time column")
-        
+
         how=OptionGroup(self.parser,
                          "How",
                          "How the data should be joined")
         self.parser.add_option_group(how)
-        
+
         how.add_option("--force",
                        action="store_true",
                        dest="force",
@@ -70,20 +70,20 @@ timescale of the the first CSV-file
                        dest="delimiter",
                        default=',',
                        help="Delimiter to be used between the values. Default: %default")
-        
-        
+
+
     def run(self):
         dest=self.parser.getArgs()[-1]
         if path.exists(dest) and not self.opts.force:
             self.error("CSV-file",dest,"exists already. Use --force to overwrite")
         sources=self.parser.getArgs()[0:-1]
-        
+
         data=SpreadsheetData(csvName=sources[0],
                              title=path.splitext(path.basename(sources[0]))[0])
-        
+
         if self.opts.time==None:
             self.opts.time=data.names()[0]
-            
+
         for s in sources[1:]:
             addition=path.splitext(path.basename(s))[0]
             sData=SpreadsheetData(csvName=s)
@@ -104,3 +104,5 @@ timescale of the the first CSV-file
 
         data.writeCSV(dest,
                       delimiter=self.opts.delimiter)
+
+# Should work with Python3 and Python2

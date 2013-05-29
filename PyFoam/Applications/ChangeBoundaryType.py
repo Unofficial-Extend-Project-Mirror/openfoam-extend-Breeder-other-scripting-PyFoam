@@ -1,9 +1,9 @@
-#  ICE Revision: $Id:$
+#  ICE Revision: $Id: ChangeBoundaryType.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamChangeBoundaryType.py
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from os import path
 import sys
@@ -11,6 +11,8 @@ from optparse import OptionGroup
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.RunDictionary.ListFile import ListFile
+
+from PyFoam.ThirdParty.six import print_
 
 class ChangeBoundaryType(PyFoamApplication):
     def __init__(self,args=None):
@@ -23,7 +25,7 @@ Changes the type of a boundary in the boundary-file
                                    changeVersion=False,
                                    nr=3,
                                    interspersed=True)
-        
+
     def addOptions(self):
         change=OptionGroup(self.parser,
                            "Change",
@@ -36,12 +38,28 @@ Changes the type of a boundary in the boundary-file
                           dest="test",
                           help="Only print the new boundary file")
 
+        change.add_option("--region",
+                          action="store",
+                          default="",
+                          dest="region",
+                          help="Region to use. If unset the default mesh is used")
+
+        change.add_option("--time-directory",
+                          action="store",
+                          default="constant",
+                          dest="time",
+                          help="Time to use. If unset the mesh in 'constant'' is used")
+
     def run(self):
         fName=self.parser.getArgs()[0]
         bName=self.parser.getArgs()[1]
         tName=self.parser.getArgs()[2]
 
-        boundary=ParsedParameterFile(path.join(".",fName,"constant","polyMesh","boundary"),debug=False,boundaryDict=True)
+        boundaryPath=path.join(".",fName,self.opts.time,self.opts.region,"polyMesh","boundary")
+        try:
+            boundary=ParsedParameterFile(boundaryPath,debug=False,boundaryDict=True)
+        except IOError:
+            self.error("Problem opening boundary file",boundaryPath)
 
         bnd=boundary.content
 
@@ -61,7 +79,9 @@ Changes the type of a boundary in the boundary-file
             self.error("Boundary",bName,"not found in",bnd[::2])
 
         if self.opts.test:
-            print boundary
+            print_(boundary)
         else:
             boundary.writeFile()
             self.addToCaseLog(fName)
+
+# Should work with Python3 and Python2

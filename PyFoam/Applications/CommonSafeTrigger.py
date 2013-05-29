@@ -2,6 +2,8 @@
 Steady runs"""
 
 import re
+import sys
+
 from os import path
 from optparse import OptionGroup
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
@@ -26,7 +28,7 @@ class CommonSafeTrigger(object):
                                default=0.5,
                                help="The factor by which the relaxation-factors should be scaled down (when calculating safe). Default: %default")
         self.parser.add_option_group(grp)
-        
+
     def addSafeTrigger(self,run,sol,steady=True):
         if self.opts.safeUntil:
             if not steady:
@@ -37,14 +39,14 @@ class CommonSafeTrigger(object):
                 run.addTrigger(self.opts.safeUntil,trig.resetIt)
                 run.addEndTrigger(trig.resetIt)
 
-        
+
 class SafeTrigger:
     def __init__(self,sol,factor):
         self.solution=ParsedParameterFile(path.join(sol.systemDir(),"fvSolution"),backup=True)
         self.schemes=ParsedParameterFile(path.join(sol.systemDir(),"fvSchemes"),backup=True)
 
         self.fresh=True
-        
+
         try:
             relax=self.solution["relaxationFactors"]
             for var in relax:
@@ -58,15 +60,18 @@ class SafeTrigger:
 
             self.solution.writeFile()
             self.schemes.writeFile()
-        except Exception,e:
+        except Exception:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             warning("Restoring defaults")
             self.solution.restore()
             self.schemes.restore()
             raise e
-        
+
     def resetIt(self):
         if self.fresh:
             warning("Trigger called: Resetting fvSchemes and fvSolution")
             self.solution.restore()
             self.schemes.restore()
             self.fresh=False
+
+# Should work with Python3 and Python2

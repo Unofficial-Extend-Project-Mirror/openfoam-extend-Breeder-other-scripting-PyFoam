@@ -1,28 +1,31 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/ListFile.py 1906 2007-08-28T16:16:19.392553Z bgschaid  $ 
+#  ICE Revision: $Id: ListFile.py 12750 2013-01-03 23:07:32Z bgschaid $
 """File that contains only a list (for instance points)"""
 
 from PyFoam.Basics.LineReader import LineReader
-from SolutionFile import SolutionFile
+from PyFoam.RunDictionary.SolutionFile import SolutionFile
+
+from PyFoam.ThirdParty.six import PY3
+
+if PY3:
+    long=int
 
 class ListFile(SolutionFile):
     """Represents a OpenFOAM file with only a list"""
-    
+
     def __init__(self,place,name):
         """@param place: directory of the file
         @param name: The name of the list file"""
 
         SolutionFile.__init__(self,place,name)
-            
+
     def getSize(self):
         """@return: the size of the list"""
 
-        size=-1L
+        size=-1 # should be long
 
         l=LineReader()
         self.openFile()
 
-        erg=""
-        
         while l.read(self.fh):
             try:
                 size=long(l.line)
@@ -33,3 +36,5 @@ class ListFile(SolutionFile):
         self.closeFile()
 
         return size
+
+# Should work with Python3 and Python2

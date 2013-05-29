@@ -1,8 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/ClusterJob.py 7722 2012-01-18T17:50:53.943725Z bgschaid  $ 
+#  ICE Revision: $Id: ClusterJob.py 12758 2013-01-03 23:08:44Z bgschaid $
 """Encapsulates all necessary things for a cluster-job, like setting
 up, running, restarting"""
 
-import os,sys
+import os,sys,subprocess
 from os import path,unlink
 from threading import Thread,Lock,Timer
 
@@ -11,10 +11,13 @@ from PyFoam.Applications.Runner import Runner
 from PyFoam.Applications.SteadyRunner import SteadyRunner
 from PyFoam.Applications.CloneCase import CloneCase
 from PyFoam.FoamInformation import changeFoamVersion
+from PyFoam.FoamInformation import foamVersion as getFoamVersion
 from PyFoam.Error import error,warning
 from PyFoam import configuration as config
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+
+from PyFoam.ThirdParty.six import print_,iteritems
 
 def checkForMessageFromAbove(job):
     if not job.listenToTimer:
@@ -23,19 +26,19 @@ def checkForMessageFromAbove(job):
     if path.exists(job.stopFile()):
         job.stopJob()
         return
-    
+
     if path.exists(job.checkpointFile()):
         job.writeCheckpoint()
-    
+
     job.timer=Timer(1.,checkForMessageFromAbove,args=[job])
     job.timer.start()
-    
+
 
 class ClusterJob(object):
     """ All Cluster-jobs are to be derived from this base-class
 
     The actual jobs are implemented by overriding methods
-    
+
     There is a number of variables in this class that are used to
     'communicate' information between the various stages"""
 
@@ -49,6 +52,7 @@ class ClusterJob(object):
                  compileOption=None,
                  useFoamMPI=False,
                  multiRegion=False,
+                 parameters={},
                  isDecomposed=False):
         """Initializes the Job
         @param basename: Basis name of the job
@@ -63,21 +67,22 @@ class ClusterJob(object):
         @param compileOption: Forces compile-option (usually 'Opt' or 'Debug')
         @param useFoamMPI: Use the OpenMPI supplied with OpenFOAM
         @param multiRegion: This job consists of multiple regions
+        @param parameters: Dictionary with parameters that are being passed to the Runner
         @param isDecomposed: Assume that the job is already decomposed"""
 
-        #        print os.environ
-        
-        if not os.environ.has_key("JOB_ID"):
+        #        print_(os.environ)
+
+        if not "JOB_ID" in os.environ:
             error("Not an SGE-job. Environment variable JOB_ID is missing")
         self.jobID=int(os.environ["JOB_ID"])
         self.jobName=os.environ["JOB_NAME"]
-        
+
         self.basename=path.join(path.abspath(path.curdir),basename)
 
         sgeRestarted=False
-        if os.environ.has_key("RESTARTED"):
+        if "RESTARTED" in os.environ:
             sgeRestarted=(int(os.environ["RESTARTED"])!=0)
-            
+
         if sgeRestarted or hardRestart:
             self.restarted=True
         else:
@@ -85,24 +90,26 @@ class ClusterJob(object):
 
         if foamVersion==None:
             foamVersion=config().get("OpenFOAM","Version")
-            
+
         changeFoamVersion(foamVersion,compileOption=compileOption)
 
-        if not os.environ.has_key("WM_PROJECT_VERSION"):
+        if not "WM_PROJECT_VERSION" in os.environ:
             error("No OpenFOAM-Version seems to be configured. Set the foamVersion-parameter")
-            
+
         self.autoParallel=autoParallel
-        
+
         self.doAutoReconstruct=doAutoReconstruct
         if self.doAutoReconstruct==None:
             self.doAutoReconstruct=config().getboolean("ClusterJob","doAutoReconstruct")
-            
+
         self.multiRegion=multiRegion
-        
+
+        self.parameters=parameters
+
         self.hostfile=None
         self.nproc=1
 
-        if os.environ.has_key("NSLOTS"):
+        if "NSLOTS" in os.environ:
             self.nproc=int(os.environ["NSLOTS"])
             self.message("Running on",self.nproc,"CPUs")
             if self.nproc>1:
@@ -110,13 +117,13 @@ class ClusterJob(object):
                 self.hostfile=path.join(os.environ["TMP"],"machines")
                 self.message("Using the machinefile",self.hostfile)
                 self.message("Contents of the machinefile:",open(self.hostfile).readlines())
-                
+
         self.ordinaryEnd=True
         self.listenToTimer=False
 
         self.taskID=None
         self.arrayJob=arrayJob
-        
+
         if self.arrayJob:
             self.taskID=int(os.environ["SGE_TASK_ID"])
 
@@ -125,23 +132,23 @@ class ClusterJob(object):
             self.message("Adding Cluster-specific paths")
             os.environ["PATH"]=config().get("ClusterJob","path")+":"+os.environ["PATH"]
             os.environ["LD_LIBRARY_PATH"]=config().get("ClusterJob","ldpath")+":"+os.environ["LD_LIBRARY_PATH"]
-        
+
         self.isDecomposed=isDecomposed
-                
+
     def fullJobId(self):
         """Return a string with the full job-ID"""
         result=str(self.jobID)
         if self.arrayJob:
             result+=":"+str(self.taskID)
         return result
-    
+
     def message(self,*txt):
-        print "=== CLUSTERJOB: ",
+        print_("=== CLUSTERJOB: ",end="")
         for t in txt:
-            print t,
-        print " ==="
+            print_(t,end="")
+        print_(" ===")
         sys.stdout.flush()
-        
+
     def setState(self,txt):
         self.message("Setting Job state to",txt)
         fName=path.join(self.casedir(),"ClusterJobState")
@@ -156,36 +163,37 @@ class ClusterJob(object):
             jobfile+=".%d" % self.taskID
         jobfile+=".pyFoam.clusterjob"
         jobfile=path.join(path.dirname(self.basename),jobfile)
-        
+
         return jobfile
 
     def checkpointFile(self):
         """The file that makes the job write a checkpoint"""
         return self.jobFile()+".checkpoint"
-    
+
     def stopFile(self):
         """The file that makes the job write a checkpoint and end"""
         return self.jobFile()+".stop"
-    
+
     def doIt(self):
         """The central logic. Runs the job, sets it up etc"""
 
         f=open(self.jobFile(),"w")
         f.write(path.basename(self.basename)+"\n")
         f.close()
-        
+
         self.message()
         self.message("Running on directory",self.casename())
         self.message()
         self.setState("Starting up")
-        
-        parameters=None
+
         if self.arrayJob:
-            parameters=self.taskParameters(self.taskID)
-            self.message("Parameters:",parameters)
+            for k,v in list(self.taskParameters(self.taskID).items()):
+                self.parameters[k]=v
+
+        self.message("Parameters:",self.parameters)
         if not self.restarted:
             self.setState("Setting up")
-            self.setup(parameters)
+            self.setup(self.parameters)
             if self.autoParallel and self.nproc>1 and not self.isDecomposed:
                 self.setState("Decomposing")
                 self.autoDecompose()
@@ -193,7 +201,7 @@ class ClusterJob(object):
             self.isDecomposed=True
 
             self.setState("Setting up 2")
-            self.postDecomposeSetup(parameters)
+            self.postDecomposeSetup(self.parameters)
         else:
             self.setState("Restarting")
 
@@ -203,26 +211,26 @@ class ClusterJob(object):
         self.listenToTimer=True
         self.timer=Timer(1.,checkForMessageFromAbove,args=[self])
         self.timer.start()
-        
-        self.run(parameters)
+
+        self.run(self.parameters)
         self.listenToTimer=False
 
         if path.exists(self.jobFile()):
             unlink(self.jobFile())
-        
+
         if self.ordinaryEnd:
             self.setState("Post Running")
-            self.preReconstructCleanup(parameters)
+            self.preReconstructCleanup(self.parameters)
 
             if self.autoParallel and self.nproc>1:
                 self.setState("Reconstructing")
                 self.autoReconstruct()
 
             if self.nproc>0:
-                self.additionalReconstruct(parameters)
-                
+                self.additionalReconstruct(self.parameters)
+
             self.setState("Cleaning")
-            self.cleanup(parameters)
+            self.cleanup(self.parameters)
             self.setState("Finished")
         else:
             self.setState("Suspended")
@@ -231,7 +239,7 @@ class ClusterJob(object):
             unlink(self.stopFile())
         if path.exists(self.checkpointFile()):
             unlink(self.checkpointFile())
-            
+
     def casedir(self):
         """Returns the actual directory of the case
         To be overridden if appropriate"""
@@ -243,7 +251,28 @@ class ClusterJob(object):
     def casename(self):
         """Returns just the name of the case"""
         return path.basename(self.casedir())
-    
+
+    def execute(self,cmd):
+        """Execute a shell command in the case directory. No checking done
+        @param cmd: the command as a string"""
+        oldDir=os.getcwd()
+        self.message("Changing directory to",self.casedir())
+        os.chdir(self.casedir())
+        self.message("Executing",cmd)
+        try:
+            retcode = subprocess.call(cmd,shell=True)
+            if retcode < 0:
+                self.message(cmd,"was terminated by signal", -retcode)
+            else:
+                self.message(cmd,"returned", retcode)
+        except OSError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+            self.message(cmd,"Execution failed:", e)
+
+        self.message("Executiong of",cmd,"ended")
+        self.message("Changing directory back to",oldDir)
+        os.chdir(oldDir)
+
     def foamRun(self,application,
                 args=[],
                 foamArgs=[],
@@ -266,7 +295,9 @@ class ClusterJob(object):
 
         arglist=args[:]
         arglist+=["--job-id=%s" % self.fullJobId()]
-        
+        for k,v in iteritems(self.parameters):
+            arglist+=["--parameter=%s:%s" % (str(k),str(v))]
+
         if self.isDecomposed and self.nproc>1:
             arglist+=["--procnr=%d" % self.nproc,
                       "--machinefile=%s" % self.hostfile]
@@ -275,22 +306,22 @@ class ClusterJob(object):
             arglist+=["--progress"]
         if noLog:
             arglist+=["--no-log"]
-            
+
         if self.multiRegion:
             if multiRegion==None or multiRegion==True:
                 arglist+=["--all-regions"]
         elif multiRegion and not self.multiRegion:
             warning("This is not a multi-region case, so trying to run stuff multi-region won't do any good")
-            
+
         if self.restarted:
             arglist+=["--restart"]
-            
+
         arglist+=[application]
         if oldApp():
             arglist+=[".",self.casename()]
         else:
             arglist+=["-case",self.casename()]
-            
+
         arglist+=foamArgs
 
         self.message("Executing",arglist)
@@ -300,13 +331,19 @@ class ClusterJob(object):
             runner=SteadyRunner(args=arglist)
         else:
             runner=Runner(args=arglist)
-            
+
     def autoDecompose(self):
         """Automatically decomposes the grid with a metis-algorithm"""
 
         if path.isdir(path.join(self.casedir(),"processor0")):
             warning("A processor directory already exists. There might be a problem")
-        args=["--method=metis",
+
+        defaultMethod="metis"
+
+        if getFoamVersion()>=(1,6):
+            defaultMethod="scotch"
+
+        args=["--method="+defaultMethod,
               "--clear",
               self.casename(),
               self.nproc,
@@ -314,7 +351,7 @@ class ClusterJob(object):
 
         if self.multiRegion:
             args.append("--all-regions")
-            
+
         deco=Decomposer(args=args)
 
     def autoReconstruct(self):
@@ -322,12 +359,12 @@ class ClusterJob(object):
 
         if self.doAutoReconstruct:
             self.isDecomposed=False
-            
+
             self.foamRun("reconstructPar",
                          args=["--logname=ReconstructPar"])
         else:
             self.message("No reconstruction (because asked to)")
-            
+
     def setup(self,parameters):
         """Set up the job. Called in the beginning if the
         job has not been restarted
@@ -367,21 +404,21 @@ class ClusterJob(object):
         @param parameters: a dictionary with parameters"""
 
         pass
-    
+
     def additionalReconstruct(self,parameters):
         """Additional reconstruction of parallel runs (Stuff that the
         OpenFOAM-reconstructPar doesn't do
         @param parameters: a dictionary with parameters"""
 
         pass
-    
+
     def taskParameters(self,id):
         """Parameters for a specific task
         @param id: the id of the task
         @return: a dictionary with parameters for this task"""
 
         error("taskParameter not implemented. Not a parameterized job")
-        
+
         return {}
 
     def writeCheckpoint(self):
@@ -394,7 +431,7 @@ class ClusterJob(object):
             warning("I'm not listening to your callbacks")
 
         self.timer=Timer(1.,checkForMessageFromAbove,args=[self])
-            
+
     def stopJob(self):
         if self.listenToTimer:
             self.ordinaryEnd=False
@@ -404,7 +441,7 @@ class ClusterJob(object):
             unlink(self.stopFile())
         else:
             warning("I'm not listening to your callbacks")
-            
+
 class SolverJob(ClusterJob):
     """A Cluster-Job that executes a solver. It implements the run-function.
     If a template-case is specified, the case is copied"""
@@ -421,6 +458,7 @@ class SolverJob(ClusterJob):
                  useFoamMPI=False,
                  steady=False,
                  multiRegion=False,
+                 parameters={},
                  progress=False,
                  solverProgress=False,
                  solverNoLog=False,
@@ -440,6 +478,7 @@ class SolverJob(ClusterJob):
                             compileOption=compileOption,
                             useFoamMPI=useFoamMPI,
                             multiRegion=multiRegion,
+                            parameters=parameters,
                             isDecomposed=isDecomposed)
         self.solver=solver
         self.steady=steady
@@ -460,4 +499,5 @@ class SolverJob(ClusterJob):
                      multiRegion=False,
                      progress=self.solverProgress,
                      noLog=self.solverNoLog)
-        
+
+# Should work with Python3 and Python2

@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PyFoamApplicationQt4.py 6286 2010-04-01T09:40:31.994745Z bgschaid  $ 
+#  ICE Revision: $Id: PyFoamApplicationQt4.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Base class for pyFoam-applications that have a QT4-GUI
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyQt4 import QtGui,QtCore
 import PyFoam
 
@@ -36,13 +36,13 @@ class PyFoamApplicationQt4(PyFoamApplication):
                                                   changeVersion=changeVersion,
                                                   exactNr=exactNr)
         self.app=None
-        
+
     def setupGUI(self):
         """
         Set up the graphical user interface
         """
         error("Not a valid QT application")
-        
+
 
     def run(self):
         """
@@ -54,9 +54,10 @@ class PyFoamApplicationQt4(PyFoamApplication):
             app.setApplicationVersion(PyFoam.versionString())
         except AttributeError:
             # Old PyQt
-            pass    
+            pass
         app.setOrganizationName("PyFoam")
         self.setupGUI()
-        
+
         sys.exit(app.exec_())
-        
+
+# Should work with Python3 and Python2

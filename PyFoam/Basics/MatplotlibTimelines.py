@@ -1,21 +1,21 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/MatplotlibTimelines.py 7611 2011-10-26T17:40:01.014376Z bgschaid  $ 
+#  ICE Revision: $Id: MatplotlibTimelines.py 12769 2013-01-16 11:38:51Z bgschaid $
 """Plots a collection of timelines"""
 
 from PyFoam.Error import warning,error
 
 from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo,CustomPlotInfo
 
-from GeneralPlotTimelines import GeneralPlotTimelines
+from .GeneralPlotTimelines import GeneralPlotTimelines
 
-from os import uname
+from platform import uname
 
 firstTimeImport=True
 
 class MatplotlibTimelines(GeneralPlotTimelines):
     """This class opens a matplotlib window and plots a timelines-collection in it"""
-    
+
     figureNr=1
-    
+
     def __init__(self,
                  timelines,
                  custom,
@@ -43,7 +43,7 @@ class MatplotlibTimelines(GeneralPlotTimelines):
                 warning("Matplotlib-Version does not support SubplotHost")
         except ImportError:
             error("Matplotlib not installed.")
-    
+
         GeneralPlotTimelines.__init__(self,timelines,custom,showWindow=showWindow,registry=registry)
 
         self.figNr=MatplotlibTimelines.figureNr
@@ -51,9 +51,15 @@ class MatplotlibTimelines(GeneralPlotTimelines):
 
         self.figure=None
         self.title=""
-        
+
+        self.xlabel=""
         self.ylabel=""
         self.ylabel2=""
+        try:
+            if self.spec.xlabel:
+                self.setXLabel(self.spec.xlabel)
+        except AttributeError:
+            pass
         try:
             if self.spec.ylabel:
                 self.setYLabel(self.spec.ylabel)
@@ -64,7 +70,7 @@ class MatplotlibTimelines(GeneralPlotTimelines):
                 self.setYLabel2(self.spec.y2label)
         except AttributeError:
             pass
-        
+
         self.axis1=None
         self.axis2=None
 
@@ -97,6 +103,19 @@ class MatplotlibTimelines(GeneralPlotTimelines):
         except AttributeError:
             pass
 
+        if self.spec.start!=None or self.spec.end!=None:
+            start=self.spec.start
+            end=self.spec.end
+            if start==None:
+                start=tm[0]
+            if end==None:
+                end=tm[-1]
+            self.axis1.set_xbound(lower=start,upper=end)
+            self.axis1.set_autoscalex_on(False)
+            if self.axis2:
+                self.axis2.set_xbound(lower=start,upper=end)
+                self.axis2.set_autoscalex_on(False)
+
         drawstyle='default'
         marker=''
         linestyle='-'
@@ -115,7 +134,7 @@ class MatplotlibTimelines(GeneralPlotTimelines):
             marker='*'
         else:
             warning("'with'-style",self.with_,"not implemented, using 'lines'")
-        
+
         if plotIt:
             a.plot(tm,
                    data,
@@ -123,7 +142,7 @@ class MatplotlibTimelines(GeneralPlotTimelines):
                    drawstyle=drawstyle,
                    marker=marker,
                    linestyle=linestyle)
-        
+
     def preparePlot(self):
         """Prepare the plotting window"""
         plt.hot()
@@ -135,20 +154,18 @@ class MatplotlibTimelines(GeneralPlotTimelines):
             self.figure.add_subplot(self.axis1)
         else:
             self.axis1=self.figure.add_subplot(111)
-        self.axis1.set_xlabel("Time")
+        self.axis1.set_xlabel(self.xlabel)
         self.axis1.set_ylabel(self.ylabel)
-        if self.spec.start or self.spec.end:
-            self.axis1.set_xbound(lower=self.spec.start,upper=self.spec.end)
-            
+
         if len(self.alternate)>0:
             self.axis2=self.axis1.twinx()
             self.axis2.set_ylabel(self.ylabel2)
-        
+
         try:
             if self.spec.logscale:
                 self.axis1.set_yscale("log")
                 if self.axis2:
-                    self.axis2.set_yscale("log")                    
+                    self.axis2.set_yscale("log")
         except AttributeError:
             pass
 
@@ -167,11 +184,16 @@ class MatplotlibTimelines(GeneralPlotTimelines):
         plt.grid(True)
         plt.draw()
         #  plt.show()
-        
+
     def actualSetTitle(self,title):
         """Sets the title"""
 
         self.title=title
+
+    def setXLabel(self,title):
+        """Sets the label on the X-Axis"""
+
+        self.xlabel=title
 
     def setYLabel(self,title):
         """Sets the label on the first Y-Axis"""
@@ -189,4 +211,5 @@ class MatplotlibTimelines(GeneralPlotTimelines):
         @param form: String describing the format"""
 
         self.figure.savefig(filename+"."+form,format=form)
-        
+
+# Should work with Python3 and Python2

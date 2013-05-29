@@ -1,15 +1,18 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Benchmark.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: Benchmark.py 12769 2013-01-16 11:38:51Z bgschaid $
 """
 Class that implements pyFoamBenchmark
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from fnmatch import fnmatch
 
-import sys,string,ConfigParser
+import sys,string
 
-from os import path,uname
+from PyFoam.ThirdParty.six.moves import configparser as ConfigParser
+
+from os import path
+from platform import uname
 from time import time,localtime,asctime
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.FoamInformation import foamTutorials
@@ -21,6 +24,8 @@ from PyFoam.Execution.ParallelExecution import LAMMachine
 from PyFoam.Basics.Utilities import execute,remove,rmtree
 from PyFoam.Basics.CSVCollection import CSVCollection
 from PyFoam.FoamInformation import oldAppConvention as oldApp
+
+from PyFoam.ThirdParty.six import print_
 
 class Benchmark(PyFoamApplication):
     def __init__(self,args=None):
@@ -50,7 +55,7 @@ Runs a set of benchmarks specified in a config files
                                default=None,
                                dest="cases",
                                help="Cases which should be processed (pattern, can be used more than once)")
-        
+
     def run(self):
         config=ConfigParser.ConfigParser()
         files=self.parser.getArgs()
@@ -58,8 +63,8 @@ Runs a set of benchmarks specified in a config files
         good=config.read(files)
         # will work with 2.4
         # if len(good)!=len(files):
-        #    print "Problem while trying to parse files",files
-        #    print "Only ",good," could be parsed"
+        #    print_("Problem while trying to parse files",files)
+        #    print_("Only ",good," could be parsed")
         #    sys.exit(-1)
 
         benchName=config.get("General","name")
@@ -67,7 +72,7 @@ Runs a set of benchmarks specified in a config files
             benchName+="_"+self.opts.nameAddition
         if self.opts.foamVersion!=None:
             benchName+="_v"+self.opts.foamVersion
-            
+
         isParallel=config.getboolean("General","parallel")
         lam=None
 
@@ -80,7 +85,7 @@ Runs a set of benchmarks specified in a config files
             if lam.cpuNr()>nrCpus:
                 self.error("Wrong number of CPUs: ",lam.cpuNr())
 
-            print "Running parallel on",lam.cpuNr(),"CPUs"
+            print_("Running parallel on",lam.cpuNr(),"CPUs")
 
         if config.has_option("General","casesDirectory"):
             casesDirectory=path.expanduser(config.get("General","casesDirectory"))
@@ -90,13 +95,13 @@ Runs a set of benchmarks specified in a config files
         if not path.exists(casesDirectory):
             self.error("Directory",casesDirectory,"needed with the benchmark cases is missing")
         else:
-            print "Using cases from directory",casesDirectory
+            print_("Using cases from directory",casesDirectory)
 
         benchCases=[]
         config.remove_section("General")
 
         for sec in config.sections():
-            print "Reading: ",sec
+            print_("Reading: ",sec)
             skipIt=False
             skipReason=""
             if config.has_option(sec,"skip"):
@@ -112,9 +117,9 @@ Runs a set of benchmarks specified in a config files
                     if fnmatch(sec,p):
                         skipIt=False
                         skipReason=""
-                
+
             if skipIt:
-                print "Skipping case ..... Reason:"+skipReason
+                print_("Skipping case ..... Reason:"+skipReason)
                 continue
             sol=config.get(sec,"solver")
             cas=config.get(sec,"case")
@@ -128,11 +133,11 @@ Runs a set of benchmarks specified in a config files
             add=[]
             if config.has_option(sec,"additional"):
                 add=eval(config.get(sec,"additional"))
-                print "Adding: ", add
+                print_("Adding: ", add)
             util=[]
             if config.has_option(sec,"utilities"):
                 util=eval(config.get(sec,"utilities"))
-                print "Utilities: ", util    
+                print_("Utilities: ", util    )
             nr=99999
             if config.has_option(sec,"nr"):
                 nr=eval(config.get(sec,"nr"))
@@ -162,16 +167,16 @@ Runs a set of benchmarks specified in a config files
                 else:
                     deMet[1]=int(deMet[1])
             else:
-                print "Unimplemented decomposition method",deMet[0],"switching to metis"
+                print_("Unimplemented decomposition method",deMet[0],"switching to metis")
                 deMet=["metis"]
 
             if isParallel==False or parallelOK==True:
                 if path.exists(path.join(casesDirectory,sol,cas)):
                     benchCases.append( (nr,sec,sol,cas,pre,con,preCon,bas,wei,add,util,sp,toRm,setInit,deMet) )
                 else:
-                    print "Skipping",sec,"because directory",path.join(casesDirectory,sol,cas),"could not be found"
+                    print_("Skipping",sec,"because directory",path.join(casesDirectory,sol,cas),"could not be found")
             else:
-                print "Skipping",sec,"because not parallel"
+                print_("Skipping",sec,"because not parallel")
 
         benchCases.sort()
 
@@ -188,21 +193,21 @@ Runs a set of benchmarks specified in a config files
         runsOK=0
         currentEstimate = 1.
 
-        print "\nStart Benching\n"
-        
+        print_("\nStart Benching\n")
+
         csv=CSVCollection("Benchmark."+benchName+"."+uname()[1]+parallelString+".csv")
-        
+
 #        csvHeaders=["description","solver","case","caseDir","base",
 #                    "benchmark","machine","arch","cpus","os","version",
 #                    "wallclocktime","cputime","cputimeuser","cputimesystem","maxmemory","cpuusage","speedup"]
 
         for nr,description,solver,case,prepare,control,preControl,base,weight,additional,utilities,split,toRemove,setInit,decomposition in benchCases:
             #    control.append( ("endTime",-2000) )
-            print "Running Benchmark: ",description
-            print "Solver: ",solver
-            print "Case: ",case
+            print_("Running Benchmark: ",description)
+            print_("Solver: ",solver)
+            print_("Case: ",case)
             caseName=solver+"_"+case+"_"+benchName+"."+uname()[1]+".case"
-            print "Short name: ",caseName
+            print_("Short name: ",caseName)
             caseDir=caseName+".runDir"
 
             csv["description"]=description
@@ -220,7 +225,7 @@ Runs a set of benchmarks specified in a config files
                 csv["cpus"]=lam.cpuNr()
             csv["os"]=uname()[0]
             csv["version"]=uname()[2]
-            
+
             workDir=path.realpath(path.curdir)
 
             orig=SolutionDirectory(path.join(casesDirectory,solver,case),
@@ -234,31 +239,31 @@ Runs a set of benchmarks specified in a config files
                 argv=[solver,workDir,caseDir]
             else:
                 argv=[solver,"-case",path.join(workDir,caseDir)]
-                
+
             run=BasicRunner(silent=True,argv=argv,logname="BenchRunning",lam=lam)
             runDir=run.getSolutionDirectory()
             controlFile=ParameterFile(runDir.controlDict())
 
             for name,value in preControl:
-                print "Setting parameter",name,"to",value,"in controlDict"
+                print_("Setting parameter",name,"to",value,"in controlDict")
                 controlFile.replaceParameter(name,value)
 
             for rm in toRemove:
                 fn=path.join(caseDir,rm)
-                print "Removing file",fn
+                print_("Removing file",fn)
                 remove(fn)
 
             for field,bc,val in setInit:
-                print "Setting",field,"on",bc,"to",val
+                print_("Setting",field,"on",bc,"to",val)
                 SolutionFile(runDir.initialDir(),field).replaceBoundary(bc,val)
 
             oldDeltaT=controlFile.replaceParameter("deltaT",0)
 
             for u in utilities:
-                print "Building utility ",u
+                print_("Building utility ",u)
                 execute("wmake 2>&1 >%s %s" % (path.join(caseDir,"BenchCompile."+u),path.join(caseDir,u)))
 
-            print "Preparing the case: "
+            print_("Preparing the case: ")
             if lam!=None:
                 prepare=prepare+[("decomposePar","")]
                 if decomposition[0]=="metis":
@@ -267,12 +272,12 @@ Runs a set of benchmarks specified in a config files
                     lam.writeSimple(SolutionDirectory(path.join(workDir,caseDir)),decomposition[1])
 
             if split:
-                print "Splitting the mesh:",split
+                print_("Splitting the mesh:",split)
                 bm=BlockMesh(runDir.blockMesh())
                 bm.refineMesh(split)
 
             for pre,post in prepare:
-                print "Doing ",pre," ...."
+                print_("Doing ",pre," ....")
                 post=post.replace("%case%",caseDir)
                 if oldApp():
                     args=string.split("%s %s %s %s" % (pre,workDir,caseDir,post))
@@ -285,12 +290,12 @@ Runs a set of benchmarks specified in a config files
 
             #    control.append(("endTime",-1000))
             for name,value in control:
-                print "Setting parameter",name,"to",value,"in controlDict"
+                print_("Setting parameter",name,"to",value,"in controlDict")
                 controlFile.replaceParameter(name,value)
 
-            print "Starting at ",asctime(localtime(time()))
-            print " Baseline is %f, estimated speedup %f -> estimated end at %s " % (base,currentEstimate,asctime(localtime(time()+base/currentEstimate)))
-            print "Running the case ...."
+            print_("Starting at ",asctime(localtime(time())))
+            print_(" Baseline is %f, estimated speedup %f -> estimated end at %s " % (base,currentEstimate,asctime(localtime(time()+base/currentEstimate))))
+            print_("Running the case ....")
             run.start()
 
             speedup=None
@@ -301,11 +306,11 @@ Runs a set of benchmarks specified in a config files
                 speedup=base/run.run.wallTime()
                 cpuUsage=100.*run.run.cpuTime()/run.run.wallTime()
             except ZeroDivisionError:
-                print "Division by Zero: ",run.run.wallTime()
+                print_("Division by Zero: ",run.run.wallTime())
 
             if not run.runOK():
-                print "\nWARNING!!!!"
-                print "Run had a problem, not using the results. Check the log\n"
+                print_("\nWARNING!!!!")
+                print_("Run had a problem, not using the results. Check the log\n")
                 speedup=None
 
             if speedup!=None:
@@ -323,13 +328,13 @@ Runs a set of benchmarks specified in a config files
                 elif speedup<minSpeedup:
                     minSpeedup=speedup
 
-            print "Wall clock: ",run.run.wallTime()
-            print "Speedup: ",speedup," (Baseline: ",base,")"
-            print "CPU Time: ",run.run.cpuTime()
-            print "CPU Time User: ",run.run.cpuUserTime()
-            print "CPU Time System: ",run.run.cpuSystemTime()
-            print "Memory: ",run.run.usedMemory()
-            print "CPU Usage: %6.2f%%" % (cpuUsage)
+            print_("Wall clock: ",run.run.wallTime())
+            print_("Speedup: ",speedup," (Baseline: ",base,")")
+            print_("CPU Time: ",run.run.cpuTime())
+            print_("CPU Time User: ",run.run.cpuUserTime())
+            print_("CPU Time System: ",run.run.cpuSystemTime())
+            print_("Memory: ",run.run.usedMemory())
+            print_("CPU Usage: %6.2f%%" % (cpuUsage))
 
             csv["wallclocktime"]=run.run.wallTime()
             csv["cputime"]=run.run.cpuTime()
@@ -341,36 +346,38 @@ Runs a set of benchmarks specified in a config files
                 csv["speedup"]=speedup
             else:
                 csv["speedup"]="##"
-                
+
             csv.write()
-            
+
             resultFile.write("Case %s WallTime %g CPUTime %g UserTime %g SystemTime %g Memory %g MB  Speedup %g\n" %(caseName,run.run.wallTime(),run.run.cpuTime(),run.run.cpuUserTime(),run.run.cpuSystemTime(),run.run.usedMemory(),speedupOut))
 
             resultFile.flush()
-            
+
             if speedup!=None:
                 currentEstimate=totalSpeedup/totalWeight
 
             if self.opts.removeCases:
-                print "Clearing case",
+                print_("Clearing case",end=" ")
                 if speedup==None:
-                    print "not ... because it failed"
+                    print_("not ... because it failed")
                 else:
-                    print "completely"
+                    print_("completely")
                     rmtree(caseDir,ignore_errors=True)
 
-            print
-            print
-        
+            print_()
+            print_()
+
         if lam!=None:
             lam.stop()
 
-        print "Total Speedup: ",currentEstimate," ( ",totalSpeedup," / ",totalWeight, " ) Range: [",minSpeedup,",",maxSpeedup,"]"
+        print_("Total Speedup: ",currentEstimate," ( ",totalSpeedup," / ",totalWeight, " ) Range: [",minSpeedup,",",maxSpeedup,"]")
 
-        print runsOK,"of",len(benchCases),"ran OK"
+        print_(runsOK,"of",len(benchCases),"ran OK")
 
         resultFile.write("Total Speedup: %g\n" % (currentEstimate))
         if minSpeedup and maxSpeedup:
             resultFile.write("Range: [ %g , %g ]\n" % (minSpeedup,maxSpeedup))
 
         resultFile.close()
+
+# Should work with Python3 and Python2

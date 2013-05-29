@@ -32,7 +32,7 @@ class CommonMultiRegion(object):
                        dest="keeppseudo",
                        help="Keep the pseudo-cases that were built for a multi-region case")
         self.parser.add_option_group(grp)
-        
+
 
     def buildRegionArgv(self,case,region):
         args=self.parser.getArgs()[:]

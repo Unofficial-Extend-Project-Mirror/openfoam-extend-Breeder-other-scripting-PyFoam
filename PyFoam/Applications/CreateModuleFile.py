@@ -27,11 +27,13 @@ import string
 import re
 from optparse import OptionGroup
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Basics.Utilities import execute
 from sets import Set
 from os import path
+
+from PyFoam.ThirdParty.six import print_
 
 class CreateModuleFile(PyFoamApplication):
     def __init__(self,args=None):
@@ -51,7 +53,7 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
                            "Module",
                            "Options specific for the module-utility")
         self.parser.add_option_group(module)
-        
+
         module.add_option("--csh",
                           action="store_true",
                           dest="useCshell",
@@ -62,9 +64,9 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
                           dest="clearEnvironment",
                           default=False,
                           help='Attempt to clear the environment of all traces of an OpenFOAM-installation before proceeding. This is no substitute to having a clean environment')
-                          
 
-    def uniqifyPathEnvVar(self, pathEnvVar): 
+
+    def uniqifyPathEnvVar(self, pathEnvVar):
         """Remove all duplicates from PATH env var. Order preserving"""
         checked = []
         for e in pathEnvVar.split(':'):
@@ -73,7 +75,7 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
 
         return string.join(checked, ':')
 
-    def removeComponentWithSubstrFromPathEnvVar(self, pathEnvVar, removeSubStr): 
+    def removeComponentWithSubstrFromPathEnvVar(self, pathEnvVar, removeSubStr):
         """Remove components from PATH env var where a substring is present. Order preserving"""
         keepComponents = []
         pathComponents = pathEnvVar.split(':')
@@ -84,7 +86,7 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
 
         return string.join(keepComponents, ':')
 
-    def removeComponentFromPathEnvVar(self, pathEnvVar, removePathComponents): 
+    def removeComponentFromPathEnvVar(self, pathEnvVar, removePathComponents):
         """Remove components from PATH env var. Order preserving"""
         keepComponents = []
         pathComponents = pathEnvVar.split(':')
@@ -126,22 +128,22 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
         pathVars = {}
 
         #Sorting keys
-        keylist = envVarDict.keys()
+        keylist = list(envVarDict.keys())
         keylist.sort()
         for k in keylist:
             value = envVarDict[k][0]
-            
+
             # Remove expanded occurences of $HOME variable
             value = value.replace(homeVar, "$HOME")
-                
+
             # Remove expanded occurences of $USER variable
             value = value.replace(userVar, "$USER")
-                
+
             if k.find('PATH') > -1 and value != ":":
                 pathVars[k] = value
             else:
                 fid.write("setenv " + k + " " + "\"" + value + "\""+ "\n")
-        
+
         # Prepend PATH variables
         fid.write("\n")
         fid.write("# Various PATH variables\n")
@@ -163,23 +165,23 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
             fid.write("if [info exists env(" + k + ")] {set " + k + ' \"$env(' + k + ')\"}\n')
         fid.write("\n")
 
-            
+
     def writeModuleAliasEntry(self, fid, aliasesVarDict, homeVar, userVar):
         """Write Modules file aliases"""
         fid.write("# Aliases\n")
 
         #Sorting keys
-        keylist = aliasesVarDict.keys()
+        keylist = list(aliasesVarDict.keys())
         keylist.sort()
         for k in keylist:
             value = aliasesVarDict[k][0]
-            
+
             # Remove expanded occurences of $HOME variable
             value = value.replace(homeVar, "$HOME")
-                
+
             # Remove expanded occurences of $USER variable
             value = value.replace(userVar, "$USER")
-                
+
             fid.write("set-alias " + k + " " + "\"" + value + "\""+ "\n")
 
     def run(self):
@@ -196,7 +198,7 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
                 oldVersion=None
 
             if oldVersion:
-                for e in os.environ.keys():
+                for e in list(os.environ.keys()):
                     for p in ["WM_","FOAM_"]:
                         if e.find(p)==0:
                             del os.environ[e]
@@ -205,9 +207,9 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
                     if p in os.environ:
                         lst=os.environ[p].split(":")
                         os.environ[p]=":".join([l for l in lst if l.find(oldVersion)<0])
-                        
+
         if path.exists(cfgFile) and path.isfile(cfgFile) and os.access(cfgFile, os.R_OK):
-            print " Using file " + cfgFile + " for loading the OpenFOAM environment"
+            print_(" Using file " + cfgFile + " for loading the OpenFOAM environment")
 
             # Some more sanity check
             fileData = open(cfgFile).read()
@@ -216,7 +218,7 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
             elif useCsh and "export" in fileData:
                 self.error(" Error: Detecting 'export' instructions in this csh file. Please provide a configuration file compatible for csh.")
             else:
-                print " The configuration file seems ok"
+                print_(" The configuration file seems ok")
         else:
             self.error(" Error: Cannot access file: " + cfgFile)
 
@@ -237,16 +239,16 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
                        Please invoke this pyFoam command from a plain OpenFOAM user account.
                        Then, make the result file available to the super user (root) of the"
                        destination host in order to install the modules configuration files.""")
-            
+
         # Grab environment + aliases before the activation of OpenFOAM
-        # We start from a minimal environment using 'env -i'    
+        # We start from a minimal environment using 'env -i'
         shellCmd = 'bash -c'
         sourceCmd = '.'
 
         if useCsh:
             shellCmd = 'csh -c'
             sourceCmd = 'source'
-            
+
         oldEnv=Set(execute(shellCmd + ' "env|sort"'))
         oldAliases=Set(execute(shellCmd + ' "alias|sort"'))
 
@@ -313,10 +315,10 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
                     newPath[key] = value
                 else:
                     envVar.setdefault(key, []).append(value)
-    
+
         # Handle the PATH variables
         for v in newPath:
-            if v in oldPath: 
+            if v in oldPath:
                 # Cleanup old PATH components
                 newPath[v] = self.removeComponentFromPathEnvVar(newPath[v], oldPath[v])
 
@@ -324,7 +326,7 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
             newPath[v] = self.uniqifyPathEnvVar(newPath[v])
             envVar.setdefault(v, []).append(newPath[v])
 
-        # Iterate through aliases variables and store them in dictionary 
+        # Iterate through aliases variables and store them in dictionary
         for v in moduleAliases:
             if v.find('=') > -1:
                 key, value = v.split('=', 1)
@@ -336,16 +338,16 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
                 aliasesVar.setdefault(key, []).append(value)
 
         # Generate module entries
-        print " Generating modulefile: " , moduleFile
+        print_(" Generating modulefile: " , moduleFile)
 
         f = open(moduleFile, 'w')
-        
+
         self.writeModuleFileHeader(f, envVar["WM_PROJECT_VERSION"][0])
         self.writeModuleEnvironmentEntry(f, envVar, homeVar, userVar)
         self.writeModuleAliasEntry(f, aliasesVar, homeVar, userVar)
         self.writeModuleFileFooter(f)
 
         f.close()
-        print " Done\n"
+        print_(" Done\n")
 
-
+# Should work with Python3 and Python2

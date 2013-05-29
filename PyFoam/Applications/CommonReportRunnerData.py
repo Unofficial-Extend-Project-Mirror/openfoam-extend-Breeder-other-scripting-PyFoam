@@ -4,6 +4,8 @@ Class that implements the common functionality for reporting the data that was s
 
 from PyFoam.Basics.RestructuredTextHelper import ReSTTable,RestructuredTextHelper
 
+from PyFoam.ThirdParty.six import print_,iteritems
+
 class CommonReportRunnerData(object):
     """ The class that reports the resource usage
     """
@@ -25,7 +27,7 @@ class CommonReportRunnerData(object):
                                     default=False,
                                     dest="dumpRunnerData",
                                     help="After the execution the data collected by the runner is dumped")
-        
+
     def reportRunnerData(self,run):
         if self.opts.reportRunnerData:
             try:
@@ -33,24 +35,24 @@ class CommonReportRunnerData(object):
             except KeyError:
                 self.error("No analyzed data")
 
-            print "\n Analyzed data:"
-            print
-            
+            print_("\n Analyzed data:")
+            print_()
+
             helper=RestructuredTextHelper(RestructuredTextHelper.LevelSubSubSection)
 
-            for n,d in data.iteritems():
+            for n,d in iteritems(data):
                 table=helper.table()
                 heads=["Descrition","value"]
                 table[0]=heads
                 table.addLine(head=True)
                 lNr=1
 
-                for k,v in d.iteritems():
+                for k,v in iteritems(d):
                     table[(lNr,0)]=k
                     table[(lNr,1)]=v
                     lNr+=1
-                
-                print helper.heading(n),table
+
+                print_(helper.heading(n),table)
 
         if self.opts.reportRunnerData:
             table=ReSTTable()
@@ -59,7 +61,7 @@ class CommonReportRunnerData(object):
             table.addLine(head=True)
             lNr=1
             done=["analyzed"]
-            
+
             def addLine(key,description):
                 if key in run.data:
                     table[(lNr,0)]=description
@@ -67,25 +69,25 @@ class CommonReportRunnerData(object):
                     done.append(key)
                     return lNr+1
                 return lNr
-            
+
             lNr=addLine("time","Last simulation time")
             lNr=addLine("stepNr","Number of timesteps")
             lNr=addLine("lines","Lines written to stdout")
             lNr=addLine("warnings","Number of warnings")
 
             table.addLine()
-            
-            for k,v in run.data.iteritems():
+
+            for k,v in iteritems(run.data):
                 if k not in done:
                     table[(lNr,0)]=k
                     table[(lNr,1)]=v
                     lNr+=1
-                
-            print "\n  Runner data:"
-            print
-            print table
-  
-        if self.opts.dumpRunnerData:
-            print "\n  Runner data:",run.data
 
-        
+            print_("\n  Runner data:")
+            print_()
+            print_(table)
+
+        if self.opts.dumpRunnerData:
+            print_("\n  Runner data:",run.data)
+
+# Should work with Python3 and Python2

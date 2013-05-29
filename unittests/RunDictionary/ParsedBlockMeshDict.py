@@ -4,23 +4,25 @@ from PyFoam.RunDictionary.ParsedBlockMeshDict import ParsedBlockMeshDict
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
-from os import path,environ,system
+from os import path,environ
+from tempfile import mktemp
+from shutil import rmtree
 
 theSuite=unittest.TestSuite()
 
 def plateHoleTutorial():
     prefix=foamTutorials()
     if not oldTutorialStructure():
-        prefix=path.join(prefix,"stressAnalysis")            
+        prefix=path.join(prefix,"stressAnalysis")
     return path.join(prefix,"solidDisplacementFoam","plateHole")
 
 class ParsedBlockMeshDictTest(unittest.TestCase):
     def setUp(self):
-        self.dest="/tmp/TestPlateHole"
+        self.dest=mktemp()
         SolutionDirectory(plateHoleTutorial(),archive=None,paraviewLink=False).cloneCase(self.dest)
 
     def tearDown(self):
-        system("rm -rf "+self.dest)
+        rmtree(self.dest)
 
     def testBoundaryRead(self):
         blk=ParsedBlockMeshDict(SolutionDirectory(self.dest).blockMesh())
@@ -40,5 +42,5 @@ class ParsedBlockMeshDictTest(unittest.TestCase):
             self.assert_(False)
         except ValueError:
             pass
-        
+
 theSuite.addTest(unittest.makeSuite(ParsedBlockMeshDictTest,"test"))

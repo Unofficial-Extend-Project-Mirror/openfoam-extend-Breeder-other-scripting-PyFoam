@@ -6,7 +6,7 @@ Author:
 
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from os import path
 import sys
@@ -14,6 +14,8 @@ from optparse import OptionGroup
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
+
+from PyFoam.ThirdParty.six import print_
 
 class ChangeBoundaryName(PyFoamApplication):
     def __init__(self,args=None):
@@ -27,7 +29,7 @@ time-step is specified
                                    changeVersion=False,
                                    nr=3,
                                    interspersed=True)
-        
+
     def addOptions(self):
         change=OptionGroup(self.parser,
                            "Change",
@@ -69,18 +71,20 @@ time-step is specified
             self.error("Boundary",bName,"not found in",bnd[::2])
 
         if self.opts.test:
-            print boundary
+            print_(boundary)
         else:
             boundary.writeFile()
             self.addToCaseLog(fName)
 
             if self.opts.timestep:
-                print "Updating the files of timestep",self.opts.timestep
+                print_("Updating the files of timestep",self.opts.timestep)
                 td=TimeDirectory(fName,self.opts.timestep,
                                  yieldParsedFiles=True)
 
                 for f in td:
-                    print "Updating",f.name
+                    print_("Updating",f.name)
                     f["boundaryField"][nName]=f["boundaryField"][bName]
                     del f["boundaryField"][bName]
                     f.writeFile()
+
+# Should work with Python3 and Python2

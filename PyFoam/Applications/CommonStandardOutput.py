@@ -57,7 +57,31 @@ class CommonStandardOutput(object):
                        dest="jobId",
                        default=None,
                        help="Text string with the job-ID of the queuing system (usually unused)")
+        inf.add_option("--parameter",
+                       dest="runParameters",
+                       default=[],
+        action="append",
+        help="Parameter that is being added to the runInfo. Of the form <key>:<value>. Can be specified more than once")
         self.parser.add_option_group(inf)
+
+    def getRunParameters(self):
+        """Return a dictionary with the parameters"""
+        parameters={}
+        for p in self.opts.runParameters:
+            try:
+                k,v=p.split(":",1)
+                try:
+                    v=int(v)
+                except ValueError:
+                    try:
+                        v=float(v)
+                    except ValueError:
+                        pass
+                        # keep as a string
+                parameters[k]=v
+            except ValueError:
+                parameters[k]=p
+        return parameters
 
     def setLogname(self,
                    default="PyFoamRunner",
@@ -70,4 +94,3 @@ class CommonStandardOutput(object):
             self.opts.logname=default
         if useApplication:
             self.opts.logname+="."+path.basename(self.parser.getArgs()[0])
-            

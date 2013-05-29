@@ -5,19 +5,21 @@ from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 from PyFoam.Error import PyFoamException
 
-from os import path,environ,system
+from shutil import rmtree
 
-from TimeDirectory import damBreakTutorial
+from tempfile import mktemp
+
+from .TimeDirectory import damBreakTutorial
 
 theSuite=unittest.TestSuite()
 
 class BoundaryDictTest(unittest.TestCase):
     def setUp(self):
-        self.dest="/tmp/TestDamBreak"
+        self.dest=mktemp()
         SolutionDirectory(damBreakTutorial(),archive=None,paraviewLink=False).cloneCase(self.dest)
 
     def tearDown(self):
-        system("rm -rf "+self.dest)
+        rmtree(self.dest)
 
     def testBoundaryRead(self):
         bnd=BoundaryDict(self.dest)
@@ -39,5 +41,5 @@ class BoundaryDictTest(unittest.TestCase):
             self.fail()
         except PyFoamException:
             pass
-        
+
 theSuite.addTest(unittest.makeSuite(BoundaryDictTest,"test"))

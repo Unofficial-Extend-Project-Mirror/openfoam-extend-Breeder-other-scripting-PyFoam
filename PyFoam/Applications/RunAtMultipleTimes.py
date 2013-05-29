@@ -1,18 +1,20 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/RunAtMultipleTimes.py 7722 2012-01-18T17:50:53.943725Z bgschaid  $ 
+#  ICE Revision: $Id: RunAtMultipleTimes.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamRunAtMultipleTimes
 """
 
-from PyFoamApplication import PyFoamApplication
-from CommonSelectTimesteps import CommonSelectTimesteps
-from CommonReportUsage import CommonReportUsage
-from CommonReportRunnerData import CommonReportRunnerData
-from CommonStandardOutput import CommonStandardOutput
-from CommonServer import CommonServer
-from CommonParallel import CommonParallel
+from .PyFoamApplication import PyFoamApplication
+from .CommonSelectTimesteps import CommonSelectTimesteps
+from .CommonReportUsage import CommonReportUsage
+from .CommonReportRunnerData import CommonReportRunnerData
+from .CommonStandardOutput import CommonStandardOutput
+from .CommonServer import CommonServer
+from .CommonParallel import CommonParallel
 
 from PyFoam.Execution.UtilityRunner import UtilityRunner
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+
+from PyFoam.ThirdParty.six import print_
 
 import sys
 from os import path
@@ -41,7 +43,7 @@ times to be run at multiple selected times
         CommonSelectTimesteps.addOptions(self,defaultUnique=True)
         CommonReportUsage.addOptions(self)
         CommonReportRunnerData.addOptions(self)
-        
+
     def run(self):
         cName=self.parser.casePath()
 
@@ -53,9 +55,9 @@ times to be run at multiple selected times
         lam=self.getParallel(SolutionDirectory(cName,archive=None))
 
         data=[]
-        
+
         for i,t in enumerate(times):
-            print " Running for t=",t
+            print_(" Running for t=",t)
             run=UtilityRunner(argv=self.parser.getArgs()+["-time",t],
                               silent=self.opts.progress or self.opts.silent,
                               server=self.opts.server,
@@ -66,7 +68,7 @@ times to be run at multiple selected times
                               lam=lam)
 
             self.addToCaseLog(cName,"Starting for t=%s",t)
-            
+
             run.start()
 
             self.setData({t:run.data})
@@ -77,5 +79,7 @@ times to be run at multiple selected times
             self.reportRunnerData(run)
 
             data.append(run.data)
-            
+
         return data
+
+# Should work with Python3 and Python2

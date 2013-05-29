@@ -1,12 +1,12 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/StandardLogAnalyzer.py 5717 2009-10-12T21:41:13.626022Z bgschaid  $ 
+#  ICE Revision: $Id: StandardLogAnalyzer.py 12753 2013-01-03 23:08:03Z bgschaid $
 """Analyze standard solver"""
 
-from FoamLogAnalyzer import FoamLogAnalyzer
+from .FoamLogAnalyzer import FoamLogAnalyzer
 
-from ContinuityLineAnalyzer import GeneralContinuityLineAnalyzer
-from LinearSolverLineAnalyzer import GeneralLinearSolverLineAnalyzer,GeneralLinearSolverIterationsLineAnalyzer
-from ExecutionTimeLineAnalyzer import GeneralExecutionLineAnalyzer
-from DeltaTLineAnalyzer import GeneralDeltaTLineAnalyzer
+from .ContinuityLineAnalyzer import GeneralContinuityLineAnalyzer
+from .LinearSolverLineAnalyzer import GeneralLinearSolverLineAnalyzer,GeneralLinearSolverIterationsLineAnalyzer
+from .ExecutionTimeLineAnalyzer import GeneralExecutionLineAnalyzer
+from .DeltaTLineAnalyzer import GeneralDeltaTLineAnalyzer
 
 class StandardLogAnalyzer(FoamLogAnalyzer):
     """
@@ -66,9 +66,11 @@ class StandardPlotLogAnalyzer(StandardLogAnalyzer):
     """This analyzer checks the current residuals and generates timelines"""
     def __init__(self):
         StandardLogAnalyzer.__init__(self,progress=True,doTimelines=True,doFiles=False)
-        
+
 ##        self.addAnalyzer("PlotContinuity",GeneralContinuityLineAnalyzer())
 ##        self.addAnalyzer("PlotLinear",GeneralLinearSolverLineAnalyzer())
 ##        self.addAnalyzer("PlotIterations",GeneralLinearSolverIterationsLineAnalyzer())
 ##        self.addAnalyzer("PlotExecution",GeneralExecutionLineAnalyzer())
-        
+
+
+# Should work with Python3 and Python2

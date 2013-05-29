@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/NameFinderLineAnalyzer.py 1532 2007-06-29T11:15:55.577361Z bgschaid  $ 
+#  ICE Revision: $Id: NameFinderLineAnalyzer.py 12762 2013-01-03 23:11:02Z bgschaid $
 """A line analyzer that generates a list of names"""
 
 import re
 
-from ContextLineAnalyzer import ContextLineAnalyzer
+from .ContextLineAnalyzer import ContextLineAnalyzer
 
 class NameFinderLineAnalyzer(ContextLineAnalyzer):
     """Class that finds names depending on a context"""
@@ -21,7 +21,7 @@ class NameFinderLineAnalyzer(ContextLineAnalyzer):
         self.idNr=idNr
 
         self.names=[]
-        
+
     def doActualAnalysis(self,line):
         m=self.analyze.match(line)
         if m!=None:
@@ -30,9 +30,11 @@ class NameFinderLineAnalyzer(ContextLineAnalyzer):
                 val="\""+val+"\""
             self.names.append(val)
             self.callOnChange()
-            
+
     def callOnChange(self):
         """
         To be called if the name list changes
         """
         pass
+
+# Should work with Python3 and Python2

@@ -15,30 +15,41 @@ thorough test of many combinations of Gnuplot.py features.
 """
 
 import os, time, math, tempfile
-import numpy
-    
 try:
-    import Gnuplot, Gnuplot.PlotItems, Gnuplot.funcutils
+    import numpy
+except ImportError:
+    # assume this is pypy and retry
+    import numpypy
+    import numpy
+
+from PyFoam.ThirdParty.six import print_
+from PyFoam.ThirdParty.six.moves import input as rinput
+
+try:
+    from PyFoam.ThirdParty import Gnuplot
+    from PyFoam.ThirdParty.Gnuplot import PlotItems
+    from PyFoam.ThirdParty.Gnuplot import funcutils
+    Gnuplot.funcutils = funcutils
 except ImportError:
     # kludge in case Gnuplot hasn't been installed as a module yet:
-    import __init__
+    from . import __init__
     Gnuplot = __init__
-    import PlotItems
+    from . import PlotItems
     Gnuplot.PlotItems = PlotItems
-    import funcutils
+    from . import funcutils
     Gnuplot.funcutils = funcutils
 
 
 def wait(str=None, prompt='Press return to show results...\n'):
     if str is not None:
-        print str
-    raw_input(prompt)
+        print_(str)
+        #    rinput(prompt)
 
 
 def main():
     """Exercise the Gnuplot module."""
 
-    print (
+    print_ (
         'This program exercises many of the features of Gnuplot.py.  The\n'
         'commands that are actually sent to gnuplot are printed for your\n'
         'enjoyment.'
@@ -62,7 +73,7 @@ def main():
             f.write('%s %s %s\n' % (x, math.cos(x), math.sin(x)))
         f.close()
 
-        print '############### test Func ###################################'
+        print_('############### test Func ###################################')
         wait('Plot a gnuplot-generated function')
         g.plot(Gnuplot.Func('sin(x)'))
 
@@ -81,7 +92,7 @@ def main():
         wait('axes=x2y2')
         g.plot(Gnuplot.Func('sin(x)', axes='x2y2', title='Sine of x'))
 
-        print 'Change Func attributes after construction:'
+        print_('Change Func attributes after construction:')
         f = Gnuplot.Func('sin(x)')
         wait('Original')
         g.plot(f)
@@ -98,7 +109,7 @@ def main():
         f.set_option(axes='x2y2')
         g.plot(f)
 
-        print '############### test File ###################################'
+        print_('############### test File ###################################')
         wait('Generate a File from a filename')
         g.plot(Gnuplot.File(filename1))
 
@@ -125,7 +136,7 @@ def main():
         wait('title="title"')
         g.plot(Gnuplot.File(filename1, title='title'))
 
-        print 'Change File attributes after construction:'
+        print_('Change File attributes after construction:')
         f = Gnuplot.File(filename1)
         wait('Original')
         g.plot(f)
@@ -139,7 +150,7 @@ def main():
         f.set_option(title=None)
         g.plot(f)
 
-        print '############### test Data ###################################'
+        print_('############### test Data ###################################')
         x = numpy.arange(100)/5. - 10.
         y1 = numpy.cos(x)
         y2 = numpy.sin(x)
@@ -163,8 +174,8 @@ def main():
         g.plot(Gnuplot.File(filename1))
         wait('Same thing, inline data')
         g.plot(Gnuplot.Data(d, inline=1))
-        wait('with_="lp 4 4"')
-        g.plot(Gnuplot.Data(d, with_='lp 4 4'))
+        wait('with_="lp lw 4 ps 4"')
+        g.plot(Gnuplot.Data(d, with_='lp lw 4 ps 4'))
         wait('cols=0')
         g.plot(Gnuplot.Data(d, cols=0))
         wait('cols=(0,1), cols=(0,2)')
@@ -185,7 +196,7 @@ def main():
         wait('title="Cosine of x"')
         g.plot(Gnuplot.Data(d, title='Cosine of x'))
 
-        print '############### test compute_Data ###########################'
+        print_('############### test compute_Data ###########################')
         x = numpy.arange(100)/5. - 10.
 
         wait('Plot Data, computed by Gnuplot.py')
@@ -202,10 +213,10 @@ def main():
         wait('with_="lp 4 4"')
         g.plot(Gnuplot.funcutils.compute_Data(x, math.cos, with_='lp 4 4'))
 
-        print '############### test hardcopy ###############################'
-        print '******** Generating postscript file "gp_test.ps" ********'
+        print_('############### test hardcopy ###############################')
+        print_('******** Generating postscript file "gp_test.ps" ********')
         wait()
-        g.plot(Gnuplot.Func('cos(0.5*x*x)', with_='linespoints 2 2',
+        g.plot(Gnuplot.Func('cos(0.5*x*x)', with_='linespoints lw 2 ps 2',
                        title='cos(0.5*x^2)'))
         g.hardcopy('gp_test.ps')
 
@@ -225,7 +236,7 @@ def main():
         g.hardcopy('gp_test.ps', enhanced=0)
         wait('Testing hardcopy options: color=1')
         g.hardcopy('gp_test.ps', color=1)
-        # For some reason, 
+        # For some reason,
         #    g.hardcopy('gp_test.ps', color=0, solid=1)
         # doesn't work here (it doesn't activate the solid option), even
         # though the command sent to gnuplot looks correct.  I'll
@@ -243,21 +254,21 @@ def main():
         wait('Testing hardcopy options: fontsize=20')
         g.hardcopy('gp_test.ps', fontsize=20)
 
-        print '******** Generating svg file "gp_test.svg" ********'
+        print_('******** Generating svg file "gp_test.svg" ********')
         wait()
-        g.plot(Gnuplot.Func('cos(0.5*x*x)', with_='linespoints 2 2',
+        g.plot(Gnuplot.Func('cos(0.5*x*x)', with_='linespoints lw 2 ps 2',
                        title='cos(0.5*x^2)'))
         g.hardcopy('gp_test.svg', terminal='svg')
 
         wait('Testing hardcopy svg options: enhanced')
         g.hardcopy('gp_test.ps', terminal='svg', enhanced='1')
-        
 
-        print '############### test shortcuts ##############################'
+
+        print_('############### test shortcuts ##############################')
         wait('plot Func and Data using shortcuts')
         g.plot('sin(x)', d)
 
-        print '############### test splot ##################################'
+        print_('############### test splot ##################################')
         wait('a 3-d curve')
         g.splot(Gnuplot.Data(d, with_='linesp', inline=0))
         wait('Same thing, saved to a file')
@@ -266,7 +277,7 @@ def main():
         wait('Same thing, inline data')
         g.splot(Gnuplot.Data(d, with_='linesp', inline=1))
 
-        print '############### test GridData and compute_GridData ##########'
+        print_('############### test GridData and compute_GridData ##########')
         # set up x and y values at which the function will be tabulated:
         x = numpy.arange(35)/2.0
         y = numpy.arange(30)/10.0 - 1.5
@@ -278,7 +289,7 @@ def main():
         m = (numpy.sin(xm) + 0.1*xm) - ym**2
         wait('a function of two variables from a GridData file')
         g('set parametric')
-        g('set data style lines')
+        g('set style data lines')
         g('set hidden')
         g('set contour base')
         g.xlabel('x')
@@ -334,3 +345,4 @@ def main():
 if __name__ == '__main__':
     main()
 
+# Should work with Python3 and Python2

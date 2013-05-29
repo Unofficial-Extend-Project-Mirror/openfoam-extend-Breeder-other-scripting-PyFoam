@@ -1,14 +1,14 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/AnalyzedRunner.py 7636 2011-11-30T13:54:29.838641Z bgschaid  $ 
+#  ICE Revision: $Id: AnalyzedRunner.py 12677 2012-09-26 08:20:38Z bgschaid $
 """Command is run and output is analyzed"""
 
-from BasicRunner import BasicRunner
-from StepAnalyzedCommon import StepAnalyzedCommon
+from PyFoam.Execution.BasicRunner import BasicRunner
+from PyFoam.Execution.StepAnalyzedCommon import StepAnalyzedCommon
 
 class AnalyzedRunner(StepAnalyzedCommon,BasicRunner):
     """The output of a command is analyzed while being run
 
     Side effects (files written etc) depend on the analyzer"""
-    
+
     def __init__(self,analyzer,
                  argv=None,
                  silent=False,
@@ -20,6 +20,7 @@ class AnalyzedRunner(StepAnalyzedCommon,BasicRunner):
                  noLog=False,
                  logTail=None,
                  remark=None,
+                 parameters=None,
                  jobId=None,
                  smallestFreq=60.):
         """ @param analyzer: the analyzer for the output
@@ -32,11 +33,14 @@ class AnalyzedRunner(StepAnalyzedCommon,BasicRunner):
                              noLog=noLog,
                              logTail=logTail,
                              remark=remark,
+                             parameters=parameters,
                              jobId=jobId)
         StepAnalyzedCommon.__init__(self,
                                     logname,
                                     analyzer,
                                     smallestFreq=smallestFreq)
+
+        self.writeToStateFile("LogDir",self.logDir)
 
     def lineHandle(self,line):
         """Not to be called: calls the analyzer for the current line"""
@@ -58,7 +62,7 @@ class AnalyzedRunner(StepAnalyzedCommon,BasicRunner):
         if exe==None:
             return None
         else:
-            return exe.clockFirst()        
+            return exe.clockFirst()
 
     def totalCpuTime(self):
         exe=self.getAnalyzer("Execution")
@@ -79,4 +83,3 @@ class AnalyzedRunner(StepAnalyzedCommon,BasicRunner):
         StepAnalyzedCommon.stopHandle(self)
 
         self.tearDown()
-            

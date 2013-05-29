@@ -1,8 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/UtilityAnalyzer.py 1532 2007-06-29T11:15:55.577361Z bgschaid  $ 
+#  ICE Revision: $Id: UtilityAnalyzer.py 12747 2013-01-03 23:06:57Z bgschaid $
 """Analyze OpenFOAM utility"""
 
-from FoamLogAnalyzer import FoamLogAnalyzer
-from RegExpLineAnalyzer import RegExpLineAnalyzer
+from .FoamLogAnalyzer import FoamLogAnalyzer
+from .RegExpLineAnalyzer import RegExpLineAnalyzer
 
 class UtilityAnalyzer(FoamLogAnalyzer):
     """
@@ -25,7 +25,7 @@ class UtilityAnalyzer(FoamLogAnalyzer):
         @param idNr: number of the pattern group that identifies data-sets
         """
         self.addAnalyzer(name,RegExpLineAnalyzer(name,expr,idNr))
-        
+
     def getData(self,name,time=None,ID=None):
         """Get data
 
@@ -56,3 +56,4 @@ class UtilityAnalyzer(FoamLogAnalyzer):
         else:
             return a.getTimes(ID=ID)
 
+# Should work with Python3 and Python2

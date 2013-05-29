@@ -1,13 +1,15 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/QwtPlotTimelines.py 6093 2010-01-28T23:00:14.709549Z bgschaid  $ 
+#  ICE Revision: $Id: QwtPlotTimelines.py 12769 2013-01-16 11:38:51Z bgschaid $
 """Plots a collection of timelines"""
 
 from PyFoam.Error import warning,error
 
 from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo,CustomPlotInfo
 
-from GeneralPlotTimelines import GeneralPlotTimelines
+from .GeneralPlotTimelines import GeneralPlotTimelines
 
-from os import uname
+from platform import uname
+
+from PyFoam.ThirdParty.six import print_
 
 firstTimeImport=True
 app=None
@@ -15,9 +17,9 @@ app=None
 
 class QwtPlotTimelines(GeneralPlotTimelines):
     """This class opens a Qt-window and plots a timelines-collection in aQwt.Plot-widget"""
-    
+
     figureNr=1
-    
+
     def __init__(self,
                  timelines,
                  custom,
@@ -31,16 +33,16 @@ class QwtPlotTimelines(GeneralPlotTimelines):
 
         try:
             global Qt,Qwt,app
-            
+
             from PyQt4 import Qt
             import PyQt4.Qwt5 as Qwt
-            
+
             if showWindow and app==None:
                 app = Qt.QApplication([])
                 #                app.thread()
         except ImportError:
             error("Could not import Qt4 or Qwt")
-    
+
         GeneralPlotTimelines.__init__(self,timelines,custom,showWindow=showWindow,registry=registry)
 
         self.figNr=QwtPlotTimelines.figureNr
@@ -48,7 +50,7 @@ class QwtPlotTimelines(GeneralPlotTimelines):
 
         self.figure=None
         self.title="no title"
-        
+
         self.ylabel="no label"
         self.ylabel2="no label"
         try:
@@ -61,7 +63,7 @@ class QwtPlotTimelines(GeneralPlotTimelines):
                 self.setYLabel2(self.spec.y2label)
         except AttributeError:
             pass
-        
+
         self.axis1=None
         self.axis2=None
 
@@ -73,7 +75,7 @@ class QwtPlotTimelines(GeneralPlotTimelines):
             self.with_='lines'
 
         self.curves={}
-        
+
         self.redo()
 
     def buildData(self,times,name,title,lastValid):
@@ -105,17 +107,17 @@ class QwtPlotTimelines(GeneralPlotTimelines):
 
         if name not in self.curves:
             a=Qwt.QwtPlotCurve(title)
-            print "Plot",dir(a)
+            print_("Plot",dir(a))
             a.attach(self.figure)
             a.setPen(Qt.QPen(Qt.Qt.red))
             self.curves[name]=a
             self.figure.update()
-            
+
         a=self.curves[name]
         a.setData(tm,data)
         #        print "Figure",dir(self.figure)
         self.figure.replot()
-        
+
 ##        drawstyle='default'
 ##        marker=''
 ##        linestyle='-'
@@ -134,7 +136,7 @@ class QwtPlotTimelines(GeneralPlotTimelines):
 ##            marker='*'
 ##        else:
 ##            warning("'with'-style",self.with_,"not implemented, using 'lines'")
-        
+
 ##        if plotIt:
 ##            a.plot(tm,
 ##                   data,
@@ -142,7 +144,7 @@ class QwtPlotTimelines(GeneralPlotTimelines):
 ##                   drawstyle=drawstyle,
 ##                   marker=marker,
 ##                   linestyle=linestyle)
-        
+
     def preparePlot(self):
         """Prepare the plotting window"""
         if self.figure:
@@ -170,7 +172,7 @@ class QwtPlotTimelines(GeneralPlotTimelines):
             self.figure.setAxisTitle(Qwt.QwtPlot.yRight, self.ylabel2)
             self.axis2=Qwt.QwtPlot.yRight
 
-        if self.spec.logscale:   
+        if self.spec.logscale:
             self.figure.setAxisScaleEngine(Qwt.QwtPlot.yLeft,
                                            Qwt.QwtLog10ScaleEngine())
             if len(self.alternate)>0:
@@ -182,10 +184,10 @@ class QwtPlotTimelines(GeneralPlotTimelines):
         mY.setLineStyle(Qwt.QwtPlotMarker.HLine)
         mY.setYValue(0.0)
         mY.attach(self.figure)
-        
+
         self.figure.resize(500,300)
         self.figure.show()
-        
+
 ##        self.figure=plt.figure(self.figNr)
 ##        self.figure.clear()
 ##        # this is black magic that makes the legend work with two axes
@@ -198,16 +200,16 @@ class QwtPlotTimelines(GeneralPlotTimelines):
 ##        self.axis1.set_ylabel(self.ylabel)
 ##        if self.spec.start or self.spec.end:
 ##            self.axis1.set_xbound(lower=self.spec.start,upper=self.spec.end)
-            
+
 ##        if len(self.alternate)>0:
 ##            self.axis2=self.axis1.twinx()
 ##            self.axis2.set_ylabel(self.ylabel2)
-        
+
 ##        try:
 ##            if self.spec.logscale:
 ##                self.axis1.set_yscale("log")
 ##                if self.axis2:
-##                    self.axis2.set_yscale("log")                    
+##                    self.axis2.set_yscale("log")
 ##        except AttributeError:
 ##            pass
 
@@ -215,7 +217,7 @@ class QwtPlotTimelines(GeneralPlotTimelines):
         """Replot the whole data"""
 
         self.figure.replot()
-        
+
 ##        if self.hasSubplotHost:
 ##            l=self.axis1.legend(fancybox=True)
 ##        else:
@@ -248,3 +250,5 @@ class QwtPlotTimelines(GeneralPlotTimelines):
         @param form: String describing the format"""
 
         Qt.QPixmap.grabWidget(self.figure).save(filename+"."+form.lower(),form)
+
+# Should work with Python3 and Python2

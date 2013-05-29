@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/ParallelExecution.py 7428 2011-04-18T14:35:39.514227Z bgschaid  $ 
+#  ICE Revision: $Id: ParallelExecution.py 12766 2013-01-14 13:18:41Z bgschaid $
 """Things that are needed for convenient parallel Execution"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -7,8 +7,8 @@ from PyFoam.Error import error,warning,debug
 from PyFoam import configuration as config
 
 from os import path,environ,system
-from string import strip
-import commands
+
+import subprocess
 
 class LAMMachine(Utilities):
     """Wrapper class for starting an stopping a LAM-Machine"""
@@ -22,20 +22,20 @@ class LAMMachine(Utilities):
 
         if machines=="":
             machines=None
-            
+
         if machines==None and foamMPI()=="LAM":
             error("Machinefile must be specified for LAM")
 
         if machines==None and nr==None:
             error("Either machinefile or Nr of CPUs must be specified for MPI type",foamMPI())
-            
+
         self.mFile=machines
         self.procNr=nr
-        
+
         self.boot()
         if not self.machineOK():
             error("Error: LAM was not started")
-            
+
     def machineOK(self):
         """Check whether the LAM machine was properly booted"""
         if self.running:
@@ -50,18 +50,18 @@ class LAMMachine(Utilities):
         self.running=False
         if(foamMPI()=="LAM"):
             self.execute("lamhalt -v")
-        
+
     def boot(self):
         """Boots a LAM-machine using the machine-file"""
         if foamMPI()=="LAM":
             warning("LAM is untested. Any Feedback most welcome")
             self.execute("lamboot -s -v "+self.mFile)
             self.running=True
-        elif foamMPI()=="OPENMPI" or foamMPI()=="SYSTEMOPENMPI":
+        elif foamMPI().find("OPENMPI")>=0:
             self.running=True
         else:
             error(" Unknown or missing MPI-Implementation: "+foamMPI())
-            
+
     def cpuNr(self):
         if(foamMPI()=="LAM"):
             if self.running:
@@ -74,10 +74,10 @@ class LAMMachine(Utilities):
                 return nr
             else:
                 return -1
-        elif(foamMPI()=="OPENMPI" or foamMPI()=="SYSTEMOPENMPI"):
+        elif foamMPI().find("OPENMPI")>=0:
             if self.mFile:
                 f=open(self.mFile)
-                l=map(strip,f.readlines())
+                l=[i.strip() for i in f.readlines()]
                 f.close()
                 nr=0
                 for m in l:
@@ -93,26 +93,30 @@ class LAMMachine(Utilities):
                     return nr
                 else:
                     return min(nr,self.procNr)
-                
+
             elif self.procNr:
                 return self.procNr
             else:
                 error("Can't determine Nr of CPUs without machinefile")
-                
+
     def buildMPIrun(self,argv,expandApplication=True):
         """Builds a list with a working mpirun command (for that MPI-Implementation)
         @param argv: the original arguments that are to be wrapped
-        @param expandApplication: Expand the 
+        @param expandApplication: Expand the
         @return: list with the correct mpirun-command"""
 
         nr=str(self.cpuNr())
         mpirun=[config().get("MPI","run_"+foamMPI(),default="mpirun")]
-
+        mpiRunPath=self.which(" ".join(mpirun))
+        if not mpiRunPath:
+            error("Could not find a path for",mpirun,
+                  "Check configuration variable","run_"+foamMPI(),
+                  "in section 'MPI'")
         mpirun+=eval(config().get("MPI","options_"+foamMPI()+"_pre",default="[]"))
-        
+
         if(foamMPI()=="LAM"):
             mpirun+=["-np",nr]
-        elif(foamMPI()=="OPENMPI" or foamMPI()=="SYSTEMOPENMPI"):
+        elif foamMPI().find("OPENMPI")>=0:
             nr=[]
             if "MPI_ARCH_PATH" in environ and config().getboolean("MPI","OpenMPI_add_prefix"):
                 nr+=["--prefix",environ["MPI_ARCH_PATH"]]
@@ -133,8 +137,9 @@ class LAMMachine(Utilities):
 
         progname=argv[0]
         if expandApplication:
-            stat,progname=commands.getstatusoutput('which '+progname)
-            if stat:
+            # old implementation: stat,progname=commands.getstatusoutput('which '+progname)
+            progname=self.which(progname)
+            if progname:
                 progname=argv[0]
                 warning("which can not find a match for",progname,". Hoping for the best")
 
@@ -142,7 +147,7 @@ class LAMMachine(Utilities):
             mpirun+=[progname]+argv[1:3]+["-parallel"]+argv[3:]
         else:
             mpirun+=[progname]+argv[1:]+["-parallel"]
-            
+
         if config().getdebug("ParallelExecution"):
             debug("MPI:",foamMPI())
             debug("Arguments:",mpirun)
@@ -152,9 +157,9 @@ class LAMMachine(Utilities):
             for a in mpirun:
                 if a in environ:
                     debug("Transfering variable",a,"with value",environ[a])
-            
+
         return mpirun
-    
+
     def writeMetis(self,sDir):
         """Write the parameter-File for a metis decomposition
         @param sDir: Solution directory
@@ -185,7 +190,7 @@ class LAMMachine(Utilities):
         else:
             params+="1"
         params+=");\n\t delta \t 0.001;\n}\n"
-        
+
         self.writeDecomposition(sDir,params)
 
     def writeDecomposition(self,sDir,par):
@@ -202,3 +207,5 @@ class LAMMachine(Utilities):
         f.write(par)
         f.write("\n\n// * * * * * * * * * //")
         f.close()
+
+# Should work with Python3 and Python2

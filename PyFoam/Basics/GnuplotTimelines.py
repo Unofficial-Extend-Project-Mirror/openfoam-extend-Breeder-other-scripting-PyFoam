@@ -1,21 +1,19 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GnuplotTimelines.py 6539 2010-05-04T19:25:43.455866Z bgschaid  $ 
+#  ICE Revision: $Id: GnuplotTimelines.py 12769 2013-01-16 11:38:51Z bgschaid $
 """Plots a collection of timelines"""
 
 from PyFoam.ThirdParty.Gnuplot import Gnuplot,Data
-    
-from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo,CustomPlotInfo
 
 from PyFoam.Error import warning
 
-from GeneralPlotTimelines import GeneralPlotTimelines
+from .GeneralPlotTimelines import GeneralPlotTimelines
 
-from os import uname
+from platform import uname
 
 class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
     """This class opens a gnuplot window and plots a timelines-collection in it"""
-    
+
     terminalNr=1
-    
+
     def __init__(self,
                  timelines,
                  custom,
@@ -31,7 +29,7 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
         Gnuplot.__init__(self,persist=self.spec.persist)
 
         self.itemlist=[]
-            
+
         if self.spec.start or self.spec.end:
             rng="["
             if self.spec.start:
@@ -41,7 +39,7 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
                 rng+=str(self.spec.end)
             rng+="]"
             self.set_string("xrange "+rng)
-            
+
         if len(self.alternate)>0:
             self.set_string("y2tics")
 
@@ -56,7 +54,13 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
                 self.set_string('ylabel "'+self.spec.ylabel+'"')
         except AttributeError:
             pass
-        
+
+        try:
+            if self.spec.xlabel:
+                self.set_string('xlabel "'+self.spec.xlabel+'"')
+        except AttributeError:
+            pass
+
         try:
             if self.spec.y2label:
                 self.set_string('y2label  "'+self.spec.y2label+'"')
@@ -80,9 +84,9 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
                 self.set_string("terminal x11"+x11addition)
         else:
             self.set_string("terminal dumb")
-            
+
         self.with_=self.spec.with_
-        
+
         self.redo()
 
     def buildData(self,times,name,title,lastValid):
@@ -108,12 +112,12 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
     def preparePlot(self):
         """Prepare the plotting window"""
         self.itemlist=[]
-        
+
     def doReplot(self):
         """Replot the whole data"""
 
         self.replot()
-        
+
     def actualSetTitle(self,title):
         """Sets the title"""
 
@@ -135,7 +139,7 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
         @param form: String describing the format"""
 
         if form=="png":
-            self.hardcopy(terminal="png",filename=filename+".png",color=True,small=True)
+            self.hardcopy(terminal="png",filename=filename+".png",small=True)
         elif form=="pdf":
             self.hardcopy(terminal="pdf",filename=filename+".pdf",color=True)
         elif form=="svg":
@@ -148,3 +152,4 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
             warning("Hardcopy format",form,"unknown. Falling back to postscript")
             self.hardcopy(filename=filename+".ps",color=True)
 
+# Should work with Python3 and Python2

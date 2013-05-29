@@ -1,20 +1,25 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/BuildHelper.py 7854 2012-02-12T14:33:22.227203Z bgschaid  $ 
+#  ICE Revision: $Id: BuildHelper.py 12785 2013-01-31 19:13:41Z bgschaid $
 """
 Application class that implements pyFoamBuildHelper
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.Basics.GeneralVCSInterface import whichVCS,getVCS
 from PyFoam.Error import FatalErrorPyFoamException
 
 from subprocess import call
 from optparse import OptionGroup
 from os import environ,path
+from platform import uname
 import os,subprocess
+
+from PyFoam.ThirdParty.six import print_
+
+import sys
 
 class BuildHelper(PyFoamApplication):
     def __init__(self,args=None):
-        description="""\ 
+        description="""\
 This application helps with updating a
 project and the projects it depends on. A phase (or a desired output)
 has to be specified with an options.
@@ -25,7 +30,7 @@ project it depends on is the OpenFOAM-installation (as found in the
 WM_PROJECT_DIR-environment variable). Arguments are assumed to be
 other projects that are injected between these two
         """
-        
+
         PyFoamApplication.__init__(self,
                                    nr=0,
                                    exactNr=False,
@@ -33,13 +38,13 @@ other projects that are injected between these two
                                    usage="%prog [options] <command> [arguments]",
                                    description=description,
                                    interspersed=True)
-        
+
     def addOptions(self):
         projects=OptionGroup(self.parser,
                              "Projects",
                              "Which projects should be automatically considered")
         self.parser.add_option_group(projects)
-        
+
         projects.add_option("--no-openfoam",
                             dest="openfoam",
                             default=True,
@@ -55,7 +60,7 @@ other projects that are injected between these two
                              "Action",
                              "What to do")
         self.parser.add_option_group(phases)
-        
+
         phases.add_option("--info",
                           dest="action",
                           action="store_const",
@@ -87,7 +92,7 @@ other projects that are injected between these two
                               type="int",
                               default=None,
                               help="Default timeout (in seconds) for the update from the repositories. If none specified the default of the VCS in question is used. Only applicable if the VCS supports it")
-    
+
     def run(self):
         if not self.opts.action:
             self.error("No action defined")
@@ -104,13 +109,13 @@ other projects that are injected between these two
             if path.isdir(d):
                 fullDirs.append(path.abspath(d))
 
-        info=dict(zip(fullDirs,[{} for i in range(len(fullDirs))]))
+        info=dict(list(zip(fullDirs,[{} for i in range(len(fullDirs))])))
 
         for d in fullDirs:
             info[d]["writable"]=os.access(d,os.W_OK)
 
             info[d]["isFoam"]=(d==fullDirs[0] and self.opts.openfoam)
-                
+
             info[d]["vcs"]=whichVCS(d)
 
             if path.exists(path.join(d,"Allwmake")):
@@ -131,7 +136,7 @@ other projects that are injected between these two
                         info[d]["branch"]=vcs.branchName()
                     except FatalErrorPyFoamException:
                         info[d]["branch"]="notImplemented"
-                        
+
                     try:
                         info[d]["revision"]=vcs.getRevision()
                     except FatalErrorPyFoamException:
@@ -141,11 +146,11 @@ other projects that are injected between these two
                     info[d]["revision"]="noVCS"
 
         if self.opts.action=="info":
-            print "Project directories:\n"
+            print_("Project directories:\n")
             for i,d in enumerate(fullDirs):
-                print "%2d.  %s" % (i+1,d)
-                print "    ",info[d]
-                print
+                print_("%2d.  %s" % (i+1,d))
+                print_("    ",info[d])
+                print_()
 
             self.setData({'order' : fullDirs,
                           'info'  : info})
@@ -158,11 +163,11 @@ other projects that are injected between these two
                                           environ["WM_OPTIONS"],
                                           environ["WM_MPLIB"])
             else:
-                name+="%s_%s" % (os.uname()[0],
-                                 os.uname()[-1])
+                name+="%s_%s" % (uname()[0],
+                                 uname()[-1])
             name += "_branch-%s" % info[fullDirs[-1]]["branch"]
 
-            print name
+            print_(name)
             self.setData({'name'   : name,
                           'info'   : info,
                           'order'  : fullDirs})
@@ -170,8 +175,8 @@ other projects that are injected between these two
             success=True
             for d in fullDirs:
                 if info[d]["writable"]:
-                    print "Attempting to update",d
-                    print
+                    print_("Attempting to update",d)
+                    print_()
                     vcs=getVCS(info[d]["vcs"],
                                d,
                                tolerant=True)
@@ -179,16 +184,17 @@ other projects that are injected between these two
                         try:
                             if not vcs.update(timeout=self.opts.timeout):
                                 success=False
-                        except FatalErrorPyFoamException,e:
-                            print "Problem:",e
+                        except FatalErrorPyFoamException:
+                            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+                            print_("Problem:",e)
                             success=False
                     else:
-                        print "Not under version control ... skipping"
+                        print_("Not under version control ... skipping")
                         success=False
                 else:
-                    print d,"not writable .... skipping update"
-                
-                print
+                    print_(d,"not writable .... skipping update")
+
+                print_()
             if not success:
                 self.error("Problem during updating")
         elif self.opts.action=="build":
@@ -197,24 +203,24 @@ other projects that are injected between these two
 
             for d in fullDirs:
                 if info[d]["writable"]:
-                    print "Attempting to build",d
-                    print
+                    print_("Attempting to build",d)
+                    print_()
                     makeCommand={"make"    :["make"],
                                  "wmake"   :["wmake"],
                                  "Allwmake":["./Allwmake"]}[info[d]["make"]]
 
-                    print "Changing to",d,"and executing"," ".join(makeCommand)
-                    print
+                    print_("Changing to",d,"and executing"," ".join(makeCommand))
+                    print_()
                     os.chdir(d)
                     erg=subprocess.call(makeCommand)
                     if erg:
-                        print
-                        print "Result of build command:",erg
+                        print_()
+                        print_("Result of build command:",erg)
                         success=False
                 else:
-                    print d,"not writable .... skipping build"
-                
-                print
+                    print_(d,"not writable .... skipping build")
+
+                print_()
 
             os.chdir(oldDir)
 
@@ -223,3 +229,5 @@ other projects that are injected between these two
 
         else:
             self.error("Unimplemented action",self.opts.action)
+
+# Should work with Python3 and Python2

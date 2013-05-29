@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/SteadyConvergedLineAnalyzer.py 1532 2007-06-29T11:15:55.577361Z bgschaid  $ 
+#  ICE Revision: $Id: SteadyConvergedLineAnalyzer.py 12753 2013-01-03 23:08:03Z bgschaid $
 """Analyze Steady Solver"""
 
 import re
 
-from LogLineAnalyzer import LogLineAnalyzer
+from .LogLineAnalyzer import LogLineAnalyzer
 
 class SteadyConvergedLineAnalyzer(LogLineAnalyzer):
     """
@@ -14,7 +14,7 @@ class SteadyConvergedLineAnalyzer(LogLineAnalyzer):
     """
 
     linearRegExp="^(.+):  Solving for (.+), Initial residual = (.+), Final residual = (.+), No Iterations (.+)$"
-    
+
     def __init__(self):
         LogLineAnalyzer.__init__(self)
         self.exp=re.compile(self.linearRegExp)
@@ -22,7 +22,7 @@ class SteadyConvergedLineAnalyzer(LogLineAnalyzer):
         self.lastTime=""
         self.isConverged=False
         self.counter=0
-        
+
     def doAnalysis(self,line):
         """Counts the number of linear solvers that have not converged"""
         time=self.parent.getTime()
@@ -36,13 +36,15 @@ class SteadyConvergedLineAnalyzer(LogLineAnalyzer):
                     self.isConverged=False
                 self.counter=0
             self.lastTime=time
-            
+
         m=self.exp.match(line)
         if m!=None:
             if int(m.group(5))>0:
                 self.counter+=1
-    
+
     def goOn(self):
         """Converged
         @return: False if converged"""
         return not self.isConverged
+
+# Should work with Python3 and Python2

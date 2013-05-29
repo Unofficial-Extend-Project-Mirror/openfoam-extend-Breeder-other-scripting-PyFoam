@@ -1,0 +1,46 @@
+Changelog for Six
+-----------------
+
+This file lists the changes in each six version.
+
+1.2.0
+-----
+
+- Issue #13: Make iterkeys/itervalues/iteritems return iterators on Python 3
+  instead of iterables.
+
+- Issue #11: Fix maxsize support on Jython.
+
+- Add six.next() as an alias for six.advance_iterator().
+
+- Use the builtin next() function for advance_iterator() where is available
+  (2.6+), not just Python 3.
+
+- Add the Iterator class for writing portable iterators.
+
+1.1.0
+-----
+
+- Add the int2byte function.
+
+- Add compatibility mappings for iterators over the keys, values, and items of a
+  dictionary.
+
+- Fix six.MAXSIZE on platforms where sizeof(long) != sizeof(Py_ssize_t).
+
+- Issue #3: Add six.moves mappings for filter, map, and zip.
+
+
+1.0.0
+-----
+
+- Issue #2: u() on Python 2.x now resolves unicode escapes.
+
+- Expose an API for adding mappings to six.moves.
+
+
+1.0 beta 1
+----------
+
+- Reworked six into one .py file.  This breaks imports.  Please tell me if you
+  are interested in an import compatibility layer.

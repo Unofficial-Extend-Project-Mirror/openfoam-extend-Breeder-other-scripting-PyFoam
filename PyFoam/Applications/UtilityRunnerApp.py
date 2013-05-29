@@ -1,11 +1,13 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UtilityRunnerApp.py 7873 2012-02-21T17:58:56.249464Z bgschaid  $ 
+#  ICE Revision: $Id: UtilityRunnerApp.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamUtilityRunner
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.Execution.UtilityRunner import UtilityRunner
+
+from PyFoam.ThirdParty.six import print_
 
 import sys
 from os import path
@@ -33,30 +35,30 @@ the regexp (the pattern groups).
                                action="append",
                                dest="regexp",
                                help="The regular expression to look for. With more than one the expresions get appended")
-        
+
         self.parser.add_option("-n",
                                "--name",
                                type="string",
                                dest="name",
                                default="test",
                                help="The name for the resulting file")
-        
+
         self.parser.add_option("--echo",
                                action="store_true",
                                dest="echo",
                                default=False,
                                help="Echo the result file after the run")
-        
+
         self.parser.add_option("--silent",
                                action="store_true",
                                dest="silent",
                                default=False,
                                help="Don't print the output of the utility to the console")
-        
+
     def run(self):
         if self.opts.regexp==None:
             self.parser.error("Regular expression needed")
-    
+
         cName=self.parser.casePath()
 
         run=UtilityRunner(argv=self.parser.getArgs(),
@@ -66,11 +68,11 @@ the regexp (the pattern groups).
         for i,r in enumerate(self.opts.regexp):
             name=self.opts.name
             if len(self.opts.regexp)>1:
-                name="%s_%d" % (name,i)                
+                name="%s_%d" % (name,i)
             run.add(name,r)
 
         self.addToCaseLog(cName,"Starting")
-        
+
         run.start()
 
         self.addToCaseLog(cName,"Ending")
@@ -80,21 +82,23 @@ the regexp (the pattern groups).
         for i,r in enumerate(self.opts.regexp):
             name=self.opts.name
             if len(self.opts.regexp)>1:
-                name="%s_%d" % (name,i)                
-            
+                name="%s_%d" % (name,i)
+
             fn=path.join(run.getDirname(),name)
 
             data=run.analyzer.getData(name)
             allData["analyzed"][name]=data
-            
+
             if data==None:
-                print sys.argv[0]+": No data found for expression",r
+                print_(sys.argv[0]+": No data found for expression",r)
             else:
                 if self.opts.echo:
                     fh=open(fn)
-                    print fh.read()
+                    print_(fh.read())
                     fh.close()
                 else:
-                    print sys.argv[0]+": Output written to file "+fn
+                    print_(sys.argv[0]+": Output written to file "+fn)
 
         self.setData(allData)
+
+# Should work with Python3 and Python2

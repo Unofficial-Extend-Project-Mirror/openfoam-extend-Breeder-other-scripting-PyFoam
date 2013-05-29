@@ -120,8 +120,8 @@ class GnuplotProcess:
         command = [GnuplotOpts.gnuplot_command]
         if persist:
             if not test_persist():
-                raise ('-persist does not seem to be supported '
-                       'by your version of gnuplot!')
+                raise Exception('-persist does not seem to be supported '
+                                'by your version of gnuplot!')
             command.append('-persist')
 
         # This is a kludge: distutils wants to import everything it
@@ -167,4 +167,4 @@ class GnuplotProcess:
         self.write(s + '\n')
         self.flush()
 
-
+# Should work with Python3 and Python2

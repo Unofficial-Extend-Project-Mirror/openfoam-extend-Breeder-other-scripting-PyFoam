@@ -4,11 +4,23 @@
 Currently not optimal as it reads the files more often than necessary"""
 
 from os import path,listdir
-from glob import glob
+
 from PyFoam.Error import error
 import math
+import sys
+
+try:
+    from sys.float_info import max as float_maximum
+except ImportError:
+    # needed py python2.5
+    float_maximum=1e301
 
 from PyFoam.Basics.SpreadsheetData import SpreadsheetData
+
+from PyFoam.ThirdParty.six import PY3
+
+if PY3:
+    from functools import reduce
 
 class TimelineDirectory(object):
     """A directory of sampled times"""
@@ -22,7 +34,7 @@ class TimelineDirectory(object):
         self.writeTimes=[]
 
         nearest=None
-        
+
         for d in listdir(self.dir):
             if path.isdir(path.join(self.dir,d)):
                 try:
@@ -34,10 +46,10 @@ class TimelineDirectory(object):
                         else:
                             if abs(float(writeTime)-v)<abs(float(writeTime)-float(nearest)):
                                 nearest=d
-                except ValueError,e:
+                except ValueError:
                     pass
 
-        self.writeTimes.sort(self.sorttimes)
+        self.writeTimes.sort(key=float)
         if nearest==None:
             self.usedTime=self.writeTimes[0]
         else:
@@ -53,9 +65,9 @@ class TimelineDirectory(object):
             self.values.append(v)
             if TimelineValue(self.dir,v,self.usedTime).isVector:
                 self.vectors.append(v)
-                
+
         self.allPositions=None
-        
+
     def __iter__(self):
         for t in self.values:
             yield TimelineValue(self.dir,t,self.usedTime)
@@ -64,22 +76,13 @@ class TimelineDirectory(object):
         if value in self:
             return TimelineValue(self.dir,value,self.usedTime)
         else:
-            raise KeyError,value
+            raise KeyError(value)
 
     def __contains__(self,value):
         return value in self.values
-    
+
     def __len__(self):
         return len(self.values)
-
-    def sorttimes(self,x,y):
-        """Sort function for the solution files"""
-        if(float(x)==float(y)):
-            return 0
-        elif float(x)<float(y):
-            return -1
-        else:
-            return 1
 
     def positions(self):
         """Returns all the found positions"""
@@ -87,7 +90,7 @@ class TimelineDirectory(object):
         if self.allPositions==None:
             positions=[]
             first=True
-            
+
             for t in self:
                 for v in t.positions:
                     if v not in positions:
@@ -99,7 +102,7 @@ class TimelineDirectory(object):
                     self.positionIndex=t.positionIndex
                 first=False
             self.allPositions=positions
-            
+
         return self.allPositions
 
     def timeRange(self):
@@ -113,21 +116,21 @@ class TimelineDirectory(object):
             maxTime=max(ma,maxTime)
 
         return minTime,maxTime
-    
+
     def getDataLocation(self,value=None,position=None,vectorMode=None):
         """Get Timeline sets
         @param value: name of the value. All
         if unspecified
         @param position: name of the position of the value. All
         if unspecified"""
-        
+
         if value==None:
             value=self.values
         if position==None:
             position=self.positions()
-            
+
         sets=[]
-        
+
         for v in value:
             for p in position:
                 fName=path.join(self.dir,v)
@@ -150,39 +153,43 @@ class TimelineDirectory(object):
                                                                  pos+2,pos+2)
                     else:
                         error("Unsupported vector mode",vectorMode)
-                        
-                sets.append((fName,v,p,pos,TimelineValue(self.dir,v,self.usedTime)))
-                
+                try:
+                    sets.append((fName,v,p,pos,TimelineValue(self.dir,v,self.usedTime)))
+                except IOError:
+                    # seems like the file/field is not there
+                    pass
+
         return sets
 
-    def getData(self,times,value=None,position=None):
+    def getData(self,times,value=None,position=None,vectorMode=None):
         """Get data that mstches the given times most closely
         @param times: a list with times
         @param value: name of the value. All
         if unspecified
         @param position: name of the position of the value. All
-        if unspecified"""
-        
+        if unspecified
+        @param vectorMode: which component of the vector to use"""
+
         if value==None:
             value=self.values
         if position==None:
             position=self.positions()
-            
+
         sets=[]
         posIndex=[]
         for p in position:
             posIndex.append(self.positions().index(p))
-            
+
         for v in value:
             val=TimelineValue(self.dir,v,self.usedTime)
-            data=val.getData(times)
+            data=val.getData(times,vectorMode=vectorMode)
             for i,t in enumerate(times):
                 used=[]
                 for p in posIndex:
                     used.append(data[i][p])
-                
+
                 sets.append((v,t,used))
-                
+
         return sets
 
 class TimelineValue(object):
@@ -199,7 +206,7 @@ class TimelineValue(object):
         poses=[]
 
         self.isVector=False
-        
+
         data=open(self.file)
         l1=data.readline()
         if len(l1)<1 or l1[0]!='#':
@@ -222,19 +229,19 @@ class TimelineValue(object):
                 poses.append("(%s %s %s)" % (x[i],y[i],z[i]))
             data.readline()
             firstData=data.readline()
-                
+
         self.positions=[]
         self.positionIndex=[]
         if len(poses)+1==len(firstData.split()):
             #scalar
             for i,v in enumerate(firstData.split()[1:]):
-                if abs(float(v))<1e40:
+                if abs(float(v))<float_maximum:
                     self.positions.append(poses[i])
                     self.positionIndex.append(i)
         else:
             self.isVector=True
             for i,v in enumerate(firstData.split()[2::3]):
-                if abs(float(v))<1e40:
+                if abs(float(v))<float_maximum:
                     self.positions.append(poses[i])
                     self.positionIndex.append(i)
 
@@ -245,7 +252,7 @@ class TimelineValue(object):
             vect=" (vector)"
         else:
             vect=""
-            
+
         return "TimelineData of %s%s on %s at t=%s " % (self.val,vect,str(self.positions),self.time)
 
     def isProbe(self):
@@ -268,20 +275,23 @@ class TimelineValue(object):
                 break
 
         return minRange,maxRange
-    
-    def getData(self,times):
+
+    def getData(self,times,vectorMode=None):
         """Get the data values that are nearest to the actual times"""
+        if self.isVector and vectorMode==None:
+            vectorMode="abs"
+
         dist=len(times)*[1e80]
         data=len(times)*[len(self.positions)*[1e80]]
-        
+
         lines=open(self.file).readlines()
-        
+
         for l in lines:
             v=l.split()
             if v[0][0]!='#':
                 try:
                     time=float(v[0])
-                    vals=v[1:]
+                    vals=[x.replace('(','').replace(')','') for x in v[1:]]
                     for i,t in enumerate(times):
                         if abs(t-time)<dist[i]:
                             dist[i]=abs(t-time)
@@ -291,22 +301,35 @@ class TimelineValue(object):
         result=[]
         for d in data:
             tmp=[]
-            for v in d:
-                if abs(float(v))<1e40:
-                    tmp.append(float(v))
+            if self.isVector:
+                for p in range(len(self.positions)):
+                    if vectorMode=="x":
+                        tmp.append(float(d[p]))
+                    elif vectorMode=="y":
+                        tmp.append(float(d[p+1]))
+                    elif vectorMode=="z":
+                        tmp.append(float(d[p+2]))
+                    elif vectorMode=="mag":
+                        tmp.append(math.sqrt(reduce(lambda a,b:a+b,[float(v)**2 for v in d[p:p+3]],0)))
+                    else:
+                        error("Unknown vector mode",vectorMode)
+            else:
+                for v in d:
+                    if abs(float(v))<1e40:
+                        tmp.append(float(v))
             result.append(tmp)
 
         return result
 
     def __call__(self):
         """Return the data as a SpreadsheetData-object"""
-        
+
         lines=open(self.file).readlines()
         data=[]
         for l in lines:
             v=l.split()
             if v[0][0]!='#':
-                data.append(map(lambda x:float(x.replace('(','').replace(')','')),v))
+                data.append([float(x.replace('(','').replace(')','')) for x in v])
         names=["time"]
         if self.isVector:
             for p in self.positions:
@@ -317,3 +340,5 @@ class TimelineValue(object):
         return SpreadsheetData(data=data,
                                names=names,
                                title="%s_t=%s" % (self.val,self.time))
+
+# Should work with Python3 and Python2

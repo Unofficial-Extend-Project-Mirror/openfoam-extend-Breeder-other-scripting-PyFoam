@@ -1,11 +1,11 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Decomposer.py 7930 2012-03-14T12:33:54.771148Z bgschaid  $ 
+#  ICE Revision: $Id: Decomposer.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Class that implements pyFoamDecompose
 """
 
 from optparse import OptionGroup
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator
 from PyFoam.Error import error
 from PyFoam.Basics.Utilities import writeDictionaryHeader,rmtree
@@ -16,13 +16,16 @@ from PyFoam.RunDictionary.ParsedParameterFile import FoamStringParser
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 from PyFoam.FoamInformation import foamVersion
 
-from CommonMultiRegion import CommonMultiRegion
-from CommonStandardOutput import CommonStandardOutput
-from CommonServer import CommonServer
-from CommonVCSCommit import CommonVCSCommit
+from .CommonMultiRegion import CommonMultiRegion
+from .CommonStandardOutput import CommonStandardOutput
+from .CommonServer import CommonServer
+from .CommonVCSCommit import CommonVCSCommit
+
+from PyFoam.ThirdParty.six import print_
 
 from os import path,listdir,symlink
 import sys,string
+from glob import glob
 
 class Decomposer(PyFoamApplication,
                  CommonStandardOutput,
@@ -43,13 +46,13 @@ on that case
 
     decomposeChoices=["metis","simple","hierarchical","manual"]
     defaultMethod="metis"
-        
+
     def addOptions(self):
         if foamVersion()>=(1,6):
             self.defaultMethod="scotch"
             self.decomposeChoices+=[self.defaultMethod]
             self.decomposeChoices+=["parMetis"]
-            
+
         spec=OptionGroup(self.parser,
                          "Decomposition Specification",
                          "How the case should be decomposed")
@@ -60,38 +63,38 @@ on that case
                         action="store",
                         choices=self.decomposeChoices,
                         help="The method used for decomposing (Choices: "+string.join(self.decomposeChoices,", ")+") Default: %default")
-        
+
         spec.add_option("--n",
                         dest="n",
                         action="store",
                         default=None,
                         help="Number of subdivisions in coordinate directions. A python list or tuple (for simple and hierarchical)")
-        
+
         spec.add_option("--delta",
                         dest="delta",
                         action="store",
                         type="float",
                         default=None,
                         help="Cell skew factor (for simple and hierarchical)")
-        
+
         spec.add_option("--order",
                         dest="order",
                         action="store",
                         default=None,
                         help="Order of decomposition (for hierarchical)")
-        
+
         spec.add_option("--processorWeights",
                         dest="processorWeights",
                         action="store",
                         default=None,
                         help="The weights of the processors. A python list. Used for metis, scotch and parMetis")
-        
+
         spec.add_option("--globalFaceZones",
                         dest="globalFaceZones",
                         action="store",
                         default=None,
                         help="""Global face zones. A string with a python list or an OpenFOAM-list of words. Used for the GGI interface. Ex: '["GGI_Z1","GGI_Z2"]' or '(GGI_Z1 GGI_Z2)'""")
-        
+
         spec.add_option("--dataFile",
                         dest="dataFile",
                         action="store",
@@ -113,13 +116,13 @@ on that case
                           action="store_true",
                           default=False,
                           help="Clear the case of previous processor directories")
-        
+
         behave.add_option("--no-decompose",
                           dest="doDecompose",
                           action="store_false",
                           default=True,
                           help="Don't run the decomposer (only writes the dictionary")
-        
+
         behave.add_option("--decomposer",
                                dest="decomposer",
                                action="store",
@@ -134,14 +137,14 @@ on that case
                         dest="doConstantLinks",
                         action="store_true",
                         default=False,
-                        help="Add links to the contents of the constant directory to the constant directories of the processor-directories")        
+                        help="Add links to the contents of the constant directory to the constant directories of the processor-directories")
         self.parser.add_option_group(work)
-        
+
         CommonMultiRegion.addOptions(self)
         CommonStandardOutput.addOptions(self)
         CommonServer.addOptions(self,False)
         CommonVCSCommit.addOptions(self)
-        
+
     def run(self):
         decomposeParWithRegion=(foamVersion()>=(1,6))
 
@@ -154,7 +157,7 @@ on that case
         nr=int(self.parser.getArgs()[1])
         if nr<2:
             error("Number of processors",nr,"too small (at least 2)")
-            
+
         case=path.abspath(self.parser.getArgs()[0])
         method=self.opts.method
 
@@ -208,18 +211,21 @@ on that case
             error("Method",method,"not yet implementes")
 
         gen=FoamFileGenerator(result)
-        
+
         if self.opts.test:
-            print str(gen)
+            print_(str(gen))
             return -1
         else:
             f=open(path.join(case,"system","decomposeParDict"),"w")
             writeDictionaryHeader(f)
             f.write(str(gen))
             f.close()
-            
+
         if self.opts.clear:
-            rmtree(path.join(case,"processor*"),ignore_errors=True)
+            print_("Clearing processors")
+            for p in glob(path.join(case,"processor*")):
+                print_("Removing",p)
+                rmtree(p,ignore_errors=True)
 
         self.checkAndCommit(SolutionDirectory(case,archive=None))
 
@@ -240,12 +246,12 @@ on that case
             sol=SolutionDirectory(case)
             if not decomposeParWithRegion:
                 if self.opts.regions or self.opts.region!=None:
-                    print "Building Pseudocases"
+                    print_("Building Pseudocases")
                     regions=RegionCases(sol,clean=True,processorDirs=False)
 
             if self.opts.regions:
                 regionNames=sol.getRegions(defaultRegion=True)
-                
+
             for theRegion in regionNames:
                 theCase=path.normpath(case)
                 if theRegion!=None and not decomposeParWithRegion:
@@ -257,14 +263,14 @@ on that case
                     argv=[self.opts.decomposer,"-case",theCase]
                     if theRegion!=None and decomposeParWithRegion:
                         argv+=["-region",theRegion]
-                        
+
                         f=open(path.join(case,"system",theRegion,"decomposeParDict"),"w")
                         writeDictionaryHeader(f)
                         f.write(str(gen))
                         f.close()
-                    
+
                 self.setLogname(default="Decomposer",useApplication=False)
-                
+
                 run=UtilityRunner(argv=argv,
                                   silent=self.opts.progress or self.opts.silent,
                                   logname=self.opts.logname,
@@ -276,12 +282,12 @@ on that case
                 run.start()
 
                 if theRegion!=None and not decomposeParWithRegion:
-                    print "Syncing into master case"
+                    print_("Syncing into master case")
                     regions.resync(theRegion)
 
             if regions!=None and not decomposeParWithRegion:
                 if not self.opts.keeppseudo:
-                    print "Removing pseudo-regions"
+                    print_("Removing pseudo-regions")
                     regions.cleanAll()
                 else:
                     for r in sol.getRegions():
@@ -289,7 +295,7 @@ on that case
                             regions.clean(r)
 
             if self.opts.doConstantLinks:
-                print "Adding symlinks in the constant directories"
+                print_("Adding symlinks in the constant directories")
                 constPath=path.join(case,"constant")
                 for f in listdir(constPath):
                     srcExpr=path.join(path.pardir,path.pardir,"constant",f)
@@ -297,6 +303,7 @@ on that case
                         dest=path.join(case,"processor%d"%p,"constant",f)
                         if not path.exists(dest):
                             symlink(srcExpr,dest)
-                            
+
             self.addToCaseLog(case)
 
+# Should work with Python3 and Python2

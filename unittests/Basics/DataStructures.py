@@ -4,6 +4,8 @@ import math
 
 from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,TupleProxy,DictProxy,Tensor,SymmTensor,Codestream
 
+from PyFoam.ThirdParty.six import iteritems
+
 theSuite=unittest.TestSuite()
 
 class DictProxyTest(unittest.TestCase):
@@ -22,14 +24,16 @@ class DictProxyTest(unittest.TestCase):
         self.assertEqual(d["a"],5)
         self.assertEqual(len(d),2)
         cnt=0
-        for k,v in d.iteritems():
+        for k,v in iteritems(d):
             self.assertEqual(d[k],v)
             cnt+=1
         self.assertEqual(len(d),cnt)
+        self.assertEqual(d.keys(),['a','b'])
         self.assertEqual(str(d),"{'a': 5, 'b': 'nix'}")
         self.assertEqual(d.keys(),['a','b'])
         d["c"]=2
-        self.assertEqual(str(d),"{'a': 5, 'c': 2, 'b': 'nix'}")
+        self.assertEqual(d.keys(),['a','b','c'])
+        self.assertEqual(str(d),"{'a': 5, 'b': 'nix', 'c': 2}")
         self.assertEqual(d.keys(),['a','b','c'])
 
     def testRegExp(self):
@@ -44,7 +48,7 @@ class DictProxyTest(unittest.TestCase):
         self.assertEqual("foo" in d,True)
         self.assertEqual("bar" in d,False)
         self.assertEqual("foobar" in d,True)
-        
+
 theSuite.addTest(unittest.makeSuite(DictProxyTest,"test"))
 
 class TupleProxyTest(unittest.TestCase):
@@ -72,7 +76,7 @@ class VectorTest(unittest.TestCase):
         self.assertEqual(v==None,False)
         v[0]=-3
         self.assertEqual(v,Vector(-3,2,1))
-        
+
 theSuite.addTest(unittest.makeSuite(VectorTest,"test"))
 
 class VectorOperatorTest(unittest.TestCase):
@@ -89,7 +93,7 @@ class VectorOperatorTest(unittest.TestCase):
         self.assertEqual(Vector(0,2,-2),Vector(0,1,-1)*2)
         self.assertEqual(Vector(0,-2,2),-2*Vector(0,1,-1))
     def testDiv(self):
-        self.assertEqual(Vector(0,0.5,1),Vector(1,1,1)/Vector(2,2.,1))
+        self.assertEqual(Vector(0.5,0.5,1),Vector(1,1,1)/Vector(2,2.,1))
         self.assertEqual(Vector(0.5,0,-0.5),Vector(1,0,-1)/2.)
     def testCross(self):
         self.assertEqual(Vector(0,0,1),Vector(1,0,0) ^ Vector(0,1,0))
@@ -104,7 +108,7 @@ class VectorOperatorTest(unittest.TestCase):
         self.assertEqual(Vector(1,-1,0),-Vector(-1,1,0))
     def testPos(self):
         self.assertEqual(Vector(1,-1,0),+Vector(1,-1,0))
-        
+
 theSuite.addTest(unittest.makeSuite(VectorOperatorTest,"test"))
 
 class TensorTest(unittest.TestCase):
@@ -118,7 +122,7 @@ class TensorTest(unittest.TestCase):
         self.assertEqual(v==None,False)
         v[0]=-3
         self.assertEqual(v,Tensor(-3,2,1,-3,-2,-1,1,2,3))
-        
+
 theSuite.addTest(unittest.makeSuite(TensorTest,"test"))
 
 class SymmTensorTest(unittest.TestCase):
@@ -132,7 +136,7 @@ class SymmTensorTest(unittest.TestCase):
         self.assertEqual(v==None,False)
         v[0]=-3
         self.assertEqual(v,SymmTensor(-3,2,1,-3,-2,-1))
-        
+
 theSuite.addTest(unittest.makeSuite(SymmTensorTest,"test"))
 
 class DimensionTest(unittest.TestCase):
@@ -150,7 +154,7 @@ class DimensionTest(unittest.TestCase):
         self.assertEqual(v[2],-1)
         v[0]=-3
         self.assertEqual(v,Dimension(-3,0,-1,0,0,0,0))
-        
+
 theSuite.addTest(unittest.makeSuite(DimensionTest,"test"))
 
 class FieldTest(unittest.TestCase):
@@ -158,7 +162,9 @@ class FieldTest(unittest.TestCase):
         v=Field(400)
         self.assertEqual(str(v),'uniform 400')
         v=Field([400],name="List<scalar>")
-        self.assertEqual(str(v),'nonuniform List<scalar> (\n  400\n)\n')
+        self.assertEqual(str(v),'nonuniform List<scalar> 1\n(\n  400\n)\n')
+        v=Field([400])
+        self.assertEqual(str(v),'nonuniform 1\n(\n  400\n)\n')
 
     def testCompare(self):
         self.assertNotEqual(Field(400),Field(300))
@@ -167,12 +173,12 @@ class FieldTest(unittest.TestCase):
         self.assertEqual(Field(400)==None,False)
 
     def testAccess(self):
-        v=Field(range(0,101,10),name="List<scalar>")
+        v=Field(list(range(0,101,10)),name="List<scalar>")
         s=sum(v.val)
         self.assertEqual(v[2],20)
         v[5]+=1
         self.assertEqual(sum(v),s+1)
-        
+
 theSuite.addTest(unittest.makeSuite(FieldTest,"test"))
 
 class CodeStreamTest(unittest.TestCase):
@@ -189,6 +195,5 @@ class CodeStreamTest(unittest.TestCase):
         s="Original text"
         c=Codestream(s)
         self.assertEqual(c,s)
-        
-theSuite.addTest(unittest.makeSuite(CodeStreamTest,"test"))
 
+theSuite.addTest(unittest.makeSuite(CodeStreamTest,"test"))

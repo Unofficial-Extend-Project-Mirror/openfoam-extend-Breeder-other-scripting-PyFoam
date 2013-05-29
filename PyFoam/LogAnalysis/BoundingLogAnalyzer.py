@@ -1,10 +1,10 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/BoundingLogAnalyzer.py 5717 2009-10-12T21:41:13.626022Z bgschaid  $ 
+#  ICE Revision: $Id: BoundingLogAnalyzer.py 12753 2013-01-03 23:08:03Z bgschaid $
 """Basic log analyer with boundedness"""
 
-from StandardLogAnalyzer import StandardLogAnalyzer
+from .StandardLogAnalyzer import StandardLogAnalyzer
 
-from BoundingLineAnalyzer import GeneralBoundingLineAnalyzer
-from SimpleLineAnalyzer import GeneralSimpleLineAnalyzer
+from .BoundingLineAnalyzer import GeneralBoundingLineAnalyzer
+from .SimpleLineAnalyzer import GeneralSimpleLineAnalyzer
 
 from PyFoam.FoamInformation import foamVersionNumber
 
@@ -36,12 +36,12 @@ class BoundingLogAnalyzer(StandardLogAnalyzer):
                                                      singleFile=singleFile,
                                                      startTime=startTime,
                                                      endTime=endTime))
-        
+
         if foamVersionNumber()<(1,4):
             courantExpression="^Mean and max Courant Numbers = (.+) (.+)$"
         else:
             courantExpression="^Courant Number mean: (.+) max: (\S+).*$"
-            
+
         self.addAnalyzer("Courant",
                          GeneralSimpleLineAnalyzer("courant",
                                                    courantExpression,
@@ -64,3 +64,5 @@ class BoundingPlotLogAnalyzer(BoundingLogAnalyzer):
 
 ##        self.addAnalyzer("Bounding",GeneralBoundingLineAnalyzer())
 ##        self.addAnalyzer("Courant",TimeLineSimpleLineAnalyzer("courant","^Mean and max Courant Numbers = (.+) (.+)$",titles=["mean","max"]))
+
+# Should work with Python3 and Python2

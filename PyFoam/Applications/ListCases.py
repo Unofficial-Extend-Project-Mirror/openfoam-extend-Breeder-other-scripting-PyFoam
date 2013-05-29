@@ -9,11 +9,17 @@ import string
 import subprocess
 import re
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 from PyFoam import configuration
+
+from PyFoam.ThirdParty.six import print_,iteritems,PY3
+
+if PY3:
+    long=int
 
 class ListCases(PyFoamApplication):
     def __init__(self,args=None):
@@ -32,13 +38,13 @@ etc). Currently doesn't honor the parallel data
                                    exactNr=False)
 
     sortChoices=["name","first","last","mtime","nrSteps","procs","diskusage","pFirst","pLast","nrParallel","nowTime","state","lastOutput","startedAt"]
-    
+
     def addOptions(self):
         what=OptionGroup(self.parser,
                          "What",
                          "Define what should be shown")
         self.parser.add_option_group(what)
-        
+
         what.add_option("--dump",
                         action="store_true",
                         dest="dump",
@@ -69,6 +75,18 @@ etc). Currently doesn't honor the parallel data
                         default=False,
                         help="Additional state information (run started, last output seen)")
 
+        what.add_option("--estimate-end-time",
+                        action="store_true",
+                        dest="estimateEndTime",
+                        default=False,
+                        help="Print an estimated end time (calculated from the start time of the run, the current time and the current simulation time)")
+
+        what.add_option("--start-end-time",
+                        action="store_true",
+                        dest="startEndTime",
+                        default=False,
+                        help="Start and end time from the controlDict")
+
         how=OptionGroup(self.parser,
                          "How",
                          "How the things should be shown")
@@ -96,7 +114,7 @@ etc). Currently doesn't honor the parallel data
                          "Behaviour",
                          "Additional output etc")
         self.parser.add_option_group(behave)
-        
+
         behave.add_option("--progress",
                           action="store_true",
                           dest="progress",
@@ -110,10 +128,10 @@ etc). Currently doesn't honor the parallel data
         else:
             self.hasState=True
             return open(fName).read().strip()
-        
+
     def run(self):
         dirs=self.parser.getArgs()
-        
+
         if len(dirs)==0:
             dirs=[path.curdir]
 
@@ -121,7 +139,7 @@ etc). Currently doesn't honor the parallel data
         totalDiskusage=0
 
         self.hasState=False
-        
+
         for d in dirs:
             for n in listdir(d):
                 cName=path.join(d,n)
@@ -130,7 +148,7 @@ etc). Currently doesn't honor the parallel data
                         sol=SolutionDirectory(cName,archive=None,paraviewLink=False)
                         if sol.isValid():
                             if self.opts.progress:
-                                print "Processing",cName
+                                print_("Processing",cName)
 
                             data={}
 
@@ -139,11 +157,11 @@ etc). Currently doesn't honor the parallel data
                             try:
                                 data["first"]=times[0]
                             except IndexError:
-                                data["first"]="None"                            
+                                data["first"]="None"
                             try:
                                 data["last"]=times[-1]
                             except IndexError:
-                                data["last"]="None"                            
+                                data["last"]="None"
                             data["nrSteps"]=len(times)
                             data["procs"]=sol.nrProcs()
                             data["pFirst"]=-1
@@ -154,7 +172,7 @@ etc). Currently doesn't honor the parallel data
                                 data["nrParallel"]=len(pTimes)
                                 if len(pTimes)>0:
                                     data["pFirst"]=pTimes[0]
-                                    data["pLast"]=pTimes[-1]                                
+                                    data["pLast"]=pTimes[-1]
                             data["name"]=cName
                             data["diskusage"]=-1
                             if self.opts.diskusage:
@@ -170,54 +188,71 @@ etc). Currently doesn't honor the parallel data
                                     data["nowTime"]=float(self.readState(sol,"CurrentTime"))
                                 except ValueError:
                                     data["nowTime"]=None
-                                    
+
                                 try:
                                     data["lastOutput"]=time.mktime(time.strptime(self.readState(sol,"LastOutputSeen")))
                                 except ValueError:
                                     data["lastOutput"]="nix"
+
+                                data["state"]=self.readState(sol,"TheState")
+
+                            if self.opts.state or self.opts.estimateEndTime:
                                 try:
                                     data["startedAt"]=time.mktime(time.strptime(self.readState(sol,"StartedAt")))
                                 except ValueError:
                                     data["startedAt"]="nix"
 
-                                data["state"]=self.readState(sol,"TheState")
-                                    
+                            if self.opts.startEndTime or self.opts.estimateEndTime:
+                                ctrlDict=ParsedParameterFile(sol.controlDict())
+                                data["startTime"]=ctrlDict["startTime"]
+                                data["endTime"]=ctrlDict["endTime"]
+
+                            if self.opts.estimateEndTime:
+                                data["endTimeEstimate"]=None
+                                if self.readState(sol,"TheState")=="Running":
+                                    gone=time.time()-data["startedAt"]
+                                    current=float(self.readState(sol,"CurrentTime"))
+                                    frac=(current-data["startTime"])/(data["endTime"]-data["startTime"])
+                                    if frac>0:
+                                        data["endTimeEstimate"]=data["startedAt"]+gone/frac
+
                             cData.append(data)
                     except OSError:
-                        print cName,"is unreadable"
-                        
+                        print_(cName,"is unreadable")
+
         if self.opts.progress:
-            print "Sorting data"
-            
+            print_("Sorting data")
+
         if self.opts.reverse:
             cData.sort(lambda x,y:cmp(y[self.opts.sort],x[self.opts.sort]))
         else:
             cData.sort(lambda x,y:cmp(x[self.opts.sort],y[self.opts.sort]))
 
         if len(cData)==0:
-            print "No cases found"
+            print_("No cases found")
             return
 
         if self.opts.dump:
-            print cData
+            print_(cData)
             return
-        
+
         lens={}
-        for k in cData[0].keys():
+        for k in list(cData[0].keys()):
             lens[k]=len(k)
         for c in cData:
-            for k in ["mtime","lastOutput","startedAt"]:
+            for k in ["mtime","lastOutput","startedAt","endTimeEstimate"]:
                 try:
-                    if self.opts.relativeTime:
-                        c[k]=datetime.timedelta(seconds=long(time.time()-c[k]))
-                    else:
-                        c[k]=time.asctime(time.localtime(c[k]))
+                    if c[k]!=None:
+                        if self.opts.relativeTime:
+                            c[k]=datetime.timedelta(seconds=long(time.time()-c[k]))
+                        else:
+                            c[k]=time.asctime(time.localtime(c[k]))
                 except KeyError:
                     pass
                 except TypeError:
                     c[k]=None
-                    
-            for k,v in c.iteritems():
+
+            for k,v in iteritems(c):
                 lens[k]=max(lens[k],len(str(v)))
 
         format=""
@@ -230,11 +265,17 @@ etc). Currently doesn't honor the parallel data
             spec+=["nowTime"," s ","state"," | "]
             if self.opts.advancedState:
                 spec+=["lastOutput"," | ","startedAt"," | "]
-                
+        if self.opts.estimateEndTime:
+            if not self.opts.advancedState:
+                spec+=["startedAt"," | "]
+            spec+=["endTimeEstimate"," | "]
+        if self.opts.startEndTime:
+            spec+=["startTime"," | ","endTime"," | "]
+
         spec+=["name"]
-        
+
         for i,l in enumerate(spec):
-            if  not l in cData[0].keys():
+            if  not l in list(cData[0].keys()):
                 format+=l
             else:
                 if i<len(spec)-1:
@@ -243,17 +284,19 @@ etc). Currently doesn't honor the parallel data
                     format+="%%(%s)s" % (l)
 
         if self.opts.progress:
-            print "Printing\n\n"
-            
-        header=format % dict(zip(cData[0].keys(),cData[0].keys()))
-        print header
-        print "-"*len(header)
-        
+            print_("Printing\n\n")
+
+        header=format % dict(list(zip(list(cData[0].keys()),list(cData[0].keys()))))
+        print_(header)
+        print_("-"*len(header))
+
         for d in cData:
-            for k in d.keys():
+            for k in list(d.keys()):
                 d[k]=str(d[k])
-            print format % d
+            print_(format % d)
 
         if self.opts.diskusage:
-            print "Total disk-usage:",totalDiskusage,"MB"
-            
+            print_("Total disk-usage:",totalDiskusage,"MB")
+
+
+# Should work with Python3 and Python2

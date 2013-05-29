@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PVLoadState.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: PVLoadState.py 12798 2013-03-04 10:41:53Z bgschaid $
 """
 Class that implements pyFoamPVLoadState
 """
@@ -12,7 +12,8 @@ from PyFoam.Paraview.ServermanagerWrapper import ServermanagerWrapper as SM
 from PyFoam.Paraview.StateFile import StateFile
 
 from os import path,unlink,system
-import sys,string
+
+from PyFoam import configuration as config
 
 class PVLoadState(PyFoamApplication):
     def __init__(self,args=None):
@@ -45,14 +46,14 @@ StateFile was generated using paraFoam)
 
         paraview.add_option("--paraview-command",
                             dest="paraview",
-                            default="paraview",
-                            help="The paraview-version that should be called. Default: %default")
+                            default=config().get("Paths","paraview"),
+                            help="The paraview-version that should be called. Default: %default (set in the configuration 'Paths'/'paraview')")
         self.parser.add_option_group(paraview)
-        
+
     def run(self):
         case=path.abspath(self.parser.getArgs()[0])
         short=path.basename(case)
-        
+
         if self.opts.state==None:
             self.opts.state=path.join(case,"default.pvsm")
 
@@ -68,14 +69,13 @@ StateFile was generated using paraFoam)
             createdDataFile=True
             f=open(dataFile,"w")
             f.close()
-            
+
         sf=StateFile(self.opts.state)
         sf.setCase(dataFile)
         newState=sf.writeTemp()
 
         system(self.opts.paraview+" --state="+newState)
-        
+
         if createdDataFile:
             self.warning("Removing pseudo-data-file",dataFile)
             unlink(dataFile)
-            

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpgradeDictionariesTo17.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: UpgradeDictionariesTo17.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamUpgradeDictionariesTo17
 """
@@ -7,7 +7,7 @@ import sys,re
 from optparse import OptionGroup
 from os import path
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Basics.Utilities import copyfile
@@ -15,18 +15,20 @@ from PyFoam.Basics.DataStructures import DictProxy
 from PyFoam.Basics.FoamFileGenerator import makeString
 from PyFoam.Error import error
 
+from PyFoam.ThirdParty.six import print_
+
 class DictionaryUpgradeInfo(object):
     """This class knows how to detect old versions and how to upgrade them"""
     def __init__(self):
         self.case=None
         self.enabled=True
-        
+
     def path(self):
         return path.join(self.case,self.location())
 
     def disable(self):
         self.enabled=False
-        
+
     def disableCallback(self, opt, value, parser, *args, **kwargs):
         self.disable()
 
@@ -34,9 +36,9 @@ class DictionaryUpgradeInfo(object):
         f=ParsedParameterFile(self.path())
         return self.checkUpgrade(f.content)
 
-    def upgrade(self,force,print_):
+    def upgrade(self,force,printIt):
         backup=self.path()+".upgradeBackup"
-        if not print_:
+        if not printIt:
             if path.exists(backup):
                 if not force:
                     error("The backup-file",backup,"does already exist")
@@ -44,17 +46,17 @@ class DictionaryUpgradeInfo(object):
             copyfile(self.path(),backup)
         f=ParsedParameterFile(self.path())
         self.manipulate(f.content)
-        if not print_:
+        if not printIt:
             f.writeFile()
         else:
-            print f
-            
+            print_(f)
+
     def makeComment(self,data):
         s=makeString(data)
         s="\n old Value: "+s
         s=s.replace("\n","\n//")
         return s
-    
+
 class FvSolutionUpgradeInfo(DictionaryUpgradeInfo):
     def __init__(self):
         DictionaryUpgradeInfo.__init__(self)
@@ -65,7 +67,7 @@ class FvSolutionUpgradeInfo(DictionaryUpgradeInfo):
     def checkUpgrade(self,content):
         if "solvers" not in content:
             return False
-        
+
         for s in content["solvers"]:
             if type(content["solvers"][s]) not in [dict,DictProxy]:
                 return True
@@ -78,7 +80,7 @@ class FvSolutionUpgradeInfo(DictionaryUpgradeInfo):
             rest["solver"]=alg
             content["solvers"][s]=rest
             content["solvers"].addDecoration(s,comment)
-            
+
 class UpgradeDictionariesTo17(PyFoamApplication):
     def __init__(self,
                  args=None,
@@ -88,7 +90,7 @@ class UpgradeDictionariesTo17(PyFoamApplication):
 Examines dictionaries in a case and tries to upgrade them to a form
 that is compatible with OpenFOAM 1.7
         """
-        
+
         self.dicts=[]
 
         self.addDicts()
@@ -108,7 +110,7 @@ that is compatible with OpenFOAM 1.7
         behaveGroup=OptionGroup(self.parser,
                                 "Behaviour",
                                 "General behaviour of the program")
-        
+
         behaveGroup.add_option("--apply-changes",
                                action="store_true",
                                dest="applyChanges",
@@ -120,21 +122,21 @@ that is compatible with OpenFOAM 1.7
                                dest="print_",
                                default=False,
                                help="Only print the modified dictionaries to the screen")
-        
+
         behaveGroup.add_option("--verbose",
                                action="store_true",
                                dest="verbose",
                                default=False,
                                help="Speak out aloud which decisions are made")
-        
+
         behaveGroup.add_option("--force",
                                action="store_true",
                                dest="force",
                                default=False,
                                help="Force even if backup-files exist")
-        
+
         self.parser.add_option_group(behaveGroup)
-    
+
         self.dictGroup=OptionGroup(self.parser,
                               "Dictionaries",
                               "Dictionaries that should be updated")
@@ -144,48 +146,48 @@ that is compatible with OpenFOAM 1.7
                                       action="callback",
                                       callback=d.disableCallback,
                                       help="Disable the modification of "+d.location())
-            
+
         self.parser.add_option_group(self.dictGroup)
-    
+
     def run(self):
         case=self.parser.getArgs()[0]
         self.checkCase(case)
-        
+
         if self.opts.verbose:
-            print "Working on case",case
+            print_("Working on case",case)
 
         for d in self.dicts:
             d.case=case
             if self.opts.verbose:
-                print "  Checking",d.location()
+                print_("  Checking",d.location())
 
             if not d.enabled:
                 if self.opts.verbose:
-                    print "    Disabled"
+                    print_("    Disabled")
                 continue
-            
+
             if not path.exists(d.path()):
                 d.disable()
                 if self.opts.verbose:
-                    print "    Does not exist - disabling"
+                    print_("    Does not exist - disabling")
                 continue
 
             if not d.needsUpgrade():
                 d.disable()
                 if self.opts.verbose:
-                    print "    Does not need an upgrade - disbling"
+                    print_("    Does not need an upgrade - disbling")
                 continue
-            
-            print d.location(),"needs an upgrade"
+
+            print_(d.location(),"needs an upgrade")
 
         if self.opts.applyChanges or self.opts.print_:
-            print
+            print_()
             if self.opts.applyChanges:
-                print "Doing the upgrades"
+                print_("Doing the upgrades")
             for d in self.dicts:
                 if d.enabled:
                     if self.opts.verbose:
-                        print "Upgrading",d.location()
+                        print_("Upgrading",d.location())
                     d.upgrade(self.opts.force,self.opts.print_)
-                    
-    
+
+# Should work with Python3 and Python2

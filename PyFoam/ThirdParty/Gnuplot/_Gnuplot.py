@@ -14,8 +14,10 @@ interface to a running gnuplot process.
 
 import sys, string, types
 
-import gp, PlotItems, termdefs, Errors
+from . import gp, PlotItems, termdefs, Errors
 
+from PyFoam.ThirdParty.six import string_types
+from PyFoam.ThirdParty.six.moves import input as rinput
 
 class _GnuplotFile:
     """A file to which gnuplot commands can be written.
@@ -223,7 +225,7 @@ class Gnuplot:
         plotcmds = []
         for item in self.itemlist:
             plotcmds.append(item.command())
-        self(self.plotcmd + ' ' + string.join(plotcmds, ', '))
+        self(self.plotcmd + ' ' + ", ".join(plotcmds))
         for item in self.itemlist:
             # Uses self.gnuplot.write():
             item.pipein(self.gnuplot)
@@ -247,7 +249,7 @@ class Gnuplot:
         for item in items:
             if isinstance(item, PlotItems.PlotItem):
                 self.itemlist.append(item)
-            elif type(item) is types.StringType:
+            elif isinstance(item,string_types):
                 self.itemlist.append(PlotItems.Func(item))
             else:
                 # assume data is an array:
@@ -348,7 +350,7 @@ class Gnuplot:
             sys.stderr.write('Press C-d to end interactive input\n')
         while 1:
             try:
-                line = raw_input('gnuplot>>> ')
+                line = rinput('gnuplot>>> ')
             except EOFError:
                 break
             self(line)
@@ -407,7 +409,7 @@ class Gnuplot:
             if font is not None:
                 cmd.append('"%s"' % (font,))
 
-        self(string.join(cmd))
+        self(" ".join(cmd))
 
     def set_boolean(self, option, value):
         """Set an on/off option.  It is assumed that the way to turn
@@ -429,7 +431,7 @@ class Gnuplot:
 
         if value is None:
             self('set %s [*:*]' % (option,))
-        elif type(value) is types.StringType:
+        elif isinstance(value,string_types):
             self('set %s %s' % (option, value,))
         else:
             # Must be a tuple:
@@ -445,7 +447,7 @@ class Gnuplot:
         The allowed settings and their treatments are determined from
         the optiontypes mapping."""
 
-        for (k,v) in keyw.items():
+        for (k,v) in list(keyw.items()):
             try:
                 type = self.optiontypes[k]
             except KeyError:
@@ -571,15 +573,15 @@ class Gnuplot:
             # Not all options were consumed.
             raise Errors.OptionError(
                 'The following options are unrecognized: %s'
-                % (string.join(keyw.keys(), ', '),)
+                % (", ".join(list(keyw.keys())),)
                 )
 
         self.set_string('output', filename)
-        self(string.join(setterm))
+        self(" ".join(setterm))
         # replot the current figure (to the printer):
         self.refresh()
         # reset the terminal to its `default' setting:
         self('set terminal %s' % gp.GnuplotOpts.default_term)
         self.set_string('output')
 
-
+# Should work with Python3 and Python2

@@ -5,7 +5,7 @@ PyFoam is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation; either version 2 of the License, or (at your
 option) any later version.  See the file COPYING in this directory,
-for a description of the GNU General Public License terms under which 
+for a description of the GNU General Public License terms under which
 you can copy the files.
 
 What it is
@@ -16,18 +16,20 @@ This Python (http://www.python.org)-library can be used to
     * analyze the logs produced by OpenFoam-solvers
     * execute OpenFoam-solvers and utilities and analyze their output simultaneously
     * manipulate the parameter files and the initial-conditions of a run in a non-destructive manner
-    * plots the residuals of OpenFOAM solvers 
+    * plots the residuals of OpenFOAM solvers
 
 More information is found on http://openfoamwiki.net/index.php/Contrib_PyFoam
 
 Contributors
 ============
 
-If not otherwise noted in a source-files the primary author is Bernhard Gschaider 
+If not otherwise noted in a source-files the primary author is Bernhard Gschaider
 
-The people contributed to PyFoam (If I forgot someone: tell me): 
+The people contributed to PyFoam (If I forgot someone: tell me):
 
 Bernhard Gschaider
 Martin Beaudoin
 Fabian Pollesböck
 Etienne Lorriaux
+Bruno Santos
+Marc Immer

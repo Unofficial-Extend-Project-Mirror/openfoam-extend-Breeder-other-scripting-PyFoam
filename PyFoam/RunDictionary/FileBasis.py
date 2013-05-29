@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/FileBasis.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
+#  ICE Revision: $Id: FileBasis.py 12750 2013-01-03 23:07:32Z bgschaid $
 """Basis for the handling of OpenFOAM-files
 
 Transparently accepts gnuzipped files"""
@@ -14,15 +14,17 @@ from PyFoam.Basics.LineReader import LineReader
 
 from PyFoam.Error import warning
 
+from PyFoam.ThirdParty.six import PY3
+
 class FileBasis(Utilities):
     """ Base class for the other OpenFOAM--file-classes"""
-    
+
     removedString="//PyFoamRemoved: "
     """Comment for lines that were overwritten by PyFoam-routines"""
-    
+
     addedString="//PyFoamAdded"
     """Comment for lines that were added by PyFoam-routines"""
-    
+
     def __init__(self,name,createZipped=True):
         """@param name: Name of the file. If the field is zipped the .gz is
         appended
@@ -30,7 +32,7 @@ class FileBasis(Utilities):
         as a zipped file?"""
         self.name = path.abspath(name)
         self.exists = False
-        
+
         if path.exists(self.name):
             self.exists = True
             self.zipped=False
@@ -60,7 +62,7 @@ class FileBasis(Utilities):
     def baseName(self):
         """Returns the basic file name (without .gz)"""
         return path.basename(self.name)
-    
+
     def openFile(self,keepContent=False,mode="r"):
         """opens the file. To be overloaded by derived classes"""
         if not keepContent:
@@ -78,7 +80,10 @@ class FileBasis(Utilities):
     def readFile(self):
         """ read the whole File into memory"""
         self.openFile()
-        self.content=self.parse(self.fh.read())
+        txt=self.fh.read()
+        if PY3 and self.zipped:
+            txt=str(txt,"utf-8")
+        self.content=self.parse(txt)
         self.closeFile()
 
     def writeFile(self,content=None):
@@ -88,8 +93,16 @@ class FileBasis(Utilities):
             self.content=content
         if self.content!=None:
             self.openFile(keepContent=True,mode="w")
-            self.fh.write(str(self))
+            txt=str(self)
+            self.fh.write(self.encode(txt))
             self.closeFile()
+
+    def encode(self,txt):
+        """Encode a string to byte if necessary (for Python3)"""
+        if PY3 and self.zipped:
+            return bytes(txt,"utf-8")
+        else:
+            return txt
 
     def writeFileAs(self,name):
         """ Writes a copy of the file. Extends with .gz if the original
@@ -108,10 +121,10 @@ class FileBasis(Utilities):
         self.name=name
         self.writeFile()
         self.name=tmp
-        
+
         if erase:
             self.content=None
-            
+
     def parse(self,cnt):
         """ Parse a string that is to be the content, to be overriden
         by the sub-classes"""
@@ -122,7 +135,7 @@ class FileBasis(Utilities):
         """Build a string from self.content, to be overriden by sub-classes"""
 
         return self.content
-    
+
     def makeTemp(self):
         """creates a temporary file"""
         fn=mktemp(dir=path.dirname(self.name))
@@ -132,6 +145,13 @@ class FileBasis(Utilities):
             fh=open(fn,"w")
 
         return fh,fn
+
+    def writeEncoded(self,out,txt):
+        """Convert the text to 'bytes' is we encounter a zipped file"""
+        if PY3:
+            if type(out) is gzip.GzipFile:
+                txt=bytes(txt,"utf-8")
+        out.write(txt)
 
     def goTo(self,l,s,out=None,echoLast=False,stop=None):
         """Read lines until a token is found
@@ -144,8 +164,8 @@ class FileBasis(Utilities):
         exp=re.compile("( |^)"+s+"( |$)")
         self.goMatch(l,exp,out=out,stop=stop)
         if out!=None and echoLast:
-            out.write(l.line+"\n")
-            
+            self.writeEncoded(out,l.line+"\n")
+
     def goMatch(self,l,exp,out=None,stop=None):
         """Read lines until a regular expression is matched
 
@@ -153,7 +173,7 @@ class FileBasis(Utilities):
         @param exp: the expression to look for
         @param out: filehandle to echo the lines to
         @param stop: pattern that indicates that exp will never be found
-        @return: match-object if exp is found, the line if stop is found and None if the end of the file is reached"""        
+        @return: match-object if exp is found, the line if stop is found and None if the end of the file is reached"""
         while l.read(self.fh):
             m=exp.match(l.line)
             if m!=None:
@@ -162,17 +182,17 @@ class FileBasis(Utilities):
                 if stop.match(l.line):
                     return l.line
             if out!=None:
-                out.write(l.line+"\n")
+                self.writeEncoded(out,l.line+"\n")
 
         return None
-    
+
     def copyRest(self,l,out):
         """Copy the rest of the file
-        
+
         @param l: a LineReader object
-        @param out: filehandle to echo the lines to"""        
+        @param out: filehandle to echo the lines to"""
         while l.read(self.fh):
-            out.write(l.line+"\n")
+            self.writeEncoded(out,l.line+"\n")
 
     def purgeFile(self):
         """Undo all the manipulations done by PyFOAM
@@ -180,7 +200,7 @@ class FileBasis(Utilities):
         Goes through the file and removes all lines that were added"""
         rmExp= re.compile("^"+self.removedString+"(.*)$")
         addExp=re.compile("^(.*)"+self.addedString+"$")
-        
+
         l=LineReader()
         self.openFile()
 
@@ -192,13 +212,13 @@ class FileBasis(Utilities):
             m=addExp.match(l.line)
             if m!=None:
                 continue
-            
+
             m=rmExp.match(l.line)
             if m!=None:
                 toPrint=m.group(1)
-                
-            fh.write(toPrint+"\n")
-        
+
+            self.writeEncoded(fh,toPrint+"\n")
+
         self.closeFile()
         fh.close()
         os.rename(fn,self.name)
@@ -207,7 +227,7 @@ class FileBasis(Utilities):
         """Return the path to the case of this file (if any valid case is found).
         Else return None"""
 
-        from SolutionDirectory import NoTouchSolutionDirectory
+        from .SolutionDirectory import NoTouchSolutionDirectory
 
         caseDir=None
         comp=path.split(self.name)[0]
@@ -216,20 +236,20 @@ class FileBasis(Utilities):
                 caseDir=comp
                 break
             comp=path.split(comp)[0]
-            
+
         return caseDir
-    
+
 class FileBasisBackup(FileBasis):
     """A file with a backup-copy"""
 
     counter={}
-    
+
     def __init__(self,name,backup=False,createZipped=True):
         """@param name: The name of the parameter file
         @type name: str
         @param backup: create a backup-copy of the file
         @type backup: boolean"""
-        
+
         FileBasis.__init__(self,name,createZipped=createZipped)
 
         if backup:
@@ -250,7 +270,9 @@ class FileBasisBackup(FileBasis):
                 self.copyfile(self.backupName,self.name)
                 self.remove(self.backupName)
                 del FileBasisBackup.counter[self.name]
-        
+
 def exists(name):
     f=FileBasis(name)
     return f.exists
+
+# Should work with Python3 and Python2

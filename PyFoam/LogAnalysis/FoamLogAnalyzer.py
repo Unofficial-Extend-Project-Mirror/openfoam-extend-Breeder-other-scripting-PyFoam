@@ -1,7 +1,7 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/FoamLogAnalyzer.py 7656 2012-01-06T14:43:20.069830Z bgschaid  $ 
+#  ICE Revision: $Id: FoamLogAnalyzer.py 12747 2013-01-03 23:06:57Z bgschaid $
 """Analyze OpenFOAM logs"""
 
-from TimeLineAnalyzer import TimeLineAnalyzer
+from .TimeLineAnalyzer import TimeLineAnalyzer
 from PyFoam.Basics.LineReader import LineReader
 from PyFoam.Error import error
 
@@ -16,7 +16,7 @@ class FoamLogAnalyzer(object):
 
     Administrates and calls a number of LogLineAnlayzers for each
     line"""
-    
+
     def __init__(self,progress=False):
         """
         @param progress: Print time progress on console?
@@ -31,19 +31,19 @@ class FoamLogAnalyzer(object):
         self.progressOut=None
         if progress:
             self.progressOut=ProgressOutput(stdout)
-        
+
         tm=TimeLineAnalyzer(progress=progress)
         self.addAnalyzer("Time",tm)
         tm.addListener(self.setTime)
-        
+
     def tearDown(self):
         """Remove reference to self in children (hoping to remove
         circular dependencies)"""
-        
-        for a in self.analyzers.values():
+
+        for a in list(self.analyzers.values()):
             a.tearDown()
             a.setParent(None)
-    
+
     def collectData(self):
         """Collect dictionaries of collected data (current state)
         from the analyzers
@@ -65,7 +65,7 @@ class FoamLogAnalyzer(object):
         if time!=self.time:
             if self.progressOut:
                 self.progressOut.reset()
-                
+
             self.time=time
             for listener in self.timeListeners:
                 listener.timeChanged()
@@ -86,7 +86,7 @@ class FoamLogAnalyzer(object):
         """Write a message to the progress output"""
         if self.progressOut:
             self.progressOut(msg)
-            
+
     def addTimeListener(self,listener):
         """@param listener: An object that is notified when the time changes. Has to
         implement a timeChanged method"""
@@ -97,25 +97,25 @@ class FoamLogAnalyzer(object):
 
     def listAnalyzers(self):
         """@returns: A list with the names of the Analyzers"""
-        return self.analyzers.keys()
-    
+        return list(self.analyzers.keys())
+
     def hasAnalyzer(self,name):
         """Is this LogLineAnalyzer name there"""
-        return self.analyzers.has_key(name)
+        return name in self.analyzers
 
     def getAnalyzer(self,name):
         """Get the LogLineAnalyzer name"""
-        if self.analyzers.has_key(name):
+        if name in self.analyzers:
             return self.analyzers[name]
         else:
             return None
-        
+
     def addAnalyzer(self,name,obj):
         """Adds an analyzer
 
         obj - A LogLineAnalyzer
         name - the name of the analyzer"""
-        
+
         obj.setParent(self)
         self.analyzers[name]=obj
 
@@ -140,9 +140,9 @@ class FoamLogAnalyzer(object):
         for nm in self.analyzers:
             #            print nm,self.analyzers[nm].goOn()
             result=result and self.analyzers[nm].goOn()
-        
+
         return result
-    
+
     def getTime(self):
         """Gets the current time"""
         return str(self.time)
@@ -156,7 +156,7 @@ class FoamLogAnalyzer(object):
     def getDirectory(self):
         """Gets the output directory"""
         return self.oDir
-    
+
     def addTrigger(self,time,func,once=True,until=None):
         """Adds a trigger function that is to be called as soon as
         the simulation time exceeds a certain value
@@ -172,7 +172,7 @@ class FoamLogAnalyzer(object):
             data["until"]=float(until)
             once=False
         data["once"]=once
-            
+
         self.timeTriggers.append(data)
 
     def checkTriggers(self):
@@ -190,6 +190,8 @@ class FoamLogAnalyzer(object):
                         remove.append(i)
 
         remove.reverse()
-        
+
         for i in remove:
             self.timeTriggers.pop(i)
+
+# Should work with Python3 and Python2

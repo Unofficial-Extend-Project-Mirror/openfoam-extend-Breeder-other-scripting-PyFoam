@@ -4,19 +4,17 @@ from PyFoam.RunDictionary.SampleDirectory import SampleDirectory,SampleTime,Samp
 
 from os import path,environ,system,mkdir
 from shutil import rmtree
+from tempfile import mkdtemp
 
 theSuite=unittest.TestSuite()
 
-theDir="/tmp/sampleDirectoryTest"
-
-def destroyDirectory():
+def destroyDirectory(theDir):
     if path.exists(theDir):
         rmtree(theDir)
 
 def createDirectory():
-    destroyDirectory()
+    theDir=mkdtemp()
 
-    mkdir(theDir)
     mkdir(path.join(theDir,"samples"))
     mkdir(path.join(theDir,"samples","0"))
     open(path.join(theDir,"samples","0","line1_U_U2.xy"),"w").write(
@@ -25,7 +23,7 @@ def createDirectory():
 3 1 1 1 1 1 1
 """)
     open(path.join(theDir,"samples","0","line1_p_p2_p3.xy"),"w").write(
-"""0 0 0 0 
+"""0 0 0 0
 1 0 0 1
 3 1 1 1
 """)
@@ -35,17 +33,19 @@ def createDirectory():
 3 1 1 1 1 1 1
 """)
     open(path.join(theDir,"samples","0","line2_p_p2_p3.xy"),"w").write(
-"""0 0 0 0 
+"""0 0 0 0
 1 0 1
 3 1 1 1
 """)
     mkdir(path.join(theDir,"samples","5"))
 
+    return theDir
+
 def createDirectory2():
-    createDirectory()
+    theDir=createDirectory()
 
     open(path.join(theDir,"samples","0","line1_p_post_preset_pre_p.xy"),"w").write(
-"""0 0 0 0 
+"""0 0 0 0
 1 0 0 1
 3 1 1 1
 """)
@@ -53,15 +53,17 @@ def createDirectory2():
         open(path.join(theDir,"samples","0","line1_p_post_preset_pre_p.xy")).read()
         )
 
+    return theDir
+
 class SampleDirectoryTest(unittest.TestCase):
     def setUp(self):
-        createDirectory()
+        self.theDir=createDirectory()
 
     def tearDown(self):
-        destroyDirectory()
+        destroyDirectory(self.theDir)
 
     def testFindCorrectNames(self):
-        sd=SampleDirectory(theDir)
+        sd=SampleDirectory(self.theDir)
         self.assertEqual(len(sd),2)
         self.assertEqual(len(sd.lines()),2)
         self.assertEqual(len(sd.values()),5)
@@ -71,27 +73,27 @@ theSuite.addTest(unittest.makeSuite(SampleDirectoryTest,"test"))
 
 class SampleTimeTest(unittest.TestCase):
     def setUp(self):
-        createDirectory()
+        self.theDir=createDirectory()
 
     def tearDown(self):
-        destroyDirectory()
+        destroyDirectory(self.theDir)
 
     def testGetTimes(self):
-        sd=SampleDirectory(theDir)
+        sd=SampleDirectory(self.theDir)
         st=sd["0"]
         self.assertRaises(KeyError,sd.__getitem__,"3")
-        
+
 theSuite.addTest(unittest.makeSuite(SampleTimeTest,"test"))
 
 class SampleDataTest(unittest.TestCase):
     def setUp(self):
-        createDirectory()
+        self.theDir=createDirectory()
 
     def tearDown(self):
-        destroyDirectory()
+        destroyDirectory(self.theDir)
 
     def testFindCorrectRanges(self):
-        sd=SampleDirectory(theDir)
+        sd=SampleDirectory(self.theDir)
         st=sd["0"]
         U=st[("line1","U")]
         self.assert_(U.isVector())
@@ -101,12 +103,12 @@ class SampleDataTest(unittest.TestCase):
         self.assertEqual(p.range(),(0.,1.))
 
     def testFailOnWrongData(self):
-        sd=SampleDirectory(theDir)
+        sd=SampleDirectory(self.theDir)
         st=sd["0"]
         self.assertRaises(KeyError,st.__getitem__,("line2","p3"))
 
     def testFindCorrectRanges(self):
-        sd=SampleDirectory(theDir)
+        sd=SampleDirectory(self.theDir)
         st=sd["0"]
         U=st[("line1","U")]
         p=st[("line1","p")]
@@ -114,19 +116,19 @@ class SampleDataTest(unittest.TestCase):
         spread2=p()
         spread2.title="duplicate"
         spread+=spread2
-        spread.writeCSV("/tmp/sample.csv")
-        
+        spread.writeCSV(path.join(self.theDir,"sample.csv"))
+
 theSuite.addTest(unittest.makeSuite(SampleDataTest,"test"))
 
 class SampleDataTestPrefix(unittest.TestCase):
     def setUp(self):
-        createDirectory2()
+        self.theDir=createDirectory2()
 
     def tearDown(self):
-        destroyDirectory()
+        destroyDirectory(self.theDir)
 
     def testUsePrePostfix(self):
-        sd=SampleDirectory(theDir,prefixes=["pre"],postfixes=["post"])
+        sd=SampleDirectory(self.theDir,prefixes=["pre"],postfixes=["post"])
         self.assertEqual(len(sd),2)
         self.assertEqual(len(sd.lines()),2)
         self.assertEqual(len(sd.values()),8)

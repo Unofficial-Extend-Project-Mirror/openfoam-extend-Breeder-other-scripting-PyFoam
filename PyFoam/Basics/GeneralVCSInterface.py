@@ -1,13 +1,15 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GeneralVCSInterface.py 7854 2012-02-12T14:33:22.227203Z bgschaid  $ 
+#  ICE Revision: $Id: GeneralVCSInterface.py 12753 2013-01-03 23:08:03Z bgschaid $
 """General interface to VCS implementations"""
 
 from PyFoam.Error import notImplemented,error
 from os import path,getcwd,chdir
 import subprocess,os
 
+from PyFoam.ThirdParty.six import exec_
+
 class GeneralVCSInterface(object):
     """This is an abstract class that implements an interface to general VCS operations"""
-    
+
     def __init__(self,
                  path,
                  init=False):
@@ -51,27 +53,27 @@ change back ot the original directory. Result of the function is returned
 
     def getRevision(self):
         """Get the current revision number"""
-        
+
         notImplemented(self,"commit")
 
     def commit(self,
                msg):
         """Commit the current state
         @param msg: Commit message"""
-        
+
         notImplemented(self,"commit")
 
     def update(self,
                timeout=None):
         """Update the working copy from the parent repository
         @param timeout: Wait a maximum time (if the VCS supports this)"""
-        
+
         notImplemented(self,"update")
 
     def branchName(self):
         """Return the branch-name (or another identifying string)"""
 
-        
+
         notImplemented(self,"commit")
 
     def addPath(self,
@@ -111,7 +113,7 @@ change back ot the original directory. Result of the function is returned
         self.addGlobToIgnore("*~")
         self.addGlobToIgnore("*.foam")
         self.addRegexpToIgnore(".*\\.logfile")
-        
+
 def getVCS(vcs,
            path,
            init=False,
@@ -131,11 +133,11 @@ def getVCS(vcs,
         if tolerant:
             return None
         else:
-            error("Unknown VCS",vcs,". Known are",table.keys())
+            error("Unknown VCS",vcs,". Known are",list(table.keys()))
 
     modName=table[vcs]
 
-    exec "from "+modName+" import "+modName
+    exec_("from "+modName+" import "+modName)
 
     return eval(modName+"(path,init)")
 
@@ -146,7 +148,7 @@ def whichVCS(dpath):
 """
     if path.exists(path.join(dpath,".svn")):
         return "svn"
-    
+
     def runTest(test):
         p = subprocess.Popen(test,
                              shell=True,
@@ -167,6 +169,5 @@ def whichVCS(dpath):
     chdir(oldDir)
     if not status:
         return "git"
-    
-    return ""
 
+    return ""

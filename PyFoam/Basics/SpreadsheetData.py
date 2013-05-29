@@ -1,16 +1,26 @@
-#  ICE Revision: $Id: $ 
+#  ICE Revision: $Id: $
 """
 Data that can go into a spreadsheet (title line and rectangular data)
 """
 
-import numpy,copy
+try:
+    import numpy
+except ImportError:
+    # assume this is pypy and retry
+    import numpypy
+    import numpy
+
+import copy
 
 from PyFoam.Error import error,FatalErrorPyFoamException,warning
+
+from PyFoam.ThirdParty.six import PY3
+from PyFoam.ThirdParty.six import b as toByte
 
 class WrongDataSize(FatalErrorPyFoamException):
     def __init__(self):
         FatalErrorPyFoamException.__init__(self,"Size of the arrays differs")
-        
+
 class SpreadsheetData(object):
     """
     Collects data that could go into a spreadsheet. The focus of this class is on
@@ -35,7 +45,7 @@ class SpreadsheetData(object):
         @param title: a name that is used to make unique heades names"""
 
         self.title=title
-        
+
         if (csvName or txtName) and data:
             error("SpreadsheetData is either constructed from data or from a file")
 
@@ -46,11 +56,13 @@ class SpreadsheetData(object):
                 names=list(rec.dtype.names)
             except AttributeError:
                 # for old numpy-versions
-                data=map(tuple,numpy.loadtxt(csvName,delimiter=',',skiprows=1))
+                data=list(map(tuple,numpy.loadtxt(csvName,
+                                                  delimiter=',',
+                                                  skiprows=1)))
                 names=open(csvName).readline().strip().split(',')
-                
+
             # redo this to make sure that everything is float
-            self.data=numpy.array(data,dtype=zip(names,['f8']*len(names)))
+            self.data=numpy.array(data,dtype=list(zip(names,['f8']*len(names))))
         elif txtName:
             try:
                 rec=numpy.recfromtxt(txtName,names=True)
@@ -58,16 +70,17 @@ class SpreadsheetData(object):
                 names=list(rec.dtype.names)
             except AttributeError:
                 # for old numpy-versions
-                data=map(tuple,numpy.loadtxt(txtName))
+                data=list(map(tuple,numpy.loadtxt(txtName)))
                 names=open(txtName).readline().strip().split()[1:]
-                
+
             # redo this to make sure that everything is float
-            self.data=numpy.array(data,dtype=zip(names,['f8']*len(names)))            
+            self.data=numpy.array(data,dtype=list(zip(names,['f8']*len(names))))
         else:
             if data!=None and names==None:
                 error("No names given for the data")
 
-            self.data=numpy.array(map(tuple,data),dtype=zip(names,['f8']*len(names)))
+            self.data=numpy.array(list(map(tuple,data)),
+                                  dtype=list(zip(names,['f8']*len(names))))
 
         if timeName:
             try:
@@ -81,33 +94,38 @@ class SpreadsheetData(object):
         if validData:
             usedData=[]
             usedNames=[]
-            
+
             for n in self.data.dtype.names:
                 if n==self.time or n in validData:
                     usedData.append(tuple(self.data[n]))
                     usedNames.append(n)
 
             usedData=numpy.array(usedData).transpose()
-            self.data=numpy.array(map(tuple,usedData),dtype=zip(usedNames,['f8']*len(usedNames)))
+            self.data=numpy.array(list(map(tuple,usedData)),
+                                  dtype=list(zip(usedNames,['f8']*len(usedNames))))
             index=list(self.data.dtype.names).index(self.time)
-                
+
         if self.title!=None:
-            self.data.dtype.names=map(lambda x:self.title+" "+x,self.data.dtype.names[0:index])+[self.data.dtype.names[index]]+map(lambda x:self.title+" "+x,self.data.dtype.names[index+1:])
+            self.data.dtype.names=[self.title+" "+x for x in self.data.dtype.names[0:index]]+[self.data.dtype.names[index]]+[self.title+" "+x for x in self.data.dtype.names[index+1:]]
 
     def names(self):
         return copy.copy(self.data.dtype.names)
 
     def size(self):
         return self.data.size
-    
+
     def writeCSV(self,fName,
                  delimiter=","):
         """Write data to a CSV-file
         @param fName: Name of the file
         @param delimiter: Delimiter to be used in the CSV-file"""
 
-        f=open(fName,"w")
-        f.write(delimiter.join(self.names())+"\n")
+        f=open(fName,"wb")
+        if PY3:
+            f.write(toByte(delimiter.join(self.names())+"\n"))
+        else:
+            f.write(delimiter.join(self.names())+"\n")
+
         numpy.savetxt(f,self.data,delimiter=delimiter)
 
     def tRange(self,time=None):
@@ -118,7 +136,7 @@ class SpreadsheetData(object):
         t=self.data[time]
 
         return (t[0],t[-1])
-    
+
     def join(self,other,time=None,prefix=None):
         """Join this object with another. Assume that they have the same
         amount of rows and that they have one column that designates the
@@ -135,7 +153,7 @@ class SpreadsheetData(object):
                 prefix="other_"
             else:
                 prefix+="_"
-                
+
         t1=self.data[time]
         t2=other.data[time]
         if len(t1)!=len(t2):
@@ -188,7 +206,7 @@ class SpreadsheetData(object):
             newrec[name] = arr
 
         self.data=newrec
-        
+
     def __call__(self,
                  t,
                  name,
@@ -202,13 +220,13 @@ class SpreadsheetData(object):
         @param time: name of the time column. If none is given then the first column is assumed
         @param invalidExtend: if t is out of the valid range then use the smallest or the biggest value. If False use nan
         @param noInterpolation: if t doesn't exactly fit a data-point return 'nan'"""
-        
+
         if time==None:
             time=self.time
 
         x=self.data[time]
         y=self.data[name]
-        
+
         # get extremes
         if t<x[0]:
             if invalidExtend:
@@ -220,13 +238,13 @@ class SpreadsheetData(object):
                 return y[-1]
             else:
                 return float('nan')
-        
+
         if noInterpolation:
             if t==x[0]:
                 return y[0]
             elif t==x[-1]:
                 return y[-1]
-            
+
         iLow=0
         iHigh=len(x)-1
 
@@ -267,7 +285,7 @@ class SpreadsheetData(object):
             if same:
                 # No difference between the times
                 return
-        
+
         newData=[]
         otherI=0
         originalI=0
@@ -285,7 +303,7 @@ class SpreadsheetData(object):
                     originalI+=1
                     otherI+=1
                     append=False
-                
+
             if append:
                 t=times[otherI]
                 newRow=[]
@@ -303,8 +321,8 @@ class SpreadsheetData(object):
             newData.append(self.data[originalI])
             originalI+=1
 
-        self.data=numpy.array(map(tuple,newData),dtype=self.data.dtype)
-        
+        self.data=numpy.array(list(map(tuple,newData)),dtype=self.data.dtype)
+
     def resample(self,
                  other,
                  name,
@@ -323,7 +341,7 @@ class SpreadsheetData(object):
         @param noInterpolation: if t doesn't exactly fit a data-point return 'nan'"""
         if time==None:
             time=self.time
-            
+
         if extendData and (
             self.data[time][0] > other.data[time][0] or \
             self.data[time][-1] < other.data[time][-1]):
@@ -341,8 +359,10 @@ class SpreadsheetData(object):
                 if i>=len(other.data[time]):
                     break
             if len(pre)>0:
-                self.data=numpy.concatenate((numpy.array(map(tuple,pre),dtype=self.data.dtype),self.data))
-            
+                self.data=numpy.concatenate((numpy.array(list(map(tuple,pre)),
+                                                         dtype=self.data.dtype),
+                                             self.data))
+
             post=[]
             i=-1
             while other.data[time][i] > self.data[time][-1]:
@@ -356,13 +376,14 @@ class SpreadsheetData(object):
                 i-=1
                 if abs(i)>=len(other.data[time])+1:
                     break
-                
+
             post.reverse()
             if len(post)>0:
-                self.data=numpy.concatenate((self.data,numpy.array(map(tuple,post),dtype=self.data.dtype)))
+                self.data=numpy.concatenate((self.data,numpy.array(list(map(tuple,post)),
+                                                                   dtype=self.data.dtype)))
 
         result=[]
-        
+
         for t in self.data[time]:
             nm=name
             if otherName:
@@ -373,8 +394,15 @@ class SpreadsheetData(object):
                                 noInterpolation=noInterpolation))
 
         return result
-    
-    def compare(self,other,name,otherName=None,time=None,common=False):
+
+    def compare(self,
+                other,
+                name,
+                otherName=None,
+                time=None,
+                common=False,
+                minTime=None,
+                maxTime=None):
         """Compare this data-set with another. The time-points of this dataset are used as
         a reference. Returns a dictionary with a number of norms: maximum absolute
         difference, average absolute difference
@@ -383,16 +411,18 @@ class SpreadsheetData(object):
         @param name: name of the data column to be evaluated. Assumes that that column
         is ordered in ascending order
         @param time: name of the time column. If none is given then the first column is assumed
-        @param common: cut off the parts where not both data sets are defined"""
+        @param common: cut off the parts where not both data sets are defined
+        @param minTime: first time which should be compared
+        @param maxTime: last time to compare"""
 
         if time==None:
             time=self.time
-            
+
         x=self.data[time]
         y=self.data[name]
         y2=self.resample(other,name,otherName=otherName,time=time,invalidExtend=True)
 
-        minT,maxT=None,None
+        minT,maxT=minTime,maxTime
         if common:
             minTmp,maxTmp=max(x[0],other.data[time][0]),min(x[-1],other.data[time][-1])
             for i in range(len(x)):
@@ -407,25 +437,38 @@ class SpreadsheetData(object):
         else:
             minT,maxT=x[0],x[-1]
 
+        result = { "max" : None,
+                   "maxPos" : None,
+                   "average" : None,
+                   "wAverage" : None,
+                   "tMin": None,
+                   "tMax": None }
+
         if minT==None or maxT==None:
-            return { "max" : None,
-                     "maxPos" : None,
-                     "average" : None,
-                     "wAverage" : None,
-                     "tMin": None,
-                     "tMax": None }
-            
+            return result
+
+        if minTime:
+            if minTime>minT:
+                minT=minTime
+
+        if maxTime:
+            if maxTime<maxT:
+                maxT=maxTime
+
+        if maxT<minT:
+            return result
+
         maxDiff=0
         maxPos=x[0]
         sumDiff=0
         sumWeighted=0
         cnt=0
-        
+
         for i,t in enumerate(x):
             if t<minT or t>maxT:
                 continue
             cnt+=1
-            
+
             val1=y[i]
             val2=y2[i]
             diff=abs(val1-val2)
@@ -447,16 +490,22 @@ class SpreadsheetData(object):
                  "tMin": minT,
                  "tMax": maxT}
 
-    def metrics(self,name,time=None):
+    def metrics(self,
+                name,
+                time=None,
+                minTime=None,
+                maxTime=None):
         """Calculates the metrics for a data set. Returns a dictionary
         with a number of norms: minimum, maximum, average, average weighted by time
         @param name: name of the data column to be evaluated. Assumes that that column
         is ordered in ascending order
-        @param time: name of the time column. If none is given then the first column is assumed"""
+        @param time: name of the time column. If none is given then the first column is assumed
+        @param minTime: first time to take metrics from
+        @param maxTime: latest time to take matrics from"""
 
         if time==None:
             time=self.time
-            
+
         x=self.data[time]
         y=self.data[name]
 
@@ -464,8 +513,23 @@ class SpreadsheetData(object):
         maxVal=-1e40
         sum=0
         sumWeighted=0
-        
+
+        minT,maxT=x[0],x[-1]
+
+        if minTime:
+            if minTime>minT:
+                minT=minTime
+
+        if maxTime:
+            if maxTime<maxT:
+                maxT=maxTime
+
+        cnt=0
+
         for i,t in enumerate(x):
+            if t<minT or t>maxT:
+                continue
+            cnt+=1
             val=y[i]
             maxVal=max(val,maxVal)
             minVal=min(val,minVal)
@@ -479,8 +543,9 @@ class SpreadsheetData(object):
 
         return { "max" : maxVal,
                  "min" : minVal,
-                 "average" : sum/len(x),
-                 "wAverage" : sumWeighted/(x[-1]-x[0]),
+                 "average" : sum/max(cnt,1),
+                 "wAverage" : sumWeighted/(maxT-minT),
                  "tMin": x[0],
                  "tMax": x[-1]}
-    
+
+# Should work with Python3 and Python2

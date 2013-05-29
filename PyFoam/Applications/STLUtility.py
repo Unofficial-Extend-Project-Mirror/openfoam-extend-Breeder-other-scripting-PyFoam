@@ -3,16 +3,18 @@ Application-class that implements pyFoamSTLUtility.py
 """
 from optparse import OptionGroup
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.Basics.STLFile import STLFile
 from PyFoam.Basics.RestructuredTextHelper import RestructuredTextHelper
 
 from os import path
 
+from PyFoam.ThirdParty.six import print_
+
 class STLUtility(PyFoamApplication):
     def __init__(self,args=None):
         description="""\
-This utility does some basic manipulations with STL-files        
+This utility does some basic manipulations with STL-files
 """
         PyFoamApplication.__init__(self,
                                    args=args,
@@ -39,28 +41,28 @@ This utility does some basic manipulations with STL-files
                           dest="patchNames",
                           default=False,
                           help="Print the names of the patches (if names are given)")
-        
+
         action.add_option("--info",
                           action="store_true",
                           dest="info",
                           default=False,
                           help="Info about the patches in the STL")
-        
+
     def run(self):
         sources=[STLFile(f) for f in self.parser.getArgs()]
         rst=RestructuredTextHelper()
-        
+
         if self.opts.patchNames:
-            print rst.buildHeading("Patch names",level=RestructuredTextHelper.LevelSection)
+            print_(rst.buildHeading("Patch names",level=RestructuredTextHelper.LevelSection))
             for s in sources:
-                print rst.buildHeading(s.filename(),level=RestructuredTextHelper.LevelSubSection)
+                print_(rst.buildHeading(s.filename(),level=RestructuredTextHelper.LevelSubSection))
                 for p in s.patchInfo():
-                    print p["name"]
+                    print_(p["name"])
 
         if self.opts.info:
-            print rst.buildHeading("Patch info",level=RestructuredTextHelper.LevelSection)
+            print_(rst.buildHeading("Patch info",level=RestructuredTextHelper.LevelSection))
             for s in sources:
-                print rst.buildHeading(s.filename(),level=RestructuredTextHelper.LevelSubSection)
+                print_(rst.buildHeading(s.filename(),level=RestructuredTextHelper.LevelSubSection))
                 tab=rst.table()
                 tab[0]=["name","facets","range in file","bounding box"]
                 tab.addLine(head=True)
@@ -70,8 +72,8 @@ This utility does some basic manipulations with STL-files
                     tab[(i+1,2)]="%d-%d" % (p["start"],p["end"])
                     tab[(i+1,3)]="(%g %g %g) - (%g %g %g)" % tuple(p["min"]+p["max"])
 
-                print tab
-                    
+                print_(tab)
+
         if self.opts.joinTo:
             if path.exists(self.opts.joinTo):
                 self.error("File",self.opts.joinTo,"does allready exist")
@@ -81,5 +83,5 @@ This utility does some basic manipulations with STL-files
                 result+=s
 
             result.writeTo(self.opts.joinTo)
-            
-            
+
+# Should work with Python3 and Python2

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/FoamInformation.py 7870 2012-02-15T17:53:40.344304Z bgschaid  $ 
+#  ICE Revision: $Id: FoamInformation.py 12561 2012-05-11 12:15:56Z bgschaid $ 
 """Getting Information about the Foam-Installation (like the installation directory)"""
 
 from os import environ,path,listdir
@@ -11,7 +11,7 @@ else:
 
 import re
 
-from Error import error,warning
+from PyFoam.Error import error,warning
 
 from PyFoam import configuration as config
 
@@ -22,7 +22,7 @@ def getPathFromEnviron(name):
     @param name: the name of the environment variable"""
 
     tmp=""
-    if environ.has_key(name):
+    if name in environ:
         tmp=path.normpath(environ[name])
 
     return tmp
@@ -34,7 +34,7 @@ def foamTutorials():
 
 def foamMPI():
     """@return: the used MPI-Implementation"""
-    if not environ.has_key("WM_MPLIB"):
+    if "WM_MPLIB" not in environ:
         return ()
     else:
         vStr=environ["WM_MPLIB"]
@@ -44,10 +44,10 @@ def foamVersionString(useConfigurationIfNoInstallation=False):
     """@return: string for the  Foam-version as found
     in $WM_PROJECT_VERSION"""
     
-    if not environ.has_key("WM_PROJECT_VERSION") and not useConfigurationIfNoInstallation:
+    if "WM_PROJECT_VERSION" not in environ and not useConfigurationIfNoInstallation:
         return ""
     else:
-        if environ.has_key("WM_PROJECT_VERSION"):
+        if "WM_PROJECT_VERSION" in environ:
             vStr=environ["WM_PROJECT_VERSION"]
         else:
             vStr=""
@@ -129,7 +129,7 @@ def findInstalledVersions(basedir,valid):
     return versions
 
 def findBaseDir(newDir):
-    if environ.has_key("WM_PROJECT_INST_DIR"):
+    if "WM_PROJECT_INST_DIR" in environ:
         basedir=environ["WM_PROJECT_INST_DIR"]
     else:
         basedir=path.expanduser(config().get("OpenFOAM","Installation"))
@@ -148,9 +148,9 @@ def foamInstalledVersions():
     versions=set()
 
     valid=re.compile("^OpenFOAM-([0-9]\.[0-9].*)$")
-    valid2=re.compile("^openfoam(1[0-9]+)$")
+    valid2=re.compile("^openfoam([0-9]+)$")
 
-    if environ.has_key("WM_PROJECT_INST_DIR"):
+    if "WM_PROJECT_INST_DIR" in environ:
         basedir=environ["WM_PROJECT_INST_DIR"]
     else:
         basedir=path.expanduser(config().get("OpenFOAM","Installation"))
@@ -177,7 +177,7 @@ def changeFoamVersion(new,force64=False,force32=False,compileOption=None):
         error("Version",new,"is not an installed version: ",foamInstalledVersions())
 
     old=None
-    if environ.has_key("WM_PROJECT_VERSION"):
+    if "WM_PROJECT_VERSION" in environ:
         old=environ["WM_PROJECT_VERSION"]
         if new==old:
             warning(new,"is already being used")
@@ -214,17 +214,21 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
     @param forceArchOption: To which architecture Option should be forced
     @param compileOption: to which value the WM_COMPILE_OPTION should be forced"""
 
-    try:
-        # Certan bashrc-s fail if this is set
-        del environ["FOAM_INST_DIR"]
-    except KeyError:
-        pass
+    # Certan bashrc-s fail if these are set
+    for v in ["FOAM_INST_DIR",
+              "WM_THIRD_PARTY_DIR",
+              "WM_PROJECT_USER_DIR",
+              "OPAL_PREFIX"]:
+        try:
+            del environ[v]
+        except KeyError:
+            pass
 
     if not path.exists(script):
         error("Can not execute",script,"it does not exist")
         
     try:    
-        if environ.has_key("SHELL"):
+        if "SHELL" in environ:
             shell=environ["SHELL"]
 
         if(path.basename(shell).find("python")==0):
@@ -245,7 +249,10 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
             cmd+="export WM_COMPILE_OPTION="+compileOption+"; "
             postCmd+=" WM_COMPILE_OPTION="+compileOption
         cmd+=". "+script+postCmd+'; echo "Starting The Dump Of Variables"; export'
-    except KeyError,name:
+    except KeyError:
+        # Instead of 'KeyError as name'. This is compatible with 2.4-3.2
+        # http://docs.pythonsprints.com/python3_porting/py-porting.html#handling-exceptions
+        name = sys.exc_info()[1]
         error("Can't do it, because shell variable",name,"is undefined")
 
     if sys.version_info<(2,6):
@@ -266,9 +273,11 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
     cnt=0
     
     for l in lines:
-        m=exp.match(l)
+        m=exp.match(str(l))
         if not m:
-            m=exp2.match(l)
+            m=exp2.match(str(l))
         if m:
             cnt+=1
             environ[m.groups()[0]]=m.groups()[1]
+
+# Should work with Python3 and Python2

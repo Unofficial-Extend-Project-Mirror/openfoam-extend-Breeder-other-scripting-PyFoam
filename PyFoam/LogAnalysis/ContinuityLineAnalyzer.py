@@ -1,14 +1,14 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/ContinuityLineAnalyzer.py 5717 2009-10-12T21:41:13.626022Z bgschaid  $ 
+#  ICE Revision: $Id: ContinuityLineAnalyzer.py 12753 2013-01-03 23:08:03Z bgschaid $
 """Check lines for continuity information"""
 
 import re
 
 continutityRegExp="^time step continuity errors : sum local = (.+), global = (.+), cumulative = (.+)$"
-    
+
 # from FileLineAnalyzer import FileLineAnalyzer
 # from TimeLineLineAnalyzer import TimeLineLineAnalyzer
 
-from GeneralLineAnalyzer import GeneralLineAnalyzer
+from .GeneralLineAnalyzer import GeneralLineAnalyzer
 
 class GeneralContinuityLineAnalyzer(GeneralLineAnalyzer):
     """Parses line for continuity information"""
@@ -29,27 +29,27 @@ class GeneralContinuityLineAnalyzer(GeneralLineAnalyzer):
         self.exp=re.compile(continutityRegExp)
 
     def addToFiles(self,match):
-        self.files.write("continuity",self.parent.getTime(),match.groups())
+        self.files.write(self.fName("continuity"),self.parent.getTime(),match.groups())
 
     def addToTimelines(self,match):
-        self.lines.setValue("Global",match.groups()[1]) 
-        self.lines.setValue("Cumulative",match.groups()[2]) 
-        
+        self.lines.setValue(self.fName("Global"),match.groups()[1])
+        self.lines.setValue(self.fName("Cumulative"),match.groups()[2])
+
 class ContinuityLineAnalyzer(GeneralContinuityLineAnalyzer):
     """Parses line for continuity information"""
 
     def __init__(self):
         GeneralContinuityLineAnalyzer.__init__(self,doTimelines=False)
 
-        
+
 ##        self.exp=re.compile(continutityRegExp)
 
 ##    def doAnalysis(self,line):
 ##        m=self.exp.match(line)
 ##        if m!=None:
 ##            self.files.write("continuity",self.parent.getTime(),m.groups())
-            
-    
+
+
 class TimeLineContinuityLineAnalyzer(GeneralContinuityLineAnalyzer):
     """Parses line for continuity information"""
 
@@ -60,7 +60,8 @@ class TimeLineContinuityLineAnalyzer(GeneralContinuityLineAnalyzer):
 ##    def doAnalysis(self,line):
 ##        m=self.exp.match(line)
 ##        if m!=None:
-##            #            self.lines.setValue("Local",m.groups()[0]) 
-##            self.lines.setValue("Global",m.groups()[1]) 
-##            self.lines.setValue("Cumulative",m.groups()[2]) 
-    
+##            #            self.lines.setValue("Local",m.groups()[0])
+##            self.lines.setValue("Global",m.groups()[1])
+##            self.lines.setValue("Cumulative",m.groups()[2])
+
+# Should work with Python3 and Python2

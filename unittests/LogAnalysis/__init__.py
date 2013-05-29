@@ -1,8 +1,8 @@
 
-import unittest
+# import unittest
 
-theSuite=unittest.TestSuite()
+# theSuite=unittest.TestSuite()
 
-from TimeLineAnalyzer import theSuite as TimeLineAnalyzer
+# from .TimeLineAnalyzer import theSuite as TimeLineAnalyzer
 
-theSuite.addTest(TimeLineAnalyzer)
+# theSuite.addTest(TimeLineAnalyzer)

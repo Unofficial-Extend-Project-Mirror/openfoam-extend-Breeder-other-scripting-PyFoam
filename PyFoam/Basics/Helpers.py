@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/Helpers.py 1532 2007-06-29T11:15:55.577361Z bgschaid  $ 
+#  ICE Revision: $Id: Helpers.py 12760 2013-01-03 23:10:16Z bgschaid $
 """Utility functions"""
 
 from os import listdir
@@ -16,8 +16,7 @@ def getLinearNames(d):
                 name=tmp[1]
                 if names.count(name)==0:
                     names.append(name)
-                    
+
     return names
 
-        
-    
+# Should work with Python3 and Python2

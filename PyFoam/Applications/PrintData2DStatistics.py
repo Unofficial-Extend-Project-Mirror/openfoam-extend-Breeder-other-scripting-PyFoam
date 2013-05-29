@@ -1,18 +1,17 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PrintData2DStatistics.py 7729 2012-01-19T12:12:30.369763Z bgschaid  $ 
+#  ICE Revision: $Id: PrintData2DStatistics.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamPrintData2DStatistics
 """
 
-import sys,re
 from optparse import OptionGroup
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
-from CommonPickledDataInput import CommonPickledDataInput
-
-from PyFoam.Error import PyFoamException
+from .CommonPickledDataInput import CommonPickledDataInput
 
 from PyFoam.Basics.Data2DStatistics import Data2DStatistics
+
+from PyFoam.ThirdParty.six import print_
 
 class PrintData2DStatistics(PyFoamApplication,
                             CommonPickledDataInput):
@@ -22,7 +21,7 @@ Reads a file with pickled information with statistics about data
 series (as it is usually gnerated by pyFoamTimelinePlot.py and
 pyFoamSamplePlot.py) and prints it in a human-readable form.
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -31,7 +30,7 @@ pyFoamSamplePlot.py) and prints it in a human-readable form.
                                    changeVersion=False,
                                    interspersed=True,
                                    inputApp=inputApp)
-        
+
     def addOptions(self):
         CommonPickledDataInput.addOptions(self)
 
@@ -61,6 +60,13 @@ function from the math-module
                           help="""\
 Print the relative error as calculated from the metrics and the compare-data
 """)
+        output.add_option("--relative-average-error",
+                          action="store_true",
+                          default=False,
+                          dest="relativeAverageError",
+                          help="""\
+Print the relative average error as calculated from the metrics and the compare-data (weighted average))
+""")
         output.add_option("--range",
                           action="store_true",
                           default=False,
@@ -68,7 +74,7 @@ Print the relative error as calculated from the metrics and the compare-data
                           help="""\
 Print the range (minimum and maximum) of the data
 """)
-        
+
         input=OptionGroup(self.parser,
                           "2D Statistics intput",
                           "Options that determine what should be used as input")
@@ -103,14 +109,14 @@ Value that is considered to be close enough to 0. Default:
 %default. Used for instance for the relative error calculations
 """)
 
-        
+
     def run(self):
         data=self.readPickledData()
         result={"originalData":data}
         if self.opts.metricsName in data:
             metrics=data[self.opts.metricsName]
         else:
-            self.error("Metrics set",self.opts.metricsName,"not in",data.keys())
+            self.error("Metrics set",self.opts.metricsName,"not in",list(data.keys()))
         if self.opts.metricsName==self.opts.compareName:
             self.warning("Metrics and comparison",self.opts.compareName,
                          "are the same. No comparison used")
@@ -121,7 +127,7 @@ Value that is considered to be close enough to 0. Default:
         elif self.opts.compareName in data:
             compare=data[self.opts.compareName]
         else:
-            self.error("Compare set",self.opts.compareName,"not in",data.keys())
+            self.error("Compare set",self.opts.compareName,"not in",list(data.keys()))
 
         stat=Data2DStatistics(metrics,
                               compare=compare,
@@ -130,34 +136,42 @@ Value that is considered to be close enough to 0. Default:
         result["statistics"]=stat
 
         for f in self.opts.field:
-            print "\nField",f
+            print_("\nField",f)
             try:
                 val=stat[f]
-                print val
+                print_(val)
                 result[f]=val
             except KeyError:
-                print " .... not present in",stat.names()
+                print_(" .... not present in",stat.names())
 
         for f in self.opts.function:
             for v in self.opts.field:
-                print "\nFunction",f,"on field",v
+                print_("\nFunction",f,"on field",v)
                 try:
                     val=stat.func(f,v)
-                    print val
+                    print_(val)
                     result["%s on %s" % (f,v)]=val
                 except KeyError:
-                    print " .... not present in",stat.names()
+                    print_(" .... not present in",stat.names())
 
         if self.opts.relativeError:
-            print "\nRelative Error"
+            print_("\nRelative Error")
             val=stat.relativeError()
-            print val
+            print_(val)
             result["relativeError"]=val
 
+        if self.opts.relativeAverageError:
+            print_("\nRelative Average Error")
+            val=stat.relativeAverageError()
+            print_(val)
+            result["relativeAverageError"]=val
+
         if self.opts.range:
-            print "\nData range"
+            print_("\nData range")
             val=stat.range()
-            print val
+            print_(val)
             result["dataRange"]=val
 
         self.setData(result)
+
+# Should work with Python3 and Python2

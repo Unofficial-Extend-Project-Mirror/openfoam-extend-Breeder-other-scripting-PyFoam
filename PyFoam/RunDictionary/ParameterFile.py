@@ -1,10 +1,10 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/ParameterFile.py 7564 2011-08-07T19:25:33.121164Z bgschaid  $ 
+#  ICE Revision: $Id: ParameterFile.py 12566 2012-05-14 08:22:17Z bgschaid $ 
 """Working with parameter-files"""
 
 import re,os
 
 from PyFoam.Basics.LineReader import LineReader
-from FileBasis import FileBasisBackup
+from PyFoam.RunDictionary.FileBasis import FileBasisBackup
 
 class ParameterFile(FileBasisBackup):
     """Represents a OpenFOAM parameter file"""

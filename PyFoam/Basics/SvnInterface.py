@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/SvnInterface.py 7854 2012-02-12T14:33:22.227203Z bgschaid  $ 
+#  ICE Revision: $Id: SvnInterface.py 12759 2013-01-03 23:08:52Z bgschaid $
 """A VCS-interface to Mercurial"""
 
 from PyFoam.Error import warning,error,notImplemented
 
-from GeneralVCSInterface import GeneralVCSInterface
+from .GeneralVCSInterface import GeneralVCSInterface
 
 from os import path as opath
 import subprocess
@@ -14,7 +14,7 @@ class SvnInterface(GeneralVCSInterface):
 The interface class to svn
 
 Only a partial implementation (As much as the BuildHelper needs)"""
-    
+
     def __init__(self,
                  path,
                  init=False):
@@ -28,9 +28,9 @@ Only a partial implementation (As much as the BuildHelper needs)"""
         for l in output.split("\n"):
             if l.find(info)==0:
                 return l[len(info)+2:]
-            
+
         return "nix"
-    
+
     def branchName(self):
         # svn does not have branch names
         return self.getInfo("Repository Root")
@@ -43,3 +43,4 @@ Only a partial implementation (As much as the BuildHelper needs)"""
         ok=self.doInPath(subprocess.call,["svn","update"])
         return ok==0
 
+# Should work with Python3 and Python2

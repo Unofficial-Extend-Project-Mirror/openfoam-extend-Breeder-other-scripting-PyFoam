@@ -12,7 +12,7 @@
 from distutils.core import setup
 
 # Get the version number from the __init__ file:
-from __init__ import __version__
+from .__init__ import __version__
 
 long_description = """\
 Gnuplot.py is a Python package that allows you to create graphs from
@@ -40,3 +40,4 @@ setup (
     packages=['Gnuplot'],
     )
 
+# Should work with Python3 and Python2

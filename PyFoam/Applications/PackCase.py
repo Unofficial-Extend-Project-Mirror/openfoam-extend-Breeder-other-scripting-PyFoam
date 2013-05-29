@@ -2,7 +2,7 @@
 Application-class that implements pyFoamPackCase.py
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
@@ -29,7 +29,7 @@ with ~
                          "What",
                          "Define what should be packed")
         self.parser.add_option_group(what)
-        
+
         what.add_option("--last",
                         action="store_true",
                         dest="last",
@@ -69,31 +69,40 @@ with ~
                          dest="basename",
                          default=None,
                          help='Name of the case inside the tar-file. If not set the actual basename of the case is used')
-        
+
     def run(self):
         sName=self.parser.getArgs()[0]
         if sName[-1]==path.sep:
             sName=sName[:-1]
-            
+
         if self.parser.getOptions().tarname!=None:
             dName=self.parser.getOptions().tarname
         else:
-            dName=sName+".tgz"
+            if sName==path.curdir:
+                dName=path.basename(path.abspath(sName))
+            else:
+                dName=sName
+            dName+=".tgz"
         if self.parser.getOptions().pyfoam:
             self.parser.getOptions().additional.append("PyFoam*")
-            
-        sol=SolutionDirectory(sName,archive=None,paraviewLink=False)
+
+        sol=SolutionDirectory(sName,
+                              archive=None,
+                              addLocalConfig=True,
+                              paraviewLink=False)
         if not sol.isValid():
             self.error(sName,"does not look like real OpenFOAM-case because",sol.missingFiles(),"are missing or of the wrong type")
-            
+
         if self.parser.getOptions().chemkin:
             sol.addToClone("chemkin")
 
         if self.opts.noPloyMesh:
             self.parser.getOptions().exclude.append("polyMesh")
-            
+
         sol.packCase(dName,
                      last=self.parser.getOptions().last,
                      additional=self.parser.getOptions().additional,
                      exclude=self.parser.getOptions().exclude,
                      base=self.parser.getOptions().basename)
+
+# Should work with Python3 and Python2

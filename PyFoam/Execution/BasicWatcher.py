@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/BasicWatcher.py 6675 2010-06-05T12:42:37.337813Z bgschaid  $ 
+#  ICE Revision: $Id: BasicWatcher.py 12757 2013-01-03 23:08:34Z bgschaid $
 """Watches the output of Foam-run"""
 
 from os import path
@@ -8,6 +8,8 @@ import gzip
 from time import sleep
 
 from PyFoam.Basics.LineReader import LineReader
+
+from PyFoam.ThirdParty.six import print_
 
 class BasicWatcher(object):
     """Base class for watching the output of commands
@@ -33,16 +35,16 @@ class BasicWatcher(object):
         self.sleep=sleep
         self.follow=follow
         self.isTailing=False
-        
+
         if not path.exists(self.filename):
-            print "Error: Logfile ",self.filename,"does not exist"
+            print_("Error: Logfile ",self.filename,"does not exist")
 
         self.reader=LineReader()
-        
+
     def getSize(self):
         """@return: the current size (in bytes) of the file"""
         return os.stat(self.filename)[stat.ST_SIZE]
-    
+
     def start(self):
         """Reads the file and does the processing"""
 
@@ -53,9 +55,9 @@ class BasicWatcher(object):
             fh=gzip.open(self.filename)
         else:
             fh=open(self.filename)
-            
+
         self.startHandle()
-        
+
         while self.follow or currSize>self.reader.bytesRead():
             try:
                 status=self.reader.read(fh)
@@ -68,35 +70,35 @@ class BasicWatcher(object):
                             self.tailingHandle()
 
                         if not self.silent:
-                            print line
+                            print_(line)
 
                     self.lineHandle(line)
                 else:
                     if self.reader.userSaidStop():
                         break
                     sleep(self.sleep)
-            except KeyboardInterrupt,e:
-                print "Watcher: Keyboard interrupt"
+            except KeyboardInterrupt:
+                print_("Watcher: Keyboard interrupt")
                 break
-                                
+
         self.stopHandle()
 
         fh.close()
-        
+
     def startHandle(self):
         """to be called before the program is started"""
         pass
-    
+
     def stopHandle(self):
         """called after the program has stopped"""
         pass
-    
+
     def tailingHandle(self):
         """called when the first line is output"""
         pass
-    
+
     def lineHandle(self,line):
         """called every time a new line is read"""
         pass
-    
 
+# Should work with Python3 and Python2

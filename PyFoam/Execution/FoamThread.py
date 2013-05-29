@@ -1,51 +1,61 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/FoamThread.py 5282 2009-07-24T12:39:30.467524Z bgschaid  $ 
+#  ICE Revision: $Id: FoamThread.py 12771 2013-01-16 11:38:56Z bgschaid $
 """Thread wrappers for OpenFOAM"""
 
 import sys
 
 from threading import Thread,Lock,Timer
+from PyFoam.ThirdParty.six import print_
+from PyFoam.Error import warning,error
 
 if sys.version_info<(2,4):
     from popen2 import Popen4
 else:
     import subprocess
-    
+
 from time import time,sleep
-from resource import getrusage,getpagesize,RUSAGE_CHILDREN
-from os import uname,kill,path,unlink
+
+try:
+    from resource import getrusage,getpagesize,RUSAGE_CHILDREN
+except ImportError:
+    try:
+        from PyFoam.ThirdParty.winhacks import getrusage,getpagesize,RUSAGE_CHILDREN
+    except ImportError:
+        error("Unable to import working getrusage,getpagesize,RUSAGE_CHILDREN functions.")
+
+from os import kill,path,unlink
+from platform import uname
 import signal
 
 from PyFoam.Basics.LineReader import LineReader
 from PyFoam.Infrastructure.Logging import foamLogger
-from PyFoam.Error import warning
 
 def checkForStopFile(thrd):
     """Checks for the file 'stop' in the directory of the FoamRun. If
     it exists it is removed and the run is stopped gracefully"""
 
     fName=path.join(thrd.runner.dir,"stop")
-    
+
     if path.exists(fName):
         unlink(fName)
         thrd.runner.stopGracefully()
         return
-    
+
     fName=path.join(thrd.runner.dir,"write")
-    
+
     if path.exists(fName):
         unlink(fName)
         thrd.runner.writeResults()
 
     thrd.timer2=Timer(thrd.timerTime,checkForStopFile,args=[thrd])
     thrd.timer2.start()
-    
+
 def getLinuxMem(thrd):
     """Reads the Memory usage of a thread on a linux-System
 
     @param thrd: the thread object in question"""
 
     #    print "Timer called"
-    
+
     if not thrd.isLinux or thrd.threadPid<0:
         return
 
@@ -58,7 +68,7 @@ def getLinuxMem(thrd):
         #        f=open('/tmp/test%dstatus' % thrd.threadPid,'w')
         #        f.write(v)
         #        f.close()
-        
+
         i=v.index('VmRSS')
         tmp=v[i:].split()
         if len(tmp)>=3:
@@ -69,19 +79,20 @@ def getLinuxMem(thrd):
                 mem*=1024*1024
             else:
                 mem=-1
-    except Exception,e:
-        print "Getting LinuxMem:",e
+    except Exception:
+        e = sys.exc_info()[1] # compatible with 2.x and 3.x
+        print_("Getting LinuxMem:",e)
         mem=-1
-        
+
     if mem>thrd.linuxMaxMem:
         #        print "Setting Memory to: ",mem
         thrd.linuxMaxMem=mem
 
     #    print "Restarting Timer"
-    
+
     thrd.timer=Timer(thrd.timerTime,getLinuxMem,args=[thrd])
     thrd.timer.start()
-    
+
 class FoamThread(Thread):
     """Thread running an OpenFOAM command
 
@@ -89,7 +100,7 @@ class FoamThread(Thread):
     line by line
 
     Designed to be used by the BasicRunner-class"""
-    
+
     def __init__(self,cmdline,runner):
         """@param cmdline:cmdline - Command line of the OpenFOAM command
         @param runner: the Runner-object that started this thread"""
@@ -101,29 +112,32 @@ class FoamThread(Thread):
 
         self.isLinux=False
         self.isDarwin=False
+        self.isWindows=False
         self.threadPid=-1
         self.who=RUSAGE_CHILDREN
-        
+
         if uname()[0]=="Linux":
             self.isLinux=True
             self.linuxMaxMem=0
         elif uname()[0]=="Darwin":
             self.isDarwin=True
-            
+        elif uname()[0]=="Windows":
+            self.isWindows=True
+
         self.resStart=None
         self.resEnd=None
 
         self.timeStart=None
         self.timeEnd=None
-        
+
         self.timerTime=5.
-        
+
         self.stateLock=Lock()
         self.setState(False)
 
         self.status=None
         self.returncode=None
-        
+
         self.lineLock=Lock()
         self.line=""
 
@@ -154,7 +168,7 @@ class FoamThread(Thread):
         #            print "Starting Timer"
         self.timer2=Timer(0.5*self.timerTime,checkForStopFile,args=[self])
         self.timer2.start()
-            
+
         self.hasSomethingToSay=True
         self.stateLock.release()
 
@@ -169,12 +183,13 @@ class FoamThread(Thread):
             if self.hasSomethingToSay:
                 sleep(2.)
             while self.reader.read(self.output):
-                print "Unused output:",self.reader.line
-        except OSError,e:
-            print "Exeption caught:",e
+                print_("Unused output:",self.reader.line)
+        except OSError:
+            e = sys.exc_info()[1] # compatible with 2.x and 3.x
+            print_("Exeption caught:",e)
 
         self.stopTimer()
-        
+
         self.threadPid=-1
 
         self.resEnd=getrusage(self.who)
@@ -183,7 +198,7 @@ class FoamThread(Thread):
         # print "Returned",self.status
 
         self.getReturnCode()
-        
+
     def getReturnCode(self):
         if sys.version_info<(2,4):
             # Don't know how to get the returncode from a Popen4-object
@@ -191,12 +206,12 @@ class FoamThread(Thread):
         else:
             self.returncode=self.run.returncode
         return self.returncode
-    
+
     def stopTimer(self):
         if self.isLinux:
             self.timer.cancel()
         self.timer2.cancel()
-        
+
     def read(self):
         """read another line from the output"""
         self.setState(self.reader.read(self.output))
@@ -216,7 +231,7 @@ class FoamThread(Thread):
         """A keyboard-interrupt is reported"""
         self.reader.wasInterupted=True
         self.setState(False)
-        
+
     def setState(self,state):
         """sets the state of the thread (is there any more output)"""
         self.stateLock.acquire()
@@ -224,16 +239,16 @@ class FoamThread(Thread):
         if not self.hasSomethingToSay and self.timeStart and self.reader.wasInterupted:
             if self.threadPid>0:
                 msg="Killing PID %d" % self.threadPid
-                print msg
+                print_(msg)
                 foamLogger().warning(msg)
                 try:
                     kill(self.threadPid,signal.SIGKILL)
                 except OSError:
                     warning("Process",self.threadPid,"was already dead")
-                    
+
         #        print "Set: ",state
         self.stateLock.release()
-        
+
     def check(self):
         """@return: False if there is no more output of the command"""
         self.stateLock.acquire()
@@ -241,12 +256,12 @@ class FoamThread(Thread):
         #        print "Get: ",state
         self.stateLock.release()
 
-        return state 
-    
+        return state
+
     def cpuTime(self):
         """@return: number of seconds CPU-Time used"""
         return self.cpuUserTime()+self.cpuSystemTime()
-    
+
     def cpuUserTime(self):
         """@return: number of seconds CPU-Time used in user mode"""
         if self.resEnd==None: # and self.isDarwin:
@@ -272,7 +287,7 @@ class FoamThread(Thread):
         scale=1024.*1024.
         if self.isLinux:
             return self.linuxMaxMem/scale
-        
+
         if self.resStart==None or self.resEnd==None:
             return 0.
         else:
@@ -285,10 +300,9 @@ class FoamThread(Thread):
             self.timeEnd=time()
 
         self.timeEnd=time()
-        
+
         #        print "Wall:",self.timeEnd,self.timeStart
         if self.timeStart==None or self.timeEnd==None:
             return 0
         else:
             return self.timeEnd-self.timeStart
-        

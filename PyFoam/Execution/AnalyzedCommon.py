@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/AnalyzedCommon.py 7665 2012-01-10T15:12:19.780331Z bgschaid  $ 
+#  ICE Revision: $Id: AnalyzedCommon.py 12750 2013-01-03 23:07:32Z bgschaid $
 """Common stuff for classes that use analyzers"""
 
 from os import path,mkdir
@@ -7,11 +7,13 @@ from shutil import move
 from PyFoam.Basics.PlotTimelinesFactory import createPlotTimelines,createPlotTimelinesDirect
 from PyFoam.Basics.TimeLineCollection import signedMax
 from PyFoam.LogAnalysis.RegExpLineAnalyzer import RegExpLineAnalyzer
+from PyFoam.LogAnalysis.PhaseChangerLineAnalyzer import PhaseChangerLineAnalyzer
 
 from PyFoam.Error import error
 
 # import pickle
-import cPickle as pickle
+from PyFoam.ThirdParty.six.moves import cPickle as pickle
+
 from PyFoam.Basics.GeneralPlotTimelines import allPlots
 from PyFoam.Basics.TimeLineCollection import allLines
 
@@ -35,45 +37,50 @@ class AnalyzedCommon(object):
             self.logDir=path.join(self.dir,filename+".analyzed")
         else:
             self.logDir=filename+".analyzed"
-            
+
         if not path.exists(self.logDir):
             mkdir(self.logDir)
-            
+
         self.doPickling=doPickling
         if self.doPickling:
             self.pickleLock=Lock()
-            
+
         self.reset()
+
+        if hasattr(self,"data"):
+            pickleFile=path.join(self.logDir,"pickledStartData")
+            pick=pickle.Pickler(open(pickleFile,"wb"))
+            pick.dump(self.data)
 
     def tearDown(self):
         self.analyzer.tearDown()
         if hasattr(self,"data"):
             pickleFile=path.join(self.logDir,"pickledData")
-            pick=pickle.Pickler(open(pickleFile,"w"))
+            pick=pickle.Pickler(open(pickleFile,"wb"))
             pick.dump(self.data)
 
     def listAnalyzers(self):
         """@returns: A list with the names of the analyzers"""
         return self.analyzer.listAnalyzers()
-    
+
     def getAnalyzer(self,name):
         """@param name: name of the LineAnalyzer to get"""
         return self.analyzer.getAnalyzer(name)
-    
+
     def hasAnalyzer(self,name):
         """@param name: name of the LineAnalyzer we ask for"""
         return self.analyzer.hasAnalyzer(name)
-    
+
     def addAnalyzer(self,name,analyzer):
         """@param name: name of the LineAnalyzer to add
         @param analyzer: the analyzer to add"""
         analyzer.setDirectory(self.logDir)
         return self.analyzer.addAnalyzer(name,analyzer)
-    
+
     def lineHandle(self,line):
         """Not to be called: calls the analyzer for the current line"""
         self.analyzer.analyzeLine(line)
-        
+
     def reset(self):
         """reset the analyzer"""
         self.analyzer.setDirectory(self.logDir)
@@ -81,11 +88,11 @@ class AnalyzedCommon(object):
     def getDirname(self):
         """Get the name of the directory where the data is written to"""
         return self.logDir
-    
+
     def getTime(self):
         """Get the execution time"""
         return self.analyzer.getTime()
-        
+
     def addTrigger(self,time,func,once=True,until=None):
         """Adds a timed trigger to the Analyzer
         @param time: the time at which the function should be triggered
@@ -94,7 +101,7 @@ class AnalyzedCommon(object):
         @param until: The time until which the trigger should be called"""
 
         self.analyzer.addTrigger(time,func,once=once,until=until)
-        
+
     def createPlots(self,
                     persist=None,
                     raiseit=False,
@@ -113,7 +120,7 @@ class AnalyzedCommon(object):
                     plottingImplementation="dummy"):
 
         plots={}
-        
+
         if plotLinear and self.hasAnalyzer("Linear"):
             plots["linear"]=createPlotTimelinesDirect("linear",
                                                       self.getAnalyzer("Linear").lines,
@@ -127,9 +134,10 @@ class AnalyzedCommon(object):
             self.getAnalyzer("Linear").lines.setSplitting(splitThres=splitThres,
                                                           splitFun=max,
                                                           advancedSplit=True)
-            
+
             plots["linear"].setTitle("Residuals")
-            
+            plots["linear"].setYLabel("Initial residual")
+
         if plotCont and self.hasAnalyzer("Continuity"):
             plots["cont"]=createPlotTimelinesDirect("continuity",
                                                     self.getAnalyzer("Continuity").lines,
@@ -143,9 +151,9 @@ class AnalyzedCommon(object):
             plots["cont"].setYLabel2("Global")
             self.getAnalyzer("Continuity").lines.setSplitting(splitThres=splitThres,
                                                               advancedSplit=True)
-            
+
             plots["cont"].setTitle("Continuity")
- 
+
         if plotBound and self.hasAnalyzer("Bounding"):
             plots["bound"]=createPlotTimelinesDirect("bounding",
                                                      self.getAnalyzer("Bounding").lines,
@@ -172,6 +180,7 @@ class AnalyzedCommon(object):
                                                               advancedSplit=True)
 
             plots["iter"].setTitle("Iterations")
+            plots["iter"].setYLabel("Sum of iterations")
 
         if plotCourant and self.hasAnalyzer("Courant"):
             plots["courant"]=createPlotTimelinesDirect("courant",
@@ -185,7 +194,8 @@ class AnalyzedCommon(object):
                                                            advancedSplit=True)
 
             plots["courant"].setTitle("Courant")
- 
+            plots["courant"].setYLabel("Courant Number [1]")
+
         if plotDeltaT and self.hasAnalyzer("DeltaT"):
             plots["deltaT"]=createPlotTimelinesDirect("timestep",
                                                       self.getAnalyzer("DeltaT").lines,
@@ -199,7 +209,8 @@ class AnalyzedCommon(object):
                                                           advancedSplit=True)
 
             plots["deltaT"].setTitle("DeltaT")
- 
+            plots["deltaT"].setYLabel("dt [s]")
+
         if plotExecution and self.hasAnalyzer("Execution"):
             plots["execution"]=createPlotTimelinesDirect("execution",
                                                          self.getAnalyzer("Execution").lines,
@@ -213,7 +224,8 @@ class AnalyzedCommon(object):
                                                              advancedSplit=True)
 
             plots["execution"].setTitle("Execution Time")
-            
+            plots["execution"].setYLabel("Time [s]")
+
         if customRegexp:
             self.plotCustom=[]
             masters={}
@@ -221,7 +233,7 @@ class AnalyzedCommon(object):
             for i,custom in enumerate(customRegexp):
                 if not custom.enabled:
                     continue
-                
+
                 if persist!=None:
                     custom.persist=persist
                 if start!=None:
@@ -230,7 +242,13 @@ class AnalyzedCommon(object):
                     custom.end=end
                 custom.raiseit=raiseit
 
-                if custom.type=="dynamic":
+                createPlot=True
+                if custom.type=="phase":
+                    self.addAnalyzer(custom.name,
+                                     PhaseChangerLineAnalyzer(custom.expr,
+                                                              idNr=custom.idNr))
+                    createPlot=False
+                elif custom.type=="dynamic":
                     self.addAnalyzer(custom.name,
                                      RegExpLineAnalyzer(custom.name.lower(),
                                                         custom.expr,
@@ -243,8 +261,8 @@ class AnalyzedCommon(object):
                                                         idNr=custom.idNr,
                                                         startTime=custom.start,
                                                         endTime=custom.end))
-                    
-                else:
+
+                elif custom.type=="regular" or custom.type=="slave":
                     self.addAnalyzer(custom.name,
                                      RegExpLineAnalyzer(custom.name.lower(),
                                                         custom.expr,
@@ -256,29 +274,34 @@ class AnalyzedCommon(object):
                                                         singleFile=True,
                                                         startTime=custom.start,
                                                         endTime=custom.end))
-
-                if custom.master==None:
-                    masters[custom.id]=custom
-                    plotCustom=createPlotTimelines(self.getAnalyzer(custom.name).lines,
-                                                   custom=custom,
-                                                   implementation=plottingImplementation)
-                    self.getAnalyzer(custom.name).lines.setSplitting(splitThres=splitThres,
-                                                                 advancedSplit=True)
-                    plotCustom.setTitle(custom.theTitle)
-                    plots["custom%04d" % i]=plotCustom
                 else:
-                    slaves.append(custom)
+                    error("Unknown type",custom.type,"in custom expression",custom.name)
+
+                if createPlot:
+                    if custom.master==None:
+                        masters[custom.id]=custom
+                        plotCustom=createPlotTimelines(self.getAnalyzer(custom.name).lines,
+                                                       custom=custom,
+                                                       implementation=plottingImplementation)
+                        self.getAnalyzer(custom.name).lines.setSplitting(splitThres=splitThres,
+                                                                     advancedSplit=True)
+                        plotCustom.setTitle(custom.theTitle)
+                        plots["custom%04d" % i]=plotCustom
+                    else:
+                        slaves.append(custom)
 
             for s in slaves:
                 if s.master not in masters:
-                    error("The custom plot",s.id,"wants the master plot",s.master,"but it is not found in the list of masters",masters.keys())
+                    error("The custom plot",s.id,"wants the master plot",
+                          s.master,"but it is not found in the list of masters",
+                          list(masters.keys()))
                 else:
                     slave=self.getAnalyzer(s.name)
                     master=self.getAnalyzer(masters[s.master].name)
                     slave.setMaster(master)
-                    
+
             self.reset()
-            
+
         return plots
 
     def picklePlots(self,wait=False):
@@ -287,22 +310,31 @@ class AnalyzedCommon(object):
         @param wait: wait for the lock to be allowed to pickle"""
 
         #        print "Putting some pickles in the jar"
-        
+
         lines=allLines()
         plots=allPlots()
         if lines and plots:
             gotIt=self.pickleLock.acquire(wait)
             if not gotIt:
                 return
-            
+
             pickleFile=path.join(self.logDir,"pickledPlots")
-            pick=pickle.Pickler(open(pickleFile+".tmp","w"))
+            pick=pickle.Pickler(open(pickleFile+".tmp","wb"))
             pick.dump(lines.prepareForTransfer())
             pick.dump(plots.prepareForTransfer())
             move(pickleFile+".tmp",pickleFile)
+
+            if hasattr(self,"data"):
+                pickleFile=path.join(self.logDir,"pickledUnfinishedData")
+                pick=pickle.Pickler(open(pickleFile+".tmp","wb"))
+                pick.dump(self.data)
+                del pick
+                move(pickleFile+".tmp",pickleFile)
 
             self.pickleLock.release()
 
     def setDataSet(self,data):
         if hasattr(self,"data"):
             self.data["analyzed"]=data
+
+# Should work with Python3 and Python2

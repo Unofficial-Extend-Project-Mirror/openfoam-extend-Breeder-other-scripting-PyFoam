@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ClearInternalField.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: ClearInternalField.py 12763 2013-01-08 17:56:07Z bgschaid $
 """
 Application class that implements pyFoamClearInternalField.py
 """
@@ -6,9 +6,13 @@ Application class that implements pyFoamClearInternalField.py
 import re
 from os import path
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+
+from PyFoam.ThirdParty.six import print_
+
+import sys
 
 class ClearInternalField(PyFoamApplication):
     def __init__(self,args=None):
@@ -16,7 +20,7 @@ class ClearInternalField(PyFoamApplication):
 Takes a field-file and makes the whole internal field uniform. Either
 taking the value from a patch or using a user-specified value
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -24,7 +28,7 @@ taking the value from a patch or using a user-specified value
                                    changeVersion=False,
                                    nr=1,
                                    interspersed=True)
-        
+
     def addOptions(self):
         self.parser.add_option("--patch",
                                action="store",
@@ -58,7 +62,8 @@ taking the value from a patch or using a user-specified value
 
         try:
             fieldFile=ParsedParameterFile(fName,backup=False)
-        except IOError,e:
+        except IOError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             self.error("Problem with file",fName,":",e)
 
         value=""
@@ -68,10 +73,11 @@ taking the value from a patch or using a user-specified value
             value="uniform "+self.opts.value
 
         fieldFile["internalField"]=value
-        
+
         if self.opts.test:
-            print str(fieldFile)
+            print_(str(fieldFile))
         else:
             fieldFile.writeFile()
             self.addToCaseLog(path.dirname(path.dirname(path.abspath(fName))))
 
+# Should work with Python3 and Python2

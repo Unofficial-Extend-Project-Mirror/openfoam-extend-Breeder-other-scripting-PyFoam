@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SamplePlot.py 7945 2012-03-29T15:50:57.506443Z bgschaid  $ 
+#  ICE Revision: $Id: SamplePlot.py 12778 2013-01-31 15:53:44Z bgschaid $
 """
 Application class that implements pyFoamSamplePlot.py
 """
@@ -7,13 +7,15 @@ import sys,string
 from os import path
 from optparse import OptionGroup
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.SampleDirectory import SampleDirectory
 from PyFoam.Basics.SpreadsheetData import WrongDataSize
 
 from PyFoam.Error import error,warning
 
-from PlotHelpers import cleanFilename
+from .PlotHelpers import cleanFilename
+
+from PyFoam.ThirdParty.six import print_
 
 class SamplePlot(PyFoamApplication):
     def __init__(self,args=None):
@@ -21,7 +23,7 @@ class SamplePlot(PyFoamApplication):
 Reads data from the sample-dictionary and generates appropriate
 gnuplot-commands. As an option the data can be written to a CSV-file.
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -29,15 +31,15 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                                    nr=1,
                                    changeVersion=False,
                                    interspersed=True)
-        
-    modeChoices=["separate","timesInOne","fieldsInOne","linesInOne","complete"]    
+
+    modeChoices=["separate","timesInOne","fieldsInOne","linesInOne","complete"]
 
     def addOptions(self):
         data=OptionGroup(self.parser,
                           "Data",
                           "Select the data to plot")
         self.parser.add_option_group(data)
-        
+
         data.add_option("--line",
                         action="append",
                         default=None,
@@ -79,7 +81,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                         default=None,
                         dest="referenceCase",
                         help="A reference case where a directory with the same name is looked for. Mutual exclusive with --reference-directory")
-        
+
         scale=OptionGroup(self.parser,
                           "Scale",
                           "Scale the data before comparing (not used during plotting)")
@@ -138,7 +140,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                          "Time",
                          "Select the times to plot")
         self.parser.add_option_group(time)
-        
+
         time.add_option("--time",
                         action="append",
                         default=None,
@@ -181,7 +183,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                            "Appearance",
                            "How it should be plotted")
         self.parser.add_option_group(output)
-        
+
         output.add_option("--mode",
                           type="choice",
                           default="separate",
@@ -219,7 +221,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                           dest="csvFile",
                           default=None,
                           help="Write the data to a CSV-file instead of the gnuplot-commands")
-        
+
         data.add_option("--info",
                         action="store_true",
                         dest="info",
@@ -250,38 +252,49 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                           dest="extendData",
                           default=False,
                           help="Extend the data range if it differs (for CSV-files)")
-        output.add_option("--compare",
-                          action="store_true",
-                          dest="compare",
-                          default=None,
-                          help="Compare all data sets that are also in the reference data")
-        output.add_option("--common-range-compare",
-                          action="store_true",
-                          dest="commonRange",
-                          default=None,
-                          help="When comparing two datasets only use the common time range")
-        output.add_option("--index-tolerant-compare",
-                          action="store_true",
-                          dest="indexTolerant",
-                          default=None,
-                          help="Compare two data sets even if they have different indizes")
-        output.add_option("--metrics",
-                          action="store_true",
-                          dest="metrics",
-                          default=None,
-                          help="Print the metrics of the data sets")
         output.add_option("--silent",
                           action="store_true",
                           dest="silent",
                           default=False,
                           help="Don't write to screen (with the silent and the compare-options)")
 
-        
+        numerics=OptionGroup(self.parser,
+                             "Quantify",
+                             "Metrics of the data and numerical comparisons")
+        self.parser.add_option_group(numerics)
+        numerics.add_option("--metrics",
+                            action="store_true",
+                            dest="metrics",
+                            default=None,
+                            help="Print the metrics of the data sets")
+        numerics.add_option("--compare",
+                            action="store_true",
+                            dest="compare",
+                            default=None,
+                            help="Compare all data sets that are also in the reference data")
+        numerics.add_option("--common-range-compare",
+                            action="store_true",
+                            dest="commonRange",
+                            default=None,
+                            help="When comparing two datasets only use the common time range")
+        numerics.add_option("--index-tolerant-compare",
+                            action="store_true",
+                            dest="indexTolerant",
+                            default=None,
+                            help="Compare two data sets even if they have different indizes")
+        numerics.add_option("--use-reference-for-comparison",
+                            action="store_false",
+                            dest="compareOnOriginal",
+                            default=True,
+                            help="Use the reference-data as the basis for the numerical comparison. Otherwise the original data will be used")
+
     def run(self):
         # remove trailing slashif present
         if self.opts.dirName[-1]==path.sep:
             self.opts.dirName=self.opts.dirName[:-1]
-                    
+
+        usedDirName=self.opts.dirName.replace("/","_")
+
         samples=SampleDirectory(self.parser.getArgs()[0],
                                 dirName=self.opts.dirName,
                                 postfixes=self.opts.fieldPostfix,
@@ -291,7 +304,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
             self.error("Options --reference-directory and --reference-case are mutual exclusive")
         if self.opts.csvFile and (self.opts.compare or self.opts.metrics):
             self.error("Options --csv-file and --compare/--metrics are mutual exclusive")
-            
+
         if self.opts.reference:
             reference=SampleDirectory(self.parser.getArgs()[0],
                                       dirName=self.opts.reference,
@@ -308,33 +321,32 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                 self.error("Used sample directory",samples.dir,
                            "and reference directory",reference.dir,
                            "are the same")
-        
+
         lines=samples.lines()
         times=samples.times
-        values=samples.values()
-        
+
         if self.opts.info:
             if not self.opts.silent:
-                print "Times : ",samples.times
-                print "Lines : ",samples.lines()
-                print "Fields: ",samples.values()
+                print_("Times : ",samples.times)
+                print_("Lines : ",samples.lines())
+                print_("Fields: ",list(samples.values()))
 
             self.setData({'times'  : samples.times,
                           'lines'  : samples.lines(),
-                          'values' : samples.values()})
+                          'values' : list(samples.values())})
 
             if reference:
                 if not self.opts.silent:
-                    print "\nReference Data:"
-                    print "Times : ",reference.times
-                    print "Lines : ",reference.lines()
-                    print "Fields: ",reference.values()
+                    print_("\nReference Data:")
+                    print_("Times : ",reference.times)
+                    print_("Lines : ",reference.lines())
+                    print_("Fields: ",list(reference.values()))
                 self.setData({'reference':{'times'  : samples.times,
                                            'lines'  : samples.lines(),
-                                           'values' : samples.values()}})
-                
+                                           'values' : list(samples.values())}})
+
             return 0
-            
+
         if self.opts.line==None:
             #            error("At least one line has to be specified. Found were",samples.lines())
             self.opts.line=lines
@@ -397,12 +409,12 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
         plots=[]
         oPlots=[]
         rPlots=[]
-        
+
         if self.opts.mode=="separate":
             if self.opts.time==None:
                 self.opts.time=samples.times
             if self.opts.field==None:
-                self.opts.field=samples.values()
+                self.opts.field=list(samples.values())
             if self.opts.line==None:
                 self.opts.line=samples.lines()
             for t in self.opts.time:
@@ -410,7 +422,11 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                     for l in self.opts.line:
                         plot=samples.getData(line=[l],
                                              value=[f],
-                                             time=[t])
+                                             time=[t],
+                                             scale=(self.opts.scaleXAxis,
+                                                    self.opts.scaleData),
+                                             offset=(self.opts.offsetXAxis,
+                                                     self.opts.offsetData))
                         oPlots.append(plot[:])
                         if reference:
                             rT=[t]
@@ -421,14 +437,18 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                             p=reference.getData(line=[l],
                                                 value=[f],
                                                 time=rT,
-                                                note=self.opts.refprefix+" ")
+                                                note=self.opts.refprefix+" ",
+                                                scale=(self.opts.scaleReferenceXAxis,
+                                                       self.opts.scaleReferenceData),
+                                                offset=(self.opts.offsetReferenceXAxis,
+                                                        self.opts.offsetReferenceData))
                             rPlots.append(p)
                             plot+=p
                         plots.append(plot)
-                    
+
         elif self.opts.mode=="timesInOne":
             if self.opts.field==None:
-                self.opts.field=samples.values() 
+                self.opts.field=list(samples.values())
             if self.opts.line==None:
                 self.opts.line=samples.lines()
             for f in self.opts.field:
@@ -452,12 +472,12 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                         plot+=p
 
                     plots.append(plot)
-                
+
         elif self.opts.mode=="fieldsInOne":
             if self.opts.scaled and not self.opts.scaleAll:
                 warning("In mode '",self.opts.mode,"' all fields are scaled to the same value")
                 self.opts.scaleAll=True
-                
+
             if self.opts.time==None:
                 self.opts.time=samples.times
             if self.opts.line==None:
@@ -482,12 +502,12 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                         plot+=p
 
                     plots.append(plot)
-                
+
         elif self.opts.mode=="linesInOne":
             if self.opts.field==None:
-                self.opts.field=samples.values() 
+                self.opts.field=list(samples.values())
             if self.opts.time==None:
-                self.opts.time=samples.times()
+                self.opts.time=samples.times
             for f in self.opts.field:
                 for t in self.opts.time:
                     plot=samples.getData(line=self.opts.line,
@@ -509,7 +529,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                         plot+=p
 
                     plots.append(plot)
-                
+
         elif self.opts.mode=="complete":
             if self.opts.scaled and not self.opts.scaleAll:
                 warning("In mode '",self.opts.mode,"' all fields are scaled to the same value")
@@ -531,15 +551,15 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                                     note=self.opts.refprefix+" ")
                 plot+=p
                 rPlots.append(p)
-                
+
             plots.append(plot)
-            
+
         if self.opts.scaled:
             if self.opts.scaleAll:
                 vRange=None
             else:
                 vRanges={}
-                
+
             for p in plots:
                 for d in p:
                     mi,ma=d.range(component=self.opts.component)
@@ -549,28 +569,33 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                             vRange=vRanges[nm]
                         else:
                             vRange=None
-                            
+
                     if vRange==None:
                         vRange=mi,ma
                     else:
                         vRange=min(vRange[0],mi),max(vRange[1],ma)
                     if not self.opts.scaleAll:
                         vRanges[nm]=vRange
-            
+
         result="set term png\n"
+
+        plots=[p for p in plots if len(p)>0]
+
+        if len(plots)<1:
+            self.error("No plots produced. Nothing done")
 
         for p in plots:
             if len(p)<1:
                 continue
 
             name=""
-            
+
             if self.opts.namePrefix:
                 name+=self.opts.namePrefix+"_"
-            name+=self.opts.dirName
+            name+=usedDirName
             title=None
             tIndex=times.index(p[0].time())
-            
+
             #            name+="_"+string.join(self.opts.line,"_")
 
             if self.opts.mode=="separate":
@@ -599,18 +624,18 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                 title="%s at t=%f" % (p[0].name,float(p[0].time()))
             elif self.opts.mode=="complete":
                 pass
-            
+
             name+=".png"
             if self.opts.pictureDest:
                 name=path.join(self.opts.pictureDest,name)
 
             if self.opts.cleanFilename:
                 name=cleanFilename(name)
-                
+
             result+='set output "%s"\n' % name
             if title!=None:
                 result+='set title "%s"\n' % title.replace("_","\\_")
-                
+
             result+="plot "
             if self.opts.scaled:
                 if not self.opts.scaleAll:
@@ -628,15 +653,36 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                 else:
                     result+=", "
 
-                colSpec="%s" % (d.index+1)
+                colSpec=d.index+1
                 if d.isVector():
                     if self.opts.component!=None:
-                        colSpec="%d" % (d.index+1+self.opts.component)
+                        colSpec=d.index+1+self.opts.component
                     else:
                         colSpec="(sqrt($%d**2+$%d**2+$%d**2))" % (d.index+1,d.index+2,d.index+3)
-                    
-                result+='"%s" using 1:%s ' % (d.file,colSpec)
-                
+
+                        #                result+='"%s" using 1:%s ' % (d.file,colSpec)
+
+                def makeCol(spec,sc,off):
+                    if type(spec)==str:
+                        pre=""
+                    else:
+                        pre="$"
+                        spec=str(spec)
+                    if sc==1:
+                        if off==0:
+                            return spec
+                        else:
+                            return "(%s%s+%f)" % (pre,spec,off)
+                    else:
+                        if off==0:
+                            return "(%s%s*%f)" % (pre,spec,sc)
+                        else:
+                            return "(%s%s*%f+%f)" % (pre,spec,sc,off)
+
+                result+='"%s" using %s:%s ' % (d.file,
+                                              makeCol(1,d.scale[0],d.offset[0]),
+                                              makeCol(colSpec,d.scale[1],d.offset[1]))
+
                 title=d.note
                 if self.opts.mode=="separate":
                     title+=""
@@ -667,7 +713,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
             for p in tmp[1:]:
                 try:
                     c+=p()
-                except WrongDataSize,e:
+                except WrongDataSize:
                     if self.opts.resampleReference:
                         sp=p()
                         for n in sp.names()[1:]:
@@ -681,7 +727,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                     else:
                         self.warning("Try the --resample-option")
                         raise
-                    
+
             c.writeCSV(self.opts.csvFile)
         elif self.opts.compare or self.opts.metrics:
             statData={}
@@ -703,8 +749,8 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                            len(rPlots))
             if len(rPlots)==0 and self.opts.metrics:
                 rPlots=[None]*len(oPlots)
-                
-            for o,r in zip(oPlots,rPlots):  
+
+            for o,r in zip(oPlots,rPlots):
                 data=o(scaleData=self.opts.scaleData,
                        offsetData=self.opts.offsetData,
                        scaleX=self.opts.scaleXAxis,
@@ -729,34 +775,52 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
 
                     if self.opts.metrics:
                         if not self.opts.silent:
-                            print "Metrics for",indexName,"(Path:",o.file,")"
-                        result=data.metrics(data.names()[i])
+                            print_("Metrics for",indexName,"(Path:",o.file,")")
+                        result=data.metrics(data.names()[i],
+                                            minTime=self.opts.minTime,
+                                            maxTime=self.opts.maxTime)
                         statData["metrics"][o.line()][indexName]=result
                         if not self.opts.silent:
-                            print "  Min                :",result["min"]
-                            print "  Max                :",result["max"]
-                            print "  Average            :",result["average"]
-                            print "  Weighted average   :",result["wAverage"]
+                            print_("  Min                :",result["min"])
+                            print_("  Max                :",result["max"])
+                            print_("  Average            :",result["average"])
+                            print_("  Weighted average   :",result["wAverage"])
                             if not self.opts.compare:
-                                print "Data size:",data.size()
-                            print "  Time Range         :",result["tMin"],result["tMax"]
+                                print_("Data size:",data.size())
+                            print_("  Time Range         :",result["tMin"],result["tMax"])
                     if self.opts.compare:
                         oname=data.names()[i]
                         if self.opts.referenceTime or self.opts.tolerantReferenceTime:
                             oname=ref.names()[i]
                         if not self.opts.silent:
-                            print "Comparing",indexName,"with name",oname,"(Path:",r.file,")"
-                        result=data.compare(ref,data.names()[i],otherName=oname,common=self.opts.commonRange)
+                            print_("Comparing",indexName,"with name",oname,"(Path:",r.file,")",end="")
+                        if self.opts.compareOnOriginal:
+                            if not self.opts.silent:
+                                print_("on original data points")
+                            result=data.compare(ref,
+                                                data.names()[i],
+                                                otherName=oname,common=self.opts.commonRange,
+                                                minTime=self.opts.minTime,
+                                                maxTime=self.opts.maxTime)
+                        else:
+                            if not self.opts.silent:
+                                print_("on reference data points")
+                            result=ref.compare(data,
+                                               oname,
+                                               otherName=data.names()[i],
+                                               common=self.opts.commonRange,
+                                               minTime=self.opts.minTime,
+                                               maxTime=self.opts.maxTime)
                         statData["compare"][o.line()][indexName]=result
                         if not self.opts.silent:
-                            print "  Max difference     :",result["max"],"(at",result["maxPos"],")"
-                            print "  Average difference :",result["average"]
-                            print "  Weighted average   :",result["wAverage"]
-                            print "Data size:",data.size(),"Reference:",ref.size()
+                            print_("  Max difference     :",result["max"],"(at",result["maxPos"],")")
+                            print_("  Average difference :",result["average"])
+                            print_("  Weighted average   :",result["wAverage"])
+                            print_("Data size:",data.size(),"Reference:",ref.size())
                             if not self.opts.metrics:
-                                print "  Time Range         :",result["tMin"],result["tMax"]
+                                print_("  Time Range         :",result["tMin"],result["tMax"])
                     if not self.opts.silent:
-                        print
+                        print_()
 
             self.setData(statData)
         else:
@@ -765,4 +829,5 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                 dest=open(self.opts.gnuplotFile,"w")
 
             dest.write(result)
-        
+
+# Should work with Python3 and Python2

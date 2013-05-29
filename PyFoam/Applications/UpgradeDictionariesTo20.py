@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpgradeDictionariesTo20.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: UpgradeDictionariesTo20.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamUpgradeDictionariesTo20
 """
@@ -6,7 +6,7 @@ Application class that implements pyFoamUpgradeDictionariesTo20
 import sys,re
 from os import path
 
-from UpgradeDictionariesTo17 import UpgradeDictionariesTo17,DictionaryUpgradeInfo
+from .UpgradeDictionariesTo17 import UpgradeDictionariesTo17,DictionaryUpgradeInfo
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Basics.DataStructures import DictProxy,TupleProxy
@@ -29,7 +29,7 @@ class BlockMeshUpgradeInfo(DictionaryUpgradeInfo):
             bnd+=[ n, { "type" : t,
                         "faces" : f }]
         content["boundary"]=bnd
-        
+
 class ThermophysicalUpgradeInfo(DictionaryUpgradeInfo):
     def __init__(self):
         DictionaryUpgradeInfo.__init__(self)
@@ -39,7 +39,7 @@ class ThermophysicalUpgradeInfo(DictionaryUpgradeInfo):
 
     def analyzeThermoType(self,content):
         return content["thermoType"].replace('>','').split('<')
-    
+
     def checkUpgrade(self,content):
         tt=self.analyzeThermoType(content)
         if len(tt)!=6:
@@ -50,7 +50,7 @@ class ThermophysicalUpgradeInfo(DictionaryUpgradeInfo):
             if type(data) in  [tuple,TupleProxy]:
                 if len(data)>4: # Maybe there is a better criterium
                     return True
-            
+
         return False
 
     def manipulate(self,content):
@@ -75,7 +75,7 @@ class ThermophysicalUpgradeInfo(DictionaryUpgradeInfo):
                 used+=2
             else:
                 error("Transport type",trans,"not implemented")
-                
+
             thermDict={}
             if therm=="hConstThermo":
                 thermDict["Hf"]=data[-1-used]
@@ -111,30 +111,31 @@ class ThermophysicalUpgradeInfo(DictionaryUpgradeInfo):
                          "thermodynamics":thermDict,
                          "transport":transDict}
             content.addDecoration(nm,comment)
-            
+
 ##            gasDict={}
 ##            if gas=="perfectGas":
 ##                pass
 ##            else:
 ##                error("Gas type",gas,"not implemented")
-            
+
 class UpgradeDictionariesTo20(UpgradeDictionariesTo17):
     def __init__(self,args=None):
         description="""\
 Examines dictionaries in a case and tries to upgrade them to a form
 that is compatible with OpenFOAM 2.0
         """
-        
+
         UpgradeDictionariesTo17.__init__(self,
                                          args=args,
                                          description=description)
-        
+
     def addDicts(self):
         UpgradeDictionariesTo17.addDicts(self)
-        
+
         self.dicts.append(BlockMeshUpgradeInfo())
         self.dicts.append(ThermophysicalUpgradeInfo())
 
 ##    def addOptions(self):
 ##        UpgradeDictionariesTo17.addOptions(self)
-    
+
+# Should work with Python3 and Python2

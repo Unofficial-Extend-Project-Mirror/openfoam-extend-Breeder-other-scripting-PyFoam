@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/TimeDirectory.py 7523 2011-07-15T16:56:59.603124Z bgschaid  $ 
+#  ICE Revision: $Id: TimeDirectory.py 12561 2012-05-11 12:15:56Z bgschaid $ 
 """Working with direcotries from a time-step"""
 
-from SolutionFile import SolutionFile
-from ParsedParameterFile import ParsedParameterFile
-from FileBasis import FileBasis
+from PyFoam.RunDictionary.SolutionFile import SolutionFile
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+from PyFoam.RunDictionary.FileBasis import FileBasis
 from PyFoam.Error import error,warning
 from PyFoam.Basics.Utilities import remove
 
@@ -47,7 +47,7 @@ class TimeDirectory(object):
             
         self.values=[]
 
-        self.lastReread=0L
+        self.lastReread=0
         self.reread()
 
     def baseName(self):
@@ -211,3 +211,4 @@ class TimeDirectory(object):
 
         return copied
     
+# Should work with Python3 and Python2

@@ -1,9 +1,15 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/ServerBase.py 1532 2007-06-29T11:15:55.577361Z bgschaid  $ 
+#  ICE Revision: $Id: ServerBase.py 12758 2013-01-03 23:08:44Z bgschaid $
 """Basis for the XMLRPC-Servers in PyFoam
 
 Based on 15.5 in "Python Cookbook" for faster restarting"""
 
-from SimpleXMLRPCServer import SimpleXMLRPCServer
+from PyFoam.ThirdParty.six import PY3
+
+if PY3:
+    from xmlrpc.server import SimpleXMLRPCServer
+else:
+    from SimpleXMLRPCServer import SimpleXMLRPCServer
+
 import socket
 
 class ServerBase(SimpleXMLRPCServer):
@@ -21,3 +27,5 @@ class ServerBase(SimpleXMLRPCServer):
     def verify_request(self,request,client_addr):
         """To be overriden later"""
         return True
+
+# Should work with Python3 and Python2

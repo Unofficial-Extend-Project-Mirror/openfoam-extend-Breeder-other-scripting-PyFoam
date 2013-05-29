@@ -1,21 +1,26 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpdateDictionary.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: UpdateDictionary.py 12763 2013-01-08 17:56:07Z bgschaid $
 """
 Application class that implements pyFoamUpdateDictionary.py
 """
 
+import sys
+
 import re
 from os import path
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Basics.DataStructures import DictProxy,TupleProxy
 
 from PyFoam.Error import error,warning
 
-from CommonParserOptions import CommonParserOptions
+from .CommonParserOptions import CommonParserOptions
 
 from PyFoam.Basics.TerminalFormatter import TerminalFormatter
+
+from PyFoam.ThirdParty.six import print_
+from PyFoam.ThirdParty.six.moves import input
 
 f=TerminalFormatter()
 f.getConfigFormat("source",shortName="src")
@@ -33,7 +38,7 @@ the first. If the dictionaries do not have the same name, it looks for
 the destination file by searching the equivalent place in the
 destination case
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -41,7 +46,7 @@ destination case
                                    nr=2,
                                    changeVersion=False,
                                    interspersed=True)
-        
+
     def addOptions(self):
         self.parser.add_option("--interactive",
                                action="store_true",
@@ -60,13 +65,13 @@ destination case
                                default=False,
                                dest="clear",
                                help="Removes all the dictionary entries that are not in the source")
-        
+
         self.parser.add_option("--add-missing",
                                action="store_true",
                                default=False,
                                dest="add",
                                help="Add all the dictionary entries that are not in the destination")
-        
+
         self.parser.add_option("--append-lists",
                                action="store_true",
                                default=False,
@@ -109,7 +114,7 @@ destination case
                                type="int",
                                dest="min",
                                help="Minimum depth of the recursive decent into dictionaries at which 'editing' should start (default: %default)")
-        
+
         self.parser.add_option("--max-recursion",
                                action="store",
                                default=100,
@@ -118,40 +123,40 @@ destination case
                                help="Maximum depth of the recursive decent into dictionaries (default: %default)")
 
         CommonParserOptions.addOptions(self)
-        
+
     def ask(self,*question):
         if not self.opts.interactive:
             return False
         else:
-            print f.ask,"QUESTION:",
+            print_(f.ask,"QUESTION:",end="")
             for q in question:
-                print q,
+                print_(q,end="")
 
             answer=None
             while answer!="y" and answer!="n":
-                answer=raw_input(f.reset+f.ask+"   [Y]es or [N]no ? "+f.input).strip()[0].lower()
-            print f.reset,
+                answer=input(f.reset+f.ask+"   [Y]es or [N]no ? "+f.input).strip()[0].lower()
+            print_(f.reset,end="")
             return answer=="y"
-        
+
     def workList(self,source,dest,depth):
         if depth>self.opts.max:
             if self.opts.verbose:
-                print "- "*depth,"Recursion ended"
+                print_("- "*depth,"Recursion ended")
             return
-        
+
         for i in range(min(len(source),len(dest))):
             if type(source[i])==type(dest[i]) and type(source[i]) in  [dict,DictProxy]:
                 if self.opts.verbose:
-                    print "- "*depth,"Entering dict nr.",i
+                    print_("- "*depth,"Entering dict nr.",i)
                 self.workDict(source[i],dest[i],depth+1)
                 if self.opts.verbose:
-                    print "- "*depth,"Leaving dict nr.",i
+                    print_("- "*depth,"Leaving dict nr.",i)
             elif type(source[i])==type(dest[i]) and type(source[i]) in [tuple,TupleProxy,list]:
                 if self.opts.verbose:
-                    print "- "*depth,"Entering tuple nr.",i
+                    print_("- "*depth,"Entering tuple nr.",i)
                 self.workList(source[i],dest[i],depth+1)
                 if self.opts.verbose:
-                    print "- "*depth,"Leaving tuple nr.",i
+                    print_("- "*depth,"Leaving tuple nr.",i)
             elif self.opts.interactive:
                 if source[i]!=dest[i]:
                     if self.ask("Replace for index",i,"the value",dest[i],"with the value",source[i]):
@@ -160,54 +165,54 @@ destination case
         if len(source)<len(dest) and self.opts.shorten:
             if self.ask("Clip [",len(source),":] with the values ",dest[len(source):],"from the list"):
                 if self.opts.verbose:
-                    print "- "*depth,"Clipping",len(dest)-len(source),"entries starting with",len(source)
+                    print_("- "*depth,"Clipping",len(dest)-len(source),"entries starting with",len(source))
                 dest=dest[0:len(source)]
         elif len(source)>len(dest) and self.opts.append:
             if self.ask("Append [",len(dest),":] with the values ",source[len(dest):],"to the list"):
                 if self.opts.verbose:
-                    print "- "*depth,"Appending",len(source)-len(dest),"entries starting with",len(dest)
+                    print_("- "*depth,"Appending",len(source)-len(dest),"entries starting with",len(dest))
                 dest+=source[len(dest):]
-                
+
     def workDict(self,source,dest,depth):
         if depth>self.opts.max:
             if self.opts.verbose:
-                print "- "*depth,"Recursion ended"
+                print_("- "*depth,"Recursion ended")
             return
 
         if depth>=self.opts.min:
             doIt=True
         else:
             doIt=False
-            
+
         for name in source:
             if name not in dest:
                 if self.opts.add and doIt:
                     if self.ask("Add the key",name,"with value",source[name]):
                         if self.opts.verbose:
-                            print "- "*depth,"Adding",name
+                            print_("- "*depth,"Adding",name)
                         dest[name]=source[name]
             elif type(source[name]) in [dict,DictProxy]:
                 if type(dest[name]) not in [dict,DictProxy]:
                     error("Entry",name,"is not a dictionary in destination (but in source)")
                 if self.opts.verbose:
-                    print "- "*depth,"Entering dict ",name
+                    print_("- "*depth,"Entering dict ",name)
                 self.workDict(source[name],dest[name],depth+1)
                 if self.opts.verbose:
-                    print "- "*depth,"Leaving dict ",name
+                    print_("- "*depth,"Leaving dict ",name)
             elif type(source[name])==type(dest[name]) and type(dest[name]) in [tuple,TupleProxy,list]:
                 if self.opts.verbose:
-                    print "- "*depth,"Entering tuple ",name
+                    print_("- "*depth,"Entering tuple ",name)
                 self.workList(source[name],dest[name],depth+1)
                 if self.opts.verbose:
-                    print "- "*depth,"Leaving tuple ",name
+                    print_("- "*depth,"Leaving tuple ",name)
             elif self.opts.interactive:
                 if source[name]!=dest[name]:
                     if self.ask("Replace for key",name,"the value",dest[name],"with the value",source[name]):
                         dest[name]=source[name]
             else:
                 if self.opts.verbose:
-                    print "- "*depth,"Nothing done for",name
-                    
+                    print_("- "*depth,"Nothing done for",name)
+
         if self.opts.clear and doIt:
             weg=[]
             for name in dest:
@@ -217,19 +222,19 @@ destination case
             for name in weg:
                 if self.ask("Remove the key",name,"with the value",dest[name]):
                     if self.opts.verbose:
-                        print "- "*depth,"Removing",name
+                        print_("- "*depth,"Removing",name)
                     del dest[name]
-    
+
     def run(self):
         sName=path.abspath(self.parser.getArgs()[0])
         dName=path.abspath(self.parser.getArgs()[1])
-        
+
         if self.opts.all:
             self.opts.append=True
             self.opts.shorten=True
             self.opts.add=True
             self.opts.clear=True
-            
+
         try:
             source=ParsedParameterFile(sName,
                                        backup=False,
@@ -239,27 +244,28 @@ destination case
                                        boundaryDict=self.opts.boundaryDict,
                                        listDict=self.opts.listDict,
                                        listDictWithHeader=self.opts.listDictWithHeader)
-        except IOError,e:
+        except IOError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             self.error("Problem with file",sName,":",e)
 
         if not self.opts.notequal and path.basename(sName)!=path.basename(dName):
             found=False
             parts=sName.split(path.sep)
             for i in range(len(parts)):
-                tmp=apply(path.join,[dName]+parts[-(i+1):])
-                
+                tmp=path.join(*[dName]+parts[-(i+1):])
+
                 if path.exists(tmp):
                     found=True
                     dName=tmp
                     warning("Found",dName,"and using this")
                     break
-                
+
             if not found:
                 error("Could not find a file named",path.basename(sName),"in",dName)
-                
+
         if path.samefile(sName,dName):
             error("Source",sName,"and destination",dName,"are the same")
-        
+
         try:
             dest=ParsedParameterFile(dName,
                                      backup=False,
@@ -269,7 +275,8 @@ destination case
                                      boundaryDict=self.opts.boundaryDict,
                                      listDict=self.opts.listDict,
                                      listDictWithHeader=self.opts.listDictWithHeader)
-        except IOError,e:
+        except IOError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             self.error("Problem with file",dName,":",e)
 
         dCase=dest.getCaseDir()
@@ -281,13 +288,13 @@ destination case
             self.workDict(source.content,dest.content,1)
         else:
             self.workList(source.content,dest.content,1)
-            
+
         if self.opts.test or self.opts.interactive:
-            print str(dest)
+            print_(str(dest))
 
         if not self.opts.test and self.ask("\n Write this file to disk"):
             dest.writeFile()
             if dCase!=None:
                 self.addToCaseLog(dCase,"Source",sName,"Destination:",dName)
-        
-                 
+
+# Should work with Python3 and Python2

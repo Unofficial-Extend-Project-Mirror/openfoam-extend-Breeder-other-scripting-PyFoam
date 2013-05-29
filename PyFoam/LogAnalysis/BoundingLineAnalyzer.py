@@ -1,14 +1,14 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/BoundingLineAnalyzer.py 5717 2009-10-12T21:41:13.626022Z bgschaid  $ 
+#  ICE Revision: $Id: BoundingLineAnalyzer.py 12753 2013-01-03 23:08:03Z bgschaid $
 """Check lines for Boundedness"""
 
 import re
 
 boundingRegExp="^bounding (.+), min: (.+) max: (.+) average: (.+)$"
-    
+
 # from FileLineAnalyzer import FileLineAnalyzer
 # from TimeLineLineAnalyzer import TimeLineLineAnalyzer
 
-from GeneralLineAnalyzer import GeneralLineAnalyzer
+from .GeneralLineAnalyzer import GeneralLineAnalyzer
 
 class GeneralBoundingLineAnalyzer(GeneralLineAnalyzer):
     """Parses the line for information about variables being bounded
@@ -31,18 +31,18 @@ class GeneralBoundingLineAnalyzer(GeneralLineAnalyzer):
         self.exp=re.compile(boundingRegExp)
 
     def addToFiles(self,match):
-        name=match.groups()[0]
+        name=self.fName(match.groups()[0])
         rest=match.groups()[1:]
         self.files.write("bounding_"+name,self.parent.getTime(),rest)
 
     def addToTimelines(self,match):
-        name=match.groups()[0]
+        name=self.fName(match.groups()[0])
         rest=match.groups()[1:]
-        
+
         self.lines.setValue(name+"_min",rest[0])
         self.lines.setValue(name+"_max",rest[1])
         self.lines.setValue(name+"_avg",rest[2])
-        
+
 class BoundingLineAnalyzer(GeneralBoundingLineAnalyzer):
     """Parses the line for information about variables being bounded
 
@@ -50,7 +50,7 @@ class BoundingLineAnalyzer(GeneralBoundingLineAnalyzer):
 
     def __init__(self):
         GeneralBoundingLineAnalyzer.__init__(self,doTimelines=False)
-        
+
 ##        FileLineAnalyzer.__init__(self,titles=['Minimum','Maximum','Average'])
 ##        self.exp=re.compile(boundingRegExp)
 
@@ -66,7 +66,7 @@ class TimeLineBoundingLineAnalyzer(GeneralBoundingLineAnalyzer):
 
     def __init__(self):
         GeneralBoundingLineAnalyzer.__init__(self,doFiles=False)
-        
+
 ##        TimeLineLineAnalyzer.__init__(self)
 ##        self.exp=re.compile(boundingRegExp)
 
@@ -79,4 +79,6 @@ class TimeLineBoundingLineAnalyzer(GeneralBoundingLineAnalyzer):
 ##            self.lines.setValue(name+"_min",rest[0])
 ##            self.lines.setValue(name+"_max",rest[1])
 ##            self.lines.setValue(name+"_avg",rest[2])
-    
+
+
+# Should work with Python3 and Python2

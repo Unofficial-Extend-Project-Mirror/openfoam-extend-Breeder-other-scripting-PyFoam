@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ClusterTester.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: ClusterTester.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamClusterTester
 """
@@ -13,11 +13,13 @@ import os,string
 from os import mkdir,path
 from optparse import OptionGroup
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.FoamInformation import changeFoamVersion
 from PyFoam import configuration as config
 
-from CommonParallel import CommonParallel
+from .CommonParallel import CommonParallel
+
+from PyFoam.ThirdParty.six import print_
 
 class ClusterTester(PyFoamApplication,
                     CommonParallel):
@@ -27,7 +29,7 @@ Is used to test Cluster-Scripts before they are submitted to the
 cluster. It tries to resemble the environment the script will
 find. Cluster in this context means the Sun Grid Engine
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -36,7 +38,7 @@ find. Cluster in this context means the Sun Grid Engine
                                    nr=1,
                                    exactNr=False,
                                    interspersed=1)
-        
+
     def addOptions(self):
         general=OptionGroup(self.parser,
                         "Cluster General",
@@ -45,14 +47,14 @@ find. Cluster in this context means the Sun Grid Engine
                            action="store_false",
                            default=True,
                            dest="clear",
-                           help="Do not clear the Environment from OpenFOAM-specific variables")        
+                           help="Do not clear the Environment from OpenFOAM-specific variables")
         general.add_option("--restart",
                            action="store_true",
                            default=False,
                            dest="restart",
                            help="Treat the case as being restarted")
         self.parser.add_option_group(general)
-        
+
         sge=OptionGroup(self.parser,
                         "SGE",
                         "Stuff that is specific to a SunGridEngine-environment")
@@ -73,13 +75,13 @@ find. Cluster in this context means the Sun Grid Engine
         self.parser.add_option_group(sge)
 
         CommonParallel.addOptions(self)
-        
+
     def run(self):
         scriptName=self.parser.getArgs()[0]
 
         if self.opts.clear:
-            print "Clearing out old the environment ...."
-            for k in os.environ.keys():
+            print_("Clearing out old the environment ....")
+            for k in list(os.environ.keys()):
                 if k.find("FOAM")==0 or k.find("WM_")==0:
                     del os.environ[k]
                     continue
@@ -91,10 +93,10 @@ find. Cluster in this context means the Sun Grid Engine
 
         tmpdir=path.join("/tmp","pyClusterTest.%d" % self.opts.jobid)
         os.environ["TMP"]=tmpdir
-        
+
         if not path.exists(tmpdir):
             mkdir(tmpdir)
-        
+
         if self.opts.procnr!=None:
             os.environ["NSLOTS"]=str(self.opts.procnr)
         if self.opts.machinefile!=None:
@@ -106,12 +108,12 @@ find. Cluster in this context means the Sun Grid Engine
         elif self.opts.procnr!=None:
             open(machinefile,"w").write("localhost\n"*self.opts.procnr)
             os.environ["PE_HOSTFILE"]=machinefile
-            
+
         if self.opts.restart:
             os.environ["RESTARTED"]="1"
         else:
             os.environ["RESTARTED"]="0"
-            
+
         if self.opts.taskid!=None:
             os.environ["SGE_TASK_ID"]=str(self.opts.taskid)
 
@@ -119,7 +121,7 @@ find. Cluster in this context means the Sun Grid Engine
 
         if self.opts.jobname==None:
             self.opts.jobname=scriptName
-                
+
         os.environ["JOB_NAME"]=self.opts.jobname
 
         os.environ["SHELL"]=config().get("Paths","python")
@@ -128,11 +130,12 @@ find. Cluster in this context means the Sun Grid Engine
         if len(self.parser.getArgs())>1:
             for a in self.parser.getArgs()[1:]:
                 callString+=" "+a
-                
-        print "Executing",callString
+
+        print_("Executing",callString)
         if sys.version_info<(2,4):
             ret=system(config().get("Paths","python")+" "+callString)
         else:
             ret=subprocess.call([config().get("Paths","python")]+self.parser.getArgs())
-        print "Result=",ret
-        
+        print_("Result=",ret)
+
+# Should work with Python3 and Python2

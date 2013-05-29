@@ -1,31 +1,74 @@
 """Data structures in Foam-Files that can't be directly represented by Python-Structures"""
 
-import FoamFileGenerator
+from __future__ import division
+
+import PyFoam.Basics.FoamFileGenerator
+
 from copy import deepcopy
 import string,math
 import re
 
+from PyFoam.ThirdParty.six import integer_types,PY3,iteritems
+
+if PY3:
+    def cmp(a,b):
+        if a<b:
+            return -1
+        elif a==b:
+            return 0
+        else:
+            return 1
+
 class FoamDataType(object):
     def __repr__(self):
         return "'"+str(self)+"'"
-    
+
+    def __eq__(self,other):
+        """Implementation to make __cmp__ work again in Python3
+
+        Implementing this method means that these objects are not hashable.
+        But that is OK
+        """
+        return self.__cmp__(other)==0
+
+    def __lt__(self,other):
+        "Implementation to make __cmp__ work again in Python3"
+        return self.__cmp__(other)<0
+
+    def __ne__(self,other):
+        return self.__cmp__(other)!=0
+
+    def __gt__(self,other):
+        return self.__cmp__(other)>0
+
+    def __ge__(self,other):
+        return self.__cmp__(other)>=0
+
+    def __le__(self,other):
+        return self.__cmp__(other)<=0
 
 class Field(FoamDataType):
     def __init__(self,val,name=None):
         self.val=val
         self.name=name
-        if self.name==None:
-            self.uniform=True
-        elif type(val) in[list,UnparsedList]:
+        if type(val) in[list,UnparsedList,BinaryList]:
             self.uniform=False
-            
+        elif self.name==None:
+            self.uniform=True
+        else:
+            raise TypeError("Type",type(val),"of value",val,"can not be used to determine uniformity")
+
     def __str__(self):
         result=""
         if self.uniform:
             result+="uniform "
         else:
-            result+="nonuniform "+self.name+" "
-        result+=str(FoamFileGenerator.FoamFileGenerator(self.val))
+            result+="nonuniform "
+            if self.name:
+                result+=self.name+" "
+
+        result+=str(PyFoam.Basics.FoamFileGenerator.FoamFileGenerator(self.val,
+                                                    longListThreshold=-1))
         return result
 
     def __cmp__(self,other):
@@ -48,7 +91,13 @@ class Field(FoamDataType):
 
     def isUniform(self):
         return self.uniform
-    
+
+    def isBinary(self):
+        return type(self.val)==BinaryList
+
+    def binaryString(self):
+        return "nonuniform "+self.name+" <BINARY DATA>"
+
     def value(self):
         return self.val
 
@@ -56,7 +105,7 @@ class Field(FoamDataType):
         self.val=data
         self.uniform=True
         self.name=None
-        
+
 class Dimension(FoamDataType):
     def __init__(self,*dims):
         assert(len(dims)==7)
@@ -73,7 +122,7 @@ class Dimension(FoamDataType):
         if other==None:
             return 1
         return cmp(self.dims,other.dims)
-    
+
     def __getitem__(self,key):
         return self.dims[key]
 
@@ -85,13 +134,13 @@ class FixedLength(FoamDataType):
         self.vals=vals[:]
 
     def __str__(self):
-        return "("+string.join(map(lambda v:"%g"%v,self.vals))+")"
-    
+        return "("+" ".join(["%g"%v for v in self.vals])+")"
+
     def __cmp__(self,other):
         if other==None or not issubclass(type(other),FixedLength):
             return 1
         return cmp(self.vals,other.vals)
-    
+
     def __getitem__(self,key):
         return self.vals[key]
 
@@ -109,47 +158,47 @@ class Vector(FixedLength):
         x=self
         if type(y)==Vector:
             return Vector(x[0]+y[0],x[1]+y[1],x[2]+y[2])
-        elif type(y) in [int,float,long]:
-            return Vector(x[0]+y,x[1]+y,x[2]+y)            
+        elif type(y) in integer_types+(float,):
+            return Vector(x[0]+y,x[1]+y,x[2]+y)
         else:
             return NotImplemented
-        
+
     def __radd__(self,y):
         x=self
-        if type(y) in [int,float,long]:
-            return Vector(x[0]+y,x[1]+y,x[2]+y)            
+        if type(y) in integer_types+(float,):
+            return Vector(x[0]+y,x[1]+y,x[2]+y)
         else:
             return NotImplemented
-        
+
     def __sub__(self,y):
         x=self
         if type(y)==Vector:
             return Vector(x[0]-y[0],x[1]-y[1],x[2]-y[2])
-        elif type(y) in [int,float,long]:
-            return Vector(x[0]-y,x[1]-y,x[2]-y)            
+        elif type(y) in integer_types+(float,):
+            return Vector(x[0]-y,x[1]-y,x[2]-y)
         else:
             return NotImplemented
-        
+
     def __rsub__(self,y):
         x=self
-        if type(y) in [int,float,long]:
-            return Vector(y-x[0],y-x[1],y-x[2])            
+        if type(y) in integer_types+(float,):
+            return Vector(y-x[0],y-x[1],y-x[2])
         else:
             return NotImplemented
-        
+
     def __mul__(self,y):
         x=self
         if type(y)==Vector:
             return Vector(x[0]*y[0],x[1]*y[1],x[2]*y[2])
-        elif type(y) in [int,float,long]:
-            return Vector(x[0]*y,x[1]*y,x[2]*y)            
+        elif type(y) in integer_types+(float,):
+            return Vector(x[0]*y,x[1]*y,x[2]*y)
         else:
             return NotImplemented
-        
+
     def __rmul__(self,y):
         x=self
-        if type(y) in [int,float,long]:
-            return Vector(y*x[0],y*x[1],y*x[2])            
+        if type(y) in integer_types+(float,):
+            return Vector(y*x[0],y*x[1],y*x[2])
         else:
             return NotImplemented
 
@@ -157,10 +206,13 @@ class Vector(FixedLength):
         x=self
         if type(y)==Vector:
             return Vector(x[0]/y[0],x[1]/y[1],x[2]/y[2])
-        elif type(y) in [int,float,long]:
-            return Vector(x[0]/y,x[1]/y,x[2]/y)            
+        elif type(y) in integer_types+(float,):
+            return Vector(x[0]/y,x[1]/y,x[2]/y)
         else:
             return NotImplemented
+
+    def __truediv__(self,y):
+        return self.__div__(y)
 
     def __xor__(self,y):
         x=self
@@ -186,7 +238,7 @@ class Vector(FixedLength):
 class Tensor(FixedLength):
     def __init__(self,v1,v2,v3,v4,v5,v6,v7,v8,v9):
         FixedLength.__init__(self,[v1,v2,v3,v4,v5,v6,v7,v8,v9])
-        
+
 class SymmTensor(FixedLength):
     def __init__(self,v1,v2,v3,v4,v5,v6):
         FixedLength.__init__(self,[v1,v2,v3,v4,v5,v6])
@@ -205,13 +257,16 @@ class DictRedirection(object):
         result=self._fullCopy
         self._fullCopy=None
         return result
-        
+
     def __call__(self):
         return self._reference
 
     def __str__(self):
         return "$"+self._name
-    
+
+    def __float__(self):
+        return float(self._reference)
+
 class DictProxy(dict):
     """A class that acts like a dictionary, but preserves the order
     of the entries. Used to beautify the output"""
@@ -222,7 +277,7 @@ class DictProxy(dict):
         self._decoration={}
         self._regex=[]
         self._redirects=[]
-        
+
     def __setitem__(self,key,value):
         isRegex=False
         if type(key)==str:
@@ -248,15 +303,15 @@ class DictProxy(dict):
                     return r()[key]
                 except KeyError:
                     pass
-                    
+
             raise KeyError(key)
-        
+
     def __delitem__(self,key):
         dict.__delitem__(self,key)
         self._order.remove(key)
         if key in self._decoration:
             del self._decoration[key]
-            
+
     def __deepcopy__(self,memo):
         new=DictProxy()
         for k in self._order:
@@ -267,7 +322,7 @@ class DictProxy(dict):
                     new[k]=deepcopy(self[k],memo)
                 except KeyError:
                     new[k]=deepcopy(self.getRegexpValue(k),memo)
-            
+
         return new
 
     def __contains__(self,key):
@@ -280,11 +335,24 @@ class DictProxy(dict):
             for r in self._redirects:
                 if key in r():
                     return True
-                    
+
             return False
 
     def keys(self):
-        return filter(lambda x:type(x)!=DictRedirection,self._order)
+        return [x for x in self._order if type(x)!=DictRedirection]
+
+    def __str__(self):
+        first=True
+        result="{"
+        for k in self.keys():
+            v=self[k]
+            if first:
+                first=False
+            else:
+                result+=", "
+            result+="%s: %s" % (repr(k),repr(v))
+        result+="}"
+        return result
 
     def addDecoration(self,key,text):
         if key in self:
@@ -308,7 +376,7 @@ class DictProxy(dict):
         self._order.append(redir)
         redir.useAsRedirect()
         self._redirects.append(redir)
-        
+
 class TupleProxy(list):
     """Enables Tuples to be manipulated"""
 
@@ -323,13 +391,24 @@ class Unparsed(object):
 
     def __str__(self):
         return self.data
-    
+
+    def __hash__(self):
+        return hash(self.data)
+
+    def __lt__(self,other):
+        return self.data<other.data
+
+class BinaryBlob(Unparsed):
+    """Represents a part of the file with binary data in it"""
+    def __init__(self,data):
+        Unparsed.__init__(self,data)
+
 class Codestream(str):
     """A class that encapsulates an codestream string"""
 
     def __str__(self):
         return "#{" + str.__str__(self) + "#}"
-    
+
 class UnparsedList(object):
     """A class that encapsulates a list that was not parsed for
     performance reasons"""
@@ -337,9 +416,23 @@ class UnparsedList(object):
     def __init__(self,lngth,data):
         self.data=data
         self.length=lngth
-        
+
     def __len__(self):
         return self.length
-    
+
     def __cmp__(self,other):
         return cmp(self.data,other.data)
+
+    def __eq__(self,other):
+        return self.data==other.data
+
+    def __lt__(self,other):
+        return self.data<other.data
+
+class BinaryList(UnparsedList):
+    """A class that represents a list that is saved as binary data"""
+
+    def __init__(self,lngth,data):
+        UnparsedList.__init__(self,lngth,data)
+
+# Should work with Python3 and Python2

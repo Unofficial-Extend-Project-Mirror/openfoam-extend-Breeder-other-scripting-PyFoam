@@ -14,9 +14,14 @@ points and tabulate the output to be used with Gnuplot.
 
 """
 
-import numpy
-    
-import Gnuplot, utils
+try:
+    import numpy
+except ImportError:
+    # assume this is pypy and retry
+    import numpypy
+    import numpy
+
+from . import Gnuplot, utils, PlotItems
 
 
 def tabulate_function(f, xvals, yvals=None, dtype=None, ufunc=0):
@@ -59,7 +64,7 @@ def tabulate_function(f, xvals, yvals=None, dtype=None, ufunc=0):
                     dtype = xvals.dtype.char
                 except AttributeError:
                     dtype = xvals.typecode()
-                    
+
             m = numpy.zeros((len(xvals),), dtype)
             for xi in range(len(xvals)):
                 x = xvals[xi]
@@ -137,7 +142,7 @@ def compute_Data(xvals, f, ufunc=0, **keyw):
     # evaluate function:
     data = tabulate_function(f, xvals, ufunc=ufunc)
 
-    return Gnuplot.Data(xvals, data, **keyw)
+    return PlotItems.Data(xvals, data, **keyw)
 
 
 def compute_GridData(xvals, yvals, f, ufunc=0, **keyw):
@@ -183,11 +188,11 @@ def compute_GridData(xvals, yvals, f, ufunc=0, **keyw):
     # evaluate function:
     data = tabulate_function(f, xvals, yvals, ufunc=ufunc)
 
-    return Gnuplot.GridData(data, xvals, yvals, **keyw)
+    return PlotItems.GridData(data, xvals, yvals, **keyw)
 
 
 # For backwards compatibility:
 def GridFunc(f, xvals, yvals, **keyw):
     return compute_GridData(xvals, yvals, f, **keyw)
 
-
+# Should work with Python3 and Python2

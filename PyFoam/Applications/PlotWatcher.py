@@ -1,17 +1,23 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotWatcher.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: PlotWatcher.py 12756 2013-01-03 23:08:21Z bgschaid $
 """
 Class that implements pyFoamPlotWatcher
 """
 
 from PyFoam.Execution.GnuplotRunner import GnuplotWatcher
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
-from CommonPlotLines import CommonPlotLines
-from CommonPlotOptions import CommonPlotOptions
+from .CommonPlotLines import CommonPlotLines
+from .CommonPlotOptions import CommonPlotOptions
 
 from os import path
 from optparse import OptionGroup
+
+from PyFoam.ThirdParty.six import PY3
+
+if PY3:
+    long=int
+
 
 class PlotWatcher(PyFoamApplication,
                   CommonPlotOptions,
@@ -41,7 +47,7 @@ file until interrupted.
                            "Input",
                            "Specifics of the input")
         self.parser.add_option_group(input)
-        
+
         input.add_option("--solver-not-running-anymore",
                           action="store_true",
                           dest="solverNotRunning",
@@ -52,11 +58,11 @@ file until interrupted.
                            "Output",
                            "What should be output to the terminal")
         self.parser.add_option_group(output)
-        
+
         output.add_option("--tail",
                           type="long",
                           dest="tail",
-                          default=5000L,
+                          default=long(5000),
                           help="The length at the end of the file that should be output (in bytes. Default: %default)")
         output.add_option("--silent",
                           action="store_true",
@@ -79,7 +85,7 @@ file until interrupted.
                           "Limits",
                           "Where the plots should start and end")
         self.parser.add_option_group(limit)
-        
+
         limit.add_option("--start",
                          action="store",
                          type="float",
@@ -95,13 +101,13 @@ file until interrupted.
                          help="End time until which the data should be plotted. If undefined it is plotted till the end")
 
         CommonPlotLines.addOptions(self)
-                
+
     def run(self):
         self.processPlotOptions()
         hereDir=path.dirname(self.parser.getArgs()[0])
         self.processPlotLineOptions(autoPath=hereDir)
         self.addLocalConfig(hereDir)
-        
+
         run=GnuplotWatcher(self.parser.getArgs()[0],
                            smallestFreq=self.opts.frequency,
                            persist=self.opts.persist,
@@ -130,3 +136,5 @@ file until interrupted.
                            solverNotRunning=self.opts.solverNotRunning)
 
         run.start()
+
+# Should work with Python3 and Python2

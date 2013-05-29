@@ -1,0 +1,1542 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.5: http://docutils.sourceforge.net/" />
+<title>pyratemp</title>
+<meta name="author" content="Roland Koebler (rk at simple-is-better dot org)" />
+<meta name="date" content="2010-06-15" />
+<meta content="pyratemp template-engine" name="description" />
+<meta content="pyratemp, Python template-engine, pseudo sandbox, sandbox, simple" name="keywords" />
+<style type="text/css">
+
+/*
+:Author: Roland Koebler
+:Copyright: free
+:Date: 2008-12-14
+
+rstdoc-stylesheet for use with Docutils and the simple-is-better.org pages,
+created by modifying the original docutils html4css1.css stylesheet.
+*/
+
+/*
+original stylesheet:
+
+:Author: David Goodger
+:Contact: goodger@users.sourceforge.net
+:Date: $Date: 2005-12-18 01:56:14 +0100 (Sun, 18 Dec 2005) $
+:Revision: $Revision: 4224 $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin-left: 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left {
+  clear: left }
+
+img.align-right {
+  clear: right }
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font-family: serif ;
+  font-size: 100% }
+
+pre.literal-block, pre.doctest-block {
+  margin-left: 2em ;
+  margin-right: 2em ;
+  background-color: #eeeeee }
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+tt.docutils {
+  background-color: #eeeeee }
+
+ul.auto-toc {
+  list-style-type: none }
+
+
+
+/* Your customizations go here.  For example: */
+
+/*h1, h2, h3, h4, h5, h6, p.topic-title {
+      font-family: sans-serif }
+*/
+
+body {
+    background-color: #FFFFFF;
+}
+
+H1.title {
+    background-color: #ffec70;
+    text-align: center;
+    text-decoration: none;
+/*    text-decoration: underline;
+    text-align: left;
+    font-style: normal;
+    font-weight: normal;
+    color: #FFFF00*/
+}
+H2 {
+    color: #7f7638;
+    text-decoration: underline;
+    font-size: large;
+}
+H3 {
+    margin-bottom: 0pt;
+    text-decoration: underline;
+/*    font-family: "Helvetica";*/
+    font-size: medium;
+}
+
+
+</style>
+</head>
+<body>
+<div class="document" id="pyratemp">
+<h1 class="title">pyratemp</h1>
+<table class="docinfo" frame="void" rules="none">
+<col class="docinfo-name" />
+<col class="docinfo-content" />
+<tbody valign="top">
+<tr><th class="docinfo-name">Author:</th>
+<td>Roland Koebler (rk <em>at</em> simple-is-better <em>dot</em> org)</td></tr>
+<tr class="field"><th class="docinfo-name">Website:</th><td class="field-body"><a class="reference external" href="http://www.simple-is-better.org/template/pyratemp.html">http://www.simple-is-better.org/template/pyratemp.html</a></td>
+</tr>
+<tr><th class="docinfo-name">Date:</th>
+<td>2010-06-15</td></tr>
+</tbody>
+</table>
+<!-- -*- coding: utf-8- -->
+<table align="right" style="float:right"><tr><td><pre>
+
+   /\.
+  /  \`.
+ /    \ `.
+/______\/
+
+</pre></td></tr></table><div class="contents topic" id="table-of-contents">
+<p class="topic-title first"><strong>Table of Contents</strong></p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#overview" id="id21">1&nbsp;&nbsp;&nbsp;Overview</a><ul class="auto-toc">
+<li><a class="reference internal" href="#features" id="id22">1.1&nbsp;&nbsp;&nbsp;Features</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#quickstart" id="id23">2&nbsp;&nbsp;&nbsp;Quickstart</a></li>
+<li><a class="reference internal" href="#template-syntax" id="id24">3&nbsp;&nbsp;&nbsp;Template syntax</a><ul class="auto-toc">
+<li><a class="reference internal" href="#substitution" id="id25">3.1&nbsp;&nbsp;&nbsp;Substitution</a></li>
+<li><a class="reference internal" href="#comments" id="id26">3.2&nbsp;&nbsp;&nbsp;Comments</a></li>
+<li><a class="reference internal" href="#blocks" id="id27">3.3&nbsp;&nbsp;&nbsp;Blocks</a><ul class="auto-toc">
+<li><a class="reference internal" href="#if-elif-else" id="id28">3.3.1&nbsp;&nbsp;&nbsp;if/elif/else</a></li>
+<li><a class="reference internal" href="#for-else" id="id29">3.3.2&nbsp;&nbsp;&nbsp;for/else</a></li>
+<li><a class="reference internal" href="#macro" id="id30">3.3.3&nbsp;&nbsp;&nbsp;macro</a></li>
+<li><a class="reference internal" href="#raw" id="id31">3.3.4&nbsp;&nbsp;&nbsp;raw</a></li>
+<li><a class="reference internal" href="#include" id="id32">3.3.5&nbsp;&nbsp;&nbsp;include</a></li>
+<li><a class="reference internal" href="#set-escape" id="id33">3.3.6&nbsp;&nbsp;&nbsp;set_escape</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#expressions" id="id34">3.4&nbsp;&nbsp;&nbsp;Expressions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#python-side" id="id35">4&nbsp;&nbsp;&nbsp;Python-side</a><ul class="auto-toc">
+<li><a class="reference internal" href="#user-interface" id="id36">4.1&nbsp;&nbsp;&nbsp;User-interface</a></li>
+<li><a class="reference internal" href="#internal-parts" id="id37">4.2&nbsp;&nbsp;&nbsp;Internal parts</a><ul class="auto-toc">
+<li><a class="reference internal" href="#escaping" id="id38">4.2.1&nbsp;&nbsp;&nbsp;escaping</a></li>
+<li><a class="reference internal" href="#loader" id="id39">4.2.2&nbsp;&nbsp;&nbsp;Loader</a></li>
+<li><a class="reference internal" href="#parser" id="id40">4.2.3&nbsp;&nbsp;&nbsp;Parser</a></li>
+<li><a class="reference internal" href="#evaluation" id="id41">4.2.4&nbsp;&nbsp;&nbsp;Evaluation</a></li>
+<li><a class="reference internal" href="#renderer" id="id42">4.2.5&nbsp;&nbsp;&nbsp;Renderer</a></li>
+<li><a class="reference internal" href="#templatebase" id="id43">4.2.6&nbsp;&nbsp;&nbsp;TemplateBase</a></li>
+<li><a class="reference internal" href="#compiler" id="id44">4.2.7&nbsp;&nbsp;&nbsp;Compiler</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#usage-notes-faq" id="id45">5&nbsp;&nbsp;&nbsp;Usage notes/FAQ</a><ul class="auto-toc">
+<li><a class="reference internal" href="#syntax-errors" id="id46">5.1&nbsp;&nbsp;&nbsp;syntax errors</a></li>
+<li><a class="reference internal" href="#fillout-render-test" id="id47">5.2&nbsp;&nbsp;&nbsp;fillout/render test</a></li>
+<li><a class="reference internal" href="#whitespace-handling" id="id48">5.3&nbsp;&nbsp;&nbsp;whitespace handling</a></li>
+<li><a class="reference internal" href="#setting-variables" id="id49">5.4&nbsp;&nbsp;&nbsp;setting variables</a></li>
+<li><a class="reference internal" href="#capture-output" id="id50">5.5&nbsp;&nbsp;&nbsp;capture output</a></li>
+<li><a class="reference internal" href="#filters" id="id51">5.6&nbsp;&nbsp;&nbsp;filters</a></li>
+<li><a class="reference internal" href="#evaluation-order-caches" id="id52">5.7&nbsp;&nbsp;&nbsp;evaluation order / caches</a></li>
+<li><a class="reference internal" href="#using-functions-which-import-other-modules" id="id53">5.8&nbsp;&nbsp;&nbsp;using functions which import other modules</a></li>
+<li><a class="reference internal" href="#shortcuts-template-syntax-extension" id="id54">5.9&nbsp;&nbsp;&nbsp;shortcuts / template-syntax-extension</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tools" id="id55">6&nbsp;&nbsp;&nbsp;Tools</a><ul class="auto-toc">
+<li><a class="reference internal" href="#yaml2pyratemp" id="id56">6.1&nbsp;&nbsp;&nbsp;yaml2pyratemp</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#download" id="id57">7&nbsp;&nbsp;&nbsp;Download</a></li>
+<li><a class="reference internal" href="#contact" id="id58">8&nbsp;&nbsp;&nbsp;Contact</a></li>
+</ul>
+</div>
+<hr class="docutils" />
+<div class="section" id="overview">
+<h2>1&nbsp;&nbsp;&nbsp;Overview</h2>
+<p><em>pyratemp is a very simple, easy to use, small, fast, powerful, modular,
+extensible, well documented and pythonic template-engine for Python</em>.</p>
+<p>It's a template-engine of my &quot;category 3&quot; as described in my <a class="reference external" href="http://www.simple-is-better.org/template/">thoughts about
+Template Engines</a>.</p>
+<p>It uses a template-language with a small set of Python-like control-structures
+(if/elif/else, for, and user-defined macros/functions) and directly benefits
+from Python by using Python-expressions <a class="footnote-reference" href="#id2" id="id1">[1]</a>.</p>
+<p>It's extremely easy to use in Python, well documented and produces good
+error-messages (incl. line- and column-position) when there is an error in
+a template.</p>
+<p>Additionally, it's extensible and its code is quite small and readable.</p>
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>or: &quot;pseudo-sandboxed&quot; Python expressions, see <a class="reference internal" href="#evaluation">Evaluation</a></td></tr>
+</tbody>
+</table>
+<div class="section" id="features">
+<h3>1.1&nbsp;&nbsp;&nbsp;Features</h3>
+<p>My template-engine has everything I think a template-engine needs:</p>
+<ul class="simple">
+<li>variable-substitution, incl. special-character-escaping (e.g. HTML, LaTeX)</li>
+<li>conditionals (if/elif/else), loops (for/else)</li>
+<li>template-defined functions/macros/variables</li>
+<li>inclusion of other templates</li>
+<li>very powerful expressions (due to Python)</li>
+<li><a class="reference internal" href="#evaluation">pseudo-sandbox</a>: the Python-expressions are evaluated inside a
+&quot;pseudo-sandbox&quot; which prevents that &quot;bad things&quot; are done by
+accident; and even a &quot;real&quot; sandbox could be added</li>
+<li>clear template syntax (&quot;There should be one -- and preferably only one --
+obvious way to do it.&quot; <a class="footnote-reference" href="#id4" id="id3">[2]</a>)</li>
+<li>non-XML, so it can be used for any kind of documents</li>
+<li>good error-handling and good error-messages, incl. the exact position
+of an error in the template-file</li>
+<li>completely uses unicode</li>
+<li><a class="reference external" href="http://www.simple-is-better.org/template/#benchmarks">fast</a> and lightweight</li>
+<li>modular: pyratemp consists of several parts, which can be used separately,
+or even be replaced by an alternative implementation</li>
+<li>extensible: additional functions can be easily added to the templates,
+and due to its modularity, the parts can be modified or even replaced</li>
+<li>small code base, which is well documented and should be easy to read and
+understand
+(about 500 lines-of-code + 500 lines of docstrings and comments)</li>
+</ul>
+<table class="docutils footnote" frame="void" id="id4" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id3">[2]</a></td><td>from: <a class="reference external" href="http://www.python.org/dev/peps/pep-0020/">The Zen of Python</a></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="quickstart">
+<h2>2&nbsp;&nbsp;&nbsp;Quickstart</h2>
+<p>Let's begin with an extremely simple example. Start your python-interpreter,
+and type:</p>
+<pre class="literal-block">
+&gt;&gt;&gt; import pyratemp
+&gt;&gt;&gt; t = pyratemp.Template(&quot;Hello &#64;!name!&#64;.&quot;)
+&gt;&gt;&gt; print t(name=&quot;World&quot;)
+Hello World.
+&gt;&gt;&gt; print t(name=&quot;Universe&quot;)
+Hello Universe.
+</pre>
+<p>Now, let's go to a more comprehensive example. Here, we put the template
+in a separate file, named <cite>example.html</cite>:</p>
+<pre class="literal-block">
+&lt;!--(set_escape)--&gt;
+    html
+&lt;!--(end)--&gt;
+&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.01 Transitional//EN&quot;
+          &quot;http://www.w3.org/TR/html4/loose.dtd&quot;&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;A simple example: &#64;!title!&#64;&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;&#64;!title!&#64;&lt;/h1&gt;
+  This is a simple example, demonstrating pyratemp:
+  #! Comments don't appear in the result !#
+  &lt;ul&gt;
+
+    &lt;li&gt;&#64;!special_chars!&#64;&lt;/li&gt;
+
+    &lt;li&gt;
+      &lt;!--(if number==42)--&gt;
+        The Answer!
+      &lt;!--(elif number==13)--&gt;
+        oh no!
+      &lt;!--(else)--&gt;
+        &#64;!number!&#64;
+      &lt;!--(end)--&gt;
+    &lt;/li&gt;
+
+    &lt;li&gt;a simple for loop: &lt;!--(for i in range(1,10))--&gt; &#64;!i!&#64; &lt;!--(end)--&gt;&lt;/li&gt;
+
+    &lt;li&gt;listing all enumerated elements of a list:
+      &lt;ul&gt;
+      &lt;!--(for i,element in enumerate(mylist))--&gt;
+        &lt;li&gt;&#64;!i+1!&#64;. &#64;!element.upper()!&#64;&lt;/li&gt;
+      &lt;!--(end)--&gt;
+      &lt;/ul&gt;
+    &lt;/li&gt;
+
+&lt;!--(macro myitem)--&gt;
+&lt;li&gt;&lt;strong&gt;&#64;!item!&#64;&lt;/strong&gt;&lt;/li&gt;
+&lt;!--(end)--&gt;
+    &#64;!myitem(item=&quot;foo&quot;)!&#64;
+    &#64;!myitem(item=&quot;bar&quot;)!&#64;
+
+  &lt;/ul&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+<p>Start python again, and type:</p>
+<pre class="literal-block">
+&gt;&gt;&gt; import pyratemp
+&gt;&gt;&gt; t = pyratemp.Template(filename=&quot;example.html&quot;)
+&gt;&gt;&gt; result = t(title=&quot;pyratemp is simple!&quot;, special_chars=u&quot;&quot;&quot;&lt;&gt;&quot;'&amp;äöü&quot;&quot;&quot;, number=42, mylist=(&quot;Spam&quot;, &quot;Parrot&quot;, &quot;Lumberjack&quot;))
+&gt;&gt;&gt; print result.encode(&quot;ascii&quot;, 'xmlcharrefreplace')
+</pre>
+<p>And here is the result:</p>
+<pre class="literal-block">
+&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.01 Transitional//EN&quot;
+          &quot;http://www.w3.org/TR/html4/loose.dtd&quot;&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;A simple example: pyratemp is simple!&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;pyratemp is simple!&lt;/h1&gt;
+  This is a simple example, demonstrating pyratemp:
+
+  &lt;ul&gt;
+
+    &lt;li&gt;&amp;lt;&amp;gt;&amp;quot;&amp;#39;&amp;amp;&amp;#228;&amp;#246;&amp;#252;&lt;/li&gt;
+
+    &lt;li&gt;
+        The Answer!
+    &lt;/li&gt;
+
+    &lt;li&gt;a simple for loop:  1  2  3  4  5  6  7  8  9 &lt;/li&gt;
+
+    &lt;li&gt;listing all enumerated elements of a list:
+      &lt;ul&gt;
+        &lt;li&gt;1. SPAM&lt;/li&gt;
+        &lt;li&gt;2. PARROT&lt;/li&gt;
+        &lt;li&gt;3. LUMBERJACK&lt;/li&gt;
+      &lt;/ul&gt;
+    &lt;/li&gt;
+
+    &lt;li&gt;&lt;strong&gt;foo&lt;/strong&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;bar&lt;/strong&gt;&lt;/li&gt;
+
+  &lt;/ul&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+<p>You can also use <a class="reference internal" href="#yaml2pyratemp">yaml2pyratemp</a> with the included <cite>example.html</cite> and
+<cite>example.json</cite> to play with this example.</p>
+<p>More small examples can be found in the pyratemp-docstring
+(-&gt; <tt class="docutils literal"><span class="pre">pydoc</span> <span class="pre">pyratemp</span></tt>).</p>
+</div>
+<div class="section" id="template-syntax">
+<h2>3&nbsp;&nbsp;&nbsp;Template syntax</h2>
+<p>A template is a normal text file, containing some special placeholders and
+control-structures.</p>
+<p>pyratemp uses only a <em>very small set</em> of control-structures
+(if/elif/else, for/else, macro, raw, include, set_escape)
+and little special template-syntax
+($!..!$, &#64;!..!&#64;, #!..!#, &lt;!--(...)--&gt;).
+This makes the templates both easy to use and easy to understand <a class="footnote-reference" href="#id6" id="id5">[3]</a>.</p>
+<p>Note that you can find several small examples in the pyratemp-docstring.</p>
+<table class="docutils footnote" frame="void" id="id6" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id5">[3]</a></td><td>&quot;There should be one -- and preferably only one -- obvious way to do
+it.&quot; [<a class="reference external" href="http://www.python.org/dev/peps/pep-0020/">The Zen of Python</a>])</td></tr>
+</tbody>
+</table>
+<div class="section" id="substitution">
+<h3>3.1&nbsp;&nbsp;&nbsp;Substitution</h3>
+<p>The template can contain placeholders, which are replaced by the evaluated
+result of their contents. pyratemp has two different placeholders:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">&#64;!EXPR!&#64;</span></tt> escaped substitution: special characters are escaped</li>
+<li><tt class="docutils literal"><span class="pre">$!EXPR!$</span></tt> unescaped/raw substitution</li>
+</ul>
+<p>Normally, you should always use <tt class="docutils literal"><span class="pre">&#64;!...!&#64;</span></tt>, since this escapes special
+characters. Currently, the following formats are supported:</p>
+<ul class="simple">
+<li>HTML (default): <tt class="docutils literal"><span class="pre">&amp;</span> <span class="pre">&lt;</span> <span class="pre">&gt;</span> <span class="pre">&quot;</span> <span class="pre">'</span></tt> are escaped to <tt class="docutils literal"><span class="pre">&amp;amp;</span></tt>,
+<tt class="docutils literal"><span class="pre">&amp;lt;</span></tt>, <tt class="docutils literal"><span class="pre">&amp;gt;</span></tt>, <tt class="docutils literal"><span class="pre">&amp;quot;</span></tt>, <tt class="docutils literal"><span class="pre">&amp;#39</span></tt>.</li>
+<li>LATEX: currently only some special characters are replaced,
+so use with care!</li>
+<li>NONE: no characters are replaced</li>
+</ul>
+<p><tt class="docutils literal"><span class="pre">EXPR</span></tt> can be any <a class="reference internal" href="#expressions">expression</a> (e.g. a variable-name, an arithmetic
+calculation, a function-/macro-call etc.), and is evaluated when the template
+is rendered. Whitespace after <tt class="docutils literal"><span class="pre">&#64;!</span></tt>/<tt class="docutils literal"><span class="pre">$!</span></tt> and before <tt class="docutils literal"><span class="pre">!&#64;</span></tt>/<tt class="docutils literal"><span class="pre">!$</span></tt> is
+ignored.</p>
+<p>Examples:</p>
+<ul>
+<li><div class="first line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">hello</span> <span class="pre">&#64;!name!&#64;.</span></tt> + <cite>name=&quot;marvin&quot;</cite></div>
+<div class="line">-&gt; <tt class="docutils literal"><span class="pre">hello</span> <span class="pre">marvin.</span></tt></div>
+</div>
+</li>
+<li><div class="first line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">hello</span> <span class="pre">escaped:</span> <span class="pre">&#64;!name!&#64;,</span> <span class="pre">unescaped:</span> <span class="pre">$!name!$</span></tt> + <cite>name=&quot;&lt;&gt;&amp;'&quot;&quot;</cite></div>
+<div class="line">-&gt; <tt class="docutils literal"><span class="pre">hello</span> <span class="pre">escaped:</span> <span class="pre">&amp;lt;&amp;gt;&amp;amp;&amp;#39;&amp;quot;,</span> <span class="pre">unescaped:</span> <span class="pre">&lt;&gt;&amp;\'&quot;</span></tt></div>
+</div>
+</li>
+<li><div class="first line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">formatted:</span> <span class="pre">&#64;!</span> <span class="pre">&quot;%8.5f&quot;</span> <span class="pre">%</span> <span class="pre">value</span> <span class="pre">!&#64;</span></tt> + <cite>value=3.141592653</cite></div>
+<div class="line">-&gt; <tt class="docutils literal"><span class="pre">formatted:</span>&nbsp; <span class="pre">3.14159</span></tt></div>
+</div>
+</li>
+<li><div class="first line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">hello</span> <span class="pre">--&#64;!name.upper().center(20)!&#64;--</span></tt> + <cite>name=&quot;world&quot;</cite></div>
+<div class="line">-&gt; <tt class="docutils literal"><span class="pre">hello</span> <span class="pre">--</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="pre">WORLD</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="pre">--</span></tt></div>
+</div>
+</li>
+<li><div class="first line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">calculate</span> <span class="pre">&#64;!var*5+7!&#64;</span></tt> + <cite>var=7</cite></div>
+<div class="line">-&gt; <tt class="docutils literal"><span class="pre">calculate</span> <span class="pre">42</span></tt></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="comments">
+<h3>3.2&nbsp;&nbsp;&nbsp;Comments</h3>
+<p>Comments can be used in a template, and they do not appear in the result.
+They are especially useful for documenting the template or for temporarily
+disabling parts of the template:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">#!...!#</span></tt> single-line comment with start- and end-tag</li>
+<li><tt class="docutils literal"><span class="pre">#!...</span></tt>  single-line-comment until end-of-line, incl. newline</li>
+</ul>
+<p>The second version also comments out the newline, and so can be used at the
+end of a line to remove that newline in the result (like a backslash in
+Python-strings).</p>
+<p>Comments can contain anything, but comments may not appear inside
+substitutions or block-tags.</p>
+</div>
+<div class="section" id="blocks">
+<h3>3.3&nbsp;&nbsp;&nbsp;Blocks</h3>
+<p>The control-structures, macros etc. have a special syntax, which consists
+of a start-tag (which is named according to the block), optional additional
+tags, and an end-tag:</p>
+<pre class="literal-block">
+&lt;!--(...)--&gt;        #! start tag
+   ..
+   ..
+&lt;!--(...)--&gt;        #! optional additional tags (e.g. for elif)
+   ..
+   ..
+&lt;!--(end)--&gt;        #! end tag
+</pre>
+<p>All tags must stand on their own line, and no code (except a <tt class="docutils literal"><span class="pre">#!...</span></tt>-comment)
+is allowed after the tag.</p>
+<p>All tags which belong to the same block <strong>must</strong> have the same indent!
+The contents of the block does not need to be indented, although it might
+improve the readability (e.g. in HTML) to indent the contents as well.</p>
+<p>Nesting blocks is possible, but the tags of nested blocks <strong>must</strong>
+have a different indent than the tags of the enclosing blocks. <a class="footnote-reference" href="#id9" id="id7">[4]</a></p>
+<p>There's also a single-line version of a block, which does not need to stand on
+its own line, but can be inserted anywhere in the template.
+But note that this version does not support nesting <a class="footnote-reference" href="#id10" id="id8">[5]</a>:</p>
+<pre class="literal-block">
+...&lt;!--(...)--&gt;...&lt;!--(...)--&gt;...&lt;!--(end)--&gt;...
+</pre>
+<table class="docutils footnote" frame="void" id="id9" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id7">[4]</a></td><td>Note that you should either use spaces <em>or</em> tabs for indentation. Since
+pyratemp distinguishes between spaces and tabs, if you mix spaces and
+tabs, two indentations might <em>look</em> the same (e.g. 8 spaces or 1 tab) but
+still be different, which might lead to unexpected errors.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id10" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id8">[5]</a></td><td>Although if you really want to nest single-line blocks, you
+nevertheless can do that by hiding the inner blocks in macros.</td></tr>
+</tbody>
+</table>
+<div class="section" id="if-elif-else">
+<h4>3.3.1&nbsp;&nbsp;&nbsp;if/elif/else</h4>
+<p>Syntax:</p>
+<pre class="literal-block">
+&lt;!--(if EXPR)--&gt;
+...
+&lt;!--(elif EXPR)--&gt;
+...
+&lt;!--(else)--&gt;
+...
+&lt;!--(end)--&gt;
+</pre>
+<p>or:</p>
+<pre class="literal-block">
+...&lt;!--(if EXPR)--&gt;...&lt;!--(elif EXPR)--&gt;...&lt;!--(else)--&gt;...&lt;!--(end)--&gt;...
+</pre>
+<p>The elif- and else-branches are optional, and there can be any number of
+elif-branches.</p>
+</div>
+<div class="section" id="for-else">
+<h4>3.3.2&nbsp;&nbsp;&nbsp;for/else</h4>
+<p>Syntax:</p>
+<pre class="literal-block">
+&lt;!--(for VARS in EXPR)--&gt;
+...
+&lt;!--(else)--&gt;
+...
+&lt;!--(end)--&gt;
+</pre>
+<pre class="literal-block">
+...&lt;!--(for VARS in EXPR)--&gt;...&lt;!--(else)--&gt;...&lt;!--(end)--&gt;...
+</pre>
+<div class="line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">VARS</span></tt> can be a single variable-name (e.g. <tt class="docutils literal"><span class="pre">myvar</span></tt>) or a comma-separated
+list of variable-names (e.g. <tt class="docutils literal"><span class="pre">i,val</span></tt>).</div>
+</div>
+<p>The else-branch is optional, and is executed only if the for-loop doesn't
+iterate at all.</p>
+</div>
+<div class="section" id="macro">
+<h4>3.3.3&nbsp;&nbsp;&nbsp;macro</h4>
+<p>Macros are user-defined &quot;sub-templates&quot;, and so can contain anything a
+template itself can contain. They can have parameters and are normally
+used to encapsulate parts of a template and to create user-defined
+&quot;functions&quot;. Macros can be used in <a class="reference internal" href="#expressions">expressions</a>, just like a normal
+variable or function.</p>
+<p>Definition:</p>
+<pre class="literal-block">
+&lt;!--(macro MACRONAME)--&gt;
+...
+&lt;!--(end)--&gt;
+</pre>
+<pre class="literal-block">
+...&lt;!--(macro MACRONAME)--&gt;...&lt;!--(end)--&gt;...
+</pre>
+<p><tt class="docutils literal"><span class="pre">MACRONAME</span></tt> may consist of alphanumeric characters and underscores (<tt class="docutils literal"><span class="pre">[0-9A-Za-z_]+</span></tt>).</p>
+<p>Note that the last newline (before <tt class="docutils literal"><span class="pre">&lt;!--(end)--&gt;</span></tt>) is removed from the
+macro, so that defining and using a macro does not add additional empty
+lines.</p>
+<p>Usage in expressions:</p>
+<pre class="literal-block">
+MACRONAME
+</pre>
+<pre class="literal-block">
+MACRONAME(KEYWORD_ARGs)
+</pre>
+<p><tt class="docutils literal"><span class="pre">KEYWORD_ARGs</span></tt> can be any number of comma-separated name-value-pairs
+(<tt class="docutils literal"><span class="pre">name=value,</span> <span class="pre">...</span></tt>), and these names then will be locally defined inside
+the macro -- in addition to those already defined for the whole template.</p>
+<p>Example:</p>
+<pre class="literal-block">
+&lt;!--(macro header)--&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;A simple example: &#64;!title!&#64;&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;!--(end)--&gt;
+
+&lt;!--(macro myfunc)--&gt;
+&lt;li&gt;&lt;!--(if exists(&quot;link&quot;))--&gt;&lt;a href=&quot;&#64;!link!&#64;&quot;&gt;&#64;!default(&quot;item&quot;,link)!&#64;&lt;/a&gt;&lt;!--(else)--&gt;&#64;!item!&#64;&lt;!--(end)--&gt;&lt;/li&gt;
+&lt;!--(end)--&gt;
+
+
+&#64;!header!&#64;
+&lt;ul&gt;
+&#64;!myfunc(item=&quot;Macros are fun!&quot;)!&#64;
+&#64;!myfunc(item=&quot;Simple is better&quot;, link=&quot;http://www.simple-is-better.org&quot;)!&#64;
+&#64;!myfunc(link=&quot;http://www.wikipedia.org&quot;)!&#64;
+&lt;/ul&gt;
+</pre>
+<p>Macros are protected against double-escaping, so if you use <tt class="docutils literal"><span class="pre">&#64;!MACRONAME!&#64;</span></tt>
+or <tt class="docutils literal"><span class="pre">&#64;!MACRONAME(...)!&#64;</span></tt>, the result of the macro is not escaped again,
+and behaves exactly like <tt class="docutils literal"><span class="pre">$!MACRONAME!$</span></tt> or <tt class="docutils literal"><span class="pre">$!MACRONAME(...)!$</span></tt>.
+But note that this only works if the macro is used as single expression
+inside <tt class="docutils literal"><span class="pre">&#64;!...!&#64;</span></tt> -- if you use additional expressions in the same
+substitution, e.g. <tt class="docutils literal"><span class="pre">&#64;!MACRONAME</span> <span class="pre">+</span> <span class="pre">&quot;hi&quot;!&#64;</span></tt>, then the result would be
+escaped again.</p>
+</div>
+<div class="section" id="raw">
+<h4>3.3.4&nbsp;&nbsp;&nbsp;raw</h4>
+<p>Syntax:</p>
+<pre class="literal-block">
+&lt;!--(raw)--&gt;
+...
+&lt;!--(end)--&gt;
+</pre>
+<pre class="literal-block">
+...&lt;!--(raw)--&gt;...&lt;!--(end)--&gt;...
+</pre>
+<p>Everything inside a <tt class="docutils literal"><span class="pre">raw</span></tt> block is passed verbatim to the result.</p>
+</div>
+<div class="section" id="include">
+<h4>3.3.5&nbsp;&nbsp;&nbsp;include</h4>
+<p>Syntax:</p>
+<pre class="literal-block">
+&lt;!--(include)--&gt;
+  FILENAME
+&lt;!--(end)--&gt;
+</pre>
+<pre class="literal-block">
+...&lt;!--(include)--&gt;FILENAME&lt;!--(end)--&gt;...
+</pre>
+<p>Include another template-file. Only a single filename (+whitespace) is
+allowed inside of the block; if you want to include several files, use
+several include-blocks.</p>
+<p>Note that inclusion of other templates is only supported when loading the
+template from a file. For simplicity and security, <tt class="docutils literal"><span class="pre">FILENAME</span></tt> may not
+contain a path, and only files which are in the same directory as the
+template itself can be included.</p>
+</div>
+<div class="section" id="set-escape">
+<h4>3.3.6&nbsp;&nbsp;&nbsp;set_escape</h4>
+<p>Since the template-engine can be used for all kind of documents, it may be
+useful if the calling Python-code doesn't need to know which format the
+template is of. But then, the template itself has to define its format,
+and especially which special characters should be escaped.</p>
+<p>Syntax:</p>
+<pre class="literal-block">
+&lt;!--(set_escape)--&gt;
+  FORMAT
+&lt;!--(end)--&gt;
+</pre>
+<pre class="literal-block">
+...&lt;!--(set_escape)--&gt;FORMAT&lt;!--(end)--&gt;...
+</pre>
+<p>Currently, <tt class="docutils literal"><span class="pre">FORMAT</span></tt> supports <tt class="docutils literal"><span class="pre">None</span></tt>, <tt class="docutils literal"><span class="pre">html</span></tt> and partially <tt class="docutils literal"><span class="pre">LaTeX</span></tt>
+(see <a class="reference internal" href="#substitution">Substitution</a>) <a class="footnote-reference" href="#id12" id="id11">[6]</a>.</p>
+<p><tt class="docutils literal"><span class="pre">set_escape</span></tt> affects every substitution in the template <em>after</em> this command.
+It's also possible to use different escapings in the same template by using
+several such <tt class="docutils literal"><span class="pre">set_escape</span></tt> blocks at different places.</p>
+<table class="docutils footnote" frame="void" id="id12" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id11">[6]</a></td><td>Note that <tt class="docutils literal"><span class="pre">FORMAT</span></tt> is case-insensitive, so e.g. <tt class="docutils literal"><span class="pre">html</span></tt>,
+<tt class="docutils literal"><span class="pre">Html</span></tt> and <tt class="docutils literal"><span class="pre">HTML</span></tt> are equal, and that whitespace around
+<tt class="docutils literal"><span class="pre">FORMAT</span></tt> is ignored.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="expressions">
+<h3>3.4&nbsp;&nbsp;&nbsp;Expressions</h3>
+<p>A template needs some kind of &quot;programming-language&quot; to access variables,
+calculate things, format data, check conditions etc. inside the template.
+So, you could invent and implement an own language therefore -- or you
+could use an already existing and well designed language: Python.</p>
+<p>pyratemp uses embedded Python-expressions.
+An expression is everything which evaluates to a value, e.g. variables,
+arithmetics, comparisons, boolean expressions, function/method calls,
+list comprehensions etc. <a class="footnote-reference" href="#id14" id="id13">[7]</a>. And such Python expressions can be directly
+used in the template -- this makes pyratemp very powerful.
+But since it would be a bad idea to directly embed unrestricted Python-code
+in a template, these expressions are restricted by a <a class="reference internal" href="#evaluation">pseudo-sandbox</a>.</p>
+<p>Examples:</p>
+<ul class="simple">
+<li>numbers, strings, lists, tuples, dictionaries, ...: <tt class="docutils literal"><span class="pre">12.34</span></tt>, <tt class="docutils literal"><span class="pre">&quot;hello&quot;</span></tt>, <tt class="docutils literal"><span class="pre">[1,2,3]</span></tt>, ...</li>
+<li>variable-access: <tt class="docutils literal"><span class="pre">var</span></tt>, <tt class="docutils literal"><span class="pre">mylist[i]</span></tt>, <tt class="docutils literal"><span class="pre">mydict[&quot;key&quot;]</span></tt>, <tt class="docutils literal"><span class="pre">myclass.attr</span></tt></li>
+<li>function/method call: <tt class="docutils literal"><span class="pre">myfunc(...)</span></tt>, <tt class="docutils literal"><span class="pre">&quot;foobar&quot;.upper()</span></tt></li>
+<li>comparison: <tt class="docutils literal"><span class="pre">(i</span> <span class="pre">&lt;</span> <span class="pre">0</span>&nbsp; <span class="pre">or</span>&nbsp; <span class="pre">j</span> <span class="pre">&gt;</span> <span class="pre">1024)</span></tt></li>
+<li>arithmetics: <tt class="docutils literal"><span class="pre">1+2</span></tt></li>
+</ul>
+<p>For details, please read the Python-documentation about Python expressions.</p>
+<p>Note that accessing <em>undefined variables</em> in the template is considered to be
+an error. I chose this behavior in contrast to many other template-engines
+(which often ignore undefined variables), since ignoring undefined variables
+would silently hide some errors, which is a bad idea. For ignoring or using
+a default-value for undefined variables, see <tt class="docutils literal"><span class="pre">default()</span></tt> below.</p>
+<p>The following Python-built-in values/functions are available by default
+in the template:</p>
+<pre class="literal-block">
+True
+False
+None
+
+abs()
+chr()
+cmp()
+divmod()
+hash()
+hex()
+len()
+max()
+min()
+oct()
+ord()
+pow()
+range()
+round()
+sorted()
+sum()
+unichr()
+zip()
+
+bool()
+complex()
+dict()
+enumerate()
+float()
+int()
+list()
+long()
+reversed()
+str()
+tuple()
+unicode()
+xrange()
+</pre>
+<p>Additionally, the functions <tt class="docutils literal"><span class="pre">exists()</span></tt>, <tt class="docutils literal"><span class="pre">default()</span></tt> and <tt class="docutils literal"><span class="pre">setvar()</span></tt> are
+defined as follows:</p>
+<p><tt class="docutils literal"><span class="pre">exists(&quot;varname&quot;)</span></tt>:</p>
+<blockquote>
+<p>Test if a variable (or any other object) with the name <em>varname</em>
+exists (in the current locals-namespace). Note that the name of the
+variable has to be quoted, and that this only works for single variable
+names, e.g. <tt class="docutils literal"><span class="pre">exists(&quot;mylist&quot;)</span></tt>. If you want to test more complicated
+expressions, use the <tt class="docutils literal"><span class="pre">default()</span></tt>-function.</p>
+<p>It's especially useful in if-conditions to check if some (optional)
+variable exists, and then to branch accordingly.</p>
+<p>Example:</p>
+<pre class="literal-block">
+&lt;!--(if exists(&quot;foo&quot;))--&gt;YES&lt;!--(else)--&gt;NO&lt;!--(end)--&gt;
+</pre>
+</blockquote>
+<p><tt class="docutils literal"><span class="pre">default(&quot;expr&quot;,</span> <span class="pre">default=None)</span></tt>:</p>
+<blockquote>
+<p><tt class="docutils literal"><span class="pre">default()</span></tt> tries to evaluate the expression <em>expr</em>. If the evaluation
+succeeds and the result is not <tt class="docutils literal"><span class="pre">None</span></tt>, its value is returned;
+otherwise the <em>default</em>-value is returned instead.
+Note that <em>expr</em> has to be quoted.</p>
+<p>Since it is considered an error when the template tries to evaluate an
+undefined variable, this can be used to use default-values for optional
+variables, e.g. <tt class="docutils literal"><span class="pre">Name:</span> <span class="pre">&#64;!default(&quot;myvar&quot;,</span> <span class="pre">&quot;No</span> <span class="pre">name</span> <span class="pre">given.&quot;)!&#64;</span></tt>.</p>
+<p>Examples:</p>
+<pre class="literal-block">
+hi &#64;!default(&quot;optional&quot;,&quot;anyone&quot;)!&#64;
+
+&#64;!default(&quot;5*var1+var2&quot;,&quot;missing variable&quot;)!&#64;
+
+&lt;!--(if default(&quot;opt1+opt2&quot;,0) &gt; 0)--&gt;yes&lt;!--(else)--&gt;no&lt;!--(end)--&gt;
+
+&lt;!--(for i in default(&quot;optional_list&quot;,[]))--&gt;&#64;!i!&#64;&lt;!--(end)--&gt;
+</pre>
+</blockquote>
+<p><tt class="docutils literal"><span class="pre">setvar(&quot;name&quot;,</span> <span class="pre">&quot;expr&quot;)</span></tt>:</p>
+<blockquote>
+<p>Although there is often a more elegant way, sometimes it is useful or
+necessary to set variables in the template. <tt class="docutils literal"><span class="pre">setvar()</span></tt> can also be
+used to capture the output of e.g. an evaluated macro.</p>
+<p>Note that variables, which are set inside of a macro, can not be accessed
+outside of the macro.</p>
+<p>Example:</p>
+<pre class="literal-block">
+$!setvar(&quot;i&quot;, &quot;i+1&quot;)!$
+</pre>
+</blockquote>
+<p>Note that you can use any expression evaluating to the desired string/value
+for all parameters (<cite>varname</cite>, <cite>expr</cite>, <cite>default</cite>, <cite>name</cite>) above.</p>
+<p>Please look into the pyratemp-docstrings for more examples of <tt class="docutils literal"><span class="pre">exists()</span></tt>,
+<tt class="docutils literal"><span class="pre">default()</span></tt> and <tt class="docutils literal"><span class="pre">setvar()</span></tt>.</p>
+<p>More/user-defined functions can be added to the template as &quot;data&quot;
+(see <a class="reference internal" href="#user-interface">User-interface</a>), or by extending the <a class="reference internal" href="#evaluation">evaluator</a>.</p>
+<table class="docutils footnote" frame="void" id="id14" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id13">[7]</a></td><td>Note that only Python <em>expressions</em> can be used, Python <em>statements</em>
+are not possible. In contrast to Python expressions, statements do not
+have a value but &quot;do something&quot; (e.g. if/for, print, raise, return, import
+etc.). See also <a class="reference external" href="http://en.wikipedia.org/wiki/Expression_%28programming%29">http://en.wikipedia.org/wiki/Expression_%28programming%29</a>
+and <a class="reference external" href="http://en.wikipedia.org/wiki/Statement_%28programming%29">http://en.wikipedia.org/wiki/Statement_%28programming%29</a>.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="python-side">
+<h2>4&nbsp;&nbsp;&nbsp;Python-side</h2>
+<p>pyratemp is modular and consists of several parts:</p>
+<ul class="simple">
+<li>First, the template is loaded,</li>
+<li>then, it is syntax-checked and parsed into a tree,</li>
+<li>later, it is rendered with some data, using</li>
+<li>some kind of evaluation for the expressions</li>
+<li>and some escaping for the substitutions.</li>
+</ul>
+<p>Normally, you don't really need to know these parts, and may simply use the
+&quot;user-interface&quot; of the template-engine. If you are only interested in how to
+use the template-engine, it's enough to read the <a class="reference internal" href="#user-interface">User-interface</a>-section
+below and skip the rest of this chapter.
+But for all who want to know more, here are also some details of the internal
+concepts of pyratemp.</p>
+<p>Note that pyratemp makes heavy use of docstrings, and all classes, functions
+etc. are documented there, so please read them (e.g. with <tt class="docutils literal"><span class="pre">pydoc</span> <span class="pre">pyratemp</span></tt>).</p>
+<div class="section" id="user-interface">
+<h3>4.1&nbsp;&nbsp;&nbsp;User-interface</h3>
+<p>The user-interface of the template-engine consists of a single class:
+<tt class="docutils literal"><span class="pre">pyratemp.Template</span></tt>. This loads a template, checks its syntax, parses
+it, and can render it with your data.</p>
+<p><tt class="docutils literal"><span class="pre">class</span> <span class="pre">Template(string|filename|parsetree,</span> <span class="pre">encoding=&quot;utf-8&quot;,</span> <span class="pre">data=None,</span> <span class="pre">escape=HTML)</span></tt>:</p>
+<blockquote>
+<p>Load (and parse) a template. The template can either be directly given
+as string, or loaded from a file, or an already parsed template can be used.</p>
+<p><tt class="docutils literal"><span class="pre">encoding</span></tt> sets the charset-encoding of the loaded template (default: UTF-8).</p>
+<p><tt class="docutils literal"><span class="pre">data</span></tt> can be a dictionary containing some data which should be filled
+into the template by default (=if the variables etc. are not given
+when calling/rendering the template).</p>
+<p><tt class="docutils literal"><span class="pre">escape</span></tt> defines which special-characters should be escaped in
+substitutions by default (currently supported: <tt class="docutils literal"><span class="pre">NONE</span></tt>, <tt class="docutils literal"><span class="pre">HTML</span></tt>, and
+partially <tt class="docutils literal"><span class="pre">LATEX</span></tt>). The escaping can also be set directly in the
+template (see <a class="reference internal" href="#set-escape">set_escape</a>), and setting the escape-format in the template
+overrides the one set here.</p>
+<p>Note that you have to use keyword-parameters here!</p>
+</blockquote>
+<p>To <em>render</em> the template, simply <em>call</em> the template with your data as
+(keyword-)parameters. This returns the result in Unicode, and you should
+encode it depending on your needs. Of course, the same template can be
+rendered several times with different data.</p>
+<p>Example:</p>
+<pre class="literal-block">
+&gt;&gt;&gt; import pyratemp
+&gt;&gt;&gt; t = pyratemp.Template(filename=&quot;test.html&quot;, data={&quot;number&quot;: 1}, escape=pyratemp.HTML)
+&gt;&gt;&gt; result1 = t(person=&quot;Monty&quot;)
+&gt;&gt;&gt; result2 = t(person=&quot;Adams&quot;, number=42)
+&gt;&gt;&gt; print result1.encode(&quot;utf-8&quot;)
+&gt;&gt;&gt; print result2.encode(&quot;ascii&quot;, 'xmlcharrefreplace')
+</pre>
+<p>Note that <tt class="docutils literal"><span class="pre">data</span></tt> (and the keyword-parameters when calling the template) can
+contain nearly anything: single variables, lists, other dictionaries, nested
+structures, functions and even classes. So <strong>be careful</strong> what you pass
+to the template. If you e.g. pass the Python-built-in-function <tt class="docutils literal"><span class="pre">open</span></tt>
+to the template, your template will be able to open (and write) arbitrary
+files!</p>
+</div>
+<div class="section" id="internal-parts">
+<h3>4.2&nbsp;&nbsp;&nbsp;Internal parts</h3>
+<p>As said before, pyratemp consists of several parts, which are independent:</p>
+<ul class="simple">
+<li>an escaping-function (<tt class="docutils literal"><span class="pre">escape()</span></tt>)</li>
+<li>a template-loader (<tt class="docutils literal"><span class="pre">class</span> <span class="pre">LoaderString</span></tt> or <tt class="docutils literal"><span class="pre">class</span> <span class="pre">LoaderFile</span></tt>)</li>
+<li>a parser (<tt class="docutils literal"><span class="pre">class</span> <span class="pre">Parser</span></tt>)</li>
+<li>a pseudo-sandboxed evaluator (<tt class="docutils literal"><span class="pre">class</span> <span class="pre">EvalPseudoSandbox</span></tt>)</li>
+<li>a renderer (<tt class="docutils literal"><span class="pre">class</span> <span class="pre">Renderer</span></tt>)</li>
+<li>a basic template-structure, e.g. used for macros/subtemplates
+(<tt class="docutils literal"><span class="pre">class</span> <span class="pre">TemplateBase</span></tt>)</li>
+</ul>
+<p>All parts could even be used on their own, or modified (e.g. by creating
+subclasses) or replaced by an other implementation.
+Modified parts can then be used by setting the parameters <tt class="docutils literal"><span class="pre">loader_class</span></tt>,
+<tt class="docutils literal"><span class="pre">parser_class</span></tt>, <tt class="docutils literal"><span class="pre">renderer_class</span></tt>, <tt class="docutils literal"><span class="pre">eval_class</span></tt> or <tt class="docutils literal"><span class="pre">escape_func</span></tt> of
+<tt class="docutils literal"><span class="pre">class</span> <span class="pre">Template</span></tt>, or by creating a modified template-user-interface-class.</p>
+<p>Read the pyratemp-docstrings for details.</p>
+<div class="section" id="escaping">
+<h4>4.2.1&nbsp;&nbsp;&nbsp;escaping</h4>
+<p>Currently, HTML- and basic LaTeX-escaping are implemented in the function
+<tt class="docutils literal"><span class="pre">escape()</span></tt>. This will probably be improved in the future.</p>
+<p>Note that escaping is currently one of the most time-consuming parts when
+rendering a template.</p>
+</div>
+<div class="section" id="loader">
+<h4>4.2.2&nbsp;&nbsp;&nbsp;Loader</h4>
+<p>There are two sources to &quot;load&quot; a template from: either directly from a
+string, or from a file. Since templates-from-files can include other templates,
+this &quot;template-loading&quot; is encapsulated into classes (<tt class="docutils literal"><span class="pre">class</span> <span class="pre">LoaderString</span></tt>
+and <tt class="docutils literal"><span class="pre">class</span> <span class="pre">LoaderFile</span></tt>).</p>
+<p>These classes contain a function <tt class="docutils literal"><span class="pre">load(...)</span></tt>, which actually loads the
+template and returns the result in unicode.</p>
+<p>Inclusion of other templates (by using <tt class="docutils literal"><span class="pre">&lt;!--(include)--&gt;)</span></tt>) is only possible
+when loading the template from a file, and (for simplicity and security) all
+included templates have to be in the same directory as the including template
+(see <tt class="docutils literal"><span class="pre">allowed_path</span></tt> of <tt class="docutils literal"><span class="pre">class</span> <span class="pre">LoaderFile</span></tt>).</p>
+</div>
+<div class="section" id="parser">
+<h4>4.2.3&nbsp;&nbsp;&nbsp;Parser</h4>
+<p>It's better, cleaner and even faster to parse the template once and afterwards
+separately render it (maybe multiple times).</p>
+<p>The parser (<tt class="docutils literal"><span class="pre">class</span> <span class="pre">Parser</span></tt>) analyzes the template-string, checks the syntax
+(and throws exceptions with detailed error-descriptions if there is an error),
+and generates a parse-tree. Since indentation is used for nesting in the
+template, the template can be completely parsed by using regexps, which
+makes parsing really fast and simple.</p>
+<p>Most of the parser-code is used to check for (syntax-)errors and to create
+error-messages.</p>
+<p>The resulting parse-tree is a recursive list, with the following elements:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">(&quot;str&quot;,</span> <span class="pre">STRING)</span></tt> (for unprocessed template-data and &quot;raw&quot;)</li>
+<li><tt class="docutils literal"><span class="pre">(&quot;sub&quot;,</span> <span class="pre">EXPR)</span></tt> (for unescaped substitution)</li>
+<li><tt class="docutils literal"><span class="pre">(&quot;esc&quot;,</span> <span class="pre">ESCAPEFORMAT,</span> <span class="pre">EXPR)</span></tt> (for escaped substitution)</li>
+<li><tt class="docutils literal"><span class="pre">(&quot;for&quot;,</span> <span class="pre">NAMESTUPLE,</span> <span class="pre">ITEREXPR,</span> <span class="pre">[...])</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">(&quot;if&quot;,</span>&nbsp;&nbsp; <span class="pre">PARAM,</span> <span class="pre">[...])</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">(&quot;elif&quot;,</span> <span class="pre">PARAM,</span> <span class="pre">[...])</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">(&quot;else&quot;,</span> <span class="pre">PARAM,</span> <span class="pre">[...])</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">(&quot;macro&quot;,</span> <span class="pre">PARAM,</span> <span class="pre">[...])</span></tt></li>
+</ul>
+<p>Examples (see <a class="reference internal" href="#quickstart">Quickstart</a>):</p>
+<ul>
+<li><p class="first">parse-tree of <tt class="docutils literal"><span class="pre">&quot;Hello</span> <span class="pre">&#64;!name!&#64;.&quot;</span></tt>:</p>
+<pre class="literal-block">
+[('str', u'Hello '), ('esc', 1, u'name'), ('str', u'.')]
+</pre>
+</li>
+<li><p class="first">parse-tree of <a class="reference external" href="pyratemp-current/example.html">example.html</a>, formatted for readability:</p>
+<pre class="literal-block">
+[('str', u'&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.01 Transitional//EN&quot;\n          &quot;http://www.w3.org/TR/html4/loose.dtd&quot;&gt;\n&lt;html&gt;\n&lt;head&gt;\n  &lt;title&gt;A simple example: '),
+ ('esc', 1, u'title'),
+ ('str', u'&lt;/title&gt;\n&lt;/head&gt;\n&lt;body&gt;\n  &lt;h1&gt;'),
+ ('esc', 1, u'title'),
+ ('str', u'&lt;/h1&gt;\n  This is a simple example, demonstrating pyratemp:\n  \n  &lt;ul&gt;\n    \n    &lt;li&gt;'),
+ ('esc', 1, u'special_chars'),
+ ('str', u'&lt;/li&gt;\n\n    &lt;li&gt;\n'),
+ ('if',  u'number==42',
+    [('str', u'        The Answer!\n')]),
+ ('elif', u'number==13',
+    [('str', u'        oh no!\n')]),
+ ('else',
+    [('str', u'        '),
+     ('esc', 1, u'number'),
+     ('str', u'\n')]),
+ ('str', u'    &lt;/li&gt;\n\n    &lt;li&gt;a simple for loop: '),
+ ('for', (u'i',), u'range(1,10)',
+    [('str', u' '),
+     ('esc', 1, u'i'),
+     ('str', u' ')]),
+ ('str', u'&lt;/li&gt;\n\n    &lt;li&gt;listing all enumerated elements of a list:\n      &lt;ul&gt;\n'),
+ ('for', (u'i', u'element'), u'enumerate(mylist)',
+    [('str', u'        &lt;li&gt;'),
+     ('esc', 1, u'i+1'),
+     ('str', u'. '),
+     ('esc', 1, u'element.upper()'),
+     ('str', u'&lt;/li&gt;\n')]),
+ ('str', u'      &lt;/ul&gt;\n    &lt;/li&gt;\n\n'),
+ ('macro', u'myitem',
+    [('str', u'&lt;li&gt;&lt;strong&gt;'),
+     ('esc', 1, u'item'),
+     ('str', u'&lt;/strong&gt;&lt;/li&gt;')]),
+ ('str', u'    '),
+ ('esc', 1, u'myitem(item=&quot;foo&quot;)'),
+ ('str', u'\n    '),
+ ('esc', 1, u'myitem(item=&quot;bar&quot;)'),
+ ('str', u'\n\n  &lt;/ul&gt;\n\n&lt;/body&gt;\n&lt;/html&gt;\n')]
+</pre>
+</li>
+</ul>
+</div>
+<div class="section" id="evaluation">
+<h4>4.2.4&nbsp;&nbsp;&nbsp;Evaluation</h4>
+<p>pyratemp uses Python-expressions <a class="footnote-reference" href="#id18" id="id15">[8]</a> in its templates.</p>
+<p>But since it is a really bad idea to directly embed unrestricted code into a
+template <a class="footnote-reference" href="#id19" id="id16">[9]</a>, pyratemp uses a &quot;pseudo-sandbox&quot; for evaluating the
+Python-expressions. This restricts the embedded expressions, so that the
+template-designer only has the necessary functionality and cannot do
+&quot;bad things&quot; by accident.</p>
+<p>This pseudo-sandbox is implemented in the <tt class="docutils literal"><span class="pre">class</span> <span class="pre">EvalPseudoSandbox</span></tt>.
+It only allows a (safe) subset of the Python-builtins and adds some
+additional functions (<tt class="docutils literal"><span class="pre">exists()</span></tt>, <tt class="docutils literal"><span class="pre">default()</span></tt>, <tt class="docutils literal"><span class="pre">setvar()</span></tt> and
+a dummy <tt class="docutils literal"><span class="pre">__import__()</span></tt>; see <a class="reference internal" href="#expressions">Expressions</a>).
+It also forbids access to names beginning with <tt class="docutils literal"><span class="pre">_</span></tt>, to prevent things
+like <tt class="docutils literal"><span class="pre">0</span> <span class="pre">.__class__</span></tt>, which could be used to break out of the sandbox.</p>
+<p>See docstring for details.</p>
+<p><em>But note that this may not be a real sandbox!</em>
+Although I currently don't know <em>any</em> way to break out of this sandbox, and
+I think that it shouldn't be possible to break out (without passing in an
+unsafe function <a class="footnote-reference" href="#id20" id="id17">[10]</a>), I'm not absolutely sure about that.</p>
+<p>So, if you want to use pyratemp for &quot;untrusted&quot; templates, you should make
+sure that nothing bad can happen. There are different possible ways:</p>
+<ul>
+<li><p class="first">Approve that it's not possible to break out of the integrated
+&quot;pseudo-sandbox&quot;.</p>
+</li>
+<li><p class="first">Make sure that nothing bad can happen even if someone breaks out of
+the sandbox (e.g. by appropriate rights).</p>
+</li>
+<li><div class="first line-block">
+<div class="line">Add a really sandboxed expression-evaluator, and use it instead of the
+<tt class="docutils literal"><span class="pre">EvalPseudoSandbox</span></tt> class. This could even be done incrementally, by
+first writing a simple evaluator which only supports string-substitution,
+and then adding comparisons, arithmetics and other functionality as needed.</div>
+<div class="line">But since such a sandboxed evaluator would increase the complexity and
+probably would only support a subset of the Python-expressions, I did
+not write such an evaluator yet.</div>
+</div>
+</li>
+</ul>
+<table class="docutils footnote" frame="void" id="id18" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id15">[8]</a></td><td>Note that there is a difference between Python-expressions (<cite>eval()</cite>)
+and Python-statements (<cite>exec()</cite>). pyratemp only uses <cite>eval</cite>.
+(see also: <a class="reference internal" href="#expressions">Expressions</a>)</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id19" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id16">[9]</a></td><td>With unrestricted embedded python, bad things like accessing, reading
+and modifying parts of the system (<tt class="docutils literal"><span class="pre">open(&quot;/etc/passwd&quot;).read()</span></tt> or
+worse) would be possible. In addition to that, unrestricted code would
+also tempt the template-designer to break the model-view-separation.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id20" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id17">[10]</a></td><td>Of course, you should not give the template a &quot;bad&quot; function with its
+data. If you do something like <tt class="docutils literal"><span class="pre">t(badfunc=open)</span></tt>, then the template
+will of course be able to open arbitrary files...</td></tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="renderer">
+<h4>4.2.5&nbsp;&nbsp;&nbsp;Renderer</h4>
+<p>The renderer (<tt class="docutils literal"><span class="pre">class</span> <span class="pre">Renderer</span></tt>) takes a parse-tree and your data, evaluates
+all embedded expressions and control-structures, expands the macros, escapes
+special characters (and tries to prevent double-escapes) and returns the
+result as Unicode-string.</p>
+</div>
+<div class="section" id="templatebase">
+<h4>4.2.6&nbsp;&nbsp;&nbsp;TemplateBase</h4>
+<p>The <tt class="docutils literal"><span class="pre">class</span> <span class="pre">TemplateBase</span></tt> on the one hand implements parts of the
+user-interface, on the other hand provides the functionality for
+user-defined macros in the template. Remember that a macro in the
+template is exactly the same as a (sub-)template!</p>
+</div>
+<div class="section" id="compiler">
+<h4>4.2.7&nbsp;&nbsp;&nbsp;Compiler</h4>
+<p>I also wrote a small (about 100 lines) experimental compiler which compiles
+the templates (or: the parse-trees) to pure Python-code. It's quite simple,
+and may even speed up the rendering a bit. But since pyratemp is already
+very fast, and compiling only has advantages if you render a template
+many times, I haven't developed the compiler any further.</p>
+</div>
+</div>
+</div>
+<div class="section" id="usage-notes-faq">
+<h2>5&nbsp;&nbsp;&nbsp;Usage notes/FAQ</h2>
+<div class="section" id="syntax-errors">
+<h3>5.1&nbsp;&nbsp;&nbsp;syntax errors</h3>
+<p>To check a pyratemp-template for syntax-errors, simply let pyratemp parse
+the template.
+You can do this e.g. with <a class="reference internal" href="#yaml2pyratemp">yaml2pyratemp</a> with <tt class="docutils literal"><span class="pre">-s</span></tt> and without any data:</p>
+<pre class="literal-block">
+$ yaml2pyratemp.py -s TEMPLATEFILE(s)
+</pre>
+<p>If there are syntax-errors, pyratemp raises a <tt class="docutils literal"><span class="pre">TemplateSyntaxError</span></tt>, and
+yaml2pyratemp displays a detailed error-message:</p>
+<pre class="literal-block">
+$ yaml2pyratemp.py -s TEMPLATEFILE
+file 'TEMPLATEFILE':
+  TemplateSyntaxError: line ##, col ##: ...
+</pre>
+</div>
+<div class="section" id="fillout-render-test">
+<h3>5.2&nbsp;&nbsp;&nbsp;fillout/render test</h3>
+<p>For a complete test, you have to render the template. Of course you can do
+this in your application, with real data, but probably it's easier to test
+it outside of the application with some &quot;dummy data&quot;.</p>
+<p>This again can be done by <a class="reference internal" href="#yaml2pyratemp">yaml2pyratemp</a>. Simply create a YAML- or JSON-file
+with your dummy data, and invoke yaml2pyratemp. If the YAML-/JSON-file
+contains all necessary data, the rendered template will be written to
+<tt class="docutils literal"><span class="pre">stdout</span></tt>, e.g.:</p>
+<pre class="literal-block">
+$ yaml2pyratemp.py -f example.json example.html
+&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.01 Transitional//EN&quot;
+          &quot;http://www.w3.org/TR/html4/loose.dtd&quot;&gt;
+&lt;html&gt;
+&lt;head&gt;
+...
+</pre>
+<p>Otherwise, if some data is missing (or invalid) or some expressions are
+invalid, pyratemp raises a <tt class="docutils literal"><span class="pre">TemplateRenderError</span></tt> and tells you what
+data is missing, e.g.:</p>
+<pre class="literal-block">
+$ yaml2pyratemp.py -f dummydata.json example.html
+file 'example.html':
+  TemplateRenderError: Cannot eval expression 'title' (NameError: name 'title' is not defined)
+</pre>
+</div>
+<div class="section" id="whitespace-handling">
+<h3>5.3&nbsp;&nbsp;&nbsp;whitespace handling</h3>
+<p>If you need to remove some whitespace (e.g. a newline), you can put it into
+<a class="reference internal" href="#comments">comments</a>, e.g. a <tt class="docutils literal"><span class="pre">#!</span></tt> at the end of a line removes the newline in the
+result.</p>
+</div>
+<div class="section" id="setting-variables">
+<h3>5.4&nbsp;&nbsp;&nbsp;setting variables</h3>
+<p>There's sometimes the wish to set variables in the template. But there's often
+a more elegant way to solve the problem without setting variables.</p>
+<p>For example, instead of:</p>
+<pre class="literal-block">
+&lt;!--(for obj in arr)--&gt;
+    &#64;!i!&#64;. &#64;!obj!&#64;
+    $!setvar(&quot;i&quot;, &quot;i+1&quot;)!$ #!
+&lt;!--(end)--&gt;
+</pre>
+<p>better use:</p>
+<pre class="literal-block">
+&lt;!--(for i,obj in enumerate(arr))--&gt;
+    &#64;!i!&#64;. &#64;!obj!&#64;
+&lt;!--(end)--&gt;
+</pre>
+<p>But if you really need to set variables, you can use <tt class="docutils literal"><span class="pre">setvar()</span></tt>
+(see <a class="reference internal" href="#expressions">Expressions</a>).</p>
+</div>
+<div class="section" id="capture-output">
+<h3>5.5&nbsp;&nbsp;&nbsp;capture output</h3>
+<p>To capture the output of a macro into a variable, you can also use
+<tt class="docutils literal"><span class="pre">setvar()</span></tt>:</p>
+<pre class="literal-block">
+&lt;!--(macro mymacro)--&gt;
+...
+&lt;!--(end)--&gt;
+$!setvar(&quot;myvar&quot;, &quot;mymacro()&quot;)!$#!
+</pre>
+</div>
+<div class="section" id="filters">
+<h3>5.6&nbsp;&nbsp;&nbsp;filters</h3>
+<p>Some template-engines have so-called &quot;filters&quot;, which are functions which
+process the contents of a whole block. This behaviour can be easily
+achieved with pyratemp, too:</p>
+<pre class="literal-block">
+&lt;!--(macro myblock)--&gt;
+...
+&lt;!--(end)--&gt;
+$!fiter(myblock())!$
+</pre>
+</div>
+<div class="section" id="evaluation-order-caches">
+<h3>5.7&nbsp;&nbsp;&nbsp;evaluation order / caches</h3>
+<p>The expressions, macros etc. are evaluated at <em>rendering</em>-time, not
+at define-/parse-time.</p>
+<p>So, e.g. a macro is evaluated each time it is called/used. If you want
+something to be evaluated only once, no matter how often it is used,
+you may:</p>
+<ul class="simple">
+<li>store the evaluation-result in a variable with <tt class="docutils literal"><span class="pre">setvar()</span></tt>
+and then use the variable</li>
+<li>write a cache-function in Python and use it in your template</li>
+</ul>
+</div>
+<div class="section" id="using-functions-which-import-other-modules">
+<h3>5.8&nbsp;&nbsp;&nbsp;using functions which import other modules</h3>
+<p>Some Python-functions, which may be useful in the template, try to import
+other modules, e.g. <tt class="docutils literal"><span class="pre">datetime.strftime</span></tt> imports <tt class="docutils literal"><span class="pre">time</span></tt>. But importing
+modules is of course not allowed in the (pseudo-)sandbox, so this fails.</p>
+<p>The best solution would be to avoid these functions and e.g. use
+<tt class="docutils literal"><span class="pre">time.strftime</span></tt> instead of <tt class="docutils literal"><span class="pre">datetime.strftime</span></tt>.</p>
+<div class="line-block">
+<div class="line">For the cases where this is not possible, the pyratemp-pseudo-sandbox
+contains a dummy-import-function, which allows to virtually import modules
+which are already accessible from within the sandbox.</div>
+<div class="line">But note that then the template needs to have access to the complete
+&quot;imported&quot; module (in the example: complete <tt class="docutils literal"><span class="pre">time</span></tt> module,
+plus probably large parts of the <tt class="docutils literal"><span class="pre">datetime</span></tt> module),
+which might be a <em>security risk</em> and break the sandbox!</div>
+<div class="line">See the docstring of <tt class="docutils literal"><span class="pre">EvalPseudoSandbox.f_import</span></tt> for details.</div>
+</div>
+</div>
+<div class="section" id="shortcuts-template-syntax-extension">
+<h3>5.9&nbsp;&nbsp;&nbsp;shortcuts / template-syntax-extension</h3>
+<p>Sometimes shortcuts for often-used things might be useful.
+Therefore, you can:</p>
+<ul>
+<li><div class="first line-block">
+<div class="line">Define macros.</div>
+<div class="line">This is probably the most common way.</div>
+</div>
+</li>
+<li><div class="first line-block">
+<div class="line">Define a Python-function and pass it to the template.</div>
+<div class="line">(But take care that you don't break the model-view-separation!)</div>
+</div>
+</li>
+<li><div class="first line-block">
+<div class="line">Extend the template-syntax. [advanced]</div>
+<div class="line">This essentially modifies the template-engine, and you should only
+do this if you are <em>really</em> sure that you want it, and that the
+alternatives do not work in your case!</div>
+</div>
+<p>The simplest way to introduce new syntax probably is to load the
+template-file, map your new syntax (e.g. with regexps) to normal
+pyratemp-syntax, and let pyratemp do the rest.</p>
+<p>Example: The new syntax <tt class="docutils literal"><span class="pre">&#64;x!...!x&#64;</span></tt> should be added, which should
+do the same as <tt class="docutils literal"><span class="pre">&#64;!myfunc(...)!&#64;</span></tt>:</p>
+<pre class="literal-block">
+import re
+import pyratemp
+
+class MyLoader(pyratemp.LoaderFile):
+    my_replacement = re.compile(r'&#64;x!\s*(.*?)\s*!x&#64;')
+
+    load(self, filename):
+        u = pyratemp.LoaderFile(self, filename)
+        u = my_replacement.sub(r'&#64;! myfunc(&quot;\1&quot;) !&#64;', u)
+        return u
+
+t = pyratemp.Template(..., loader_class=MyLoader)
+</pre>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="tools">
+<h2>6&nbsp;&nbsp;&nbsp;Tools</h2>
+<div class="section" id="yaml2pyratemp">
+<h3>6.1&nbsp;&nbsp;&nbsp;yaml2pyratemp</h3>
+<p><tt class="docutils literal"><span class="pre">yaml2pyratemp.py</span></tt> is a simple command-line-interface to pyratemp which
+fills a template with the data from YAML- or JSON-files or from the
+command-line and prints the result to <tt class="docutils literal"><span class="pre">stdout</span></tt> in UTF-8.</p>
+<p>By default, special html-characters are escaped (except for <tt class="docutils literal"><span class="pre">*.tex</span></tt>),
+and two additional variables are defined: <tt class="docutils literal"><span class="pre">date</span></tt> and <tt class="docutils literal"><span class="pre">mtime_CCYYMMDD</span></tt>,
+both containing the current date in the &quot;YYYY-MM-DD&quot;-format.</p>
+<p>Note that <tt class="docutils literal"><span class="pre">yaml2pyratemp</span></tt> needs the Python-modules <tt class="docutils literal"><span class="pre">simplejson</span></tt> and/or
+<tt class="docutils literal"><span class="pre">yaml</span></tt> to read JSON- and/or YAML-files.</p>
+<p>Usage (see also <tt class="docutils literal"><span class="pre">yaml2pyratemp.py</span> <span class="pre">--help</span></tt>):</p>
+<pre class="literal-block">
+yaml2pyratemp.py [-s] &lt;-d NAME=VALUE&gt; &lt;-f DATAFILE [-n NR_OF_ENTRY]&gt; TEMPLATEFILES
+    -s      syntax-check only (don't render the template)
+    -d      define variables (these also override the values from files)
+    -f      use variables from YAML/JSON file(s)
+    -n      use nth entry of the YAML/JSON-file
+            (YAML: n-th entry, JSON: n-th element of the root-array)
+</pre>
+<p>For the 2nd example of <a class="reference internal" href="#quickstart">Quickstart</a>, a JSON-file might look like:</p>
+<pre class="literal-block">
+{
+  &quot;title&quot; : &quot;filling JSON into pyratemp&quot;,
+  &quot;special_chars&quot; : &quot;µ&lt;ß€&quot;,
+  &quot;number&quot; : 13,
+  &quot;mylist&quot; : [ &quot;JSON&quot;, &quot;YAML&quot;, &quot;manually-defined variables&quot; ]
+}
+</pre>
+<p>To fill the template, with using a different value for <tt class="docutils literal"><span class="pre">number</span></tt> than
+in the JSON-file, invoke yaml2pyratemp as follows:</p>
+<pre class="literal-block">
+$ yaml2pyratemp.py -d number=42 -f example.json example.html &gt; filled.html
+</pre>
+<p>Now, the result is in <tt class="docutils literal"><span class="pre">filled.html</span></tt></p>
+</div>
+</div>
+<div class="section" id="download">
+<h2>7&nbsp;&nbsp;&nbsp;Download</h2>
+<p>pyratemp is used in several applications for several years now without any
+problems and it's quite stable. But it has been tested only by a few people,
+so there may still be bugs in it. Please report any problems.</p>
+<p>pyratemp consists of a single python-file, which you can directly copy
+into some directory where <tt class="docutils literal"><span class="pre">import</span></tt> can find it, e.g. the same directory
+as your other code.</p>
+<p>If you want to be informed about new releases, bugfixes etc., please subscribe
+to the <a class="reference internal" href="#pyratemp-announce">pyratemp-announce</a> list.</p>
+<blockquote>
+<p>Author: Roland Koebler (rk <em>at</em> simple-is-better <em>dot</em> org)</p>
+<p>Release: 0.2.0</p>
+<p>License: MIT-like</p>
+<p>Requirements: python (tested with 2.4),
+optionally python-simplejson and/or python-yaml for yaml2pyratemp</p>
+<dl class="docutils">
+<dt>Download: <a class="reference external" href="pyratemp-0.2.0.tgz">pyratemp-0.2.0.tgz</a> (48 kB), containing:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="pyratemp-current/README">README</a></li>
+<li><a class="reference external" href="pyratemp-current/NEWS">NEWS</a></li>
+<li><a class="reference external" href="pyratemp-current/LICENSE">LICENSE</a></li>
+<li><a class="reference external" href="pyratemp-current/example.html">example.html</a> and <a class="reference external" href="pyratemp-current/example.json">example.json</a></li>
+<li><a class="reference external" href="pyratemp-current/pyratemp.py">pyratemp.py</a> and <a class="reference external" href="pyratemp-current/yaml2pyratemp.py">yaml2pyratemp.py</a></li>
+<li><a class="reference external" href="pyratemp-current/pyratemp.html">pyratemp.html</a> / <a class="reference external" href="pyratemp-current/pyratemp.txt">pyratemp.txt</a></li>
+</ul>
+</dd>
+</dl>
+</blockquote>
+</div>
+<div class="section" id="contact">
+<h2>8&nbsp;&nbsp;&nbsp;Contact</h2>
+<p>Please <strong>don't hesitate</strong> to contact me (in English or German) if you find
+any bugs, have any questions, comments, suggestions etc.!
+It would also be nice to drop me a note if you are simply using pyratemp.</p>
+<dl class="docutils">
+<dt>author:</dt>
+<dd><em>rk at simple-is-better.org</em></dd>
+</dl>
+<dl class="docutils" id="pyratemp-announce">
+<dt>announcements:</dt>
+<dd><div class="first line-block">
+<div class="line"><em>pyratemp-announce at lists.simple-is-better.org</em></div>
+<div class="line">(new releases, bugfixes etc.)</div>
+</div>
+<div class="last line-block">
+<div class="line">subscribe:   send a mail to <a class="reference external" href="mailto:pyratemp-announce-subscribe&#64;lists.simple-is-better.org">pyratemp-announce-subscribe&#64;lists.simple-is-better.org</a></div>
+<div class="line">unsubscribe: send a mail to <a class="reference external" href="mailto:pyratemp-announce-unsubscribe&#64;lists.simple-is-better.org">pyratemp-announce-unsubscribe&#64;lists.simple-is-better.org</a></div>
+</div>
+</dd>
+<dt>mailinglist:</dt>
+<dd><div class="first line-block">
+<div class="line"><em>pyratemp at lists.simple-is-better.org</em></div>
+<div class="line">(currently completely moderated)</div>
+</div>
+<div class="last line-block">
+<div class="line">subscribe:   send a mail to <a class="reference external" href="mailto:pyratemp-subscribe&#64;lists.simple-is-better.org">pyratemp-subscribe&#64;lists.simple-is-better.org</a></div>
+<div class="line">unsubscribe: send a mail to <a class="reference external" href="mailto:pyratemp-unsubscribe&#64;lists.simple-is-better.org">pyratemp-unsubscribe&#64;lists.simple-is-better.org</a></div>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="footer">
+<hr class="footer" />
+<a class="reference external" href="pyratemp.txt">View document source</a>.
+Generated on: 2010-06-14 23:56 UTC.
+
+</div>
+</body>
+</html>

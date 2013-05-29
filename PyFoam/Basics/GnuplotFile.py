@@ -1,7 +1,6 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GnuplotFile.py 4667 2009-02-28T22:46:13.716267Z bgschaid  $ 
+#  ICE Revision: $Id: GnuplotFile.py 12762 2013-01-03 23:11:02Z bgschaid $
 """Analyze a file with GNUPLOT-Data"""
 
-from string import strip,split
 import re
 
 class GnuplotFile(object):
@@ -19,7 +18,7 @@ class GnuplotFile(object):
         Find out how many columns there are and what their names are
 
         There are two cases:
-        
+
           1. the first line is not a comment. In this case the column
           names are 'time' and 'value0x'
           depending on how many values are in the first line
@@ -31,7 +30,7 @@ class GnuplotFile(object):
         fh=open(self.fname)
         line=fh.readline()
         fh.close()
-        line=strip(line)
+        line=line.strip()
 
         if line[0]=='#':
             line=line[1:]
@@ -39,16 +38,16 @@ class GnuplotFile(object):
             while exp.match(line)!=None:
                 m=exp.match(line)
                 fnd=m.group(1)
-                line=strip(m.group(4))
+                line=m.group(4).strip()
                 if fnd[0]=='\"':
                     fnd=fnd[1:-1]
                 self.titles.append(fnd)
         else:
             self.titles=["time"]
-            els=split(line)
+            els=line.split()
             for i in range(1,len(els)):
                 self.titles.append("value%02d" % i )
-                
+
     def writePlotFile(self,name):
         """
         Writes a file that can be used by Gnuplot
@@ -56,7 +55,7 @@ class GnuplotFile(object):
         @param name: name of the file
         """
         fh=open(name,'w')
-        
+
         fh.write("plot ")
         first=True
 

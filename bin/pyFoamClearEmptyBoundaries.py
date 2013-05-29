@@ -1,4 +1,4 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 
 description="""
 Clears all empty boundaries (those with zero faces) from a
@@ -11,6 +11,8 @@ import sys
 
 from PyFoam.RunDictionary.BoundaryDict import BoundaryDict
 from PyFoam.RunDictionary.MeshInformation import MeshInformation
+
+from PyFoam.ThirdParty.six import print_
 
 parse=FoamOptionParser(description=description,usage="%prog <caseDirectory>")
 parse.parse(nr=1)
@@ -27,8 +29,9 @@ for b in boundary.patches():
         del  boundary[b]
 
 if len(cleared)>0:
-    print "Cleared boundaries",", ".join(cleared)
+    print_("Cleared boundaries",", ".join(cleared))
     boundary.writeFile()
 else:
-    print "No empty boundaries"
-    
+    print_("No empty boundaries")
+
+# Should work with Python3 and Python2

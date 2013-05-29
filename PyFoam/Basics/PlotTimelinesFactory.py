@@ -1,12 +1,12 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/PlotTimelinesFactory.py 6092 2010-01-28T22:13:47.366409Z bgschaid  $ 
+#  ICE Revision: $Id: PlotTimelinesFactory.py 12747 2013-01-03 23:06:57Z bgschaid $
 """Creates subclasses of GeneralPlotTimelines"""
 
-from GnuplotTimelines import GnuplotTimelines
-from MatplotlibTimelines import MatplotlibTimelines
-from QwtPlotTimelines import QwtPlotTimelines
-from DummyPlotTimelines import DummyPlotTimelines
+from PyFoam.Basics.GnuplotTimelines import GnuplotTimelines
+from PyFoam.Basics.MatplotlibTimelines import MatplotlibTimelines
+from PyFoam.Basics.QwtPlotTimelines import QwtPlotTimelines
+from PyFoam.Basics.DummyPlotTimelines import DummyPlotTimelines
 
-from CustomPlotInfo import CustomPlotInfo
+from .CustomPlotInfo import CustomPlotInfo
 
 
 from PyFoam import configuration
@@ -33,7 +33,7 @@ def createPlotTimelines(timelines,
 
     if implementation not in lookupTable:
         error("Requested plotting implementation",implementation,
-              "not in list of available implementations",lookupTable.keys())
+              "not in list of available implementations",list(lookupTable.keys()))
 
     return lookupTable[implementation](timelines,
                                        custom,
@@ -64,7 +64,7 @@ def createPlotTimelinesDirect(name,
     @param start: First time that should be plotted. If undefined everything from the start is plotted
     @param end: Last time that should be plotted. If undefined data is plotted indefinitly
     @param logscale: Scale the y-axis logarithmic
-    @param ylabel: Label of the y-axis        
+    @param ylabel: Label of the y-axis
     @param y2label: Label of the alternate y-axis
     @param implementation: the implementation that should be used
     """
@@ -80,5 +80,7 @@ def createPlotTimelinesDirect(name,
     ci.logscale=logscale
     ci.ylabel=ylabel
     ci.y2label=y2label
-    
+
     return createPlotTimelines(timelines,ci,implementation=implementation)
+
+# Should work with Python3 and Python2

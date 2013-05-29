@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/FoamOptionParser.py 7815 2012-01-30T19:52:34.081422Z bgschaid  $ 
+#  ICE Revision: $Id: FoamOptionParser.py 12414 2012-01-31 09:24:13Z bgschaid $ 
 """Parse options for the PyFoam-Scripts"""
 
 from optparse import OptionParser,TitledHelpFormatter

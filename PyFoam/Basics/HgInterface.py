@@ -1,24 +1,26 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/HgInterface.py 7885 2012-02-26T19:32:53.603570Z bgschaid  $ 
+#  ICE Revision: $Id: HgInterface.py 12769 2013-01-16 11:38:51Z bgschaid $
 """A VCS-interface to Mercurial"""
+
+import sys
 
 from PyFoam.Error import warning,error
 
-from GeneralVCSInterface import GeneralVCSInterface
+from .GeneralVCSInterface import GeneralVCSInterface
 
-from os import uname
+from platform import uname
 from os import path as opath
 from mercurial import commands,ui,hg
 from mercurial.node import short
 
 class HgInterface(GeneralVCSInterface):
     """The interface class to mercurial"""
-    
+
     def __init__(self,
                  path,
                  init=False):
 
         GeneralVCSInterface.__init__(self,path,init)
-        
+
         if init:
             commands.init(ui.ui(),self.path)
             open(opath.join(self.path,".hgignore"),"w").write("syntax: re\n\n")
@@ -29,10 +31,10 @@ class HgInterface(GeneralVCSInterface):
         if init:
             self.addPath(opath.join(self.repo.root,".hgignore"))
             self.addStandardIgnores()
-            
+
     def getRoot(self,path):
         return self.executeWithOuput("hg root --cwd %s" % path)
-    
+
     def addPath(self,
                 path,
                 rules=[]):
@@ -41,7 +43,7 @@ class HgInterface(GeneralVCSInterface):
                 error("Path",path,"does not exist")
         except TypeError:
             error(path,"is not a path name")
-            
+
         include=[]
         exclude=[]
         if rules!=[]:
@@ -70,7 +72,7 @@ class HgInterface(GeneralVCSInterface):
         ctx = self.repo[None]
         parents = ctx.parents()
         return '+'.join([short(p.node()) for p in parents])
-                
+
     def commit(self,
                msg):
         commands.commit(self.ui,
@@ -90,7 +92,8 @@ class HgInterface(GeneralVCSInterface):
             if commands.update(self.ui,
                                self.repo):
                 ok=False
-        except IndexError,e:
+        except IndexError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             #        except Exception,e:
             raise e
             return False
@@ -105,3 +108,5 @@ class HgInterface(GeneralVCSInterface):
 
     def addToHgIgnore(self,expr):
         open(opath.join(self.repo.root,".hgignore"),"a").write(expr+"\n")
+
+# Should work with Python3 and Python2

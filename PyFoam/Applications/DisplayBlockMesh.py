@@ -9,22 +9,25 @@ from PyFoam.RunDictionary.ParsedBlockMeshDict import ParsedBlockMeshDict
 from PyFoam.Applications.PyFoamApplication import PyFoamApplication
 from PyFoam.Error import error,warning
 
+from PyFoam.ThirdParty.six import print_
+
 def doImports():
     try:
-        global Tkinter
-        import Tkinter
+        global tkinter
+        from PyFoam.ThirdParty.six.moves import tkinter
         global vtk
         try:
             import vtk
-            print "Using system-VTK"
+            print_("Using system-VTK")
         except ImportError:
-            print "Trying VTK implementation from Paraview"
+            print_("Trying VTK implementation from Paraview")
             from paraview import vtk
         global vtkTkRenderWindowInteractor
         from vtk.tk.vtkTkRenderWindowInteractor import vtkTkRenderWindowInteractor
-    except ImportError,e:
+    except ImportError:
+        e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
         error("Error while importing modules:",e)
-        
+
 class DisplayBlockMesh(PyFoamApplication):
     def __init__(self):
         description="""\
@@ -43,7 +46,7 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
 
     def run(self):
         doImports()
-        
+
         self.renWin = vtk.vtkRenderWindow()
         self.ren = vtk.vtkRenderer()
         self.renWin.AddRenderer(self.ren)
@@ -63,23 +66,24 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
 
         try:
             self.readFile()
-        except Exception,e:
+        except Exception:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             warning("While reading",self.parser.getArgs()[0],"this happened:",e)
             raise e
-        
+
         self.ren.ResetCamera()
 
-        self.root = Tkinter.Tk()
+        self.root = tkinter.Tk()
         self.root.withdraw()
 
         # Create the toplevel window
-        self.top = Tkinter.Toplevel(self.root)
+        self.top = tkinter.Toplevel(self.root)
         self.top.title("blockMesh-Viewer")
         self.top.protocol("WM_DELETE_WINDOW", self.quit)
 
         # Create some frames
-        self.f1 = Tkinter.Frame(self.top)
-        self.f2 = Tkinter.Frame(self.top)
+        self.f1 = tkinter.Frame(self.top)
+        self.f2 = tkinter.Frame(self.top)
 
         self.f1.pack(side="top", anchor="n", expand=1, fill="both")
         self.f2.pack(side="bottom", anchor="s", expand="f", fill="x")
@@ -88,14 +92,14 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
         self.rw = vtkTkRenderWindowInteractor(self.f1, width=400, height=400, rw=self.renWin)
         self.rw.pack(expand="t", fill="both")
 
-        self.blockHigh=Tkinter.IntVar()
+        self.blockHigh=tkinter.IntVar()
         self.blockHigh.set(-1)
 
         self.oldBlock=-1
         self.blockActor=None
         self.blockTextActor=None
 
-        self.patchHigh=Tkinter.IntVar()
+        self.patchHigh=tkinter.IntVar()
         self.patchHigh.set(-1)
 
         self.oldPatch=-1
@@ -106,26 +110,26 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
         self.patchTextActor.GetTextProperty().SetColor(0.,0.,0.)
         self.patchTextActor.SetInput("Patch: <none>")
 
-        self.scroll=Tkinter.Scale(self.f2,orient='horizontal',
+        self.scroll=tkinter.Scale(self.f2,orient='horizontal',
                                   from_=-1,to=len(self.blocks)-1,resolution=1,tickinterval=1,
                                   label="Block (-1 is none)",
                                   variable=self.blockHigh,command=self.colorBlock)
 
         self.scroll.pack(side="top", expand="t", fill="x")
 
-        self.scroll2=Tkinter.Scale(self.f2,orient='horizontal',
-                                   from_=-1,to=len(self.patches.keys())-1,resolution=1,tickinterval=1,
+        self.scroll2=tkinter.Scale(self.f2,orient='horizontal',
+                                   from_=-1,to=len(list(self.patches.keys()))-1,resolution=1,tickinterval=1,
                                    label="Patch (-1 is none)",
                                    variable=self.patchHigh,command=self.colorPatch)
 
         self.scroll2.pack(side="top", expand="t", fill="x")
 
-        self.f3 = Tkinter.Frame(self.f2)
+        self.f3 = tkinter.Frame(self.f2)
         self.f3.pack(side="bottom", anchor="s", expand="f", fill="x")
-        
-        self.b1 = Tkinter.Button(self.f3, text="Quit", command=self.quit)
+
+        self.b1 = tkinter.Button(self.f3, text="Quit", command=self.quit)
         self.b1.pack(side="left", expand="t", fill="x")
-        self.b2 = Tkinter.Button(self.f3, text="Reread blockMeshDict", command=self.reread)
+        self.b2 = tkinter.Button(self.f3, text="Reread blockMeshDict", command=self.reread)
         self.b2.pack(side="left", expand="t", fill="x")
 
         self.root.update()
@@ -137,7 +141,7 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
         self.istyle.SetCurrentStyleToTrackballCamera()
 
         self.addProps()
-        
+
         self.iren.Initialize()
         self.renWin.Render()
         self.iren.Start()
@@ -161,7 +165,7 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
         self.setAxes()
 
         self.undefined=[]
-        
+
         for i in range(len(self.blocks)):
             self.addBlock(i)
 
@@ -176,12 +180,12 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
     def addUndefined(self,i):
         if not i in self.undefined:
             self.undefined.append(i)
-            
+
     def addProps(self):
         self.ren.AddViewProp(self.axes)
         self.ren.AddActor2D(self.patchTextActor)
         self.ren.AddActor2D(self.undefinedActor)
-        
+
     def addPoint(self,coord,factor=1):
         sphere=vtk.vtkSphereSource()
         sphere.SetRadius(self.vRadius*factor)
@@ -251,7 +255,7 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
         tActor.SetScale(self.vRadius,self.vRadius,self.vRadius)
         tActor.AddPosition((c1[0]+c2[0])/2+self.vRadius,(c1[1]+c2[1])/2+self.vRadius,(c1[2]+c2[2])/2+self.vRadius)
         tActor.SetCamera(self.cam)
-        tActor.GetProperty().SetColor(0.0,0.,0.)    
+        tActor.GetProperty().SetColor(0.0,0.,0.)
         return tube.GetOutput(),tActor
 
     def makeSpline(self,lst):
@@ -278,7 +282,7 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
                 self.addUndefined(data[0])
             if data[2]>=len(self.vertices):
                 self.addUndefined(data[2])
-            
+
         self.addPoint(data[1],factor=0.5)
 
     def makeFace(self,lst):
@@ -321,7 +325,7 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
             if a!=None:
                 append.AddInput(a.GetMapper().GetInput())
         self.axes.SetInput(append.GetOutput())
-    
+
 
     # Define a quit method that exits cleanly.
     def quit(self):
@@ -334,7 +338,7 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
         self.blockTextActor=None
         self.addProps()
         self.readFile()
-        
+
         tmpBlock=int(self.blockHigh.get())
         if not tmpBlock<len(self.blocks):
             tmpBlock=len(self.blocks)-1
@@ -343,14 +347,14 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
         self.colorBlock(tmpBlock)
 
         tmpPatch=int(self.patchHigh.get())
-        if not tmpPatch<len(self.patches.keys()):
-            tmpPatch=len(self.patches.keys())-1
-        self.scroll2.config(to=len(self.patches.keys())-1)
+        if not tmpPatch<len(list(self.patches.keys())):
+            tmpPatch=len(list(self.patches.keys()))-1
+        self.scroll2.config(to=len(list(self.patches.keys()))-1)
         self.patchHigh.set(tmpPatch)
         self.colorPatch(tmpPatch)
 
         self.renWin.Render()
-        
+
     def colorBlock(self,value):
         newBlock=int(value)
         if self.oldBlock>=0 and self.blockActor!=None:
@@ -397,7 +401,7 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
             self.patchActor=None
             self.patchTextActor.SetInput("Patch: <none>")
         if newPatch>=0:
-            name=self.patches.keys()[newPatch]
+            name=list(self.patches.keys())[newPatch]
             subs=self.patches[name]
             append=vtk.vtkAppendPolyData()
             for s in subs:
@@ -413,4 +417,5 @@ uses Tkinter and is no longer activly developed.  Use the QT-version.
 
         self.oldPatch=newPatch
         self.renWin.Render()
-    
+
+# Should work with Python3 and Python2

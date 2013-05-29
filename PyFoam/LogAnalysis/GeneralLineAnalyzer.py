@@ -1,15 +1,21 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/GeneralLineAnalyzer.py 7656 2012-01-06T14:43:20.069830Z bgschaid  $ 
+#  ICE Revision: $Id: GeneralLineAnalyzer.py 12757 2013-01-03 23:08:34Z bgschaid $
 """Line analyzer with output and the capability to store lines"""
 
-from LogLineAnalyzer import LogLineAnalyzer
+from .LogLineAnalyzer import LogLineAnalyzer
 from PyFoam.Basics.OutFileCollection import OutFileCollection
 from PyFoam.Basics.TimeLineCollection import TimeLineCollection
+
+from PyFoam.Error import warning
+import sys
 
 class GeneralLineAnalyzer(LogLineAnalyzer):
     """Base class for analyzers that write data to files and store time-lines
 
     Combines the capabilities of TimeLineLineAnalyzer and FileLineAnalyzer"""
-    
+
+    # phase of the solver to distinguish similar results
+    __phase = ""
+
     def __init__(self,
                  doTimelines=False,
                  doFiles=False,
@@ -28,10 +34,10 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
         self.doTimelines=doTimelines
         self.doFiles=doFiles
         self.singleFile=singleFile
-        
+
         self.files=None
         self.titles=titles
-        
+
         self.setTitles(titles)
 
         accu="first"
@@ -44,12 +50,23 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
 
         self.startTime=startTime
         self.endTime=endTime
-        
+
         self.master=None
 
         self.didProgress=False
         self.progressTemplate=progressTemplate
-        
+
+    @staticmethod
+    def setPhase(p=""):
+        GeneralLineAnalyzer.__phase = p
+
+    @staticmethod
+    def fName(n):
+        if GeneralLineAnalyzer.__phase=="":
+            return n
+        else:
+            return n+"_"+GeneralLineAnalyzer.__phase
+
     def getCurrentData(self):
         if self.lines:
             return self.lines.getLatestData()
@@ -61,7 +78,7 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
         self.master=master
         if self.lines and self.master.lines:
             self.master.lines.addSlave(self.lines)
-            
+
     def setTitles(self,titles):
         """
         Sets the titles anew
@@ -71,7 +88,7 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
             self.titles=titles
             if self.files!=None:
                 self.files.setTitles(titles)
-            
+
     def setDirectory(self,oDir):
         """Creates the OutFileCollection-object"""
         if self.doFiles:
@@ -89,9 +106,13 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
                 if (self.startTime==None or time>=self.startTime) and (self.endTime==None or time<=self.endTime):
                     self.lines.setTime(self.getTime())
             except ValueError:
-                pass
+                e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+                warning("Problem with lines",e)
+                raise e
+
         self.didProgress=False
-        
+        self.setPhase()
+
     def getTimeline(self,name):
         """@param name: Name of the timeline to return
         @return: the timeline as two list: the times and the values"""
@@ -102,18 +123,20 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
 
     def doAnalysis(self,line):
         """General analysis method. Derived classes should instead override callbacks"""
-        
+
         m=self.exp.match(line)
         if m!=None:
             self.startAnalysis(m)
-            
+
             if self.doTimelines:
                 try:
                     time=float(self.getTime())
                     if (self.startTime==None or time>=self.startTime) and (self.endTime==None or time<=self.endTime):
                         self.addToTimelines(m)
                 except ValueError:
-                    pass
+                    e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+                    warning("Problem doing timelines",e)
+
             if self.doFiles:
                 self.addToFiles(m)
 
@@ -124,29 +147,29 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
                 for i,g in enumerate(m.groups()):
                     myProgress=myProgress.replace("$%d" % i,g)
                 self.writeProgress(myProgress)
-                
+
             self.didProgress=False
 
     def startAnalysis(self,match):
         """Method at the start of a successfull match"""
         pass
-    
+
     def endAnalysis(self,match):
         """Method at the end of a successfull match"""
         pass
-    
+
     def addToTimelines(self,match):
         """Method that adds matched data to timelines
 
         @param match: data matched by a regular expression"""
-        
+
         pass
 
     def addToFiles(self,match):
         """Method that adds matched data to files
 
         @param match: data matched by a regular expression"""
-        
+
         pass
 
     def tearDown(self):
@@ -155,4 +178,5 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
 
         if self.files!=None:
             self.files.close()
-            
+
+# Should work with Python3 and Python2

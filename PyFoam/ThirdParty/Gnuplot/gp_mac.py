@@ -12,7 +12,7 @@
 
 import os, string
 
-import Errors
+from . import Errors
 
 
 # ############ Configuration variables: ################################
@@ -55,7 +55,7 @@ class GnuplotOpts:
 # The Macintosh doesn't support pipes so communication is via
 # AppleEvents.
 
-import gnuplot_Suites
+from . import gnuplot_Suites
 import Required_Suite
 import aetools
 
@@ -118,7 +118,7 @@ class GnuplotProcess:
 
     def flush(self):
         pass
-        
+
     def __call__(self, s):
         """Send a command string to gnuplot, for immediate execution."""
 
@@ -126,4 +126,4 @@ class GnuplotProcess:
         self.write(s)
         self.flush()
 
-
+# Should work with Python3 and Python2

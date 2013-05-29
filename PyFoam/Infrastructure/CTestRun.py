@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/CTestRun.py 7936 2012-03-16T15:06:46.196748Z bgschaid  $ 
+#  ICE Revision: $Id: CTestRun.py 12758 2013-01-03 23:08:44Z bgschaid $
 """A wrapper to run a solver as a CTest"""
 
 import sys
@@ -8,7 +8,9 @@ import subprocess
 import shutil
 import traceback
 import inspect
-import cPickle as pickle
+
+from PyFoam.ThirdParty.six.moves import cPickle as pickle
+
 import time
 
 from PyFoam.Applications.CloneCase import CloneCase
@@ -19,6 +21,8 @@ from PyFoam.Applications.SamplePlot import SamplePlot
 from PyFoam.Applications.TimelinePlot import TimelinePlot
 from PyFoam.Applications.Decomposer import Decomposer
 from PyFoam.Basics.Data2DStatistics import Data2DStatistics
+
+from PyFoam.ThirdParty.six import print_,PY3,iteritems
 
 callbackMethods=[]
 
@@ -32,11 +36,12 @@ class CTestRun(object):
 
     def __init__(self):
         pass
-    
+
     def __new__(cls,*args,**kwargs):
         obj=super(CTestRun,cls).__new__(cls,*args,**kwargs)
 
         obj.__parameters={}
+        obj.__parametersClosedForWriting=False
 
         obj.setParameters(sizeClass="unknown",
                           parallel=False,
@@ -46,16 +51,18 @@ class CTestRun(object):
                           originalCaseBasis=None)
 
         obj.__addToClone=[]
-        
+
         called=[]
         obj.__recursiveInit(obj.__class__,called)
         obj.__setParameterAsUsed(["nrCpus","autoDecompose","doReconstruct"])
-        
+
+        obj.__parametersClosedForWriting=True
+
         return obj
-    
+
     def __recursiveInit(self,theClass,called):
         """Automatically call the 'init'-method of the whole tree"""
-        #        print theClass
+        #        print_(theClass)
         for b in theClass.__bases__:
             if b not in [object,CTestRun]:
                 self.__recursiveInit(b,called)
@@ -63,54 +70,64 @@ class CTestRun(object):
         # subclass overwrites superclasses
         if "init" in dir(theClass):
             # make sure this is only called once
-            if not theClass.init.im_func in called:
+            if PY3:
+                toCall=theClass.init.__func__
+            else:
+                toCall=theClass.init.im_func
+            if not toCall in called:
                 theClass.init(self)
-                called.append(theClass.init.im_func)
-                #                print "Calling init for",theClass
+                called.append(toCall)
+                #                print_("Calling init for",theClass)
 
     def addToClone(self,*args):
         for a in args:
             self.__addToClone.append(a)
-            
+
     def setParameters(self,**kwargs):
         """Update the parameters with a set of keyword-arguments"""
 
+        if self.__parametersClosedForWriting:
+            self.warn("Tried to modify parameters after the initialization phase",
+                      kwargs)
+
         caller=inspect.stack()[1]
         setter="Set by %s in %s line %d" % (caller[3],caller[1],caller[2])
-        
-        for k,v in kwargs.iteritems():
+
+        for k,v in iteritems(kwargs):
             self.__parameters[k]={"value":v,
                                   "setter":setter,
                                   "used":False}
 
     def parameterValues(self):
         vals={}
-        
-        for k,v in self.__parameters.iteritems():
+
+        for k,v in iteritems(self.__parameters):
             vals[k]=v["value"]
-            
+
         return vals
 
     def __setParameterAsUsed(self,keys):
         for k in keys:
             if k in self.__parameters:
                 self.__parameters[k]["used"]=True
-                
+
     def __getitem__(self,key):
         """Get a parameter"""
         try:
             parameter=self.__parameters[key]
-        except KeyError,e:
-            print "Unknown parameter",key,"(Parameters:",self.__parameters.keys(),")"
+        except KeyError:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+
+            print_("Unknown parameter",key,"(Parameters:",list(self.__parameters.keys()),")")
             raise e
 
         parameter["used"]=True
 
         return parameter["value"]
-    
+
     def shortTestName(self):
         return type(self).__name__
-    
+
     def testName(self):
         """Return the full test name with which this test is identified"""
         result=self.shortTestName()+"_"+self["solver"]
@@ -122,19 +139,19 @@ class CTestRun(object):
         return result
 
     timeoutDefinitions=[
-        ("unknown",60),       
+        ("unknown",60),
         ("tiny",60),          # a minute
         ("small",300),        # 5 minutes
         ("medium",1800),      # half an hour
         ("big",7200),         # 2 hours
         ("huge",43200),       # 12 hours
         ("monster",172800),   # 2 days
-        ("unlimited",259200)  # 30 days
+        ("unlimited",2592000)  # 30 days
         ]
 
     def sizeClassString(self):
         return ", ".join(["%s = %ds"% t for t in CTestRun.timeoutDefinitions])
-                         
+
     def setTimeout(self,quiet=False):
         if self["sizeClass"]=="unknown":
             if not quiet:
@@ -142,7 +159,7 @@ class CTestRun(object):
 
         self.toSmallTimeout=0
         self.proposedSizeClass="unknown"
-        
+
         try:
             self.timeout=dict(CTestRun.timeoutDefinitions)[self["sizeClass"]]
             index=-1
@@ -157,7 +174,7 @@ class CTestRun(object):
                            ". Valid values are with their timeout values",
                            self.sizeClassString())
             self.timeout=dict(CTestRun.timeoutDefinitions["unknown"]) # just in case that we continue
-            
+
     def __doInit(self,
                  solver,
                  originalCase,
@@ -179,11 +196,11 @@ class CTestRun(object):
         @param tailLength: output that many lines from the end of the solver output
         @param headLength: output that many lines from the beginning of the solver output
         """
-        print "Creating test",self.testName()
+        print_("Creating test",self.testName())
 
         self.__setParameterAsUsed(["solver","originalCase","minimumRunTime",
                                    "referenceData","tailLength","headLength"])
-        
+
         self.__failed=False
         self.__failMessage=""
         self.__runInfo=None
@@ -192,23 +209,23 @@ class CTestRun(object):
         self.__headLength=headLength
 
         self.setTimeout()
-        
+
         self.solver=self.which(solver)
         if not self.solver:
             self.fatalFail("Solver",solver,"not in PATH")
-        print "Using solver",self.solver
+        print_("Using solver",self.solver)
 
         if self["originalCaseBasis"]:
             originalCase=path.join(self["originalCaseBasis"],originalCase)
-            print "Expanding original case path with",self["originalCaseBasis"]
-            
+            print_("Expanding original case path with",self["originalCaseBasis"])
+
         self.originalCase=path.expandvars(originalCase)
         if not path.exists(self.originalCase):
             self.fatalFail("Original case",self.originalCase,"does not exist")
-        print "Original case",self.originalCase
+        print_("Original case",self.originalCase)
 
         self.caseDir=path.join(self.workDir(),self.testName()+"_runDir")
-        print "Running case in",self.caseDir
+        print_("Running case in",self.caseDir)
         if path.exists(self.caseDir):
             if self.removeOldCase:
                 self.warn("Removing old case",self.caseDir)
@@ -217,60 +234,60 @@ class CTestRun(object):
                 self.fatalFail(self.caseDir,"already existing")
             else:
                 self.fail(self.caseDir,"already existing")
-                
+
         if referenceData:
             self.referenceData=path.join(self.dataDir(),referenceData)
             if not path.exists(self.referenceData):
                 self.fatalFail("Data directory",self.referenceData,"does not exist")
-            print "Using reference data from"
+            print_("Using reference data from")
         else:
             self.referenceData=None
-            print "No reference data specified"
+            print_("No reference data specified")
 
         if self.doReadRunInfo:
-            print "Attempting to read the runInfo-file"
+            print_("Attempting to read the runInfo-file")
             self.readRunInfo()
-            
+
         self.minimumRunTime=minimumRunTime
-        print
+        print_()
 
     def readRunInfo(self):
         """read the runInfo from a file"""
         pick=pickle.Unpickler(open(path.join(self.caseDir,"runInfo.pickle")))
         self.__runInfo=pick.load()
-        
+
     def writeRunInfo(self):
         """read the runInfo from a file"""
         pick=pickle.Pickler(open(path.join(self.caseDir,"runInfo.pickle"),"w"))
         pick.dump(self.__runInfo)
-        
+
     def wrapACallback(self,name):
         """Has to be a separate method because the loop in
         wrapCallbacks didn't work"""
         original=getattr(self,name)
         original_callable=getattr(original,'im_func')
         def wrapped(*args,**kwargs):
-            #            print "Wrapping",name,args,kwargs,original_callable
+            #            print_("Wrapping",name,args,kwargs,original_callable)
             return self.runAndCatchExceptions(original_callable,self,*args,**kwargs)
         setattr(self,name,wrapped)
-        
+
     def wrapCallbacks(self):
         """Wrap the callback methods with a Python exception handler.
         This is not done here so that methoids that the child classes
         overwrote will be wrapped to"""
 
         # not yet working
-        
+
         for m in callbackMethods:
-            print "Wrapping method",m
+            print_("Wrapping method",m)
             #            setattr(self,m,original)
             self.wrapACallback(m)
-            
+
     def processOptions(self):
         """Select which phase of the test should be run"""
 
         from optparse import OptionParser,OptionGroup
-        
+
         parser = OptionParser(usage="%prog: [options]")
         phases=OptionGroup(parser,
                            "Phase",
@@ -336,7 +353,7 @@ class CTestRun(object):
                           dest="jumpToTests",
                           default=False,
                           help="Skip everything except the final tests")
-        
+
         behave=OptionGroup(parser,
                            "Behaviour",
                            "Determine the behaviour")
@@ -405,35 +422,35 @@ class CTestRun(object):
 
         if options.parameterValue:
             try:
-                print self[options.parameterValue]
+                print_(self[options.parameterValue])
                 sys.exit(0)
             except KeyError:
                 sys.exit(1)
 
         if options.printTestName:
-            print self.testName()
+            print_(self.testName())
             sys.exit(0)
 
         if options.timeout:
             self.setTimeout(quiet=True)
-            print self.timeout
+            print_(self.timeout)
             sys.exit(0)
 
         if options.dumpParameters or options.verboseDumpParameters:
-            keys=self.__parameters.keys()
+            keys=list(self.__parameters.keys())
             keys.sort()
             maxLen=max([len(n) for n in keys])
             for k in keys:
-                print k," "*(maxLen-len(k)),":",self[k]
+                print_(k," "*(maxLen-len(k)),":",self[k])
                 if options.verboseDumpParameters:
-                    print "   ",self.__parameters[k]["setter"]
-                    print
-                    
+                    print_("   ",self.__parameters[k]["setter"])
+                    print_()
+
             sys.exit(0)
 
         self.doReadRunInfo=options.readRunInfo
         self.doPrintRunInfo=options.printRunInfo
-        
+
         self.doClone=options.doClone
         self.doPreparation=options.doPreparation
         self.doSerialPreTests=options.doSerialPreTests
@@ -455,7 +472,7 @@ class CTestRun(object):
             self.doPreTests=False
             self.doSimulation=False
             self.doPostprocessing=False
-            
+
         self.fatalIsNotFatal=options.fatalIsNotFatal
         self.removeOldCase=options.removeOldCase
 
@@ -463,7 +480,7 @@ class CTestRun(object):
         """Run the actual test"""
 
         startTime=time.time()
-        
+
         self.processOptions()
 
         self.__doInit(**self.parameterValues())
@@ -471,7 +488,7 @@ class CTestRun(object):
         self.wrapCallbacks()
 
         self.__runParallel=False
-        
+
         if self.doClone:
             self.status("Cloning case")
 
@@ -518,8 +535,15 @@ class CTestRun(object):
                     self.decompose()
             else:
                 self.status("Skipping the decomposition")
-                
+
         self.__runParallel=self["parallel"]
+
+        if self["parallel"]:
+            if self.doParallelPreparation:
+                self.status("Parallel preparation of the case")
+                self.parallelPrepare()
+            else:
+                self.status("Skipping parallel preparation")
 
         if self.doPreTests:
             self.status("Running pre-run tests")
@@ -531,7 +555,7 @@ class CTestRun(object):
             self.status("Run solver")
             self.__runInfo=self.execute(self.solver)
             self.writeRunInfo()
-            print
+            print_()
             if not self.runInfo()["OK"]:
                 self.fail("Solver",self.solver,"ended with an error")
             else:
@@ -543,10 +567,10 @@ class CTestRun(object):
             self.status("Skipping running of the simulation")
 
         if self.doPrintRunInfo:
-            print
-            print "runInfo used in furthere tests"
+            print_()
+            print_("runInfo used in further tests")
             import pprint
-            
+
             printer=pprint.PrettyPrinter()
             printer.pprint(self.__runInfo.getData())
 
@@ -572,7 +596,7 @@ class CTestRun(object):
                 else:
                     self.reconstruct()
             else:
-                self.status("Skipping the decomposition")
+                self.status("Skipping the reconstruction")
 
         if self.doSerialPostTests:
             self.status("Running serial post-run tests")
@@ -611,9 +635,9 @@ class CTestRun(object):
         except KeyError:
             if not hasattr(self,"__checkWorkDir"):
                 self.__checkWorkDir=None
-                self.warn("No environment variable PYFOAM_CTESTRUN_WORKDIR defined. Using current directory")            
+                self.warn("No environment variable PYFOAM_CTESTRUN_WORKDIR defined. Using current directory")
             return path.curdir
-            
+
     # make configuration-dependent
     def dataDir(self):
         try:
@@ -621,11 +645,11 @@ class CTestRun(object):
         except KeyError:
             if not hasattr(self,"__checkDataDir"):
                 self.__checkDataDir=None
-                self.warn("No environment variable PYFOAM_CTESTRUN_DATADIR defined. Using current directory")            
+                self.warn("No environment variable PYFOAM_CTESTRUN_DATADIR defined. Using current directory")
             return path.curdir
 
     def addFunctionObjects(self,templateFile):
-        """Add entries for libraries and functionObjects to the controlDict 
+        """Add entries for libraries and functionObjects to the controlDict
         (if they don't exist
         @param templateFile: file withe the data that should be added
         """
@@ -645,7 +669,7 @@ class CTestRun(object):
             touchedCD=True
             if not "functions" in cd:
                 cd["functions"]={}
-            for k,v in tf["functions"].iteritems():
+            for k,v in iteritems(tf["functions"]):
                 if k in cd["functions"]:
                     self.warn("Overwriting function object",k)
                 cd["functions"][k]=v
@@ -657,7 +681,7 @@ class CTestRun(object):
         """Copy files recurivly into a case
         @param src: the source directory the files come fro
         @param dst: the destination directory the files go to"""
-        
+
         for f in os.listdir(src):
             if f[0]=='.':
                 self.warn("Ignoring dot-file",path.join(src,f))
@@ -677,8 +701,8 @@ class CTestRun(object):
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT)
-        
-        print p.communicate()[0]
+
+        print_(p.communicate()[0])
         sts=p.returncode
 
         if sts!=0:
@@ -689,7 +713,7 @@ class CTestRun(object):
         """Run a command in the case directory and let it directly
         write to the output
         @param workingDirectory: change to this directory"""
-        
+
         workingDirectory=None
         if not workingDirectory:
             workingDirectory=self.caseDir
@@ -702,10 +726,10 @@ class CTestRun(object):
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT)
-        
+
         self.status("Output of the command")
         self.line()
-        print p.communicate()[0]
+        print_(p.communicate()[0])
         self.line()
 
         sts=p.returncode
@@ -714,7 +738,7 @@ class CTestRun(object):
             self.fail("Command",cmd,"ended with status",sts)
         else:
             self.status(cmd,"ran OK")
-            
+
         os.chdir(oldDir)
 
     def execute(self,*args,**kwargs):
@@ -729,14 +753,14 @@ class CTestRun(object):
                 raise KeyError
         except KeyError:
             regexps=None
-            
+
         if len(args)==1 and type(args[0])==str:
             args=[a.replace("%case%",self.solution().name) for a in args[0].split()]
 
         pyArgs=["--silent","--no-server-process"]
         if self.__runParallel:
             pyArgs+=["--procnr=%d" % self["nrCpus"]]
-            
+
         argList=list(args)+\
                  ["-case",self.caseDir]
         self.status("Executing"," ".join(argList))
@@ -746,14 +770,14 @@ class CTestRun(object):
 
         runner=Runner(args=pyArgs+argList)
         self.status("Execution ended")
-        
+
         if not runner["OK"]:
             self.fail("Running "," ".join(argList),"failed")
         else:
             self.status("Execution was OK")
         if "warnings" in runner:
             self.status(runner["warnings"],"during execution")
-        print
+        print_()
         self.status("Output of"," ".join(argList),":")
         if runner["lines"]>(self.__tailLength+self.__headLength):
             self.status("The first",self.__headLength,"lines of the output.",
@@ -761,7 +785,7 @@ class CTestRun(object):
             self.line()
             self.runCommand("head","-n",self.__headLength,runner["logfile"])
             self.line()
-            print
+            print_()
             self.status("The last",self.__tailLength,"lines of the output.",
                         "Of a total of",runner["lines"])
             self.line()
@@ -771,12 +795,12 @@ class CTestRun(object):
             self.line()
             self.runCommand("cat",runner["logfile"])
             self.line()
-            
+
         self.status("End of output")
-        print
-        
+        print_()
+
         return runner
-    
+
     def runInfo(self):
         """return the run information. If the solver was actually run"""
         if self.__runInfo==None:
@@ -797,38 +821,38 @@ class CTestRun(object):
         if not hasattr(self,"_controlDict"):
             self._controlDict=ParsedParameterFile(self.solution().controlDict())
         return self._controlDict
-    
+
     def line(self):
         self.status("/\\"*((78-len("TEST "+self.shortTestName()+" :"))/2))
-        
+
     def status(self,*args):
         """print a status message about the test"""
-        print "TEST",self.shortTestName(),":",
+        print_("TEST",self.shortTestName(),":",end="")
         for a in args:
-            print a,
-        print
-        
+            print_(a,end="")
+        print_()
+
     def messageGeneral(self,prefix,say,*args):
         """Everything that passes through this method will be repeated
         in the end
         @param args: arbitrary number of arguments that build the
         fail-message
-        @param prefix: General classification of the message 
+        @param prefix: General classification of the message
         """
         msg=prefix.upper()+": "+str(args[0])
         for a in args[1:]:
             msg+=" "+str(a)
 
-        print
-        print say,msg
-        print
-        
+        print_()
+        print_(say,msg)
+        print_()
+
         self.__failMessage+=msg+"\n"
 
     def failGeneral(self,prefix,*args):
         """@param args: arbitrary number of arguments that build the
         fail-message
-        @param prefix: General classification of the failure 
+        @param prefix: General classification of the failure
         """
         self.__failed=True
         self.messageGeneral(prefix,"Test failed:",*args)
@@ -837,14 +861,14 @@ class CTestRun(object):
         """@param args: arbitrary number of arguments that build the
         warning-message"""
         self.messageGeneral("warning","",*args)
-        
+
     def fail(self,*args):
         """To be called if the test failed but other tests should be tried
         @param args: arbitrary number of arguments that build the
         fail-message"""
 
         self.failGeneral("failure",*args)
-        
+
     def fatalFail(self,*args):
         """@param args: arbitrary number of arguments that build the
         fail-message"""
@@ -852,32 +876,32 @@ class CTestRun(object):
         self.failGeneral("fatal failure",*args)
         if not self.fatalIsNotFatal:
             self.endTest()
-        
+
     def endTest(self):
         unused=[]
-        for k,v in self.__parameters.iteritems():
+        for k,v in iteritems(self.__parameters):
             if not v["used"]:
                 unused.append(k)
         if len(unused)>0:
             self.warn("Unused parameters (possible typo):",unused)
-            
-        print
+
+        print_()
         if self.__failed:
-            print "Test failed."
-            print
-            print "Summary of failures"
-            print self.__failMessage
-            print
+            print_("Test failed.")
+            print_()
+            print_("Summary of failures")
+            print_(self.__failMessage)
+            print_()
 
             sys.exit(1)
         else:
-            print "Test successful"
-            print
+            print_("Test successful")
+            print_()
             if len(self.__failMessage)>0:
-                print "Summary of warnings"
-                print self.__failMessage
-                print
-            
+                print_("Summary of warnings")
+                print_(self.__failMessage)
+                print_()
+
             sys.exit(0)
 
     def which(self,command):
@@ -895,17 +919,19 @@ class CTestRun(object):
         try:
             func(*args,**kwargs)
             return True
-        except SystemExit,e:
+        except SystemExit:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             self.fail("sys.exit() called somewhere while executing",
                       func.__name__,":",e)
             traceback.print_exc()
             raise e
-        except Exception,e:
+        except Exception:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             self.fail("Python problem during execution of",
                       func.__name__,":",e)
             traceback.print_exc()
             return False
-        
+
     def runTests(self,namePrefix,warnSerial=False):
         """Run all methods that fit a certain name prefix"""
         self.status("Looking for tests that fit the prefix",namePrefix)
@@ -932,7 +958,7 @@ class CTestRun(object):
                     testFunction,
                     args,
                     *message):
-        if not apply(testFunction,args):
+        if not testFunction(*args):
             self.fail(*message)
 
     def compareSamples(self,
@@ -944,7 +970,8 @@ class CTestRun(object):
                        scaleData=1,
                        offsetData=0,
                        scaleX=1,
-                       offsetX=0):
+                       offsetX=0,
+                       useReferenceForComparison=False):
         """Compare sample data and return the statistics
         @param data: the name of the data directory
         @param reference:the name of the directory with the reference data
@@ -955,7 +982,10 @@ class CTestRun(object):
             timeOpt=["--time="+str(time)]
         if line:
             timeOpt+=["--line=%s" % line]
-            
+        addOpt=[]
+        if useReferenceForComparison:
+            addOpt.append("--use-reference-for-comparison")
+
         sample=SamplePlot(args=[self.caseDir,
                                 "--silent",
                                 "--dir="+data,
@@ -971,6 +1001,7 @@ class CTestRun(object):
                                 "--offset-x=%f" % offsetX
                             ]+
                           timeOpt+
+                          addOpt+
                           ["--field="+f for f in fields])
         return Data2DStatistics(metrics=sample["metrics"],
                                 compare=sample["compare"],
@@ -997,7 +1028,7 @@ class CTestRun(object):
                                 compare=sample["compare"],
                                 noStrings=True,
                                 failureValue=0)
-        
+
 
     def isNotEqual(self,value,target=0,tolerance=1e-10,message=""):
         self.generalTest(
@@ -1005,26 +1036,26 @@ class CTestRun(object):
             (value,target),
             message,"( value",value,"within tolerance",tolerance,
             "of target",target,")")
-            
+
     def isEqual(self,value,target=0,tolerance=1e-10,message=""):
         self.generalTest(
             lambda x,y:abs(x-y)<tolerance,
             (value,target),
             message,"( value",value," not within tolerance",tolerance,
             "of target",target,")")
-            
+
     def isBigger(self,value,threshold=0,message=""):
         self.generalTest(
             lambda x:x>threshold,
             (value),
             message,"( value",value," not bigger than",threshold)
-            
+
     def isSmaller(self,value,threshold=0,message=""):
         self.generalTest(
             lambda x:x<threshold,
             (value),
             message,"( value",value," not smaller than",threshold)
-            
+
     def preRunTestCheckMesh(self):
         """This test is always run. If this is not desirable it has to
         be overridden in a child-class"""
@@ -1047,11 +1078,17 @@ class CTestRun(object):
         result=self.execute("blockMesh")
         if not result["OK"]:
             self.fatalFail("blockMesh was not able to create a mesh")
-            
+
     @isCallback
     def casePrepare(self):
         """Callback to prepare the case. Default behaviour is to do
         nothing"""
+        pass
+
+    @isCallback
+    def parallelPrepare(self):
+        """Callback to prepare the case in parallel (after it was decomposed).
+        Default behaviour is to do nothing"""
         pass
 
     @isCallback
@@ -1064,9 +1101,11 @@ class CTestRun(object):
     def decompose(self):
         """Callback to do the decomposition (if automatic is not sufficient)"""
         self.fatalFail("Manual decomposition specified but no callback for manual decomposition specified")
-        
+
     @isCallback
     def reconstruct(self):
         """Callback to do the reconstruction (if automatic is not sufficient)"""
         self.warn("Manual decomposition specified, but no callback 'reconstruct' implemented. Using the automatic reconstruction")
         self.autoReconstruct()
+
+# Should work with Python3 and Python2

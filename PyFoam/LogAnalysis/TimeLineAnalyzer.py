@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/TimeLineAnalyzer.py 7880 2012-02-23T20:00:16.529769Z bgschaid  $ 
+#  ICE Revision: $Id: TimeLineAnalyzer.py 12747 2013-01-03 23:06:57Z bgschaid $
 """Analyze Line for Time"""
 
 import re
 
-from LogLineAnalyzer import LogLineAnalyzer
+from .LogLineAnalyzer import LogLineAnalyzer
 
 from PyFoam import configuration as conf
 
@@ -16,15 +16,15 @@ class TimeLineAnalyzer(LogLineAnalyzer):
     def __init__(self,progress=False):
         """
         Constructs the analyzer
-        
+
         @param progress: whether to print the time on the console
         """
         LogLineAnalyzer.__init__(self)
         self.exp=re.compile(conf().get("SolverOutput","timeRegExp"))
-        
+
         self.fallback=re.compile("^(Time =|Iteration:) (.+)$")
         self.tryFallback=True
-        
+
         self.progress=progress
 
     def notifyNewTime(self,m):
@@ -35,7 +35,7 @@ class TimeLineAnalyzer(LogLineAnalyzer):
 
         except ValueError:
             pass
-        
+
     def doAnalysis(self,line):
         m=self.exp.match(line)
         if m!=None:
@@ -47,3 +47,5 @@ class TimeLineAnalyzer(LogLineAnalyzer):
             m=self.fallback.match(line)
             if m!=None:
                 self.notifyNewTime(m)
+
+# Should work with Python3 and Python2

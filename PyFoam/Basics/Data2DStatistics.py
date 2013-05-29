@@ -1,12 +1,15 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/Data2DStatistics.py 7788 2012-01-24T23:04:14.838211Z bgschaid  $ 
+#  ICE Revision: $Id: Data2DStatistics.py 12763 2013-01-08 17:56:07Z bgschaid $
 """Data structure to do some calculations on the results from
 SpreadSheetData-methods metrics and compare that are organized in 2
 dimensions"""
+
+import sys
 
 from PyFoam.Basics.TableData import TableData
 from PyFoam.Error import error
 
 from math import *
+import collections
 
 class Data2DStatistics(object):
     """Oranize statistics about data in 2D-Tables and do basic
@@ -17,7 +20,7 @@ class Data2DStatistics(object):
                  small=1e-10,
                  noStrings=False,
                  failureValue=None):
-	"""
+        """
 	@param metrics: metrics of the data
         @param compare: metrics of the comparsion with another data-set
         @param small: the value that is considered to be close to 0
@@ -34,11 +37,11 @@ class Data2DStatistics(object):
         """Return a tuple with the names of the rows and the
         columns. Assumes that the names for the first data-set are
         valid for all"""
-        colNames=self.__metrics.keys()
-        rowNames=self.__metrics[colNames[0]].keys()
+        colNames=list(self.__metrics.keys())
+        rowNames=list(self.__metrics[colNames[0]].keys())
 
         return rowNames,colNames
-    
+
     def _makeEmptyTable(self):
         """Create an empty table to fill the data in"""
         r,c=self._getLabels()
@@ -50,20 +53,20 @@ class Data2DStatistics(object):
         @param data: the dataset. If unset then self.__metrics is used"""
         if data==None:
             data=self.__metrics
-        
+
         tab=self._makeEmptyTable()
         row,col=self._getLabels()
         for r in row:
             for c in col:
                 tab[(r,c)]=data[c][r][name]
-        
+
         return tab
 
     def names(self):
         "Valid data names"
         row,col=self._getLabels()
-        return self.__metrics[col[0]][row[0]].keys()
-    
+        return list(self.__metrics[col[0]][row[0]].keys())
+
     def compare(self):
         """Get a separate Data2DStatistics with the compare-data (if
         present)"""
@@ -78,11 +81,11 @@ class Data2DStatistics(object):
         """Evaluate a function on the data
         @param func: either a callable function or a string that evaluates to a callable
         @param val: name of the data value to use"""
-        if callable(func):
+        if isinstance(func, collections.Callable):
             f=func
         elif type(func)==str:
             f=eval(func)
-            if not callable(f):
+            if not isinstance(f, collections.Callable):
                 error(func,"does not evaluate to a callable")
         else:
             error(func,"is neither callable nor a string")
@@ -95,7 +98,7 @@ class Data2DStatistics(object):
         for r in row:
             for c in col:
                 tab[(r,c)]=f(data[(r,c)])
-        
+
         return tab
 
     def range(self):
@@ -108,16 +111,17 @@ class Data2DStatistics(object):
         for r in row:
             for c in col:
                 tab[(r,c)]=(minD[(r,c)],maxD[(r,c)])
-        
+
         return tab
 
-    def relativeError(self):
-        """Return a table with the relative error"""
+    def __relativeErrorInternal(self,name):
+        """Return a table with the relative error
+        @param name: spcifies the name under which the error is found in the data"""
         dataRange=self.range()
         if self.__compare==None:
             error("Need comparison data for relative error")
 
-        maxError=self._extractTable("max",self.__compare)
+        maxError=self._extractTable(name,self.__compare)
         rErr=self._makeEmptyTable()
 
         row,col=self._getLabels()
@@ -128,7 +132,8 @@ class Data2DStatistics(object):
                 if rng>self.small:
                     try:
                         rErr[(r,c)]=mx/rng
-                    except TypeError,e:
+                    except TypeError:
+                        e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
                         rErr[(r,c)]=self.failureValue
                         if self.failureValue==None:
                             raise e
@@ -144,3 +149,13 @@ class Data2DStatistics(object):
                         rErr[(r,c)]="constant =="
 
         return rErr
+
+    def relativeError(self):
+        """Return a table with the relative error"""
+        return self.__relativeErrorInternal("max")
+
+    def relativeAverageError(self):
+        """Return a table with the relative average error"""
+        return self.__relativeErrorInternal("wAverage")
+
+# Should work with Python3 and Python2

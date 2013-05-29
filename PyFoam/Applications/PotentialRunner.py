@@ -1,12 +1,14 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PotentialRunner.py 7722 2012-01-18T17:50:53.943725Z bgschaid  $ 
+#  ICE Revision: $Id: PotentialRunner.py 12763 2013-01-08 17:56:07Z bgschaid $
 """
 Application class that implements pyFoamSteadyRunner
 """
 
+import sys
+
 from os import path,environ
 from optparse import OptionGroup
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
@@ -15,12 +17,14 @@ from PyFoam.Error import warning,error
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 
-from CommonParallel import CommonParallel
-from CommonStandardOutput import CommonStandardOutput
-from CommonServer import CommonServer
-from CommonVCSCommit import CommonVCSCommit
+from .CommonParallel import CommonParallel
+from .CommonStandardOutput import CommonStandardOutput
+from .CommonServer import CommonServer
+from .CommonVCSCommit import CommonVCSCommit
 
 from PyFoam.FoamInformation import oldTutorialStructure
+
+from PyFoam.ThirdParty.six import print_
 
 class PotentialRunner(PyFoamApplication,
                       CommonStandardOutput,
@@ -46,7 +50,7 @@ Copies the current fields for U and p to backup-files.
         pot=OptionGroup(self.parser,
                         "Solver settings",
                         "Basic settings for the potentialFoam-solver")
-        
+
         pot.add_option("--non-orthogonal-correctors",
                        type="int",
                        dest="noCorr",
@@ -78,12 +82,12 @@ Copies the current fields for U and p to backup-files.
                                default=None,
                                help="Sets the pressure reference value for closed cases")
         self.parser.add_option_group(pot)
-        
+
         CommonParallel.addOptions(self)
         CommonStandardOutput.addOptions(self)
         CommonServer.addOptions(self,False)
         CommonVCSCommit.addOptions(self)
-        
+
     def run(self):
         cName=self.parser.getArgs()[0]
         sol=SolutionDirectory(cName,archive=None)
@@ -94,7 +98,7 @@ Copies the current fields for U and p to backup-files.
         if self.opts.writep:
             initial["p.prepotential"]=initial["p"]
         initial["U.prepotential"]=initial["U"]
-        
+
         lam=self.getParallel(sol)
 
         if self.opts.writep:
@@ -107,11 +111,11 @@ Copies the current fields for U and p to backup-files.
             argv+=[".",cName]
         else:
             argv+=["-case",cName]
-        
+
         self.setLogname(default="Potential",useApplication=False)
 
         self.checkAndCommit(sol)
-        
+
         run=BasicRunner(argv=argv+writep,
                         server=self.opts.server,
                         logname=self.opts.logname,
@@ -121,7 +125,7 @@ Copies the current fields for U and p to backup-files.
                         logTail=self.opts.logTail,
                         noLog=self.opts.noLog)
 
-        print "Setting system-directory for potentialFoam"
+        print_("Setting system-directory for potentialFoam")
         trig=PotentialTrigger(sol,
                               self.opts.noCorr,
                               self.opts.tolerance,
@@ -131,7 +135,7 @@ Copies the current fields for U and p to backup-files.
         run.addEndTrigger(trig.resetIt)
 
         self.addToCaseLog(cName,"Starting")
-        
+
         run.start()
 
         self.setData(run.data)
@@ -147,14 +151,14 @@ class PotentialTrigger:
         self.schemes=ParsedParameterFile(path.join(sol.systemDir(),"fvSchemes"),backup=True)
         self.control=ParsedParameterFile(path.join(sol.systemDir(),"controlDict"),backup=True)
         self.controlOrig=ParsedParameterFile(path.join(sol.systemDir(),"controlDict"),backup=False)
-        
+
         pre=environ["FOAM_TUTORIALS"]
         if not oldTutorialStructure():
             pre=path.join(pre,"basic")
         pot=SolutionDirectory(path.join(pre,"potentialFoam","cylinder"),archive=None,paraviewLink=False)
-        
+
         self.fresh=True
-        
+
         try:
             if "SIMPLE" not in self.solution:
                 self.solution["SIMPLE"]=ParsedParameterFile(path.join(pot.systemDir(),"fvSolution"),backup=False)["SIMPLE"]
@@ -169,40 +173,41 @@ class PotentialTrigger:
                 self.solution["SIMPLE"]["pRefCell"]=pRefCell
             if pRefValue!=None:
                 self.solution["SIMPLE"]["pRefValue"]=pRefValue
-                
+
             if tolerance!=None:
                 try:
                     self.solution["solvers"]["p"][1]["tolerance"]=tolerance
                 except KeyError:
                     # 1.6 format
                     self.solution["solvers"]["p"]["tolerance"]=tolerance
-                    
+
             if relTol!=None:
                 try:
                     self.solution["solvers"]["p"][1]["relTol"]=relTol
                 except KeyError:
                     # 1.6 format
                     self.solution["solvers"]["p"]["relTol"]=relTol
-                    
+
             self.schemes.content=ParsedParameterFile(path.join(pot.systemDir(),"fvSchemes"),backup=False).content
             self.control.content=ParsedParameterFile(path.join(pot.systemDir(),"controlDict"),backup=False).content
             if "functions" in self.controlOrig:
-                print "Copying functions over"
+                print_("Copying functions over")
                 self.control["functions"]=self.controlOrig["functions"]
             if "libs" in self.controlOrig:
-                print "Copying libs over"
+                print_("Copying libs over")
                 self.control["libs"]=self.controlOrig["libs"]
-                
+
             self.solution.writeFile()
             self.schemes.writeFile()
             self.control.writeFile()
-        except Exception,e:
+        except Exception:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             warning("Restoring defaults")
             self.solution.restore()
             self.schemes.restore()
             self.control.restore()
             raise e
-        
+
     def resetIt(self):
         if self.fresh:
             warning("Trigger called: Resetting fvSchemes and fvSolution")
@@ -210,3 +215,5 @@ class PotentialTrigger:
             self.schemes.restore()
             self.control.restore()
             self.fresh=False
+
+# Should work with Python3 and Python2

@@ -1,14 +1,15 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/TestConfiguration.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: TestConfiguration.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamTestConfiguration.py
 """
 
 import sys,re
-import ConfigParser
+from PyFoam.ThirdParty.six.moves import configparser as ConfigParser
+from PyFoam.ThirdParty.six import print_
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
-from CommonParserOptions import CommonParserOptions
+from .CommonParserOptions import CommonParserOptions
 
 from PyFoam.FoamInformation import foamVersionString
 from PyFoam import configuration as config
@@ -22,29 +23,30 @@ OpenFOAM-version
 
 Used to find configuration problems
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
                                    usage="%prog [options] <section> <option>",
                                    nr=2,
                                    interspersed=True)
-        
+
     def addOptions(self):
         CommonParserOptions.addOptions(self)
-    
+
     def run(self):
         section=self.parser.getArgs()[0]
         option=self.parser.getArgs()[1]
 
-        print "Foam-Version: ",foamVersionString()
-        print "Section:      ",section
-        print "Option:       ",option
-        print "Value:        ",
+        print_("Foam-Version: ",foamVersionString())
+        print_("Section:      ",section)
+        print_("Option:       ",option)
+        print_("Value:        ",end="")
         try:
-            print config().get(section,option)
+            print_(config().get(section,option))
         except ConfigParser.NoSectionError:
-            print "<section not found>"
+            print_("<section not found>")
         except ConfigParser.NoOptionError:
-            print "<option not found>"
-            
+            print_("<option not found>")
+
+# Should work with Python3 and Python2

@@ -1,15 +1,15 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/__init__.py 7974 2012-04-13T16:39:16.800544Z bgschaid  $ 
+#  ICE Revision: $Id: __init__.py 12802 2013-03-14 12:15:26Z bgschaid $
 """ Utility-classes for OpenFOAM
 
 Module for the Execution of OpenFOAM-commands and processing their output
 """
 
-from Infrastructure.Configuration import Configuration
+from PyFoam.Infrastructure.Configuration import Configuration
 
 def version():
     """@return: Version number as a tuple"""
+    return (0,6,0)
     #    return (0,6,0,"development")
-    return (0,5,7)
 
 def versionString():
     """@return: Version number of PyFoam"""
@@ -24,7 +24,7 @@ def versionString():
     return vStr
 
 def foamVersionString():
-    from FoamInformation import foamVersionString
+    from PyFoam.FoamInformation import foamVersionString
     return foamVersionString()
 
 _configuration = Configuration()
@@ -33,3 +33,4 @@ def configuration():
     """@return: The Configuration information of PyFoam"""
     return _configuration
 
+# Should work with Python3 and Python2

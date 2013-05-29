@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Paraview/SimpleSources.py 6996 2010-11-05T18:07:37.592944Z bgschaid  $ 
+#  ICE Revision: $Id: SimpleSources.py 11898 2010-11-08 07:06:55Z bgschaid $ 
 """ Simple sources
 
 Builds and displays simple sources. Grants easy access to the actual source

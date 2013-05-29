@@ -1,21 +1,23 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/BasicRunner.py 7901 2012-03-08T16:14:41.526931Z bgschaid  $ 
+#  ICE Revision: $Id: BasicRunner.py 12785 2013-01-31 19:13:41Z bgschaid $
 """Run a OpenFOAM command"""
 
 import sys
 import string
 import gzip
 from os import path
+from platform import uname
 from threading import Timer
 from time import time,asctime
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
+from PyFoam.ThirdParty.six import print_
 
 if not 'curdir' in dir(path) or not 'sep' in dir(path):
-    print "Warning: Inserting symbols into os.path (Python-Version<2.3)"
+    print_("Warning: Inserting symbols into os.path (Python-Version<2.3)")
     path.curdir='.'
     path.sep   ='/'
-    
-from FoamThread import FoamThread
+
+from PyFoam.Execution.FoamThread import FoamThread
 from PyFoam.Infrastructure.FoamServer import FoamServer
 from PyFoam.Infrastructure.Logging import foamLogger
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
@@ -28,7 +30,7 @@ def restoreControlDict(ctrl,runner):
     warning("Restoring the controlDict")
     ctrl.restore()
     runner.controlDict=None
-    
+
 class BasicRunner(object):
     """Base class for the running of commands
 
@@ -42,10 +44,10 @@ class BasicRunner(object):
 
     The directory name for outputs is therefor created from <dir> and
     <case>
-    
+
     Provides some handle-methods that are to be overloaded for
     additional functionality"""
-    
+
     def __init__(self,
                  argv=None,
                  silent=False,
@@ -58,6 +60,7 @@ class BasicRunner(object):
                  logTail=None,
                  remark=None,
                  jobId=None,
+                 parameters=None,
                  writeState=True):
         """@param argv: list with the tokens that are the command line
         if not set the standard command line is used
@@ -70,6 +73,8 @@ class BasicRunner(object):
         @param noLog: Don't output a log file
         @param logTail: only the last lines of the log should be written
         @param remark: User defined remark about the job
+        @param parameters: User defined dictionary with parameters for
+                 documentation purposes
         @param jobId: Job ID of the controlling system (Queueing system)
         @param writeState: Write the state to some files in the case"""
 
@@ -92,30 +97,31 @@ class BasicRunner(object):
             self.dir=path.curdir
             if "-case" in self.argv:
                 self.dir=self.argv[self.argv.index("-case")+1]
-                
+
         if logname==None:
             logname="PyFoam."+path.basename(argv[0])
-            
+
         try:
             sol=self.getSolutionDirectory()
-        except OSError,e:
+        except OSError:
+            e = sys.exc_info()[1] # compatible with 2.x and 3.x
             error("Solution directory",self.dir,"does not exist. No use running. Problem:",e)
-            
+
         self.silent=silent
         self.lam=lam
         self.origArgv=self.argv
         self.writeState=writeState
         self.__lastLastSeenWrite=0
         self.__lastNowTimeWrite=0
-        
+
         if self.lam!=None:
             self.argv=lam.buildMPIrun(self.argv)
             if config().getdebug("ParallelExecution"):
-                debug("Command line:",string.join(self.argv))
-        self.cmd=string.join(self.argv," ")
+                debug("Command line:"," ".join(self.argv))
+        self.cmd=" ".join(self.argv)
         foamLogger().info("Starting: "+self.cmd+" in "+path.abspath(path.curdir))
         self.logFile=path.join(self.dir,logname+".logfile")
-        
+
         self.noLog=noLog
         self.logTail=logTail
         if self.logTail:
@@ -123,15 +129,15 @@ class BasicRunner(object):
                 warning("Log tail",self.logTail,"and no-log specified. Using logTail")
             self.noLog=True
             self.lastLines=[]
-            
+
         self.compressLog=compressLog
         if self.compressLog:
             self.logFile+=".gz"
-            
+
         self.fatalError=False
         self.fatalFPE=False
         self.fatalStackdump=False
-        
+
         self.warnings=0
         self.started=False
 
@@ -142,7 +148,7 @@ class BasicRunner(object):
             self.isRestarted=True
         else:
             self.controlDict=None
-            
+
         self.run=FoamThread(self.cmd,self)
 
         self.server=None
@@ -153,12 +159,12 @@ class BasicRunner(object):
             try:
                 IP,PID,Port=self.server.info()
                 f=open(path.join(self.dir,"PyFoamServer.info"),"w")
-                print >>f,IP,PID,Port
+                print_(IP,PID,Port,file=f)
                 f.close()
             except AttributeError:
                 warning("There seems to be a problem with starting the server:",self.server,"with attributes",dir(self.server))
                 self.server=None
-                
+
         self.createTime=None
         self.nowTime=None
         self.startTimestamp=time()
@@ -174,16 +180,31 @@ class BasicRunner(object):
         self.remark=remark
         self.jobId=jobId
 
-        self.data={"lines":0L}
+        self.data={"lines":0} #        self.data={"lines":0L}
         self.data["logfile"]=self.logFile
-        
+        self.data["casefullname"]=path.abspath(self.dir)
+        self.data["casename"]=path.basename(path.abspath(self.dir))
+        self.data["solver"]=path.basename(self.argv[0])
+        self.data["solverFull"]=self.argv[0]
+        self.data["commandLine"]=self.cmd
+        self.data["hostname"]=uname()[1]
+        if remark:
+            self.data["remark"]=remark
+        else:
+            self.data["remark"]="No remark given"
+        if jobId:
+            self.data["jobId"]=jobId
+        if parameters:
+            self.data["parameters"]=parameters
+        self.data["starttime"]=asctime()
+
     def appendTailLine(self,line):
         """Append lines to the tail of the log"""
         if len(self.lastLines)>10*self.logTail:
             # truncate the lines, but not too often
             self.lastLines=self.lastLines[-self.logTail:]
             self.writeTailLog()
-            
+
         self.lastLines.append(line+"\n")
 
     def writeTailLog(self):
@@ -194,7 +215,7 @@ class BasicRunner(object):
         else:
             fh.writelines(self.lastLines[-self.logTail:])
         fh.close()
-        
+
     def start(self):
         """starts the command and stays with it till the end"""
 
@@ -209,12 +230,16 @@ class BasicRunner(object):
 
         self.writeStartTime()
         self.writeTheState("Running")
-        
+
         check=BasicRunnerCheck()
-        
+
         self.run.start()
         interrupted=False
-        
+
+        totalWarningLines=0
+        addLinesToWarning=0
+        collectWarnings=True
+
         while self.run.check():
             try:
                 self.run.read()
@@ -222,6 +247,18 @@ class BasicRunner(object):
                     break
 
                 line=self.run.getLine()
+
+                if "errorText" in self.data:
+                    self.data["errorText"]+=line+"\n"
+
+                if addLinesToWarning>0:
+                    self.data["warningText"]+=line+"\n"
+                    addLinesToWarning-=1
+                    totalWarningLines+=1
+                    if totalWarningLines>500:
+                        collectWarnings=False
+                        addLinesToWarning=0
+                        self.data["warningText"]+="No more warnings added because limit of 500 lines exceeded"
                 self.data["lines"]+=1
                 self.lastLogLineSeen=time()
                 self.writeLastSeen()
@@ -235,7 +272,7 @@ class BasicRunner(object):
                               restoreControlDict,
                               args=[self.controlDict,self]).start()
                         self.writeRequested=False
-                        
+
                 if tmp!=None:
                     self.data["time"]=tmp
                     self.nowTime=tmp
@@ -248,29 +285,39 @@ class BasicRunner(object):
                     try:
                         self.data["stepNr"]+=1
                     except KeyError:
-                        self.data["stepNr"]=1L
-                        
+                        self.data["stepNr"]=1  # =1L
+
+                    self.data["lasttimesteptime"]=asctime()
+
                 tmp=check.getCreateTime(line)
                 if tmp!=None:
                     self.createTime=tmp
-                    
+
                 if not self.silent:
                     try:
-                        print line
-                    except IOError,e:
+                        print_(line)
+                    except IOError:
+                        e = sys.exc_info()[1] # compatible with 2.x and 3.x
                         if e.errno!=32:
                             raise e
                         else:
                             # Pipe was broken
                             self.run.interrupt()
-                            
+
                 if line.find("FOAM FATAL ERROR")>=0 or line.find("FOAM FATAL IO ERROR")>=0:
                     self.fatalError=True
+                    self.data["errorText"]="PyFoam found a Fatal Error "
+                    if "time" in self.data:
+                        self.data["errorText"]+="at time "+str(self.data["time"])+"\n"
+                    else:
+                        self.data["errorText"]+="before time started\n"
+                    self.data["errorText"]+="\n"+line+"\n"
+
                 if line.find("Foam::sigFpe::sigFpeHandler")>=0:
                     self.fatalFPE=True
                 if line.find("Foam::error::printStack")>=0:
                     self.fatalStackdump=True
-                    
+
                 if self.fatalError and line!="":
                     foamLogger().error(line)
 
@@ -280,10 +327,23 @@ class BasicRunner(object):
                         self.data["warnings"]+=1
                     except KeyError:
                         self.data["warnings"]=1
-                        
+                    if collectWarnings:
+                        addLinesToWarning=20
+                        if not "warningText" in self.data:
+                            self.data["warningText"]=""
+                        else:
+                            self.data["warningText"]+=("-"*40)+"\n"
+                        self.data["warningText"]+="Warning found by PyFoam on line "
+                        self.data["warningText"]+=str(self.data["lines"])+" "
+                        if "time" in self.data:
+                            self.data["warningText"]+="at time "+str(self.data["time"])+"\n"
+                        else:
+                            self.data["warningText"]+="before time started\n"
+                        self.data["warningText"]+="\n"+line+"\n"
+
                 if self.server!=None:
                     self.server._insertLine(line)
-                
+
                 self.lineHandle(line)
 
                 if not self.noLog:
@@ -291,43 +351,55 @@ class BasicRunner(object):
                     fh.flush()
                 elif self.logTail:
                     self.appendTailLine(line)
-                    
-            except KeyboardInterrupt,e:
+
+            except KeyboardInterrupt:
+                e = sys.exc_info()[1] # compatible with 2.x and 3.x
                 foamLogger().warning("Keyboard Interrupt")
                 self.run.interrupt()
                 self.writeTheState("Interrupted")
                 interrupted=True
-                
+
+        self.data["interrupted"]=interrupted
+        self.data["OK"]=self.runOK()
+        self.data["cpuTime"]=self.run.cpuTime()
+        self.data["cpuUserTime"]=self.run.cpuUserTime()
+        self.data["cpuSystemTime"]=self.run.cpuSystemTime()
+        self.data["wallTime"]=self.run.wallTime()
+        self.data["usedMemory"]=self.run.usedMemory()
+        self.data["endtime"]=asctime()
+
+        self.data["fatalError"]=self.fatalError
+        self.data["fatalFPE"]=self.fatalFPE
+        self.data["fatalStackdump"]=self.fatalStackdump
+
         self.writeNowTime(force=True)
-       
+
         self.stopHandle()
 
         if not interrupted:
             self.writeTheState("Finished")
-            
+
         for t in self.endTriggers:
             t()
 
-        if not self.noLog:        
+        if not self.noLog:
             fh.close()
         elif self.logTail:
             self.writeTailLog()
-            
+
         if self.server!=None:
             self.server.deregister()
             self.server.kill()
-            
+
         foamLogger().info("Finished")
 
-        self.data["OK"]=self.runOK()
-        
         return self.data
-    
+
     def writeToStateFile(self,fName,message):
         """Write a message to a state file"""
         if self.writeState:
             open(path.join(self.dir,"PyFoamState."+fName),"w").write(message+"\n")
-        
+
     def writeStartTime(self):
         """Write the real time the run was started at"""
         self.writeToStateFile("StartedAt",asctime())
@@ -336,7 +408,7 @@ class BasicRunner(object):
         """Write the current state the run is in"""
         if always or (time()-self.__lastLastSeenWrite)>9:
             self.writeToStateFile("TheState",state)
-        
+
     def writeLastSeen(self):
         if (time()-self.__lastLastSeenWrite)>10:
             self.writeToStateFile("LastOutputSeen",asctime())
@@ -346,14 +418,14 @@ class BasicRunner(object):
         if (time()-self.__lastNowTimeWrite)>10 or force:
             self.writeToStateFile("CurrentTime",str(self.nowTime))
             self.__lastNowTimeWrite=time()
-    
+
     def runOK(self):
         """checks whether the run was successful"""
         if self.started:
             return not self.fatalError and not self.fatalFPE and not self.fatalStackdump # and self.run.getReturnCode()==0
         else:
             return False
-        
+
     def startHandle(self):
         """to be called before the program is started"""
         pass
@@ -380,16 +452,16 @@ class BasicRunner(object):
             self.controlDict.replaceParameter("writeControl","timeStep")
             self.controlDict.replaceParameter("writeInterval","1")
             self.writeRequested=True
-            
+
     def stopHandle(self):
         """called after the program has stopped"""
         if self.stopMe or self.isRestarted:
             self.controlDict.restore()
-    
+
     def lineHandle(self,line):
         """called every time a new line is read"""
         pass
-    
+
     def logName(self):
         """Get the name of the logfiles"""
         return self.logFile
@@ -404,7 +476,7 @@ class BasicRunner(object):
     def addEndTrigger(self,f):
         """@param f: A function that is to be executed at the end of the simulation"""
         self.endTriggers.append(f)
-        
+
 import re
 
 class BasicRunnerCheck(object):
@@ -415,9 +487,9 @@ class BasicRunnerCheck(object):
 
     def __init__(self):
         #        self.timeExpr=re.compile("^Time = (%f%)$".replace("%f%",self.floatRegExp))
-        self.timeExpr=config().getRegexp("SolverOutput","timeregexp")     
+        self.timeExpr=config().getRegexp("SolverOutput","timeregexp")
         self.createExpr=re.compile("^Create mesh for time = (%f%)$".replace("%f%",self.floatRegExp))
-        
+
     def getTime(self,line):
         """Does this line contain time information?"""
         m=self.timeExpr.match(line)
@@ -425,7 +497,7 @@ class BasicRunnerCheck(object):
             return float(m.group(2))
         else:
             return None
-        
+
     def getCreateTime(self,line):
         """Does this line contain mesh time information?"""
         m=self.createExpr.match(line)
@@ -433,11 +505,12 @@ class BasicRunnerCheck(object):
             return float(m.group(1))
         else:
             return None
-        
+
     def controlDictRead(self,line):
         """Was the controlDict reread?"""
         if line.find("Reading object controlDict from file")>=0:
             return True
         else:
             return False
-        
+
+# Should work with Python3 and Python2

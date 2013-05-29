@@ -1,9 +1,10 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Execute.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: Execute.py 12561 2012-05-11 12:15:56Z bgschaid $ 
 """
 Application class that implements pyFoamExecute
 """
 
-from PyFoamApplication import PyFoamApplication
+from PyFoam.Applications.PyFoamApplication import PyFoamApplication
+from PyFoam.ThirdParty.six import print_
 
 from subprocess import call
 
@@ -27,4 +28,6 @@ OpenFOAM-version. Is of use for using wmake for a specific version
     def run(self):            
         result=call(self.parser.getArgs())
         if result!=0:
-            print "\nError result:",result
+            print_("\nError result:",result)
+
+# Should work with Python3 and Python2

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotHelpers.py 5985 2009-12-21T21:05:52.364284Z bgschaid  $ 
+#  ICE Revision: $Id: PlotHelpers.py 12760 2013-01-03 23:10:16Z bgschaid $
 """
 Helper-functions for the plots
 """
@@ -17,8 +17,5 @@ def cleanFilename(orig):
     # LaTeX doesn't like dots
     fName=fName.replace('.','dot')
     result=path.join(dName,fName)+ext
-        
+
     return result
-
-
-    

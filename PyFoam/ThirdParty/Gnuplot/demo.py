@@ -16,8 +16,10 @@ the Gnuplot package, see test.py.
 from numpy import *
 
 # If the package has been installed correctly, this should work:
-import Gnuplot, Gnuplot.funcutils
+from PyFoam.ThirdParty import Gnuplot
+from PyFoam.ThirdParty.Gnuplot import funcutils
 
+from PyFoam.ThirdParty.six.moves import input as rinput
 
 def demo():
     """Demonstrate the Gnuplot package."""
@@ -27,11 +29,11 @@ def demo():
     # are also output on stderr.
     g = Gnuplot.Gnuplot(debug=1)
     g.title('A simple example') # (optional)
-    g('set data style linespoints') # give gnuplot an arbitrary command
+    g('set style data linespoints') # give gnuplot an arbitrary command
     # Plot a list of (x, y) pairs (tuples or a numpy array would
     # also be OK):
     g.plot([[0,1.1], [1,5.8], [2,3.3], [3,4.2]])
-    raw_input('Please press return to continue...\n')
+    rinput('Please press return to continue...\n')
 
     g.reset()
     # Plot one dataset from an array and one via a gnuplot function;
@@ -40,7 +42,7 @@ def demo():
         x = arange(10, dtype='float_')
     except TypeError:
         x = arange(10, typecode='d')
-        
+
     y1 = x**2
     # Notice how this plotitem is created here but used later?  This
     # is convenient if the same dataset has to be plotted multiple
@@ -48,13 +50,13 @@ def demo():
     # written to a temporary file once.
     d = Gnuplot.Data(x, y1,
                      title='calculated by python',
-                     with_='points 3 3')
+                     with_='points pt 3 ps 3')
     g.title('Data can be computed by python or gnuplot')
     g.xlabel('x')
     g.ylabel('x squared')
     # Plot a function alongside the Data PlotItem defined above:
     g.plot(Gnuplot.Func('x**2', title='calculated by gnuplot'), d)
-    raw_input('Please press return to continue...\n')
+    rinput('Please press return to continue...\n')
 
     # Save what we just plotted as a color postscript file.
 
@@ -65,7 +67,7 @@ def demo():
     g.ylabel('x^2') # take advantage of enhanced postscript mode
     g.hardcopy('gp_test.ps', enhanced=1, color=1)
     print ('\n******** Saved plot to postscript file "gp_test.ps" ********\n')
-    raw_input('Please press return to continue...\n')
+    rinput('Please press return to continue...\n')
 
     g.reset()
     # Demonstrate a 3-d plot:
@@ -79,7 +81,7 @@ def demo():
     ym = y[newaxis,:]
     m = (sin(xm) + 0.1*xm) - ym**2
     g('set parametric')
-    g('set data style lines')
+    g('set style data lines')
     g('set hidden')
     g('set contour base')
     g.title('An example of a surface plot')
@@ -93,7 +95,7 @@ def demo():
     # binary data.  Change this to `binary=1' (or omit the binary
     # option) to get the advantage of binary format.
     g.splot(Gnuplot.GridData(m,x,y, binary=0))
-    raw_input('Please press return to continue...\n')
+    rinput('Please press return to continue...\n')
 
     # plot another function, but letting GridFunc tabulate its values
     # automatically.  f could also be a lambda or a global function:
@@ -101,7 +103,7 @@ def demo():
         return 1.0 / (1 + 0.01 * x**2 + 0.5 * y**2)
 
     g.splot(Gnuplot.funcutils.compute_GridData(x,y, f, binary=0))
-    raw_input('Please press return to continue...\n')
+    rinput('Please press return to continue...\n')
 
     # Explicit delete shouldn't be necessary, but if you are having
     # trouble with temporary files being left behind, try uncommenting
@@ -113,3 +115,4 @@ def demo():
 if __name__ == '__main__':
     demo()
 
+# Should work with Python3 and Python2

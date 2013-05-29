@@ -1,11 +1,12 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Configuration.py 7646 2011-12-19T09:18:22.197517Z bgschaid  $ 
+#  ICE Revision: $Id: Configuration.py 12798 2013-03-04 10:41:53Z bgschaid $
 """Reads configuration-files that define defaults for various PyFoam-Settings
 
 Also hardcodes defaults for the settings"""
 
-from ConfigParser import ConfigParser,NoOptionError
+from PyFoam.ThirdParty.six.moves import configparser
+from PyFoam.ThirdParty.six import iteritems,PY3
 
-from Hardcoded import globalConfigFile,userConfigFile,globalDirectory,userDirectory,globalConfigDir,userConfigDir
+from PyFoam.Infrastructure.Hardcoded import globalConfigFile,userConfigFile,globalDirectory,userDirectory,globalConfigDir,userConfigDir
 
 from os import path
 import glob,re
@@ -50,6 +51,7 @@ _defaults={
     "Paths": {
     "python" : "/usr/bin/python",
     "bash" : "/bin/bash",
+    "paraview" : "paraview",
     },
     "ClusterJob": {
     "useFoamMPI":'["1.5"]',
@@ -89,22 +91,63 @@ _defaults={
     },
     "Clearing": {
     "additionalPatterns":"[]",
-    }
+    },
+    "postRunHook_WriteMySqlite" : {
+        "enabled":False,
+        "module":"WriteToSqliteDatabase",
+        "createDatabase":False,
+        "database":"~/databaseOfAllMyRuns.db",
+    },
+    "postRunHook_SendToPushover" : {
+        "enabled":False,
+        "minRunTime":600,
+        "useSSL":True,
+        "module":"SendToWebservice",
+        "host":"api.pushover.net:443",
+        "method":"POST",
+        "url":"/1/messages",
+        "param_token":"invalid_get_yourself_one_at_pushover.net",
+        "param_user":"invalid_get_yourself_an_account_at_pushover.net",
+        "param_title":"<!--(if OK)-->Finished<!--(else)-->Failed<!--(end)-->: |-casename-| (|-solver-|)",
+        "param_message":"""Case |-casefullname-| ended after |-wallTime-|s
+Last timestep: t=|-time-|
+Machine: |-hostname-|
+Full command: |-commandLine-|""",
+        "header_Content-type": "application/x-www-form-urlencoded",
+        "templates":"title message"
+    },
+    "Cloning" : {
+        "addItem":"[]",
+    },
     }
 
-class Configuration(ConfigParser):
+class ConfigurationSectionProxy(object):
+    """Wraps a Confguration so that the section automatically becomes the
+    first argument"""
+
+    def __init__(self,conf,section):
+        self.conf=conf
+        self.section=section
+
+    def __getattr__(self,name):
+        f=getattr(self.conf,name)
+        def curried(*args,**kwargs):
+            return f(*((self.section,)+args),**kwargs)
+        return curried
+
+class Configuration(configparser.ConfigParser):
     """Reads the settings from files (if existing). Otherwise uses hardcoded
     defaults"""
-    
+
     def __init__(self):
         """Constructs the ConfigParser and fills it with the hardcoded defaults"""
-        ConfigParser.__init__(self)
+        configparser.ConfigParser.__init__(self)
 
-        for section,content in _defaults.iteritems():
+        for section,content in iteritems(_defaults):
             self.add_section(section)
-            for key,value in content.iteritems():
-                self.set(section,key,value)
-                
+            for key,value in iteritems(content):
+                self.set(section,key,str(value))
+
         self.read(self.configFiles())
 
         self.validSections={}
@@ -119,9 +162,14 @@ class Configuration(ConfigParser):
             except KeyError:
                 self.validSections[name]=[s]
 
-        for name,sections in self.validSections.iteritems():
+        for name,sections in iteritems(self.validSections):
             if not name in sections:
-                print "Invalid configuration for",name,"there is no default section for it in",sections
+                print("Invalid configuration for",name,"there is no default section for it in",sections)
+
+    def sectionProxy(self,section):
+        """Return a proxy object that makes it possible to avoid the section
+        specification"""
+        return ConfigurationSectionProxy(self,section)
 
     def bestSection(self,section,option):
         """Get the best-fitting section that has that option"""
@@ -133,7 +181,7 @@ class Configuration(ConfigParser):
                 return section
         except KeyError:
             return section
-        
+
         result=section
         fullName=section+"-"+foamVersionString()
 
@@ -141,9 +189,9 @@ class Configuration(ConfigParser):
             if fullName.find(s)==0 and len(s)>len(result):
                 if self.has_option(s,option):
                     result=s
-            
+
         return result
-    
+
     def configSearchPath(self):
         """Defines a search path for the configuration files as a pare of type/name
         pairs"""
@@ -152,7 +200,7 @@ class Configuration(ConfigParser):
                ("file",userConfigFile()),
                ("directory",userConfigDir())]
         return files
-        
+
     def configFiles(self):
         """Return a list with the configurationfiles that are going to be used"""
         files=[]
@@ -166,17 +214,17 @@ class Configuration(ConfigParser):
                         files.append(ff)
                 else:
                     error("Unknown type",t,"for the search entry",f)
-                
+
         return files
-    
+
     def addFile(self,filename,silent=False):
         """Add another file to the configuration (if it exists)"""
         if not path.exists(filename):
             if not silent:
-                print "The configuration file",filename,"is not there"
+                print("The configuration file",filename,"is not there")
         else:
             self.read([filename])
-            
+
     def dump(self):
         """Dumps the contents in INI-Form
         @return: a string with the contents"""
@@ -209,10 +257,26 @@ class Configuration(ConfigParser):
         @param default: if set and the option is not found, then this value is used"""
 
         try:
-            return ConfigParser.getboolean(self,
+            return configparser.ConfigParser.getboolean(self,
                                            self.bestSection(section,option),
                                            option)
-        except NoOptionError:
+        except configparser.NoOptionError:
+            if default!=None:
+                return default
+            else:
+                raise
+
+    def getint(self,section,option,default=None):
+        """Overrides the original implementation from ConfigParser
+        @param section: the section
+        @param option: the option
+        @param default: if set and the option is not found, then this value is used"""
+
+        try:
+            return int(configparser.ConfigParser.get(self,
+                                                     self.bestSection(section,option),
+                                                     option))
+        except configparser.NoOptionError:
             if default!=None:
                 return default
             else:
@@ -225,10 +289,10 @@ class Configuration(ConfigParser):
         @param default: if set and the option is not found, then this value is used"""
 
         try:
-            return ConfigParser.getfloat(self,
-                                         self.bestSection(section,option),
-                                         option)
-        except (NoOptionError,ValueError):
+            return float(configparser.ConfigParser.get(self,
+                                                       self.bestSection(section,option),
+                                                       option))
+        except (configparser.NoOptionError,ValueError):
             if default!=None:
                 return default
             else:
@@ -241,9 +305,9 @@ class Configuration(ConfigParser):
         @param option: the option
         @param default: if set and the option is not found, then this value is used"""
         floatRegExp="[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?"
-        
+
         return re.compile(self.get(section,option).replace("%f%",floatRegExp))
-    
+
     def get(self,section,option,default=None):
         """Overrides the original implementation from ConfigParser
         @param section: the section
@@ -251,10 +315,10 @@ class Configuration(ConfigParser):
         @param default: if set and the option is not found, then this value is used"""
 
         try:
-            return ConfigParser.get(self,
+            return configparser.ConfigParser.get(self,
                                     self.bestSection(section,option),
                                     option)
-        except NoOptionError:
+        except configparser.NoOptionError:
             if default!=None:
                 return default
             else:
@@ -264,4 +328,5 @@ class Configuration(ConfigParser):
         """Gets a debug switch"""
 
         return self.getboolean("Debug",name,default=False)
-    
+
+# Should work with Python3 and Python2

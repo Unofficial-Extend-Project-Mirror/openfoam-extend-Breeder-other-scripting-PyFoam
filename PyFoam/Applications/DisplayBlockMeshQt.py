@@ -3,18 +3,24 @@ New implementation of DisplayBlockMesh using PyQT4
 """
 
 from PyFoam.RunDictionary.ParsedBlockMeshDict import ParsedBlockMeshDict
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Applications.PyFoamApplicationQt4 import PyFoamApplicationQt4
 from PyFoam.Error import error,warning
 from PyFoam.RunDictionary.SolutionDirectory import NoTouchSolutionDirectory
 from PyFoam.Execution.BasicRunner import BasicRunner
+from PyFoam.Basics.TemplateFile import TemplateFile
+
+from os import path
+from optparse import OptionGroup
+
+from PyFoam.ThirdParty.six import print_
 
 import sys
-from os import path
 
 def doImports():
     try:
         global QtGui,QtCore
-        from PyQt4 import QtGui,QtCore        
+        from PyQt4 import QtGui,QtCore
         global vtk
 
         global usedVTK
@@ -27,7 +33,8 @@ def doImports():
             from paraview import vtk
         global QVTKRenderWindowInteractor
         from vtk.qt4 import QVTKRenderWindowInteractor
-    except ImportError,e:
+    except ImportError:
+        e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
         error("Error while importing modules:",e)
 
 doImports()
@@ -59,44 +66,52 @@ class UtilityThread(QtCore.QThread):
             runner.start()
             if not runner.runOK():
                 self.status=" - Problem"
-                
+
         except IOError:
             self.status=" - OS Problem"
-    
+
     def append(self,line):
         self.emit(QtCore.SIGNAL("newLine(QString)"),line)
-        
+
 class DisplayBlockMeshDialog(QtGui.QMainWindow):
-    def __init__(self,fName):
+    def __init__(self,
+                 fName,
+                 valuesFile=None):
         super(DisplayBlockMeshDialog,self).__init__(None)
         self.fName=fName
+        self.vName=valuesFile
 
         self.numberScale=2
         self.pointScale=1
         self.axisLabelScale=1
         self.axisTubeScale=0.5
-        
-        self.setWindowTitle("%s[*] - DisplayBlockMesh" % fName)
+
+        titleString="%s[*] - DisplayBlockMesh" % fName
+
+        if self.vName:
+            titleString+="(Values: %s)" % path.basename(self.vName)
+
+        self.setWindowTitle(titleString)
 
         self.caseDir=None
         try:
-            caseDir=path.sep+apply(path.join,path.abspath(fName).split(path.sep)[:-3])
+            caseDir=path.sep+path.join(*path.abspath(fName).split(path.sep)[:-3])
             isOK=NoTouchSolutionDirectory(caseDir)
             if isOK:
                 self.caseDir=caseDir
                 self.setWindowTitle("Case %s[*] - DisplayBlockMesh" % caseDir.split(path.sep)[-1])
         except:
             pass
-        
+
         central = QtGui.QWidget()
         self.setCentralWidget(central)
-        
+
         layout = QtGui.QVBoxLayout()
         central.setLayout(layout)
         self.renInteractor=QVTKRenderWindowInteractor.QVTKRenderWindowInteractor(central)
         #        self.renInteractor.Initialize() # this creates a segfault for old PyQt
         self.renInteractor.Start()
-        
+
         layout.addWidget(self.renInteractor)
 
         mainDock=QtGui.QDockWidget("Main controls",
@@ -106,11 +121,11 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         mainDock.setAllowedAreas(QtCore.Qt.TopDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
         mainDockWidget=QtGui.QWidget()
         mainDock.setWidget(mainDockWidget)
-        
+
         subLayout=QtGui.QGridLayout()
         mainDockWidget.setLayout(subLayout)
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, mainDock)
-        
+
         self.renInteractor.show()
         self.renWin = self.renInteractor.GetRenderWindow()
         self.ren = vtk.vtkRenderer()
@@ -135,7 +150,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         self.connect(self.rereadAction,
                      QtCore.SIGNAL("triggered()"),
                      self.reread)
-        
+
         self.blockMeshAction=QtGui.QAction("&BlockMesh",
                                         self)
         self.blockMeshAction.setShortcut("Ctrl+B")
@@ -143,7 +158,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         self.connect(self.blockMeshAction,
                      QtCore.SIGNAL("triggered()"),
                      self.blockMesh)
-        
+
         self.checkMeshAction=QtGui.QAction("Chec&kMesh",
                                         self)
         self.checkMeshAction.setShortcut("Ctrl+K")
@@ -154,10 +169,10 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         if self.caseDir==None:
             self.blockMeshAction.setEnabled(False)
             self.checkMeshAction.setEnabled(False)
-        
+
         self.quitAction=QtGui.QAction("&Quit",
                                       self)
-        
+
         self.quitAction.setShortcut("Ctrl+Q")
         self.quitAction.setToolTip("Quit this program")
         self.connect(self.quitAction,
@@ -166,21 +181,25 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
 
         self.saveAction=QtGui.QAction("&Save",
                                       self)
-        
+
         self.saveAction.setShortcut(QtGui.QKeySequence.Save)
         self.saveAction.setToolTip("Save the blockmesh from the editor")
         self.connect(self.saveAction,
                      QtCore.SIGNAL("triggered()"),
                      self.saveBlockMesh)
         self.saveAction.setEnabled(False)
-        
+
         self.fileMenu=self.menuBar().addMenu("&Blockmesh file")
         self.fileMenu.addAction(self.rereadAction)
         self.fileMenu.addAction(self.saveAction)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.quitAction)
 
-        self.editorDock=QtGui.QDockWidget("Edit blockMesh",
+        editTitle="Edit blockMesh"
+        if self.vName:
+            editTitle+=" - template"
+
+        self.editorDock=QtGui.QDockWidget(editTitle,
                                           self)
         self.editorDock.setObjectName("EditorDock")
         self.editorDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea)
@@ -197,11 +216,31 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
             self.saveAction.setEnabled(True)
 
         self.editor.setFont(QtGui.QFont("Courier"))
-        
+
         self.editorDock.setWidget(self.editor)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea,self.editorDock)
         self.editorDock.hide()
-        
+
+        if self.vName:
+            self.vEditorDock=QtGui.QDockWidget("Values file",
+                                               self)
+            self.vEditorDock.setObjectName("VEditorDock")
+            self.vEditorDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea)
+
+            try:
+                self.vEditor=QtGui.QPlainTextEdit()
+                self.vEditor.setLineWrapMode(QtGui.QPlainTextEdit.NoWrap)
+                self.vEditor.textChanged.connect(self.blockMeshWasModified)
+            except AttributeError:
+                warning("Old PyQT4-version. Editing might not work as expected")
+                self.vEditor=QtGui.QTextEdit()
+
+            self.vEditor.setFont(QtGui.QFont("Courier"))
+
+            self.vEditorDock.setWidget(self.vEditor)
+            self.addDockWidget(QtCore.Qt.RightDockWidgetArea,self.vEditorDock)
+            self.vEditorDock.hide()
+
         self.utilityDock=QtGui.QDockWidget("Utility output",
                                           self)
         self.utilityOutput=QtGui.QTextEdit()
@@ -218,6 +257,10 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
 
         self.texteditorAction=self.editorDock.toggleViewAction()
         self.texteditorAction.setShortcut("Ctrl+E")
+
+        if self.vName:
+            self.textveditorAction=self.vEditorDock.toggleViewAction()
+            self.textveditorAction.setShortcut("Ctrl+F")
 
         self.utilityAction=self.utilityDock.toggleViewAction()
         self.utilityAction.setShortcut("Ctrl+U")
@@ -260,18 +303,20 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         displayLayout.addWidget(axisTScale,3,1)
 
         displayLayout.setRowStretch(4,10)
-        
+
         self.displayDock.setWidget(displayStuff)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea,self.displayDock)
         self.displayDock.hide()
 
         self.displaypropertiesAction=self.displayDock.toggleViewAction()
         self.displaypropertiesAction.setShortcut("Ctrl+D")
-        
+
         self.displayMenu=self.menuBar().addMenu("&Display")
         self.displayMenu.addAction(self.texteditorAction)
         self.displayMenu.addAction(self.displaypropertiesAction)
         self.displayMenu.addAction(self.utilityAction)
+        if self.vName:
+            self.displayMenu.addAction(self.textveditorAction)
 
         self.utilityMenu=self.menuBar().addMenu("&Utilities")
         self.utilityMenu.addAction(self.blockMeshAction)
@@ -281,10 +326,11 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
 
         try:
             self.readFile()
-        except Exception,e:
+        except Exception:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             warning("While reading",self.fName,"this happened:",e)
             raise e
-        
+
         self.ren.ResetCamera()
 
         self.oldBlock=-1
@@ -314,7 +360,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         label2=QtGui.QLabel("Patch (-1 is none)")
         subLayout.addWidget(label2,1,0)
         self.scroll2=QtGui.QSlider(QtCore.Qt.Horizontal)
-        self.scroll2.setRange(-1,len(self.patches.keys())-1)
+        self.scroll2.setRange(-1,len(list(self.patches.keys()))-1)
         self.scroll2.setValue(-1)
         self.scroll2.setTickPosition(QtGui.QSlider.TicksBothSides)
         self.scroll2.setTickInterval(1)
@@ -331,7 +377,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         b1=QtGui.QPushButton("Quit")
         buttonLayout.addWidget(b1)
         self.connect(b1,QtCore.SIGNAL("clicked()"),self.close)
-        
+
         self.iren = self.renWin.GetInteractor()
         self.istyle = vtk.vtkInteractorStyleSwitch()
 
@@ -348,19 +394,526 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
 
         self.restoreGeometry(QtCore.QSettings().value("geometry").toByteArray())
         self.restoreState(QtCore.QSettings().value("state").toByteArray())
-        
+
         self.setStatus()
+
+        self.setupBlockingGui()
+
+        self.reread()
+
+    def setupBlockingGui(self):
+        """sets up the GUI to add the Blocking functions."""
+        self.isBlocking = False
+        self.isPatching = False
+        self.tmpBlock = []
+        self.redLineActors = []
+        self.tmpBlockActor = None
+
+        self.tmpPatch = []
+        self.tmpPatchActor = None
+
+        self.tmpGlyphActor = None
+
+        self.renInteractor.GetPicker().AddObserver('PickEvent', self.PickEvent)
+
+        self.blockingDock=QtGui.QDockWidget("GUI Blocking",
+                                          self)
+        self.blockingDock.setObjectName("BlockingDock")
+        self.blockingDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea)
+
+        displayStuff=QtGui.QWidget()
+        displayLayout=QtGui.QGridLayout()
+        displayStuff.setLayout(displayLayout)
+
+        """Define Block"""
+        self.defineBlockButton=QtGui.QPushButton("Define Block")
+        displayLayout.addWidget(self.defineBlockButton,0,0)
+        self.connect(self.defineBlockButton,QtCore.SIGNAL("clicked()"),self.defineBlock)
+
+        """Insert Block"""
+        self.insertBlockButton=QtGui.QPushButton("Insert Block")
+        self.insertBlockButton.setEnabled(False)
+        displayLayout.addWidget(self.insertBlockButton,0,1)
+        self.connect(self.insertBlockButton,QtCore.SIGNAL("clicked()"),self.insertBlock)
+
+        displayLayout.addWidget(QtGui.QLabel("Press 'p' to select vertices"),1,0,1,4,QtCore.Qt.AlignLeft)
+
+        """Division Spin Box"""
+        self.blockdivx = 1;
+        self.blockdivy = 1;
+        self.blockdivz = 1;
+
+
+        self.blockDivSpinX=QtGui.QDoubleSpinBox()
+        self.blockDivSpinX.setValue(self.blockdivx)
+        self.blockDivSpinX.setMinimum(1)
+        self.blockDivSpinX.setSingleStep(1)
+        self.blockDivSpinX.setDecimals(0)
+
+
+        self.blockDivSpinY=QtGui.QDoubleSpinBox()
+        self.blockDivSpinY.setValue(self.blockdivy)
+        self.blockDivSpinY.setMinimum(1)
+        self.blockDivSpinY.setSingleStep(1)
+        self.blockDivSpinY.setDecimals(0)
+
+
+        self.blockDivSpinZ=QtGui.QDoubleSpinBox()
+        self.blockDivSpinZ.setValue(self.blockdivz)
+        self.blockDivSpinZ.setMinimum(1)
+        self.blockDivSpinZ.setSingleStep(1)
+        self.blockDivSpinZ.setDecimals(0)
+
+        divLayout = QtGui.QHBoxLayout()
+        divWidget = QtGui.QWidget()
+        displayLayout.addWidget(QtGui.QLabel("Block Division"),2,0)
+        divLayout.addWidget(self.blockDivSpinX)
+        divLayout.addWidget(self.blockDivSpinY)
+        divLayout.addWidget(self.blockDivSpinZ)
+        divWidget.setLayout(divLayout)
+        displayLayout.addWidget(divWidget,2,1,1,3)
+
+        """Text Editor"""
+
+        self.hexeditor=QtGui.QTextEdit()
+        self.hexeditor.setFont(QtGui.QFont("Courier"))
+        self.hexeditor.setLineWrapMode(QtGui.QTextEdit.NoWrap)
+        self.hexeditor.setReadOnly(True)
+        #self.hexeditor.textChanged.connect(self.blockMeshWasModified)
+        displayLayout.addWidget(self.hexeditor,3,0,1,4)
+
+        """patch button"""
+        self.definePatchButton=QtGui.QPushButton("Define Patch")
+        displayLayout.addWidget(self.definePatchButton,4,0)
+        self.connect(self.definePatchButton,QtCore.SIGNAL("clicked()"),self.definePatch)
+
+        self.insertPatchButton=QtGui.QPushButton("Insert Patch")
+        displayLayout.addWidget(self.insertPatchButton,5,0)
+        self.connect(self.insertPatchButton,QtCore.SIGNAL("clicked()"),self.insertPatch)
+        self.insertPatchButton.setEnabled(False)
+
+        self.reverseNormalButton=QtGui.QPushButton("Reverse Normal")
+        displayLayout.addWidget(self.reverseNormalButton,4,1)
+        self.connect(self.reverseNormalButton,QtCore.SIGNAL("clicked()"),self.reverseNormal)
+        self.reverseNormalButton.setEnabled(False)
+
+        self.selectPatchBox=QtGui.QComboBox()
+        displayLayout.addWidget(self.selectPatchBox,4,2,1,2)
+
+        for str in self.patches.keys():
+            self.selectPatchBox.addItem(str)
+
+        self.blockingDock.setWidget(displayStuff)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea,self.blockingDock)
+        self.blockingDock.hide()
+
+        self.blockingGuiAction=self.blockingDock.toggleViewAction()
+        self.blockingGuiAction.setShortcut("Ctrl+G")
+        self.displayMenu.addAction(self.blockingGuiAction)
+        self.blockingGuiAction.setEnabled(True)
+
+    def AddBlockToDict(self):
+        """Adds block to dict, using pyFoam functions"""
+        msgBox = QtGui.QMessageBox()
+        msgBox.setText("The document has been modified.")
+        msgBox.setInformativeText("Do you want to save your changes?")
+        msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel)
+        msgBox.setDefaultButton(QtGui.QMessageBox.Ok)
+        ret = msgBox.exec_()
+
+        if(ret==QtGui.QMessageBox.Ok):
+            self.blockMesh["blocks"].append("hex")
+            self.blockMesh["blocks"].append(self.tmpBlock)
+            self.blockMesh["blocks"].append(self.getDivString())
+            self.blockMesh["blocks"].append("simpleGrading")
+            self.blockMesh["blocks"].append("(1 1 1)")
+            self.blockMesh.writeFile()
+            self.reread()
+
+    def AddBlockToText(self):
+        """Inserts block into opened dict"""
+        msgBox = QtGui.QMessageBox()
+        msgBox.setText("The document has been modified.")
+        msgBox.setInformativeText("Do you want to save your changes?")
+        msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel)
+        msgBox.setDefaultButton(QtGui.QMessageBox.Ok)
+        ret = msgBox.exec_()
+
+        if(ret==QtGui.QMessageBox.Ok):
+            txt=str(self.editor.toPlainText())
+            p1=txt.find("blocks")
+            p2=txt.find("(",p1+1)
+            if p1>=0 and p2>=0:
+              txt=txt[:p2+1]+self.getTotalHexString()+txt[p2+1:]
+              self.editor.setPlainText(txt)
+              self.saveBlockMesh()
+
+    def AddPatchToText(self):
+        """Inserts patch into opened dict"""
+        msgBox = QtGui.QMessageBox()
+        msgBox.setText("The document has been modified.")
+        msgBox.setInformativeText("Do you want to save your changes?")
+        msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel)
+        msgBox.setDefaultButton(QtGui.QMessageBox.Ok)
+        ret = msgBox.exec_()
+
+        if(ret==QtGui.QMessageBox.Ok):
+            txt=str(self.editor.toPlainText())
+            patchname = self.selectPatchBox.currentText()
+            self.setStatus("Adding to patch "+patchname)
+            p1=txt.find(patchname)
+            p2=txt.find("{",p1+1)
+            p3=txt.find("(",p1+1)
+
+            success=False
+
+            if p1>=0 and p2>=0 and (p3<0 or p3>p2):
+                p11=txt.find("faces",p2)
+                p22=txt.find("(",p11+1)
+                if p11>=0 and p22>=0:
+                    success=True
+                    txt=txt[:p22+1]+self.getTotalPatchString()+txt[p22+1:]
+            elif p1>=0 and p3>=0:
+                # old blockMeshFormat
+                success=True
+                txt=txt[:p3+1]+self.getTotalPatchString()+txt[p3+1:]
+
+            if success:
+                self.editor.setPlainText(txt)
+                self.saveBlockMesh()
+            else:
+                self.setStatus("Could not insert into patch",patchname)
+
+    def PickEvent(self, obj, evt):
+        """Callback for picking event"""
+        if(self.isBlocking):
+            self.pickBlockVertice()
+        if(self.isPatching):
+            self.pickPatchVertice()
+        return 1
+
+    def pickBlockVertice(self):
+        """pick a sphere and add point to block"""
+        i=self.pickVertice()
+        if(i==None):
+            return
+
+        if (len(self.tmpBlock)<=0 or self.tmpBlock[-1] != i):
+            self.tmpBlock.append(i)
+            self.hexeditor.moveCursor(QtGui.QTextCursor.End)
+            self.hexeditor.insertPlainText(str(self.tmpBlock[-1]) + " ")
+            n=len(self.tmpBlock)
+            if(n>1):
+                if(n==5):
+                    self.addTmpBlockingLine(self.tmpBlock[n-5],self.tmpBlock[-1])
+                    self.addTmpBlockingLine(self.tmpBlock[0],self.tmpBlock[3])
+                elif(n>5):
+                    self.addTmpBlockingLine(self.tmpBlock[n-5],self.tmpBlock[-1])
+                    self.addTmpBlockingLine(self.tmpBlock[-2],self.tmpBlock[-1])
+                else:
+                    self.addTmpBlockingLine(self.tmpBlock[-2],self.tmpBlock[-1])
+
+        if(len(self.tmpBlock)>=8):
+            self.isBlocking=False
+            self.hexeditor.moveCursor(QtGui.QTextCursor.End)
+            self.hexeditor.insertPlainText(self.getEndHexString())
+            self.setStatus("Block finished")
+            self.showTmpBlock()
+            #self.AddBlockToDict()
+            self.insertBlockButton.setEnabled(True)
+
+    def pickPatchVertice(self):
+        """pick a sphere and add point to vertice"""
+        i=self.pickVertice()
+        if(i==None):
+            return
+
+        if (len(self.tmpPatch)<=0 or self.tmpPatch[-1] != i):
+            self.tmpPatch.append(i)
+            self.hexeditor.moveCursor(QtGui.QTextCursor.End)
+            self.hexeditor.insertPlainText(str(self.tmpPatch[-1]) + " ")
+            n=len(self.tmpPatch)
+            if(n>1):
+                if(n>3):
+                    self.addTmpBlockingLine(self.tmpPatch[0],self.tmpPatch[-1])
+                    self.addTmpBlockingLine(self.tmpPatch[-2],self.tmpPatch[-1])
+                else:
+                    self.addTmpBlockingLine(self.tmpPatch[-2],self.tmpPatch[-1])
+
+        if(len(self.tmpPatch)>=4):
+            self.isPatching=False
+            self.hexeditor.moveCursor(QtGui.QTextCursor.End)
+            self.hexeditor.insertPlainText(")")
+            self.setStatus("Patch finished")
+            self.showTmpPatch()
+            self.insertPatchButton.setEnabled(True)
+            self.reverseNormalButton.setEnabled(True)
+
+    def pickVertice(self):
+        """pick a vertice, returns Null if invalid"""
+        picker = self.renInteractor.GetPicker()
+        source = picker.GetActor().GetMapper().GetInput().GetProducerPort().GetProducer()
+        if(source.__class__.__name__=="vtkSphereSource"):
+                for i in range(len(self.vActors)):
+                    if(self.vActors[i]==picker.GetActor()):
+                        return i
+        return None
+
+    def getEndHexString(self):
+        """last part of hex string"""
+        string =""
+        divstring=self.getDivString()
+        # + " " + str(self.blockDivSpinY.value()) + " " + str(self.blockDivSpinZ.value()) + " )"
+        string = " ) "+ divstring +" simpleGrading (1 1 1)"
+        return string
+
+    def getTotalHexString(self):
+        """total block hex string"""
+        string ="\n    // added by pyFoam, DisplayBlockMesh\n"
+        string =string + "    hex ( "
+        for blk in self.tmpBlock:
+            string += str(blk) + " "
+        divstring=self.getDivString()
+        string = string + self.getEndHexString()
+        return string
+
+    def getTotalPatchString(self):
+        """total patch string"""
+        string ="\n    // added by pyFoam, DisplayBlockMesh\n"
+        string+=self.getPatchString()
+        return string
+
+    def getPatchString(self):
+        string = "( "
+        for patch in self.tmpPatch:
+            string += str(patch) + " "
+        string+= ")"
+        return string
+
+    def getDivString(self):
+        """block division string"""
+        divstring="(" + "{val:g}".format(val=self.blockDivSpinX.value())
+        divstring=divstring + " {val:g}".format(val=self.blockDivSpinY.value())
+        divstring=divstring + " {val:g})".format(val=self.blockDivSpinZ.value())
+        return divstring
+
+    def defineBlock(self):
+        """callback for create block button"""
+        self.isBlocking = not self.isBlocking
+        if(self.isBlocking):
+            self.startBlocking()
+        else:
+            self.resetBlocking()
+
+    def definePatch(self):
+        """Callback for create patch button"""
+        self.isPatching = not self.isPatching
+        if(self.isPatching):
+            self.startPatch()
+        else:
+            self.resetPatch()
+
+    def insertBlock(self):
+        """inserts new block"""
+        self.AddBlockToText()
+        self.resetBlocking()
+
+    def insertPatch(self):
+        """inserts new patch"""
+        self.AddPatchToText()
+        self.resetPatch()
+
+    def startBlocking(self):
+        """start blocking"""
+        self.resetBlocking()
+        self.resetPatch()
+
+        self.renInteractor.setFocus()
+        self.isBlocking = True
+        self.defineBlockButton.setText("Reset Block")
+        self.hexeditor.append("hex ( ")
+        self.setStatus("Start hex")
+
+    def resetBlocking(self):
+        """rest block"""
+        self.isBlocking = False
+        self.defineBlockButton.setText("Define Block")
+
+        for act in self.redLineActors:
+            self.ren.RemoveActor(act)
+        self.redLineActors = []
+        self.tmpBlock = []
+        self.hexeditor.clear()
+        self.insertBlockButton.setEnabled(False)
+        self.ren.RemoveActor(self.tmpBlockActor)
+        #cellpicker = vtk.vtkCellPicker()
+        #picker = self.renInteractor.GetPicker()
+        self.reread(False)
+
+    def startPatch(self):
+        """start define patch"""
+        self.resetBlocking()
+        self.resetPatch()
+
+        self.renInteractor.setFocus()
+        self.isPatching = True
+        self.definePatchButton.setText("Reset Patch")
+        self.hexeditor.append("( ")
+        return
+
+    def resetPatch(self):
+        """rest patch"""
+        self.isPatching = False
+        self.definePatchButton.setText("Define Patch")
+        self.tmpPatch = []
+        for act in self.redLineActors:
+            self.ren.RemoveActor(act)
+        self.ren.RemoveActor(self.tmpGlyphActor)
+        self.redLineActors = []
+        self.hexeditor.clear()
+        self.insertPatchButton.setEnabled(False)
+        self.reverseNormalButton.setEnabled(False)
+        self.ren.RemoveActor(self.tmpBlockActor)
+        self.reread(False)
+        return;
+
+    def reverseNormal(self):
+        self.tmpPatch.reverse()
+        self.ren.RemoveActor(self.tmpGlyphActor)
+        self.ren.RemoveActor(self.tmpBlockActor)
+        self.showTmpPatch()
+        self.hexeditor.clear()
+        self.hexeditor.append(self.getPatchString())
+
+    def addTmpBlockingLine(self,index1,index2):
+        """Add a colored line to show blocking progress"""
+        try:
+            c1=self.vertices[index1]
+            c2=self.vertices[index2]
+        except:
+            if index1>=len(self.vertices):
+                self.addUndefined(index1)
+            if index2>=len(self.vertices):
+                self.addUndefined(index2)
+            return None
+        line=vtk.vtkLineSource()
+        line.SetPoint1(c1)
+        line.SetPoint2(c2)
+        mapper=vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(line.GetOutputPort())
+
+        property = vtk.vtkProperty();
+        property.SetColor(0, 255, 50);
+
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper)
+        actor.SetProperty(property);
+
+        self.redLineActors.append(actor)
+
+        self.ren.AddActor(actor)
+        return actor
+
+    def showTmpBlock(self):
+        """Add a colored block"""
+        append=vtk.vtkAppendPolyData()
+        append2=vtk.vtkAppendPolyData()
+        b=self.tmpBlock
+        append.AddInput(self.makeFace([b[0],b[1],b[2],b[3]]))
+        append.AddInput(self.makeFace([b[4],b[5],b[6],b[7]]))
+        append.AddInput(self.makeFace([b[0],b[1],b[5],b[4]]))
+        append.AddInput(self.makeFace([b[3],b[2],b[6],b[7]]))
+        append.AddInput(self.makeFace([b[0],b[3],b[7],b[4]]))
+        append.AddInput(self.makeFace([b[1],b[2],b[6],b[5]]))
+        mapper=vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(append.GetOutputPort())
+        self.tmpBlockActor = vtk.vtkActor()
+        self.tmpBlockActor.SetMapper(mapper)
+        self.tmpBlockActor.GetProperty().SetColor(0.,1.,0.1)
+        self.tmpBlockActor.GetProperty().SetOpacity(0.3)
+        self.ren.AddActor(self.tmpBlockActor)
+
+        self.renWin.Render()
+
+    def showTmpPatch(self):
+        """Add a colored patch"""
+        append=vtk.vtkAppendPolyData()
+        b=self.tmpPatch
+        append.AddInput(self.makeFace([b[0],b[1],b[2],b[3]]))
+        mapper=vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(append.GetOutputPort())
+        self.tmpBlockActor = vtk.vtkActor()
+        self.tmpBlockActor.SetMapper(mapper)
+        self.tmpBlockActor.GetProperty().SetColor(0.,1.,0.1)
+        self.tmpBlockActor.GetProperty().SetOpacity(0.3)
+        self.ren.AddActor(self.tmpBlockActor)
+
+
+        planeNormals = vtk.vtkPolyDataNormals()
+        planeNormals.SetInputConnection(append.GetOutputPort())
+        planeMapper = vtk.vtkDataSetMapper()
+        planeMapper.SetInputConnection(planeNormals.GetOutputPort())
+
+        arrowSource = vtk.vtkArrowSource()
+
+        arrowGlyph = vtk.vtkGlyph3D()
+        arrowGlyph.ScalingOn()
+        arrowGlyph.SetScaleFactor(self.blockMesh.typicalLength()/4)
+        arrowGlyph.SetVectorModeToUseNormal()
+        arrowGlyph.SetScaleModeToScaleByVector()
+        arrowGlyph.OrientOn()
+        arrowGlyph.SetSourceConnection(arrowSource.GetOutputPort())
+        arrowGlyph.SetInputConnection(planeNormals.GetOutputPort())
+
+        """
+
+
+
+        >>>
+        >>> # Specify the shape of the glyph
+        >>> vtkArrowSource arrowSource
+        >>>
+        >>> vtkGlyph3D arrowGlyph
+        >>>  arrowGlyph ScalingOn
+        >>>  arrowGlyph SetScaleFactor 0.7
+        >>>  arrowGlyph SetVectorModeToUseNormal
+        >>>  arrowGlyph SetScaleModeToScaleByVector
+        >>>  arrowGlyph OrientOn
+        >>>  arrowGlyph SetSourceConnection [arrowSource GetOutputPort]
+        >>>  arrowGlyph SetInputConnection  [planeNormals GetOutputPort]
+        >>>
+        >>> vtkDataSetMapper arrowGlyphMapper
+        >>>  arrowGlyphMapper SetInputConnection [arrowGlyph GetOutputPort]
+        >>>
+        >>> vtkActor glyphActor
+        >>>  glyphActor SetMapper arrowGlyphMapper
+        """
+        #actor = vtk.vtkActor()
+        #actor.SetMapper(planeMapper);
+        #self.ren.AddActor(actor)
+
+        glyphMapper = vtk.vtkPolyDataMapper()
+        glyphMapper.SetInputConnection(arrowGlyph.GetOutputPort());
+
+        self.tmpGlyphActor = vtk.vtkActor()
+        self.tmpGlyphActor.SetMapper(glyphMapper);
+
+        self.tmpGlyphActor.GetProperty().SetColor(0., 1., 0.)
+
+        self.ren.AddActor(self.tmpGlyphActor)
+
+        self.renWin.Render()
 
     def blockMesh(self):
         self.executeUtility("blockMesh")
-        
+
     def checkMesh(self):
         self.executeUtility("checkMesh")
 
     def executeUtility(self,util):
         if self.worker!=None:
             self.error("There seems to be another worker")
-            
+
         self.setStatus("Executing "+util)
         self.blockMeshAction.setEnabled(False)
         self.checkMeshAction.setEnabled(False)
@@ -379,40 +932,59 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
 
     def utilityOutputAppend(self,line):
         self.utilityOutput.append(line)
-        
+
     def executionEnded(self):
         self.blockMeshAction.setEnabled(True)
         self.checkMeshAction.setEnabled(True)
         self.setStatus("Execution of "+self.worker.argv[0]+" finished"+self.worker.status)
         self.worker=None
-        
+
     def setStatus(self,message="Ready"):
         if self.isWindowModified():
             message="blockMesh modified - "+message
+        print_("Status:",message)
         self.statusBar().showMessage(message)
-            
+
     def blockMeshWasModified(self):
         if not self.saveAction.isEnabled():
             self.saveAction.setEnabled(True)
         if self.rereadAction.isEnabled():
             self.rereadAction.setEnabled(False)
             self.rereadButton.setEnabled(False)
-            
+
         self.setWindowModified(True)
         self.setStatus()
-        
+
     def readFile(self,resetText=True):
         if resetText:
             txt=open(self.fName).read()
             self.editor.setPlainText(txt)
-            
+            if self.vName:
+                txt=open(self.vName).read()
+                self.vEditor.setPlainText(txt)
+
         self.setWindowModified(False)
         if not self.alwaysSave:
             self.saveAction.setEnabled(False)
         self.rereadAction.setEnabled(True)
         self.rereadButton.setEnabled(True)
-        
-        self.blockMesh=ParsedBlockMeshDict(self.fName,
+
+        bFile=self.fName
+        if self.vName:
+            print_("Evaluating template")
+            bFile=path.splitext(self.fName)[0]
+            template=TemplateFile(self.fName)
+
+            if path.exists(self.vName):
+                vals=ParsedParameterFile(self.vName,
+                                         noHeader=True,
+                                         doMacroExpansion=True).getValueDict()
+            else:
+                vals={}
+            txt=template.getString(vals)
+            open(bFile,"w").write(txt)
+
+        self.blockMesh=ParsedBlockMeshDict(bFile,
                                            doMacroExpansion=True)
 
         self.vertices=self.blockMesh.vertices()
@@ -431,7 +1003,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         self.setAxes()
 
         self.undefined=[]
-        
+
         for i in range(len(self.blocks)):
             self.addBlock(i)
 
@@ -448,14 +1020,17 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
     def saveBlockMesh(self):
         txt=str(self.editor.toPlainText())
         open(self.fName,"w").write(txt)
+        if self.vName:
+            txt=str(self.vEditor.toPlainText())
+            open(self.vName,"w").write(txt)
 
         self.reread(resetText=False)
-        self.setStatus("Saved file")        
+        self.setStatus("Saved file")
 
     def addUndefined(self,i):
         if not i in self.undefined:
             self.undefined.append(i)
-            
+
     def addProps(self):
         self.ren.AddViewProp(self.axes)
         self.ren.AddActor2D(self.patchTextActor)
@@ -466,7 +1041,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         for tActor in self.tActors:
             tActor.SetScale(self.numberScale*self.vRadius,self.numberScale*self.vRadius,self.numberScale*self.vRadius)
         self.renWin.Render()
-            
+
     def pointScaleChanged(self,scale):
         self.pointScale=scale
         for sphere in self.spheres:
@@ -481,14 +1056,14 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
                            self.axisLabelScale*self.vRadius,
                            self.axisLabelScale*self.vRadius)
             self.renWin.Render()
-            
+
     def axisTubeScaleChanged(self,scale):
         self.axisTubeScale=scale
         if self.blockAxisActor:
             for t in self.blockAxisActor:
                 t.SetRadius(self.vRadius*self.axisTubeScale)
             self.renWin.Render()
-    
+
     def addPoint(self,coord,factor=1):
         sphere=vtk.vtkSphereSource()
         sphere.SetRadius(self.vRadius*factor*self.pointScale)
@@ -563,7 +1138,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
                            (c1[1]+c2[1])/2+self.vRadius,
                            (c1[2]+c2[2])/2+self.vRadius)
         tActor.SetCamera(self.cam)
-        tActor.GetProperty().SetColor(0.0,0.,0.)    
+        tActor.GetProperty().SetColor(0.0,0.,0.)
         return tube,tActor
 
     def makeSpline(self,lst):
@@ -590,7 +1165,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
                 self.addUndefined(data[0])
             if data[2]>=len(self.vertices):
                 self.addUndefined(data[2])
-            
+
         self.addPoint(data[1],factor=0.5)
 
     def makeFace(self,lst):
@@ -633,7 +1208,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
             if a!=None:
                 append.AddInput(a.GetMapper().GetInput())
         self.axes.SetInput(append.GetOutput())
-    
+
     def reread(self,resetText=True):
         self.ren.RemoveAllViewProps()
         self.patchActor=None
@@ -641,24 +1216,30 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         self.blockAxisActor=None
         self.blockTextActor=None
         self.addProps()
-        self.readFile(resetText=resetText)
-        
-        tmpBlock=self.scroll.value()
-        if not tmpBlock<len(self.blocks):
-            tmpBlock=len(self.blocks)-1
-        self.scroll.setRange(-1,len(self.blocks)-1)
-        self.scroll.setValue(tmpBlock)
-        self.colorBlock(tmpBlock)
+        try:
+            self.readFile(resetText=resetText)
 
-        tmpPatch=self.scroll2.value()
-        if not tmpPatch<len(self.patches.keys()):
-            tmpPatch=len(self.patches.keys())-1
-        self.scroll2.setRange(-1,len(self.patches.keys())-1)
-        self.scroll2.setValue(tmpPatch)
-        self.colorPatch(tmpPatch)
+            tmpBlock=self.scroll.value()
+            if not tmpBlock<len(self.blocks):
+                tmpBlock=len(self.blocks)-1
+            self.scroll.setRange(-1,len(self.blocks)-1)
+            self.scroll.setValue(tmpBlock)
+            self.colorBlock(tmpBlock)
 
-        self.renWin.Render()
-        
+            tmpPatch=self.scroll2.value()
+            if not tmpPatch<len(list(self.patches.keys())):
+                tmpPatch=len(list(self.patches.keys()))-1
+            self.scroll2.setRange(-1,len(list(self.patches.keys()))-1)
+            self.scroll2.setValue(tmpPatch)
+            self.colorPatch(tmpPatch)
+
+            self.renWin.Render()
+        except Exception:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+            print_("Problem rereading:",e)
+            self.setStatus("Problem:"+str(e))
+            raise e
+
     def colorBlock(self,value):
         newBlock=int(value)
         if self.oldBlock>=0 and self.blockActor!=None:
@@ -707,7 +1288,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
             self.patchActor=None
             self.patchTextActor.SetInput("Patch: <none>")
         if newPatch>=0:
-            name=self.patches.keys()[newPatch]
+            name=list(self.patches.keys())[newPatch]
             subs=self.patches[name]
             append=vtk.vtkAppendPolyData()
             for s in subs:
@@ -725,10 +1306,10 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         self.renWin.Render()
 
     def closeEvent(self,event):
-        print "Closing and saving settings to",QtCore.QSettings().fileName()
+        print_("Closing and saving settings to",QtCore.QSettings().fileName())
         QtCore.QSettings().setValue("geometry",QtCore.QVariant(self.saveGeometry()))
         QtCore.QSettings().setValue("state",QtCore.QVariant(self.saveState()))
-        
+
 class DisplayBlockMesh(PyFoamApplicationQt4):
     def __init__(self):
         description="""\
@@ -746,14 +1327,35 @@ This is a new version with a QT-GUI
                                               interspersed=True,
                                               nr=1)
 
+    def addOptions(self):
+        template=OptionGroup(self.parser,
+                             "Template mode",
+                             "Additional input for template mode where the edited file is a template that can be processed with the pyFoamFromTemplate.py-utility")
+        template.add_option("--values-file",
+                            dest="valuesFile",
+                            action="store",
+                            default=None,
+                            help="File with the values to be used in the template. If specified the application runs in template mode")
+
+        self.parser.add_option_group(template)
+
     def setupGUI(self):
-        print usedVTK
+        print_(usedVTK)
 
         bmFile=self.parser.getArgs()[0]
         if not path.exists(bmFile):
             self.error(bmFile,"not found")
+
+        if self.opts.valuesFile:
+            print_("Running in template mode")
+            if path.splitext(bmFile)[1]=="":
+                self.error("Specified template file",bmFile,
+                           "has no extension")
         try:
-            self.dialog=DisplayBlockMeshDialog(bmFile)
+            self.dialog=DisplayBlockMeshDialog(bmFile,
+                                               valuesFile=self.opts.valuesFile)
         except IOError:
             self.error("Problem with blockMesh file",bmFile)
         self.dialog.show()
+
+# Should work with Python3 and Python2

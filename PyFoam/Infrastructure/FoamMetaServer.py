@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/FoamMetaServer.py 6441 2010-04-07T15:25:41.442177Z bgschaid  $ 
+#  ICE Revision: $Id: FoamMetaServer.py 12592 2012-05-22 16:23:33Z bgschaid $ 
 """A XMLRPC-Server that knows all PyFoam-Runs in its subnet"""
 
 from ServerBase import ServerBase
@@ -357,7 +357,14 @@ class MetaCollector(Thread):
 
                 foamLogger("server").debug("Collector Checking:"+str(host)+" "+name)
 
-                result=checkFoamServers(str(host),port,length)
+                result=None
+                try:
+                    result=checkFoamServers(str(host),port,length)
+                except:
+                    foamLogger("server").error("Unknown exception "+str(sys.exc_info()[0])+" while checking for new servers"+str((str(host),port,length)))
+                    foamLogger("server").error("Reason:"+str(sys.exc_info()[1]))
+                    foamLogger("server").error("Trace:"+str(extract_tb(sys.exc_info()[2])))
+                    
                 if result!=None:
                     foamLogger("server").debug("Collector Found "+str(result)+" for "+name)
                     for p in result:

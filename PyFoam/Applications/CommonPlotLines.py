@@ -3,24 +3,21 @@
 Class that implements common functionality for collecting plot-lines
 """
 
-import sys
 import re
 from os import path
 from optparse import OptionGroup
 
-from PyFoam.Error import error,warning
-from PyFoam.LogAnalysis.RegExpLineAnalyzer import RegExpLineAnalyzer
-
 from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo,resetCustomCounter
+from PyFoam.ThirdParty.six import print_
 
 ruleList=[]
 
 def addRegexpInclude(option,opt,value,parser,*args,**kwargs):
     ruleList.append((True,value))
-    
+
 def addRegexpExclude(option,opt,value,parser,*args,**kwargs):
     ruleList.append((False,value))
-        
+
 
 class CommonPlotLines(object):
     """ This class collects the lines that should be plotted
@@ -28,10 +25,10 @@ class CommonPlotLines(object):
 
     def __init__(self):
         self.lines_=[]
-        
+
     def plotLines(self):
         return self.lines_
-    
+
     def addPlotLine(self,line):
         """Add a single line"""
         self.lines_+=readCustomPlotInfo(line)
@@ -58,7 +55,7 @@ class CommonPlotLines(object):
         grp=OptionGroup(self.parser,
                         "Regular expression",
                         "Where regular expressions for custom plots are found")
-        
+
         grp.add_option("--custom-regexp",
                        action="append",
                        default=None,
@@ -70,7 +67,7 @@ class CommonPlotLines(object):
                        default=None,
                        dest="regexpFile",
                        help="A file with regulare expressions that are treated like the expressions given with --custom-regexp")
-        
+
         grp.add_option("--no-auto-customRegexp",
                        action="store_false",
                        default=True,
@@ -82,7 +79,6 @@ class CommonPlotLines(object):
                        default=False,
                        dest="dumpCustomRegexp",
                        help="Dump the used regular expressions in a format suitable to put into a customRegexp-file and finish the program")
-        self.parser.add_option_group(grp)
 
         grp.add_option("--list-custom-Regexp",
                        action="store_true",
@@ -95,15 +91,15 @@ class CommonPlotLines(object):
                        callback=addRegexpInclude,
                        type="string",
                        help="Add all the customRegex whose name fits this regular expression. This option can be used as often as liked ")
-        
+
         grp.add_option("--exclude-regexp-fitting",
                        action="callback",
                        callback=addRegexpExclude,
                        type="string",
                        help="Remove all the customRegex whose name fits this regular expression. This option can be used as often as liked ")
-        
+
         self.parser.add_option_group(grp)
-        
+
         grp2=OptionGroup(self.parser,
                         "Data files",
                         "How data files are written")
@@ -125,19 +121,19 @@ class CommonPlotLines(object):
 
         # make sure that every object starts with a new batch
         resetCustomCounter()
-        
+
         self.addPlotLines(self.opts.customRegex)
-        
+
         if self.opts.regexpFile!=None:
             for f in self.opts.regexpFile:
-                print " Reading regular expressions from",f
+                print_(" Reading regular expressions from",f)
                 self.addFileRegexps(f)
 
-            
+
         if autoPath!=None and  self.opts.autoCustom:
             autoFile=path.join(autoPath,"customRegexp")
             if path.exists(autoFile):
-                print " Reading regular expressions from",autoFile
+                print_(" Reading regular expressions from",autoFile)
                 self.addFileRegexps(autoFile)
 
         for include,expr in ruleList:
@@ -148,32 +144,32 @@ class CommonPlotLines(object):
                         l.enabled=True
                     else:
                         l.enabled=False
-                        
+
         if self.opts.dumpCustomRegexp:
-            print "\nDumping customRegexp:\n"
+            print_("\nDumping customRegexp:\n")
             for l in self.lines_:
-                print l
+                print_(l)
             return -1
 
         if self.opts.listCustomRegexp:
-            print "\nListing the customRegexp:\n"
+            print_("\nListing the customRegexp:\n")
             for l in self.lines_:
                 if l.enabled:
                     prefix="*"
                 else:
                     prefix=" "
-                    
-                print prefix,l.id
+
+                print_(prefix,l.id)
 
             if len(ruleList)>0:
-                print "\nAccording to list of rules:"
+                print_("\nAccording to list of rules:")
                 for incl,expr in ruleList:
                     if incl:
                         prefix="Include"
                     else:
                         prefix="Exclude"
-                    print prefix,"matching",'"%s"' % expr
-                    
+                    print_(prefix,"matching",'"%s"' % expr)
+
             return -1
-            
-        
+
+# Should work with Python3 and Python2

@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GitInterface.py 7854 2012-02-12T14:33:22.227203Z bgschaid  $ 
+#  ICE Revision: $Id: GitInterface.py 12762 2013-01-03 23:11:02Z bgschaid $
 """A VCS-interface to Mercurial"""
 
 from PyFoam.Error import warning,error,notImplemented
 
-from GeneralVCSInterface import GeneralVCSInterface
+from .GeneralVCSInterface import GeneralVCSInterface
 
 from os import path as opath
 import subprocess
@@ -14,7 +14,7 @@ class GitInterface(GeneralVCSInterface):
 The interface class to git
 
 Only a partial implementation (As much as the BuildHelper needs)"""
-    
+
     def __init__(self,
                  path,
                  init=False):
@@ -42,3 +42,5 @@ Only a partial implementation (As much as the BuildHelper needs)"""
         ok=self.doInPath(subprocess.call,["git","pull"])
         return ok==0
 
+
+# Should work with Python3 and Python2

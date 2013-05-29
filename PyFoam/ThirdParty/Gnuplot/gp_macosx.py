@@ -5,7 +5,7 @@
 # This file is licensed under the GNU Lesser General Public License
 # (LGPL).  See LICENSE.txt for details.
 
-"""gp_macosx -- an interface to the command line version of gnuplot 
+"""gp_macosx -- an interface to the command line version of gnuplot
 used under Mac OS X.
 
 The only difference between this interface and gp_unix is that
@@ -118,8 +118,8 @@ class GnuplotProcess:
             persist = GnuplotOpts.prefer_persist
         if persist:
             if not test_persist():
-                raise ('-persist does not seem to be supported '
-                       'by your version of gnuplot!')
+                raise Exception('-persist does not seem to be supported '
+                                'by your version of gnuplot!')
             self.gnuplot = popen('%s -persist' % GnuplotOpts.gnuplot_command,
                                  'w')
         else:
@@ -143,4 +143,4 @@ class GnuplotProcess:
         self.write(s + '\n')
         self.flush()
 
-
+# Should work with Python3 and Python2

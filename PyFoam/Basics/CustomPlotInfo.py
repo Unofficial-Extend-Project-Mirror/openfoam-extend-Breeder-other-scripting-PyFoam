@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$ 
+#  ICE Revision: $Id$
 """Information about custom plots"""
 
 from PyFoam.Basics.TimeLineCollection import TimeLineCollection
@@ -6,6 +6,7 @@ from PyFoam.Basics.FoamFileGenerator import makeString
 from PyFoam.RunDictionary.ParsedParameterFile import FoamStringParser,PyFoamParserError
 
 from PyFoam.Error import error
+from PyFoam.ThirdParty.six import iteritems
 
 from os import path
 
@@ -19,7 +20,7 @@ def cleanString(data):
             elif data in ["false","off","no"]:
                 data=False
     return data
-    
+
 def encloseString(data):
     if type(data)!=str:
         return data
@@ -27,12 +28,12 @@ def encloseString(data):
         return data
     else:
         return '"'+data+'"'
-    
+
 class CustomPlotInfo(object):
     """Information about a custom plot"""
 
     nr=1
-    
+
     def __init__(self,raw=None,name=None,enabled=True):
         """@param raw: The raw data. Either a string for the two legacy-formats or a
         dictionary for the new format
@@ -50,7 +51,7 @@ class CustomPlotInfo(object):
             self.theTitle += " - "+name
         else:
             self.id=self.name
-            
+
         self.expr=None
         self.titles=[]
         self.accumulation="first"
@@ -63,7 +64,9 @@ class CustomPlotInfo(object):
         self.master=None
         self.progress=None
         self.enabled=enabled
-        
+        self.xlabel="Time [s]"
+        self.ylabel=None
+
         # Legacy format
         if raw==None:
             self.expr=""
@@ -95,7 +98,7 @@ class CustomPlotInfo(object):
                 if type(data)==str:
                     data=cleanString(data)
                 elif type(data)==list:
-                    data=map(cleanString,data)
+                    data=list(map(cleanString,data))
                 if k=="with":
                     k="with_"
                 self.set(k,data)
@@ -116,7 +119,7 @@ class CustomPlotInfo(object):
 
     def getDict(self,wrapStrings=False):
         result={}
-        
+
         for d in dir(self):
             if (type(getattr(self,d))  in [str,bool,int,list,dict,float]) and d.find("__")<0:
                 if d=="id" or d=="nr":
@@ -128,12 +131,12 @@ class CustomPlotInfo(object):
                         if type(val)==str:
                             val=encloseString(val)
                         elif type(val)==list:
-                            val=map(encloseString,val)
-                    
+                            val=list(map(encloseString,val))
+
                 result[key]=val
         return result
-    
-    
+
+
 def readCustomPlotInfo(rawData,useName=None):
     """Determines which of the three possible formats for custom-plotting is used
     and returns a list of CustomPlotInfo-objects
@@ -144,7 +147,7 @@ def readCustomPlotInfo(rawData,useName=None):
         data=FoamStringParser(rawData,
                               duplicateCheck=True,
                               duplicateFail=True)
-        for k,d in data.data.iteritems():
+        for k,d in iteritems(data.data):
             info.append(CustomPlotInfo(d,name=k))
     except PyFoamParserError:
         for i,l in enumerate(rawData.split('\n')):
@@ -153,10 +156,11 @@ def readCustomPlotInfo(rawData,useName=None):
                 if i>0 and name!=None:
                     name+=("_%d" % i)
                 info.append(CustomPlotInfo(l,name=name))
-            
+
     return info
 
 def resetCustomCounter():
     """Reset the counter. Use with care"""
     CustomPlotInfo.nr=1
-    
+
+# Should work with Python3 and Python2

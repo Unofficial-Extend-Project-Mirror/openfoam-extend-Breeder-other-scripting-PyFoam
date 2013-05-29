@@ -1,16 +1,19 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Logging.py 1906 2007-08-28T16:16:19.392553Z bgschaid  $ 
+#  ICE Revision: $Id: Logging.py 12769 2013-01-16 11:38:51Z bgschaid $
 """Writes Logfiles"""
+
+from PyFoam.ThirdParty.six import print_
 
 try:
     import logging
     hasLogging=True
 except ImportError:
     # For Python-versions < 2.3
-    print "Warning: old python-version. No logging-support"
+    print_("Warning: old python-version. No logging-support")
     hasLogging=False
-    
-from Hardcoded import assertDirectory,logDirectory
-from os import path,uname
+
+from PyFoam.Infrastructure.Hardcoded import assertDirectory,logDirectory
+from os import path
+from platform import uname
 
 from PyFoam import configuration as config
 
@@ -28,9 +31,9 @@ def _getLoggingLevel(name):
     value=logging.INFO
     try:
         value=getattr(logging,level)
-    except AttributeError,reason:
-        print "WARNING: Wrong specification of debug level "+level+" for log "+name
-        
+    except AttributeError:
+        print_("WARNING: Wrong specification of debug level "+level+" for log "+name)
+
     return value
 
 class DummyLogger:
@@ -39,7 +42,7 @@ class DummyLogger:
 
     def info(self,arg):
         pass
-    
+
 def foamLogger(name="general"):
     """
     @param name: name of the logfile
@@ -48,7 +51,7 @@ def foamLogger(name="general"):
 
     if not hasLogging:
         return DummyLogger()
-    
+
     log=logging.getLogger(name)
     if not (name in _definedLoggers):
         assertDirectory(logDirectory())
@@ -60,5 +63,7 @@ def foamLogger(name="general"):
         log.addHandler(rot)
         log.setLevel(_getLoggingLevel(name))
         _definedLoggers.append(name)
-        
+
     return log
+
+# Should work with Python3 and Python2

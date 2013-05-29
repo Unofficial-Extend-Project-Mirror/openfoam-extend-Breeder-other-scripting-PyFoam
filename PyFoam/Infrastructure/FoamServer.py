@@ -1,9 +1,15 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/FoamServer.py 7641 2011-12-18T21:49:13.536132Z bgschaid  $ 
+#  ICE Revision: $Id: FoamServer.py 12769 2013-01-16 11:38:51Z bgschaid $
 """A XMLRPC-Server that answeres about the current state of a Foam-Run"""
 
-from ServerBase import ServerBase
+from PyFoam.ThirdParty.six import PY3
 
-from xmlrpclib import ServerProxy
+from PyFoam.Infrastructure.ServerBase import ServerBase
+
+if PY3:
+    from xmlrpc.client import ServerProxy
+else:
+    from xmlrpclib import ServerProxy
+
 from time import sleep
 from random import random
 import select
@@ -19,11 +25,12 @@ from PyFoam.Error import warning
 from PyFoam.Basics.GeneralPlotTimelines import allPlots
 from PyFoam.Basics.TimeLineCollection import allLines
 
-from Hardcoded import userName
+from PyFoam.Infrastructure.Hardcoded import userName
 
 from threading import Lock,Thread,Timer
 from time import time
-from os import environ,uname,path,getpid,getloadavg
+from os import environ,path,getpid,getloadavg
+from platform import uname
 import socket
 
 import sys,string
@@ -32,11 +39,11 @@ from traceback import extract_tb
 def findFreePort():
     """Finds a free server port on this machine and returns it
 
-    Valid server ports are in the range 18000 upward (the function tries to 
+    Valid server ports are in the range 18000 upward (the function tries to
     find the lowest possible port number
 
     ATTENTION: this part may introduce race conditions"""
-    
+
     return freeServerPort(config().getint("Network","startServerPort"),
                           length=config().getint("Network","nrServerPorts"))
 
@@ -53,20 +60,20 @@ class FoamAnswerer(object):
         self._run=run
         self._master=master
         self._foamserver=foamserver
-	self._lines=RingBuffer(nr=lines)
+        self._lines=RingBuffer(nr=lines)
         self._lastTime=time()
-	self._linesLock=Lock()
+        self._linesLock=Lock()
         self._maxOutputTime=config().getfloat("IsAlive","maxTimeStart")
-        
+
     def _insertLine(self,line):
-	"""Inserts a new line, not to be called via XMLRPC"""
-	self._linesLock.acquire()
-	self._lines.insert(line)
+        """Inserts a new line, not to be called via XMLRPC"""
+        self._linesLock.acquire()
+        self._lines.insert(line)
         tmp=time()
         if (tmp-self._lastTime)>self._maxOutputTime:
             self._maxOutputTime=tmp-self._lastTime
         self._lastTime=tmp
-	self._linesLock.release()
+        self._linesLock.release()
 
     def isFoamServer(self):
         """This is a Foam-Server (True by default)"""
@@ -89,33 +96,33 @@ class FoamAnswerer(object):
         """Stops the run gracefully (after writing the last time-step to disk)"""
         self._master.stopGracefully()
         return True
-    
+
     def write(self):
         """Makes the program write the next time-step to disk and the continue"""
         self._master.writeResults()
         return True
-    
+
     def argv(self):
         """Argument vector with which the runner was called"""
         if self._master:
             return self._master.origArgv
         else:
             return []
-        
+
     def usedArgv(self):
         """Argument vector with which the runner started the run"""
         if self._master:
             return self._master.argv
         else:
             return []
-        
+
     def isParallel(self):
         """Is it a parallel run?"""
         if self._master:
             return self._master.lam!=None
         else:
             return False
-        
+
     def procNr(self):
         """How many processors are used?"""
         if self._master:
@@ -125,7 +132,7 @@ class FoamAnswerer(object):
                 return 1
         else:
             return 0
-        
+
     def nrWarnings(self):
         """Number of warnings the executable emitted"""
         if self._master:
@@ -154,29 +161,29 @@ class FoamAnswerer(object):
     def runnerData(self):
         """@return: the data the runner collected so far"""
         return self._master.data
-    
+
     def lastLogLineSeen(self):
         """@return: the time at which the last log-line was seen"""
         return self._master.lastLogLineSeen
-    
+
     def lastTimeStepSeen(self):
         """@return: the time at which the last log-line was seen"""
         return self._master.lastTimeStepSeen
-    
+
     def lastLine(self):
-	"""@return: the last line that was output by the running FOAM-process"""
-	self._linesLock.acquire()
-	result=self._lines.last()
-	self._linesLock.release()
+        """@return: the last line that was output by the running FOAM-process"""
+        self._linesLock.acquire()
+        result=self._lines.last()
+        self._linesLock.release()
         if not result:
             return ""
-	return result
+            return result
 
     def tail(self):
-	"""@return: the current last lines as a string"""
-	self._linesLock.acquire()
-	tmp=self._lines.dump()
-	self._linesLock.release()
+        """@return: the current last lines as a string"""
+        self._linesLock.acquire()
+        tmp=self._lines.dump()
+        self._linesLock.release()
         result=""
         for l in tmp:
             result+=l
@@ -185,17 +192,17 @@ class FoamAnswerer(object):
 
     def elapsedTime(self):
         """@return: time in seconds since the last line was output"""
-	self._linesLock.acquire()
-	result=time()-self._lastTime
-	self._linesLock.release()
+        self._linesLock.acquire()
+        result=time()-self._lastTime
+        self._linesLock.release()
 
         return result
-    
+
     def getEnviron(self,name):
         """@param name: name of an environment variable
         @return: value of the variable, empty string if non-existing"""
         result=""
-        if environ.has_key(name):
+        if name in environ:
             result=environ[name]
         return result
 
@@ -206,7 +213,7 @@ class FoamAnswerer(object):
     def foamVersion(self):
         """Version number of the Foam-Version"""
         return self.getEnviron("WM_PROJECT_VERSION")
-    
+
     def pyFoamVersion(self):
         """@return: Version number of the PyFoam"""
         return versionString()
@@ -252,7 +259,7 @@ class FoamAnswerer(object):
     def loadAvg(self):
         """@return: a tuple with the average loads of the last 1, 5 and 15 minutes"""
         return getloadavg()
-    
+
     def user(self):
         """@return: the user that runs this script"""
         return userName()
@@ -271,7 +278,7 @@ class FoamAnswerer(object):
             return self._master.nowTime
         else:
             return 0
-        
+
     def createTime(self):
         """@return: the time in the simulation for which the mesh was created"""
         if self._master.nowTime:
@@ -289,11 +296,11 @@ class FoamAnswerer(object):
     def startTime(self):
         """@return: parameter startTime from the controlDict"""
         return float(self._readParameter("startTime"))
-    
+
     def endTime(self):
         """@return: parameter endTime from the controlDict"""
         return float(self._readParameter("endTime"))
-    
+
     def deltaT(self):
         """@return: parameter startTime from the controlDict"""
         return float(self._readParameter("deltaT"))
@@ -321,11 +328,11 @@ class FoamAnswerer(object):
         @param name: name of the dictionary file
         @return: the contents of the file as a big string"""
         return self._master.getSolutionDirectory().getDictionaryText(directory,name)
-    
+
     def getDictionaryContents(self,directory,name):
         """@param directory: Sub-directory of the case
         @param name: name of the dictionary file
-        @return: the contents of the file as a python data-structure"""        
+        @return: the contents of the file as a python data-structure"""
         return self._master.getSolutionDirectory().getDictionaryContents(directory,name)
 
     def writeDictionaryText(self,directory,name,text):
@@ -333,9 +340,9 @@ class FoamAnswerer(object):
         @param directory: Sub-directory of the case
         @param name: name of the dictionary file
         @param text: String with the dictionary contents"""
-        
+
         self._master.getSolutionDirectory().writeDictionaryText(directory,name,text)
-        
+
         return True
 
     def writeDictionaryContents(self,directory,name,contents):
@@ -343,14 +350,14 @@ class FoamAnswerer(object):
         @param directory: Sub-directory of the case
         @param name: name of the dictionary file
         @param contents: Python-dictionary with the dictionary contents"""
-        
+
         self._master.getSolutionDirectory().writeDictionaryContents(directory,name,contents)
         return True
 
     def getPlots(self):
         """Get all the information about the plots"""
         return allPlots().prepareForTransfer()
-    
+
     def getPlotData(self):
         """Get all the data for the plots"""
         return allLines().prepareForTransfer()
@@ -379,28 +386,29 @@ class FoamAnswerer(object):
             return self._master.jobId
         else:
             return ""
-        
+
 class FoamServer(Thread):
     """This is the class that serves the requests about the FOAM-Run"""
     def __init__(self,run=None,master=None,lines=100):
-	"""
+        """
         @param run: The thread that controls the run
         @param master: The Runner-Object that controls everything
-	@param lines: the number of lines the server should remember
+        @param lines: the number of lines the server should remember
 	"""
         Thread.__init__(self)
 
         self.isRegistered=False
-        
+
         tries=0
-        maxTries=length=config().getint("Network","socketRetries")
+
+        maxTries=config().getint("Network","socketRetries")
 
         ok=False
-        
+
         while not ok and tries<maxTries:
             ok=True
             tries+=1
-            
+
             self._port=findFreePort()
 
             self._running=False
@@ -423,7 +431,8 @@ class FoamServer(Thread):
                     self._server.register_function(run.cpuSystemTime)
                     self._server.register_function(run.wallTime)
                     self._server.register_function(run.usedMemory)
-            except socket.error,reason:
+            except socket.error:
+                reason = sys.exc_info()[1] # compatible with 2.x and 3.x
                 ok=False
                 warning("Could not start on port",self._port,"althoug it was promised. Try:",tries,"of",maxTries)
                 foamLogger().warning("Could not get port %d - SocketError: %s. Try %d of %d" % (self._port,str(reason),tries,maxTries))
@@ -435,7 +444,7 @@ class FoamServer(Thread):
         else:
             if tries>1:
                 warning("Got a port after %d tries" % tries)
-            
+
     def run(self):
         foamLogger().info("Running server at port %d" % self._port)
         if self._port<0:
@@ -449,42 +458,49 @@ class FoamServer(Thread):
         try:
             while self._running:
                 self._server.handle_request()
-        except select.error,e:
+        except select.error:
             # This seems to be necessary since python 2.6
             pass
-        
+
         # self._server.serve_forever() # the old way
         self._server.server_close()
-        
+
         foamLogger().warning("Stopped serving on port %d" % self._port)
 
     def info(self):
         """Returns the IP, the PID and the port of the server (as one tuple)"""
-        
+
         return self._answerer.ip(),self._answerer.pid(),self._port
-    
+
     def kill(self):
         """Interrupts the FOAM-process (and kills the server)"""
         self._answerer._kill()
         return self.killServer()
-        
+
     def killServer(self):
         """Kills the server process"""
         tmp=self._running
         self._running=False
         return tmp
-    
+
     def register(self):
         """Tries to register with the Meta-Server"""
 
-        foamLogger().info("Trying to register as IP:%s PID:%d Port:%d" % (self._answerer.ip(),self._answerer.pid(),self._port))
+        foamLogger().info("Trying to register as IP:%s PID:%d Port:%d"
+                          % (self._answerer.ip(),
+                             self._answerer.pid(),self._port))
         try:
             try:
-                meta=ServerProxy("http://%s:%d" % (config().get("Metaserver","ip"),config().getint("Metaserver","port")))
-                response=meta.registerServer(self._answerer.ip(),self._answerer.pid(),self._port)
+                meta=ServerProxy(
+                    "http://%s:%d" % (config().get(
+                        "Metaserver","ip"),config().getint("Metaserver","port")))
+                response=meta.registerServer(self._answerer.ip(),
+                                             self._answerer.pid(),self._port)
                 self.isRegistered=True
-                foamLogger().info("Registered with server. Response "+str(response))
-            except socket.error, reason:
+                foamLogger().info("Registered with server. Response "
+                                  + str(response))
+            except socket.error:
+                reason = sys.exc_info()[1] # compatible with 2.x and 3.x
                 foamLogger().warning("Can't connect to meta-server - SocketError: "+str(reason))
             except:
                 foamLogger().error("Can't connect to meta-server - Unknown Error: "+str(sys.exc_info()[0]))
@@ -493,7 +509,7 @@ class FoamServer(Thread):
         except:
             # print "Error during registering (no socket module?)"
             pass
-        
+
     def deregister(self):
         """Tries to deregister with the Meta-Server"""
 
@@ -501,7 +517,8 @@ class FoamServer(Thread):
             try:
                 meta=ServerProxy("http://%s:%d" % (config().get("Metaserver","ip"),config().getint("Metaserver","port")))
                 meta.deregisterServer(self._answerer.ip(),self._answerer.pid(),self._port)
-            except socket.error, reason:
+            except socket.error:
+                reason = sys.exc_info()[1] # compatible with 2.x and 3.x
                 foamLogger().warning("Can't connect to meta-server - SocketError: "+str(reason))
             except:
                 foamLogger().error("Can't connect to meta-server - Unknown Error: "+str(sys.exc_info()[0]))
@@ -510,7 +527,9 @@ class FoamServer(Thread):
         else:
             foamLogger().warning("Not deregistering, because it seems we were not registered in the first place ")
         self._server.server_close()
-        
+
     def _insertLine(self,line):
         """Inserts a new line, not to be called via XMLRPC"""
         self._answerer._insertLine(line)
+
+# Should work with Python3 and Python2

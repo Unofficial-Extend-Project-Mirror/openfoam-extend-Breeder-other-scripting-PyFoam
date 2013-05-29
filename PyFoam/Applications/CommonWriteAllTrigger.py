@@ -2,6 +2,8 @@
 such a way that every time-step is written to disk"""
 
 import re
+import sys
+
 from os import path
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Error import warning
@@ -33,7 +35,7 @@ class CommonWriteAllTrigger(object):
     def addWriteAllTrigger(self,run,sol):
         if self.opts.purgeWrite!=None and not self.opts.writeAll:
             warning("purgeWrite of",self.opts.purgeWrite,"ignored because write-all-timesteps unused")
-            
+
         if self.opts.writeAll or self.opts.runUntil!=None:
             warning("Adding Trigger and resetting to safer start-settings")
             trig=WriteAllTrigger(sol,
@@ -41,31 +43,36 @@ class CommonWriteAllTrigger(object):
                                  self.opts.purgeWrite,
                                  self.opts.runUntil)
             run.addEndTrigger(trig.resetIt)
-        
+
 class WriteAllTrigger:
     def __init__(self,sol,writeAll,purge,until):
-        self.control=ParsedParameterFile(path.join(sol.systemDir(),"controlDict"),backup=True)
+        self.control=ParsedParameterFile(path.join(sol.systemDir(),"controlDict"),
+                                         backup=True,
+                                         doMacroExpansion=True)
 
         self.fresh=True
-        
+
         try:
             if writeAll:
                 self.control["writeControl"]="timeStep"
                 self.control["writeInterval"]="1"
                 if purge!=None:
                     self.control["purgeWrite"]=purge
-                    
+
             if until!=None:
                 self.control["endTime"]=until
-                
+
             self.control.writeFile()
-        except Exception,e:
+        except Exception:
+            e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             warning("Restoring defaults")
             self.control.restore()
             raise e
-        
+
     def resetIt(self):
         if self.fresh:
             warning("Trigger called: Resetting the controlDict")
             self.control.restore()
             self.fresh=False
+
+# Should work with Python3 and Python2

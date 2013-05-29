@@ -3,7 +3,6 @@ Class that implements common functionality for plotting options
 """
 
 from optparse import OptionGroup
-import string
 
 class CommonPlotOptions(object):
     """ The class that adds plot options
@@ -11,12 +10,12 @@ class CommonPlotOptions(object):
 
     def __init__(self,persist):
         self.persistDefault=persist
-        
+
     def addOptions(self):
         behaveGroup=OptionGroup(self.parser,
                                 "Plot Behaviour",
                                 "How the plots should behave (most of these options are passed to gnuplot)")
-        
+
         behaveGroup.add_option("--frequency",
                                type="float",
                                dest="frequency",
@@ -39,7 +38,7 @@ class CommonPlotOptions(object):
                                default=None,
                                dest="implementation",
                                help="The implementation that should be used for plotting")
-        
+
         self.parser.add_option_group(behaveGroup)
 
         writeDGroup=OptionGroup(self.parser,
@@ -57,21 +56,21 @@ class CommonPlotOptions(object):
                                default="png",
                                dest="hardcopyformat",
                                choices=hcChoices,
-                               help="File-format the hardcopy should be written in (Formats: "+string.join(hcChoices,", ")+") Default: %default")
+                               help="File-format the hardcopy should be written in (Formats: "+", ".join(hcChoices)+") Default: %default")
         writeDGroup.add_option("--prefix-hardcopy",
                                action="store",
                                default=None,
                                dest="hardcopyPrefix",
                                help="Prefix for the hardcopy-files")
-        
+
         writeDGroup.add_option("--no-pickled-file",
                                action="store_false",
                                default=True,
                                dest="writePickled",
                                help="Do not write a pickled file with the plot data")
-        
+
         self.parser.add_option_group(writeDGroup)
-        
+
         plotItGroup=OptionGroup(self.parser,
                                 "What to plot",
                                 "Predefined quantities that the program looks for and plots")
@@ -121,13 +120,13 @@ class CommonPlotOptions(object):
                                dest="withAll",
                                help="Switch all possible plots on")
         self.parser.add_option_group(plotItGroup)
-        
+
     def processPlotOptions(self):
         if self.opts.nodefault:
             self.opts.linear=False
             self.opts.cont=False
             self.opts.bound=False
-            
+
         if self.opts.withAll:
             self.opts.linear=True
             self.opts.cont=True
@@ -137,5 +136,4 @@ class CommonPlotOptions(object):
             self.opts.execution=True
             self.opts.deltaT=True
 
-        
-        
+# Should work with Python3 and Python2

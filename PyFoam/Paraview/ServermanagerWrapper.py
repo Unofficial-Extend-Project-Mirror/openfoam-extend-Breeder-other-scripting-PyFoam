@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Paraview/ServermanagerWrapper.py 7608 2011-10-11T16:50:42.194214Z bgschaid  $ 
+#  ICE Revision: $Id: ServermanagerWrapper.py 12798 2013-03-04 10:41:53Z bgschaid $
 """ Wrapper class for the paraview servermanager
 
 Sets up the servermanager to be used with OpenFOAM-Data. Especially makes sure that
@@ -13,8 +13,9 @@ from PyFoam.FoamInformation import foamVersion
 if version()>=(3,6):
     from paraview.simple import LoadPlugin
     from paraview import simple
-    
-from os import environ,path,uname
+
+from os import environ,path
+from platform import uname
 
 from PyFoam.Error import error,warning
 
@@ -28,16 +29,22 @@ class ServermanagerWrapper(object):
         with OpenFOAM-data.
         @param requiredReader: Reader that is needed. If not found, try to load plugins"""
 
-        self.con=self.module().Connect()
+        try:
+            self.con=self.module().Connect()
+        except RuntimeError:
+            # 3.98 doesn't seem to need this naymore
+            self.con=None
 
         dyExt="so"
         if uname()[0]=="Darwin":
             dyExt="dylib"
+        elif uname()[0]=="Windows":
+            dyExt="DLL"
 
         if requiredReader in dir(simple) and not "OpenFOAMReader":
             warning("Reader",requiredReader,"already present. No plugins loaded")
             return
-        
+
         if requiredReader=="PV3FoamReader":
             if uname()[0]=="Darwin":
                 import ctypes
@@ -64,7 +71,7 @@ class ServermanagerWrapper(object):
             plug1="libPV3FoamReader."+dyExt
             if foamVersion()>=(1,7):
                 plug1=None
-                
+
             plug2="libPV3FoamReader_SM."+dyExt
 
             loaded=False
@@ -110,7 +117,7 @@ class ServermanagerWrapper(object):
         """Delegate Attributes to the servermanager-module"""
 
         return getattr(servermanager,attr)
-    
+
     def __setattr__(self,attr,val):
         """Delegate Attributes to the servermanager-module"""
 
@@ -125,6 +132,7 @@ class ServermanagerWrapper(object):
         #        print dir(servermanager)
         for v in servermanager.GetRenderViews():
             del v
-        self.module().Disconnect(self.con)
-        self.con=None
+        if self.con:
+            self.module().Disconnect(self.con)
+            self.con=None
         #        self.module().Finalize()

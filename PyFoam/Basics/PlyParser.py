@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/PlyParser.py 3503 2008-08-03T20:12:31.222345Z bgschaid  $ 
+#  ICE Revision: $Id: PlyParser.py 9163 2008-08-04 08:01:10Z bgschaid $ 
 """Base class for all parser classes based on PLY
 
 Most of this class was shamelessly stolen from the examples"""

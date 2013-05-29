@@ -14,13 +14,15 @@ from PyFoam import configuration as config
 
 from PyFoam.Error import error,warning
 
+from PyFoam.ThirdParty.six import print_
+
 try:
     import PyQt4
 except ImportError:
     error("This application needs an installed PyQt4-library")
 
 from PyQt4 import QtCore, QtGui
-    
+
 class APoMaFoXiiQt(PyFoamApplication,
                CommonCaseBuilder):
     def __init__(self,args=None):
@@ -39,7 +41,7 @@ A small text interface to the CaseBuilder-Functionality
 
     def addOptions(self):
         CommonCaseBuilder.addOptions(self)
-            
+
     def run(self):
         if self.pathInfo():
             return
@@ -89,35 +91,35 @@ class FilenameWrapper(QtGui.QWidget):
             theDir=path.dirname(self.text())
         except AttributeError:
             theDir=path.abspath(path.curdir)
-        
+
         fName=QtGui.QFileDialog.getOpenFileName(self, # parent
                                                 "Select File", # caption
                                                 theDir)
         if fName!="":
             self.setText(str(fName))
-            
+
         return False
-    
+
     def setText(self,txt):
         self.name.setText(txt)
 
     def text(self):
         return path.abspath(str(self.name.text()))
-    
+
 class CaseBuilderQt(QtGui.QDialog):
     """The common denominator for the windows"""
     def __init__(self,parent=None):
         super(CaseBuilderQt,self).__init__(parent)
         self.status=None
-        
+
     def setStatus(self,text):
-        print text
+        print_(text)
         if not self.status:
             self.status=QtGui.QStatusBar(self)
             self.layout().addWidget(self.status)
-            
+
         self.status.showMessage(text)
-        
+
 class CaseBuilderBrowser(CaseBuilderQt):
     """A browser of all the available descriptions"""
     def __init__(self):
@@ -140,7 +142,7 @@ class CaseBuilderBrowser(CaseBuilderQt):
             item.setToolTip(d[3])
             self.descriptsList.addItem(item)
             self.itemlist.append((item,d))
-            
+
         buttons=QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Cancel)
         mainLayout.addWidget(buttons)
         selectButton=QtGui.QPushButton("Select")
@@ -153,7 +155,7 @@ class CaseBuilderBrowser(CaseBuilderQt):
             warning("Old QT-version where QDialogButtonBox doesn't have the accepted/rejected-attributes")
             self.connect(buttons,QtCore.SIGNAL("accepted()"),self.selectPressed)
             self.connect(buttons,QtCore.SIGNAL("rejected()"),self.reject)
-            
+
     def selectPressed(self):
         self.setStatus("Pressed selected")
         selected=self.descriptsList.selectedItems()
@@ -174,15 +176,15 @@ class CaseBuilderBrowser(CaseBuilderQt):
         self.setStatus("")
         sub=CaseBuilderDialog(desc[1],parent=self)
         sub.show()
-        
+
 class CaseBuilderDialog(CaseBuilderQt):
     """A dialog for a CaswBuilder-dialog"""
     def __init__(self,fName,parent=None):
         CaseBuilderQt.__init__(self,parent=parent)
-        
+
         self.desc=CaseBuilderFile(fName)
-        
-        #        print "Read case description",self.desc.name()
+
+        #        print_("Read case description",self.desc.name())
 
         mainLayout = QtGui.QVBoxLayout()
         self.setLayout(mainLayout)
@@ -190,7 +192,7 @@ class CaseBuilderDialog(CaseBuilderQt):
         mainLayout.addWidget(QtGui.QLabel("Builder Template: "
                                         + self.desc.name()
                                         +"\n"+self.desc.description()))
-        
+
         mainLayout.addWidget(QtGui.QLabel("Data Template: "
                                           + self.desc.templatePath()))
 
@@ -199,7 +201,7 @@ class CaseBuilderDialog(CaseBuilderQt):
         except AttributeError:
             warning("Qt-version without QFormLayout")
             caseLayout=QtGui.QVBoxLayout()
-            
+
         mainLayout.addLayout(caseLayout)
 
         self.caseName=QtGui.QLineEdit()
@@ -210,13 +212,13 @@ class CaseBuilderDialog(CaseBuilderQt):
         except AttributeError:
             caseLayout.addWidget(QtGui.QLabel("Case name"))
             caseLayout.addWidget(self.caseName)
-            
+
         args=self.desc.arguments()
-        mLen=apply(max,map(len,args))
+        mLen=max(*list(map(len,args)))
         aDesc=self.desc.argumentDescriptions()
         aDef=self.desc.argumentDefaults()
         allArgs=self.desc.argumentDict()
-        
+
         self.argfields={}
 
         groups=[None]+self.desc.argumentGroups()
@@ -224,7 +226,7 @@ class CaseBuilderDialog(CaseBuilderQt):
 
         theGroupTabs=QtGui.QTabWidget()
         mainLayout.addWidget(theGroupTabs)
-        
+
         for g in groups:
             if g==None:
                 name="Default"
@@ -236,15 +238,15 @@ class CaseBuilderDialog(CaseBuilderQt):
             try:
                 gLayout=QtGui.QFormLayout()
             except AttributeError:
-                gLayout=QtGui.QVBoxLayout()                
+                gLayout=QtGui.QVBoxLayout()
             gWidget.setLayout(gLayout)
             idx=theGroupTabs.addTab(gWidget,name)
             theGroupTabs.setTabToolTip(idx,desc)
-            
+
             for a in self.desc.groupArguments(g):
                 theType=allArgs[a].type
                 if theType=="file":
-                    print "File",a
+                    print_("File",a)
                     aWidget=FilenameWrapper(self)
                     aWidget.setText(aDef[a])
                 elif theType=="selection":
@@ -268,7 +270,7 @@ class CaseBuilderDialog(CaseBuilderQt):
         self.noClose=QtGui.QCheckBox("Don't close")
         self.noClose.setToolTip("Do not close after 'Generate'")
         bottomLayout.addWidget(self.noClose)
-        
+
         buttons=QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Cancel)
         bottomLayout.addWidget(buttons)
         generateButton=QtGui.QPushButton("Generate")
@@ -280,7 +282,7 @@ class CaseBuilderDialog(CaseBuilderQt):
         except AttributeError:
             self.connect(buttons,QtCore.SIGNAL("accepted()"),self.generatePressed)
             self.connect(buttons,QtCore.SIGNAL("rejected()"),self.reject)
-        
+
     def generatePressed(self):
         self.setStatus("Pressed generate")
         ok=False
@@ -289,11 +291,11 @@ class CaseBuilderDialog(CaseBuilderQt):
         if len(caseName)==0:
             self.setStatus("Casename empty")
             return
-        
+
         if path.exists(caseName):
             self.setStatus("Directory "+caseName+" already existing")
             return
-        
+
         self.setStatus("Generating the case "+caseName)
         args={}
         for i,a in enumerate(self.desc.arguments()):
@@ -306,7 +308,7 @@ class CaseBuilderDialog(CaseBuilderQt):
         if msg:
             self.setStatus(msg)
             return
-        
+
         self.setStatus("With the arguments "+str(args))
 
         self.desc.buildCase(caseName,args)
@@ -317,5 +319,5 @@ class CaseBuilderDialog(CaseBuilderQt):
                 self.accept()
             else:
                 self.setStatus("Generated "+caseName)
-                    
 
+# Should work with Python3 and Python2

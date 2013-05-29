@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SurfacePlot.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: SurfacePlot.py 12762 2013-01-03 23:11:02Z bgschaid $
 """
 Application class that implements pyFoamSurfacePlot.py
 """
@@ -9,12 +9,15 @@ from optparse import OptionGroup
 from copy import copy
 from math import ceil,sqrt
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.SurfaceDirectory import SurfaceDirectory
 
 from PyFoam.Error import error,warning
 
-from PlotHelpers import cleanFilename
+from .PlotHelpers import cleanFilename
+
+from PyFoam.ThirdParty.six import print_
+from PyFoam.ThirdParty.six.moves import input
 
 class SurfacePlot(PyFoamApplication):
     def __init__(self,args=None):
@@ -22,7 +25,7 @@ class SurfacePlot(PyFoamApplication):
 Searches for sampled surface in the VTK-format in a directory and
 makes pictures from them
         """
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -30,13 +33,13 @@ makes pictures from them
                                    nr=1,
                                    changeVersion=False,
                                    interspersed=True)
-        
+
     def addOptions(self):
         data=OptionGroup(self.parser,
                           "Data",
                           "Select the data to plot")
         self.parser.add_option_group(data)
-        
+
         data.add_option("--surface",
                         action="append",
                         default=None,
@@ -52,12 +55,12 @@ makes pictures from them
                         default="surfaces",
                         dest="dirName",
                         help="Alternate name for the directory with the samples (Default: %default)")
-        
+
         time=OptionGroup(self.parser,
                          "Time",
                          "Select the times to plot")
         self.parser.add_option_group(time)
-        
+
         time.add_option("--time",
                         action="append",
                         default=None,
@@ -85,7 +88,7 @@ makes pictures from them
                            "Appearance",
                            "How it should be plotted")
         self.parser.add_option_group(output)
-        
+
         output.add_option("--unscaled",
                           action="store_false",
                           dest="scaled",
@@ -116,17 +119,17 @@ makes pictures from them
                           dest="cleanFilename",
                           default=False,
                           help="Clean filenames so that they can be used in HTML or Latex-documents")
-        
+
         colorMaps=["blueToRed","redToBlue","blackToWhite","redToWhite"]
         #        colorMaps.append("experimental")
-        
+
         output.add_option("--color-map",
                           type="choice",
                           dest="colorMap",
                           default="blueToRed",
                           choices=colorMaps,
                           help="Sets the used colormap to one of "+string.join(colorMaps,", ")+" with the default: %default")
-         
+
         data.add_option("--info",
                         action="store_true",
                         dest="info",
@@ -195,6 +198,11 @@ makes pictures from them
                           dest="silent",
                           default=False,
                           help="Don't write progress to the terminal")
+        behave.add_option("--wait",
+                          action="store_true",
+                          dest="wait",
+                          default=False,
+                          help="Keep window open until a key is pressed")
 
     def setupPipeline(self,fName):
         if self.opts.offscreen:
@@ -203,7 +211,7 @@ makes pictures from them
             grap.SetUseMesaClasses(1)
             img=vtk.vtkImagingFactory()
             img.SetUseMesaClasses(1)
-        
+
         self.reader = vtk.vtkDataSetReader()
         self.reader.SetFileName(fName)
         self.output = self.reader.GetOutput()
@@ -212,21 +220,21 @@ makes pictures from them
         self.surfMapper = vtk.vtkDataSetMapper()
         self.surfMapper.SetColorModeToMapScalars()
         self.lut = vtk.vtkLookupTable()
-        if self.opts.colorMap=="blueToRed":            
+        if self.opts.colorMap=="blueToRed":
             self.lut.SetHueRange(0.667,0)
-        elif self.opts.colorMap=="redToBlue":            
+        elif self.opts.colorMap=="redToBlue":
             self.lut.SetHueRange(0,0.667)
-        elif self.opts.colorMap=="blackToWhite":            
-            self.lut.SetHueRange(1,1)            
+        elif self.opts.colorMap=="blackToWhite":
+            self.lut.SetHueRange(1,1)
             self.lut.SetValueRange(0,1)
             self.lut.SetSaturationRange(0,0)
-        elif self.opts.colorMap=="redToWhite":            
-            self.lut.SetHueRange(0,0.2)            
+        elif self.opts.colorMap=="redToWhite":
+            self.lut.SetHueRange(0,0.2)
             self.lut.SetValueRange(1,1)
             self.lut.SetSaturationRange(1,0.2)
         else:
             self.warning("Unknown colormap",self.opts.colorMap)
-            
+
         self.surfMapper.SetLookupTable(self.lut)
         self.surfActor = vtk.vtkActor()
         self.surfActor.SetMapper(self.surfMapper)
@@ -234,7 +242,7 @@ makes pictures from them
         self.textActor.SetDisplayPosition(90, 50)
         self.textActor.SetTextScaleModeToViewport()
         self.textActor.SetWidth(0.75)
-        
+
         self.barActor = vtk.vtkScalarBarActor()
         self.barActor.SetLookupTable(self.lut)
         self.barActor.SetDisplayPosition(90, 300)
@@ -261,7 +269,7 @@ makes pictures from them
 #        self.ren.AddViewProp(self.axes)
 
 #        self.axes.SetCamera(self.ren.GetActiveCamera())
-        
+
         self.ren.SetBackground(0.7, 0.7, 0.7)
 
         self.hasPipeline=True
@@ -271,7 +279,7 @@ makes pictures from them
             self.setupPipeline(fName)
         else:
             self.reader.SetFileName(fName)
-            
+
         self.reader.Update()
         self.output = self.reader.GetOutput()
         if self.opts.toPoint:
@@ -289,13 +297,13 @@ makes pictures from them
     def setTitles(self,title,bar):
         self.textActor.SetInput(title)
         self.barActor.SetTitle(bar)
-        
+
     def getCurrentRange(self):
         return self.reader.GetOutput().GetScalarRange()
 
     def getVector(self,opt):
-        return map(float,opt.split(','))
-    
+        return list(map(float,opt.split(',')))
+
     def writePicture(self,fName):
         self.ren.ResetCamera()
 
@@ -325,14 +333,14 @@ makes pictures from them
 
         for i in range(3):
             position[i]+=camOffset[i]
-                
+
         if self.opts.reportCamera:
-            print "Picture size:",self.opts.width,self.opts.height
-            print "Data bounds:",xMin,xMax,yMin,yMax,zMin,zMax
-            print "Focal point:",focalPoint
-            print "Up-direction:",up
-            print "Camera position:",position
-            
+            print_("Picture size:",self.opts.width,self.opts.height)
+            print_("Data bounds:",xMin,xMax,yMin,yMax,zMin,zMax)
+            print_("Focal point:",focalPoint)
+            print_("Up-direction:",up)
+            print_("Camera position:",position)
+
         self.renWin.SetSize(self.opts.width,self.opts.height)
         self.barActor.SetDisplayPosition(int(self.opts.width*0.124), 20)
         self.textActor.SetDisplayPosition(int(self.opts.width*0.124),self.opts.height-30)
@@ -343,7 +351,7 @@ makes pictures from them
         self.ren.ResetCameraClippingRange()
 
         self.renWin.Render()
-        
+
         self.renderLarge = vtk.vtkRenderLargeImage()
         self.renderLarge.SetInput(self.ren)
         self.renderLarge.SetMagnification(1)
@@ -353,7 +361,10 @@ makes pictures from them
 
         self.writer.SetFileName(fName)
         self.writer.Write()
-        
+
+        if self.opts.wait:
+            input("waiting for key")
+
     def run(self):
         global vtk
         import vtk
@@ -361,17 +372,17 @@ makes pictures from them
         caseName=path.basename(path.abspath(self.parser.getArgs()[0]))
         samples=SurfaceDirectory(self.parser.getArgs()[0],dirName=self.opts.dirName)
         self.hasPipeline=False
-        
+
         if self.opts.info:
-            print "Times    : ",samples.times
-            print "Surfaces : ",samples.surfaces()
-            print "Values   : ",samples.values()
+            print_("Times    : ",samples.times)
+            print_("Surfaces : ",samples.surfaces())
+            print_("Values   : ",list(samples.values()))
             sys.exit(0)
 
         surfaces=samples.surfaces()
         times=samples.times
-        values=samples.values()
-        
+        values=list(samples.values())
+
         if self.opts.surface==None:
             #            error("At least one line has to be specified. Found were",samples.lines())
             self.opts.surface=surfaces
@@ -413,9 +424,9 @@ makes pictures from them
                         self.opts.time.append(use)
                 else:
                     self.warning("Time",t,"not found in the sample-times. Use option --fuzzy")
-            
+
         if not self.opts.silent:
-            print "Getting data about plots"
+            print_("Getting data about plots")
         plots=[]
 
         if self.opts.time==None:
@@ -423,7 +434,7 @@ makes pictures from them
         elif len(self.opts.time)==0:
             self.error("No times specified. Exiting")
         if self.opts.field==None:
-            self.opts.field=samples.values()
+            self.opts.field=list(samples.values())
         for s in self.opts.surface:
             for t in self.opts.time:
                 for f in self.opts.field:
@@ -436,12 +447,12 @@ makes pictures from them
         vRanges=None
         if self.opts.scaled:
             if not self.opts.silent:
-                print "Getting ranges"
+                print_("Getting ranges")
             if self.opts.scaleAll:
                 vRange=None
             else:
                 vRanges={}
-                
+
             for p in plots:
                 f,tm,surf,nm=p
                 self.setFilename(f)
@@ -468,16 +479,16 @@ makes pictures from them
                 name+=self.opts.namePrefix+"_"
             name+=self.opts.dirName
             tIndex=times.index(time)
-            
+
             name+="_"+surf
 
             name+="_%s_%04d"   % (nm,tIndex)
             title="%s : %s - %s   t=%f" % (caseName,self.opts.dirName,surf,float(time))
-                        
+
             name+=".png"
             if self.opts.cleanFilename:
                 name=cleanFilename(name)
-            
+
             if self.opts.pictureDest:
                 name=path.join(self.opts.pictureDest,name)
 
@@ -489,11 +500,12 @@ makes pictures from them
                 if vRanges:
                     if nm in vRanges:
                         self.setRange(vRanges[nm])
-                    
+
             self.setTitles(title,nm)
 
             if not self.opts.silent:
-                print "Writing picture",name
-                
+                print_("Writing picture",name)
+
             self.writePicture(name)
-            
+
+# Should work with Python3 and Python2

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PVSnapshot.py 7660 2012-01-07T16:44:40.128256Z bgschaid  $ 
+#  ICE Revision: $Id: PVSnapshot.py 12799 2013-03-04 11:39:49Z bgschaid $
 """
 Class that implements pyFoamPVSnapshot
 """
@@ -36,7 +36,7 @@ In TextSources the string "%(casename)s" gets replaced by the
 casename. Additional replacements can be specified
 """
         CommonSelectTimesteps.__init__(self)
-        
+
         PyFoamApplication.__init__(self,
                                    args=args,
                                    description=description,
@@ -46,10 +46,10 @@ casename. Additional replacements can be specified
 
     typeTable={"png":"vtkPNGWriter",
                "jpg":"vtkJPEGWriter"}
-        
+
     def addOptions(self):
         CommonSelectTimesteps.addOptions(self,defaultUnique=False)
-        
+
         paraview=OptionGroup(self.parser,
                            "Paraview specifications",
                            "Options concerning paraview")
@@ -105,14 +105,14 @@ casename. Additional replacements can be specified
                             dest="casenameKey",
                             default="casename",
                             help="Key with which the caename should be replaced. Default: %default")
-        
+
     def run(self):
         if foamVersion()>=(1,6):
             self.warning("This utilitiy currently does not work with OF>=1.6 because the API in Paraview>=3.6 has changed. But we'll try")
-            
+
         case=path.abspath(self.parser.getArgs()[0])
         short=path.basename(case)
-        
+
         if self.opts.state==None:
             self.opts.state=path.join(case,"default.pvsm")
 
@@ -120,7 +120,7 @@ casename. Additional replacements can be specified
             self.error("The state file",self.opts.state,"does not exist")
 
         timeString=""
-        
+
         if self.opts.casename:
             timeString+="_"+short
         timeString+="_%(nr)05d"
@@ -131,28 +131,33 @@ casename. Additional replacements can be specified
         sol=SolutionDirectory(case,
                               paraviewLink=False,
                               archive=None)
-        
+
         times=self.processTimestepOptions(sol)
         if len(times)<1:
             self.warning("Can't continue without time-steps")
             return
-        
+
         dataFile=path.join(case,short+".OpenFOAM")
         createdDataFile=False
         if not path.exists(dataFile):
             createdDataFile=True
             f=open(dataFile,"w")
             f.close()
-            
+
         sf=StateFile(self.opts.state)
         sf.setCase(dataFile)
-        
+
         values=eval(self.opts.replacements)
         values[self.opts.casenameKey]=short
         sf.rewriteTexts(values)
         newState=sf.writeTemp()
 
         sm=SM(requiredReader=sf.readerType())
+
+        # make sure that the first snapshot is rendered correctly
+        import paraview.simple
+        paraview.simple._DisableFirstRenderCameraReset()
+
         if not self.opts.progress:
             sm.ToggleProgressPrinting()
 
@@ -164,13 +169,15 @@ casename. Additional replacements can be specified
             self.warning("More than 1 view in state-file. Generating multiple series")
             timeString="_View%(view)02d"+timeString
         timeString=self.opts.prefix+timeString
-        
+
         for view in views:
             view.UseOffscreenRenderingForScreenshots=True
-        
+
         for i,t in enumerate(times):
-            print "Snapshot ",i," for t=",t
+            print "Snapshot ",i," for t=",t,
             for j,view in enumerate(views):
+                if len(views)>0:
+                    print "View %d" % j,
                 view.ViewTime=float(t)
                 fn = timeString % {'nr':i,'t':t,'view':j}
                 if PVVersion()<(3,6):
@@ -181,12 +188,12 @@ casename. Additional replacements can be specified
                     from paraview.simple import SetActiveView,Render,WriteImage
                     SetActiveView(view)
                     Render()
-                    # This always produces segmentation fauklts for me 
+                    # This always produces segmentation fauklts for me
                     WriteImage(fn,
                                view,
 #                               Writer=self.typeTable[self.opts.type],
                                Magnification=self.opts.magnification)
-                    
+            print
         if createdDataFile:
             self.warning("Removing pseudo-data-file",dataFile)
             unlink(dataFile)

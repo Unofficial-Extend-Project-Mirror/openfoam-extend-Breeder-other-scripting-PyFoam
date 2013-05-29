@@ -1,7 +1,7 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/TimeLineLineAnalyzer.py 1906 2007-08-28T16:16:19.392553Z bgschaid  $ 
+#  ICE Revision: $Id: TimeLineLineAnalyzer.py 12762 2013-01-03 23:11:02Z bgschaid $
 """Line analyzer that collects datga in arrays"""
 
-from GeneralLineAnalyzer import GeneralLineAnalyzer
+from .GeneralLineAnalyzer import GeneralLineAnalyzer
 
 class TimeLineLineAnalyzer(GeneralLineAnalyzer):
     """Base class for analyzers that collect data in arrays
@@ -9,4 +9,5 @@ class TimeLineLineAnalyzer(GeneralLineAnalyzer):
     Just a stub to enable legacy code"""
     def __init__(self):
         GeneralLineAnalyzer.__init__(self,doTimelines=True)
-        
+
+# Should work with Python3 and Python2

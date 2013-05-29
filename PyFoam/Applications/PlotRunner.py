@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotRunner.py 7722 2012-01-18T17:50:53.943725Z bgschaid  $ 
+#  ICE Revision: $Id: PlotRunner.py 12753 2013-01-03 23:08:03Z bgschaid $
 """
 Class that implements pyFoamPlotRunner
 """
 
-from PyFoamApplication import PyFoamApplication
+from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.Execution.GnuplotRunner import GnuplotRunner
 
@@ -11,19 +11,19 @@ from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 from PyFoam.Error import warning
 
-from CommonStandardOutput import CommonStandardOutput
-from CommonPlotLines import CommonPlotLines
-from CommonParallel import CommonParallel
-from CommonRestart import CommonRestart
-from CommonPlotOptions import CommonPlotOptions
-from CommonClearCase import CommonClearCase
-from CommonReportUsage import CommonReportUsage
-from CommonReportRunnerData import CommonReportRunnerData
-from CommonSafeTrigger import CommonSafeTrigger
-from CommonWriteAllTrigger import CommonWriteAllTrigger
-from CommonLibFunctionTrigger import CommonLibFunctionTrigger
-from CommonServer import CommonServer
-from CommonVCSCommit import CommonVCSCommit
+from .CommonStandardOutput import CommonStandardOutput
+from .CommonPlotLines import CommonPlotLines
+from .CommonParallel import CommonParallel
+from .CommonRestart import CommonRestart
+from .CommonPlotOptions import CommonPlotOptions
+from .CommonClearCase import CommonClearCase
+from .CommonReportUsage import CommonReportUsage
+from .CommonReportRunnerData import CommonReportRunnerData
+from .CommonSafeTrigger import CommonSafeTrigger
+from .CommonWriteAllTrigger import CommonWriteAllTrigger
+from .CommonLibFunctionTrigger import CommonLibFunctionTrigger
+from .CommonServer import CommonServer
+from .CommonVCSCommit import CommonVCSCommit
 
 from os import path
 
@@ -48,7 +48,7 @@ Runs an OpenFoam solver needs the usual 3 arguments (<solver>
 Output is sent to stdout and a logfile inside the case directory
 (PyFoamSolver.logfile) Information about the residuals is output as
 graphs
-        
+
 If the directory contains a file customRegexp this is automatically
 read and the regular expressions in it are displayed
         """
@@ -58,18 +58,18 @@ read and the regular expressions in it are displayed
                                    exactNr=False,
                                    args=args,
                                    description=description)
-        
+
     def addOptions(self):
         CommonClearCase.addOptions(self)
 
         CommonPlotOptions.addOptions(self)
-        
+
         self.parser.add_option("--steady-run",
                                action="store_true",
                                default=False,
                                dest="steady",
                                help="This is a steady run. Stop it after convergence")
-        
+
         CommonReportUsage.addOptions(self)
         CommonReportRunnerData.addOptions(self)
         CommonStandardOutput.addOptions(self)
@@ -81,26 +81,26 @@ read and the regular expressions in it are displayed
         CommonLibFunctionTrigger.addOptions(self)
         CommonServer.addOptions(self)
         CommonVCSCommit.addOptions(self)
-        
+
     def run(self):
         self.processPlotOptions()
-        
+
         cName=self.parser.casePath()
         self.checkCase(cName)
         self.addLocalConfig(cName)
 
         self.processPlotLineOptions(autoPath=cName)
-        
+
         sol=SolutionDirectory(cName,archive=None)
 
         self.clearCase(sol)
 
         lam=self.getParallel(sol)
-        
+
         self.setLogname()
 
         self.checkAndCommit(sol)
-        
+
         run=GnuplotRunner(argv=self.parser.getArgs(),
                           smallestFreq=self.opts.frequency,
                           persist=self.opts.persist,
@@ -130,14 +130,15 @@ read and the regular expressions in it are displayed
                           writePickled=self.opts.writePickled,
                           singleFile=self.opts.singleDataFilesOnly,
                           remark=self.opts.remark,
+                          parameters=self.getRunParameters(),
                           jobId=self.opts.jobId)
 
         self.addSafeTrigger(run,sol,steady=self.opts.steady)
         self.addWriteAllTrigger(run,sol)
-        self.addLibFunctionTrigger(run,sol)        
-        
+        self.addLibFunctionTrigger(run,sol)
+
         self.addToCaseLog(cName,"Starting")
-        
+
         run.start()
 
         self.setData(run.data)
@@ -148,4 +149,5 @@ read and the regular expressions in it are displayed
         self.reportRunnerData(run)
 
         return run.data
-    
+
+# Should work with Python3 and Python2

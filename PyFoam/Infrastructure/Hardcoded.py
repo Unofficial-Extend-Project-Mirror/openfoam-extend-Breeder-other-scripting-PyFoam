@@ -1,7 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Hardcoded.py 6471 2010-04-16T19:46:47.669328Z bgschaid  $ 
+#  ICE Revision: $Id: Hardcoded.py 12760 2013-01-03 23:10:16Z bgschaid $
 """Hardcoded values"""
 
 from os import path,makedirs,environ
+from PyFoam.ThirdParty.six import PY3
 
 _pyFoamDirName="pyFoam"
 
@@ -34,23 +35,30 @@ def userConfigDir():
 def userName():
     """@return: name of the current user"""
     user=""
-    if environ.has_key("USER"):
+    if "USER" in environ:
         user=environ["USER"]
     return user
 
 def logDirectory():
     """Path to the log directory that this user may write to.
-    /var/log/pyFoam for root, ~/.pyFoam/log for all others 
+    /var/log/pyFoam for root, ~/.pyFoam/log for all others
     @return: path to the log directory."""
     if userName()=="root":
         return path.join("/var/log","pyFoam")
     else:
         return path.join(userDirectory(),"log")
-    
+
 def assertDirectory(name):
     """Makes sure that the directory exists
     @param name: the directory"""
     if path.exists(name):
         return
     else:
-        makedirs(name,mode=0755)
+        if PY3:
+            perm=eval("0o755")
+        else:
+            perm=eval("0755")
+
+        makedirs(name,mode=perm)
+
+# Should work with Python3 and Python2
