@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: RegExpLineAnalyzer.py 12747 2013-01-03 23:06:57Z bgschaid $
+#  ICE Revision: $Id$
 """Analyzes lines with regular expressions"""
 
 import re

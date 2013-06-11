@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: LinearSolverLineAnalyzer.py 12775 2013-01-31 15:53:22Z bgschaid $
+#  ICE Revision: $Id$
 """Analyze information from the linear solver"""
 
 import re

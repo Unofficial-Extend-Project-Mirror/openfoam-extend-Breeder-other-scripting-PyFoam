@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SteadyConvergedLineAnalyzer.py 12753 2013-01-03 23:08:03Z bgschaid $
+#  ICE Revision: $Id$
 """Analyze Steady Solver"""
 
 import re

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamServer.py 12769 2013-01-16 11:38:51Z bgschaid $
+#  ICE Revision: $Id$
 """A XMLRPC-Server that answeres about the current state of a Foam-Run"""
 
 from PyFoam.ThirdParty.six import PY3

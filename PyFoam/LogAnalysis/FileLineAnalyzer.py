@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FileLineAnalyzer.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Line analyzer with output"""
 
 from .GeneralLineAnalyzer import GeneralLineAnalyzer

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: __init__.py 12798 2013-03-04 10:41:53Z bgschaid $
+#  ICE Revision: $Id$
 """ Paraview interaction
 
 Classes that help to interact with a Python-enabled paraFoam/paraview

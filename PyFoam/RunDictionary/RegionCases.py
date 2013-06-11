@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: RegionCases.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Pseudo-Cases for Regions, built from symlinks"""
 
 from .SolutionDirectory import SolutionDirectory

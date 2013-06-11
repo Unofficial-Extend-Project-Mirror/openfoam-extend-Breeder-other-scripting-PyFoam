@@ -78,7 +78,22 @@ If the case is under VCS then the cloning mechanism of the VCS is used
                           dest="vcs",
                           default=True,
                           help="Do NOT use the VCS-clone mechanism if the case is under source control")
-
+        behave.add_option("--symlink-mode",
+                          action="store_true",
+                          dest="symlinkMode",
+                          default=False,
+                          help="Clone in symbolic link mode. This means that all directories down to the level specified in 'symlink-level' are created and populated with symbolic links to the appropriate files. Below that level a symlink to the whole directory is created. Exception are the 'polyMesh'-directories where all files except 'blockMeshDict' are being copied. If for certain files a copy instead of the symbolic link is wanted use 'pyFoamSymlinkToFile.py'")
+        behave.add_option("--symlink-level",
+                          action="store",
+                          dest="symlinkLevel",
+                          type=int,
+                          default=1,
+                          help="Level until which no symlinks to directories are created. Default: %default")
+        behave.add_option("--relative-symlink",
+                          action="store_true",
+                          dest="symlinkRelative",
+                          default=False,
+                          help="With '--symlink-mode' make the symbolic links relative instead of absolute")
     def run(self):
         if len(self.parser.getArgs())>2:
             error("Too many arguments:",self.parser.getArgs()[2:],"can not be used")
@@ -125,9 +140,17 @@ If the case is under VCS then the cloning mechanism of the VCS is used
         if self.parser.getOptions().latest:
             sol.addToClone(sol.getLast())
 
-        sol.cloneCase(
-            dName,
-            followSymlinks=self.parser.getOptions().followSymlinks
+        if self.opts.symlinkMode:
+            sol.symlinkCase(
+                dName,
+                followSymlinks=self.parser.getOptions().followSymlinks,
+                maxLevel=self.opts.symlinkLevel,
+                relPath=self.opts.symlinkRelative
+            )
+        else:
+            sol.cloneCase(
+                dName,
+                followSymlinks=self.parser.getOptions().followSymlinks
             )
 
         self.addToCaseLog(dName,"Cloned to",dName)

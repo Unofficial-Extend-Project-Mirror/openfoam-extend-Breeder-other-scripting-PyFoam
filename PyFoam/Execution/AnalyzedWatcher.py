@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: AnalyzedWatcher.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Watches output and analyzes it"""
 
 from .BasicWatcher import BasicWatcher

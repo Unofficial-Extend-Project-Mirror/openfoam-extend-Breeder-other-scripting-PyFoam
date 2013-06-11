@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SourceBase.py 10106 2009-03-12 09:50:26Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """ Base class for the wrapping of graphical objects
 
 The actual object is accessed via the member variable src.

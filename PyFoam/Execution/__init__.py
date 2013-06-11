@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: __init__.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """ Program execution
 
 Classes that execute the OpenFoam applications in a controlled manner

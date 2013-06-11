@@ -26,6 +26,8 @@ print_("Machine info:"," | ".join(uname()))
 print_()
 print_("Python version:",sys.version)
 print_()
+print_("Python executable:",sys.executable)
+print_()
 
 if sys.version_info<(2,3):
     print_("\nUnsupported Python-version (at least 2.3). Recommended is 2.6 or 2.7")
@@ -59,8 +61,8 @@ if PyFoam.FoamInformation.oldAppConvention():
     print_("  This version of OpenFOAM uses the old calling convention")
 print_()
 print_("pyFoam-Version:",PyFoam.versionString())
-# hardcodedVersion=(0,6,0,"development")
-hardcodedVersion=(0,6,0)
+# hardcodedVersion=(0,6,2,"development")
+hardcodedVersion=(0,6,1)
 if PyFoam.version()!=hardcodedVersion:
     print_("ALERT: Reported version",PyFoam.version(),
            "is different from hardcoded version",
@@ -71,7 +73,10 @@ print_()
 print_("Configuration search path:",PyFoam.configuration().configSearchPath())
 print_("Configuration files (used):",PyFoam.configuration().configFiles())
 
+libLoc={}
+
 def testLibrary(name,textMissing=None,textThere=None):
+    global libLoc
     print_("%-20s : " % name, end=' ')
 
     try:
@@ -88,6 +93,7 @@ def testLibrary(name,textMissing=None,textThere=None):
             print_("\t",textThere, end=' ')
         print_()
 
+        libLoc[name]=eval(name+'.__file__')
         return True
     except ImportError:
         print_("No", end=' ')
@@ -136,5 +142,10 @@ testLibrary("nose","Only needed for running the unit-tests (developers only)")
 testLibrary("twisted","Not yet used. Possibly reimplement MetaServer with it")
 testLibrary("pandas","Not yet used. Maybe handling of timelines will be reimplemented with it")
 testLibrary("scipy","Not yet used. Possibly use signal-fitting etc")
+
+print_()
+print_("Library locations")
+for l in libLoc:
+    print_("%-20s : %s" % (l,libLoc[l]))
 
 # Should work with Python3 and Python2

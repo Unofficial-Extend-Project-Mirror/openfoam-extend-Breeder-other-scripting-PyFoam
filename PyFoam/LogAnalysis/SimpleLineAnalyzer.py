@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SimpleLineAnalyzer.py 12753 2013-01-03 23:08:03Z bgschaid $
+#  ICE Revision: $Id$
 """Do analysis for simple expressions"""
 
 import re

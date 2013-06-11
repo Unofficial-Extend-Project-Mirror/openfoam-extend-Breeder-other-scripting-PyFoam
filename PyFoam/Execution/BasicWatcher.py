@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BasicWatcher.py 12757 2013-01-03 23:08:34Z bgschaid $
+#  ICE Revision: $Id$
 """Watches the output of Foam-run"""
 
 from os import path

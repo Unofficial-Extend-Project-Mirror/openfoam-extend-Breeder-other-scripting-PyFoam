@@ -10,6 +10,8 @@ from PyFoam.RunDictionary.SolutionDirectory import NoTouchSolutionDirectory
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.Basics.TemplateFile import TemplateFile
 
+from .CommonTemplateFormat import CommonTemplateFormat
+
 from os import path
 from optparse import OptionGroup
 
@@ -76,10 +78,14 @@ class UtilityThread(QtCore.QThread):
 class DisplayBlockMeshDialog(QtGui.QMainWindow):
     def __init__(self,
                  fName,
-                 valuesFile=None):
+                 valuesFile=None,
+                 opts=None):
         super(DisplayBlockMeshDialog,self).__init__(None)
         self.fName=fName
         self.vName=valuesFile
+
+        # dirty. Gives us access to the command line opts
+        self.opts=opts
 
         self.numberScale=2
         self.pointScale=1
@@ -328,6 +334,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
             self.readFile()
         except Exception:
             e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+
             warning("While reading",self.fName,"this happened:",e)
             raise e
 
@@ -973,7 +980,9 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         if self.vName:
             print_("Evaluating template")
             bFile=path.splitext(self.fName)[0]
-            template=TemplateFile(self.fName)
+            template=TemplateFile(self.fName,
+                                  expressionDelimiter=self.opts.expressionDelimiter,
+                                  assignmentLineStart=self.opts.assignmentLineStart)
 
             if path.exists(self.vName):
                 vals=ParsedParameterFile(self.vName,
@@ -1310,7 +1319,8 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         QtCore.QSettings().setValue("geometry",QtCore.QVariant(self.saveGeometry()))
         QtCore.QSettings().setValue("state",QtCore.QVariant(self.saveState()))
 
-class DisplayBlockMesh(PyFoamApplicationQt4):
+class DisplayBlockMesh(PyFoamApplicationQt4,
+                       CommonTemplateFormat):
     def __init__(self):
         description="""\
 Reads the contents of a blockMeshDict-file and displays the vertices
@@ -1339,6 +1349,8 @@ This is a new version with a QT-GUI
 
         self.parser.add_option_group(template)
 
+        CommonTemplateFormat.addOptions(self)
+
     def setupGUI(self):
         print_(usedVTK)
 
@@ -1353,6 +1365,7 @@ This is a new version with a QT-GUI
                            "has no extension")
         try:
             self.dialog=DisplayBlockMeshDialog(bmFile,
+                                               opts=self.opts,
                                                valuesFile=self.opts.valuesFile)
         except IOError:
             self.error("Problem with blockMesh file",bmFile)

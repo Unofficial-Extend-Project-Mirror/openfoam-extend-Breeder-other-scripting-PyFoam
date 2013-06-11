@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: NetworkHelpers.py 12758 2013-01-03 23:08:44Z bgschaid $
+#  ICE Revision: $Id$
 """Helpers for the networking functionality"""
 
 import socket

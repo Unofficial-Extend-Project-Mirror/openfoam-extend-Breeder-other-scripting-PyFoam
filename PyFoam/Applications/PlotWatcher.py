@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlotWatcher.py 12756 2013-01-03 23:08:21Z bgschaid $
+#  ICE Revision: $Id$
 """
 Class that implements pyFoamPlotWatcher
 """

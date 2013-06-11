@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: BasicRunner.py 12785 2013-01-31 19:13:41Z bgschaid $
+#  ICE Revision: $Id$
 """Run a OpenFOAM command"""
 
 import sys
@@ -508,9 +508,13 @@ class BasicRunnerCheck(object):
 
     def controlDictRead(self,line):
         """Was the controlDict reread?"""
-        if line.find("Reading object controlDict from file")>=0:
-            return True
-        else:
-            return False
+        phrases=["Reading object controlDict from file",
+                 "Re-reading object controlDict from file"]
+
+        for p in phrases:
+            if line.find(p)>=0:
+                return True
+
+        return False
 
 # Should work with Python3 and Python2

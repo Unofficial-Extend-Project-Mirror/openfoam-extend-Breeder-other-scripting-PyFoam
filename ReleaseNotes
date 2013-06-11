@@ -1,4 +1,70 @@
 # -*- mode: org -*-
+* Version 0.6.1 - 2013-05-24
+** Major changes
+** Bugfixes
+*** Restoring of =controlDict= after =write=
+    When activating an on-demand write the =constrolDict= was not
+    restored because the output-line about the file being read was not
+    recognized (due to a change in the output in recent
+    OF-versions). Now a number of different formats is recognized
+*** Custom-plot type =slave= not working if no =master= defined
+    That plot-type needs a =master=. Fixed to fail if none is defined
+*** =-list-only= did not correctly parse lists with a numeric prefix
+    This did affect all utilities that use that option and also calls
+    with =listOnly= to the library class
+** Utilities
+*** =pyFoamBuildHelper.py= now allow more than one action
+    If multiple actions like =--update= and =--build= are specified
+    they are executed in a sensible order (update before build etc)
+*** Utilities warn if OpenFOAM-version is unset
+    If the environment variable that determines the OpenFOAM-version
+    is unset a warning is issued by the utilities
+*** =pyFoamUpgradeDictionariesTo20.py= allows single files
+    If  single file is specified then the action to transform it has
+    can be specified
+*** =pyFoamUpgradeDictionariesTo20.py= transforms reaction-schemes
+    Now knows how to transform "old" reaction files (where the
+    =reactions=-entry was a list) to the new format (where it is a
+    dictionary). Only a limited number of reaction types is supported.
+*** =pyFoamUpgradeDictionariesTo20.py= transforms thermophysical data
+    Now the old form of thermophysical data (lists) is transformed
+    into the new dictionary-form
+*** =pyFoamCloneCase= now allows creating directory that symlinks to the original
+    Now with the option =--symlink-mode= instead of copying the
+    directories from the original new directories art created and
+    populated with symlinks to the files in the original. The depth
+    until which no symlinks to directories are created can be
+    specified. This allows the clone to share the configuration files
+    with the original
+*** =pyFoamClearCase.py= now removes =postProcessing= and allows removal of additional files
+    The directory =postProcessing= is now automatically removed (can be
+    switched off with =--keep-postprocessing=). Also with the
+    =--additional=-option patterns with additional files to remove
+    can be specified.
+*** Improvements to =pyFoamVersion.py=
+    - Now reports the location of the =python=-executable
+    - Reports locations of used libraries
+*** Additional files automatically cloned
+    The files =Allrun=, =Allclean= and =0.org= are automatically
+    added during cloning as these are often used by the standard-utilities
+*** =pyFoamDisplayBlockMesh.py= uses the same options for template format as =pyFoamFromTemplate.py=
+    This makes sure that templates are handled consistently and also
+    allows different delimiters in the =blockMeshDict.template=
+** Library
+*** Improvements in syntax of =ParsedParameterFile=
+    - Now the new relative scoping that was introduced in OF 2.2 is
+      supported
+*** =Utilities=-class now function to find files matching a pattern
+    Added a function =find= that approxiamtes the =find=-command
+*** VCS ignores more files
+    Some more patterns have been added that will be ignored in a
+    VSC-controlled case. All of them concerning files that PyFoam
+    creates during operation
+** New features/Utilities
+*** New Utility =pyFoamSymlinkToFile.py=
+    This utility replaces a symlink with a copy of the
+    file/directories it points to. To be used after a
+    =pyFoamCloneCase.py= in =--symlink-mode=
 * Version 0.6.0 - 2013-03-14
 ** Major changes
 *** Adaption to work with Python3

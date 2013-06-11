@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Benchmark.py 12769 2013-01-16 11:38:51Z bgschaid $
+#  ICE Revision: $Id$
 """
 Class that implements pyFoamBenchmark
 """

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: UtilityRunner.py 12664 2012-08-27 09:04:34Z bgschaid $
+#  ICE Revision: $Id$
 """Run a non-solver utility"""
 
 from PyFoam.Execution.AnalyzedRunner import AnalyzedRunner

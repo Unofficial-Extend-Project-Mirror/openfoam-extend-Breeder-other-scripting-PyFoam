@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SimpleSources.py 11898 2010-11-08 07:06:55Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """ Simple sources
 
 Builds and displays simple sources. Grants easy access to the actual source

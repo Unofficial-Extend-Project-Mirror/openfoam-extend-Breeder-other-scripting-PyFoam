@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Data2DStatistics.py 12763 2013-01-08 17:56:07Z bgschaid $
+#  ICE Revision: $Id$
 """Data structure to do some calculations on the results from
 SpreadSheetData-methods metrics and compare that are organized in 2
 dimensions"""

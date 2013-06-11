@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ValueLineAnalyzer.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Do analysis for a line with values"""
 
 from .FileLineAnalyzer import FileLineAnalyzer

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GnuplotRunner.py 12753 2013-01-03 23:08:03Z bgschaid $
+#  ICE Revision: $Id$
 """Runner that outputs the residuals of the linear solver with Gnuplot"""
 
 from .StepAnalyzedCommon import StepAnalyzedCommon

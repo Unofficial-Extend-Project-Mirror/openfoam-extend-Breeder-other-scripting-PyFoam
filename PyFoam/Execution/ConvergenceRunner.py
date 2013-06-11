@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ConvergenceRunner.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Stop solver at convergence"""
 
 from .AnalyzedRunner import AnalyzedRunner

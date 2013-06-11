@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: AnalyzedCommon.py 12750 2013-01-03 23:07:32Z bgschaid $
+#  ICE Revision: $Id$
 """Common stuff for classes that use analyzers"""
 
 from os import path,mkdir
@@ -279,6 +279,8 @@ class AnalyzedCommon(object):
 
                 if createPlot:
                     if custom.master==None:
+                        if custom.type=="slave":
+                            error("Custom expression",custom.name,"is supposed to be a 'slave' but no master is defined")
                         masters[custom.id]=custom
                         plotCustom=createPlotTimelines(self.getAnalyzer(custom.name).lines,
                                                        custom=custom,

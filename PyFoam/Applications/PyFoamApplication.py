@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PyFoamApplication.py 12753 2013-01-03 23:08:03Z bgschaid $
+#  ICE Revision: $Id$
 """Base class for pyFoam-applications
 
 Classes can also be called with a command-line string"""
@@ -213,6 +213,8 @@ with these option for commands that generate a lot of output""")
         self.parser.parse(nr=nr,exactNr=exactNr)
         self.opts=self.parser.getOptions()
 
+        if "WM_PROJECT_VERSION" not in environ:
+             warning("$WM_PROJECT_VERSION unset. PyFoam will not be able to determine the OpenFOAM-version and behave strangely")
         if self.opts.developerMode:
              self.opts.syntaxErrorDebugger=True
              self.opts.keyboardInterrupTrace=True

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: EchoLineAnalyzer.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Echos a line"""
 
 from .LogLineAnalyzer import LogLineAnalyzer

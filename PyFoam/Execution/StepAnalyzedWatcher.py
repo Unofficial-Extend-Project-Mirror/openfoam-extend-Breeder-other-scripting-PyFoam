@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: StepAnalyzedWatcher.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """An Analyzed Runner that does something at every time-step"""
 
 from .BasicWatcher import BasicWatcher

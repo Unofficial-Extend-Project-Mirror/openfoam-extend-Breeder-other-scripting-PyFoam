@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: DeltaTLineAnalyzer.py 12753 2013-01-03 23:08:03Z bgschaid $
+#  ICE Revision: $Id$
 """Check lines for timestep information"""
 
 import re

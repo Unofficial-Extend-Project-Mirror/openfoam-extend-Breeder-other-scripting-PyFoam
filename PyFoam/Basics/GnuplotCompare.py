@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GnuplotCompare.py 7833 2007-08-28 15:28:57Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """Compare files with Gnuplot"""
 
 from glob import glob

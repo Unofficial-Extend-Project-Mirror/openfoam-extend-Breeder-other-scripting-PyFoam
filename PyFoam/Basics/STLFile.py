@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: STLFile.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Read a STL file and do simple manipulations"""
 
 from os import path

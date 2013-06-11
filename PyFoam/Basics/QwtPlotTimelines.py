@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: QwtPlotTimelines.py 12769 2013-01-16 11:38:51Z bgschaid $
+#  ICE Revision: $Id$
 """Plots a collection of timelines"""
 
 from PyFoam.Error import warning,error

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ListFile.py 12750 2013-01-03 23:07:32Z bgschaid $
+#  ICE Revision: $Id$
 """File that contains only a list (for instance points)"""
 
 from PyFoam.Basics.LineReader import LineReader

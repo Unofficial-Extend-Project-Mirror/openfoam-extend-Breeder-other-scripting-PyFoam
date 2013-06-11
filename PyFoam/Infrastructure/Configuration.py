@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Configuration.py 12798 2013-03-04 10:41:53Z bgschaid $
+#  ICE Revision: $Id$
 """Reads configuration-files that define defaults for various PyFoam-Settings
 
 Also hardcodes defaults for the settings"""

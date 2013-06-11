@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: StepAnalyzedCommon.py 12566 2012-05-14 08:22:17Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """Common stuff for classes that do something at every timestep"""
 
 from PyFoam.ThirdParty.six import print_

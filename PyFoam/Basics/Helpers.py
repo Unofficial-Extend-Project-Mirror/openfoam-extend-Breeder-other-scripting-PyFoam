@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Helpers.py 12760 2013-01-03 23:10:16Z bgschaid $
+#  ICE Revision: $Id$
 """Utility functions"""
 
 from os import listdir

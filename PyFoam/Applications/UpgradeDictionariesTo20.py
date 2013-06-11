@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: UpgradeDictionariesTo20.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamUpgradeDictionariesTo20
 """
@@ -12,9 +12,103 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Basics.DataStructures import DictProxy,TupleProxy
 from PyFoam.Error import error,warning
 
+class ReactionFileUpgradeInfo(DictionaryUpgradeInfo):
+    def __init__(self):
+        DictionaryUpgradeInfo.__init__(self)
+        self.noHeader=True
+
+    def name(self):
+        return "reactionFile20"
+
+    def location(self):
+        return path.join("constant","reactions")
+
+    def checkUpgrade(self,content):
+        if "reactions" not in content:
+            return False
+        else:
+            return type(content["reactions"]) in [list]
+
+    def makeCoeffList(self,raw,default,specNames):
+        specs=set(specNames)
+        lst=[]
+        for s,v in zip(raw[0::2],raw[1::2]):
+            lst.append([s,v])
+            specs.remove(s)
+
+        for s in specs:
+            lst.append([s,default])
+
+        return lst
+
+    def manipulate(self,content):
+        newReactions=DictProxy()
+        rData=zip(*[content["reactions"][i::3] for i in range(3)])
+        cnt=1
+        for rType,scheme,parameters in rData:
+            name="reaction%d"%cnt
+            cnt+=1
+            r={}
+            r["type"]=rType
+            r["reaction"]='"'+str(scheme).strip()+'"'
+            if rType in ["irreversibleArrheniusReaction",
+                         "reversibleArrheniusReaction"]:
+                r["A"]=parameters[0]
+                r["beta"]=parameters[1]
+                r["Ta"]=parameters[2]
+            elif rType in ["reversiblethirdBodyArrheniusReaction"]:
+                r["A"]=parameters[0][0]
+                r["beta"]=parameters[0][1]
+                r["Ta"]=parameters[0][2]
+                r["defaultEfficiency"]=parameters[1][0]
+                r["coeffs"]=self.makeCoeffList(parameters[1][1:],
+                                               parameters[1][0],
+                                               content["species"])
+            elif rType in ["reversibleArrheniusLindemannFallOffReaction"]:
+                r["k0"]={}
+                r["k0"]["A"]=parameters[0][0]
+                r["k0"]["beta"]=parameters[0][1]
+                r["k0"]["Ta"]=parameters[0][2]
+                r["kInf"]={}
+                r["kInf"]["A"]=parameters[1][0]
+                r["kInf"]["beta"]=parameters[1][1]
+                r["kInf"]["Ta"]=parameters[1][2]
+                r["F"]={}
+                r["thirdBodyEfficiencies"]={}
+                r["thirdBodyEfficiencies"]["defaultEfficiency"]=parameters[2][0]
+                r["thirdBodyEfficiencies"]["coeffs"]=self.makeCoeffList(parameters[2][1:],
+                                                                        parameters[2][0],
+                                                                        content["species"])
+            elif rType in ["reversibleArrheniusTroeFallOffReaction"]:
+                r["k0"]={}
+                r["k0"]["A"]=parameters[0][0]
+                r["k0"]["beta"]=parameters[0][1]
+                r["k0"]["Ta"]=parameters[0][2]
+                r["kInf"]={}
+                r["kInf"]["A"]=parameters[1][0]
+                r["kInf"]["beta"]=parameters[1][1]
+                r["kInf"]["Ta"]=parameters[1][2]
+                r["F"]={}
+                r["F"]["alpha"]=parameters[2][0]
+                r["F"]["Tsss"]=parameters[2][1]
+                r["F"]["Ts"]=parameters[2][2]
+                r["F"]["Tss"]=parameters[2][3]
+                r["thirdBodyEfficiencies"]={}
+                r["thirdBodyEfficiencies"]["defaultEfficiency"]=parameters[3][0]
+                r["thirdBodyEfficiencies"]["coeffs"]=self.makeCoeffList(parameters[3][1:],
+                                                                        parameters[3][0],
+                                                                        content["species"])
+            else:
+                r["unsupported"]=parameters
+            newReactions[name]=r
+        content["reactions"]=newReactions
+
 class BlockMeshUpgradeInfo(DictionaryUpgradeInfo):
     def __init__(self):
         DictionaryUpgradeInfo.__init__(self)
+
+    def name(self):
+        return "blockMesh20"
 
     def location(self):
         return path.join("constant","polyMesh","blockMeshDict")
@@ -33,6 +127,9 @@ class BlockMeshUpgradeInfo(DictionaryUpgradeInfo):
 class ThermophysicalUpgradeInfo(DictionaryUpgradeInfo):
     def __init__(self):
         DictionaryUpgradeInfo.__init__(self)
+
+    def name(self):
+        return "thermophysical20"
 
     def location(self):
         return path.join("constant","thermophysicalProperties")
@@ -118,6 +215,60 @@ class ThermophysicalUpgradeInfo(DictionaryUpgradeInfo):
 ##            else:
 ##                error("Gas type",gas,"not implemented")
 
+class ThermophysicalDataUpgradeInfo(DictionaryUpgradeInfo):
+    def __init__(self):
+        DictionaryUpgradeInfo.__init__(self)
+        self.listDict=True
+
+    def name(self):
+        return "thermophysicalData20"
+
+    def location(self):
+        return path.join("constant","thermoData")
+
+    def checkUpgrade(self,content):
+        if type(content) in [list]:
+            return True
+        else:
+            return False
+
+    def manipulate(self,content):
+        lenData=2+2+(2*7+3)+2
+        rawData=zip(*[content[i::lenData] for i in range(lenData)])
+        content=DictProxy()
+        for d in rawData:
+            name=d[0]
+            data=d[2:]
+            used=0
+
+            specDict={}
+            specDict["nMoles"]=data[used]
+            specDict["molWeight"]=data[used+1]
+            used+=2
+
+            thermDict={}
+            thermDict["Tlow"]=data[used]
+            thermDict["Thigh"]=data[used+1]
+            thermDict["Tcommon"]=data[used+2]
+            thermDict["highCpCoeffs"]=list(data[used+3:used+3+7])
+            thermDict["lowCpCoeffs"]=list(data[used+3+7:used+3+2*7])
+            used+=2*7+3
+
+            transDict={}
+            transDict["As"]=data[used]
+            transDict["Ts"]=data[used+1]
+            used+=2
+
+            if len(data)!=used:
+                warning("Not all data for",name,"used:",used,len(data))
+
+            comment=self.makeComment(d)
+            content[name]={"specie":specDict,
+                           "thermodynamics":thermDict,
+                           "transport":transDict}
+            content.addDecoration(name,comment)
+        return content
+
 class UpgradeDictionariesTo20(UpgradeDictionariesTo17):
     def __init__(self,args=None):
         description="""\
@@ -134,6 +285,8 @@ that is compatible with OpenFOAM 2.0
 
         self.dicts.append(BlockMeshUpgradeInfo())
         self.dicts.append(ThermophysicalUpgradeInfo())
+        self.dicts.append(ThermophysicalDataUpgradeInfo())
+        self.dicts.append(ReactionFileUpgradeInfo())
 
 ##    def addOptions(self):
 ##        UpgradeDictionariesTo17.addOptions(self)

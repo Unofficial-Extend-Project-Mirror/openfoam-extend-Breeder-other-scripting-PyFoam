@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GeneralVCSInterface.py 12753 2013-01-03 23:08:03Z bgschaid $
+#  ICE Revision: $Id$
 """General interface to VCS implementations"""
 
 from PyFoam.Error import notImplemented,error
@@ -112,7 +112,11 @@ change back ot the original directory. Result of the function is returned
         self.addGlobToIgnore("*.gz")
         self.addGlobToIgnore("*~")
         self.addGlobToIgnore("*.foam")
+        self.addGlobToIgnore("PlyParser*")
+        self.addGlobToIgnore("PyFoam*")
+        self.addGlobToIgnore("postProcessing")
         self.addRegexpToIgnore(".*\\.logfile")
+        self.addRegexpToIgnore(".*\\.analyzed")
 
 def getVCS(vcs,
            path,

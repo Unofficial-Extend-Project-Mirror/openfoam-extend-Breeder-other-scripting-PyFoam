@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ParsedParameterFile.py 12791 2013-02-05 13:40:06Z bgschaid $
+#  ICE Revision: $Id$
 """Parameter file is read into memory and modified there"""
 
 from PyFoam.RunDictionary.FileBasis import FileBasisBackup
@@ -531,7 +531,7 @@ class FoamFileParser(PlyParser):
         return t
 
     def t_SUBSTITUITION(self,t):
-        r'\$[a-zA-Z_][+\-<>(),.\*|a-zA-Z_0-9&%:]*'
+        r'\$[a-zA-Z_.:{][+\-<>(),.\*|a-zA-Z_0-9&%:${}]*'
         t.type=self.reserved.get(t.value,'SUBSTITUTION')
         if t.value[-1]==")":
             if t.value.count(")")>t.value.count("("):
@@ -640,7 +640,7 @@ class FoamFileParser(PlyParser):
         p[0] = ( None , p[1] )
 
     def p_pureList(self,p):
-        'pureList : list'
+        'pureList : onlyListOrPList'
         p[0] = ( None , p[1] )
 
     def p_onlyListOrPList(self,p):
@@ -891,17 +891,47 @@ class FoamFileParser(PlyParser):
                 | ERROR'''
         p[0]=p[1]
 
+    def parseSubst_root(self,nm,stck):
+        if nm[0]==":":
+            stck=[self.dictStack[0]]
+            nm=nm[1:]
+        elif nm[0]=='.':
+            nm=nm[1:]
+            off=0
+            while nm[0]=='.':
+                nm=nm[1:]
+                off+=1
+            if off>0:
+                stck=stck[:-off]
+        elif nm[0]=="{":
+            inner=nm[1:nm.rfind("}")].strip()
+            if inner[0]=="$":
+                nm=self.parseSubst_root(inner[1:],stck)()
+            else:
+                nm=inner
+        rest=None
+        if nm.find(".")>0:
+            rest=nm[nm.find(".")+1:]
+            nm=nm[:nm.find(".")]
+        for i,di in enumerate(reversed(stck)):
+            if nm in di:
+                if rest==None:
+                    v=DictRedirection(deepcopy(di[nm]),
+                                      di[nm],
+                                      nm)
+                    return v
+                else:
+                    newStck=stck[:i]
+                    newStck.append(di[nm])
+                    return self.parseSubst_root(rest,newStck)
+
     def p_substitution(self,p):
         '''substitution : SUBSTITUTION'''
         if self.doMacros:
             nm=p[1][1:]
             p[0]="<Symbol '"+nm+"' not found>"
-            for di in reversed(self.dictStack):
-                if nm in di:
-                    p[0]=DictRedirection(deepcopy(di[nm]),
-                                         di[nm],
-                                         nm)
-                    return
+            stck=self.dictStack
+            p[0]=self.parseSubst_root(nm,stck)
         else:
             p[0]=p[1]
 

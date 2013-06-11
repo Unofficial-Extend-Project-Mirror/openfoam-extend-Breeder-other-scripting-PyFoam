@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FromTemplate.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamFromTemplate
 """
@@ -13,11 +13,13 @@ from PyFoam.Basics.TemplateFile import TemplateFile,TemplateFileOldFormat
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 from .CommonPickledDataInput import CommonPickledDataInput
+from .CommonTemplateFormat import CommonTemplateFormat
 
 from PyFoam.ThirdParty.six import print_
 
 class FromTemplate(PyFoamApplication,
-                   CommonPickledDataInput):
+                   CommonPickledDataInput,
+                   CommonTemplateFormat):
     def __init__(self,args=None):
         description="""\
 Generates a file from a template file. Usually the name of the
@@ -88,20 +90,7 @@ at the end. These defaults can be changed
                            dest="outputFile",
                            help="File to which the output will be written. Only for the new format")
 
-        tformat=OptionGroup(self.parser,
-                            "Format",
-                           "Specifying details about the format of the pyratemp-templates (new format)")
-        self.parser.add_option_group(tformat)
-        tformat.add_option("--expression-delimiter",
-                           action="store",
-                           default="|-",
-                           dest="expressionDelimiter",
-                           help="String that delimits an expression. At the end of the expression the reverse string is being used")
-        tformat.add_option("--assignment-line-start",
-                           action="store",
-                           default="$$",
-                           dest="assignmentLineStart",
-                           help="String at the start of a line that signifies that this is an assignment")
+        CommonTemplateFormat.addOptions(self)
 
         behaviour=OptionGroup(self.parser,
                               "Behaviour",

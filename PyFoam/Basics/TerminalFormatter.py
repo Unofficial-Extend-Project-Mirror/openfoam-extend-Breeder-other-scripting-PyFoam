@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: TerminalFormatter.py 11682 2010-06-17 11:53:22Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """Formats the output on a terminal"""
 
 import os

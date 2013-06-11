@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PlyParser.py 9163 2008-08-04 08:01:10Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """Base class for all parser classes based on PLY
 
 Most of this class was shamelessly stolen from the examples"""

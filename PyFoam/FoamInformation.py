@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FoamInformation.py 12561 2012-05-11 12:15:56Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """Getting Information about the Foam-Installation (like the installation directory)"""
 
 from os import environ,path,listdir

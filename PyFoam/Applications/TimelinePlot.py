@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: TimelinePlot.py 12778 2013-01-31 15:53:44Z bgschaid $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamTimelinePlot.py
 """

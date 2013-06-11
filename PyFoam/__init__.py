@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: __init__.py 12802 2013-03-14 12:15:26Z bgschaid $
+#  ICE Revision: $Id$
 """ Utility-classes for OpenFOAM
 
 Module for the Execution of OpenFOAM-commands and processing their output
@@ -8,8 +8,8 @@ from PyFoam.Infrastructure.Configuration import Configuration
 
 def version():
     """@return: Version number as a tuple"""
-    return (0,6,0)
-    #    return (0,6,0,"development")
+    return (0,6,1)
+    #    return (0,6,2,"development")
 
 def versionString():
     """@return: Version number of PyFoam"""

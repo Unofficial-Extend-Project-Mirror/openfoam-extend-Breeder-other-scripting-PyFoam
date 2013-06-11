@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GeneralPlotTimelines.py 12747 2013-01-03 23:06:57Z bgschaid $
+#  ICE Revision: $Id$
 """Plots a collection of timelines. General superclass for te other implementations"""
 
 from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo,CustomPlotInfo

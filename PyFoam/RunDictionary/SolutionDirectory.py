@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SolutionDirectory.py 12792 2013-02-06 13:22:52Z bgschaid $
+#  ICE Revision: $Id$
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -26,7 +26,7 @@ except ImportError:
     try:
         import PyFoam.ThirdParty.winhacks
     except ImportError:
-        print "Unable to import the getlogin function."
+        print_("Unable to import the getlogin function.")
         import sys
         sys.exit(-1)
 
@@ -75,10 +75,16 @@ class SolutionDirectory(Utilities):
         self.essential=[self.systemDir(),
                         self.constantDir(),
                         self.initialDir()]
-        self.addToClone("PyFoamHistory")
 
+        # PyFoam-specific
+        self.addToClone("PyFoamHistory")
         self.addToClone("customRegexp")
         self.addToClone("LocalConfigPyFoam")
+
+        # this usually comes with the tutorials
+        self.addToClone("Allclean")
+        self.addToClone("Allrun")
+#         self.addToClone("0.org")
 
         emptyFoamFile=path.join(self.name,path.basename(self.name)+".foam")
         if paraviewLink and not path.exists(emptyFoamFile):
@@ -274,6 +280,93 @@ class SolutionDirectory(Utilities):
 
         return self.__class__(name,archive=self.archive)
 
+    def symlinkCase(self,
+                    name,
+                    followSymlinks=False,
+                    maxLevel=1,
+                    relPath=False):
+        """create a clone of this case directory by creating a
+        directory with symbolic links
+
+        @param name: Name of the new case directory
+        @param maxLevel: Maximum level down to which directories are created instead of symbolically linked
+        @param followSymlinks: Follow symbolic links instead of just copying them
+        @param relPath: the created symbolic links are relative (instead of absolute)
+        @rtype: L{SolutionDirectory} or correct subclass
+        @return: The target directory
+        """
+        here=path.abspath(self.name)
+        polyDirs=[path.relpath(p,here) for p in self.find("polyMesh*",here)]
+
+        additional=eval(conf().get("Cloning","addItem"))
+        for a in additional:
+            self.addToClone(a)
+
+        if path.exists(name):
+            self.rmtree(name)
+        mkdir(name)
+        toProcess=[]
+        for d in self.essential:
+            if d!=None:
+                if self.parallel:
+                    pth,fl=path.split(d)
+                    if path.exists(path.join(pth,"processor0",fl)):
+                        for i in range(self.nrProcs()):
+                            toProcess.append("processor%d" % i)
+                if path.exists(d):
+                    toProcess.append(path.relpath(d,here))
+
+        maxLevel=max(0,maxLevel)
+
+        self.__symlinkDir(src=here,
+                          dest=path.abspath(name),
+                          toProcess=toProcess,
+                          maxLevel=maxLevel,
+                          relPath=relPath,
+                          polyDirs=polyDirs,
+                          symlinks=not followSymlinks)
+
+        return self.__class__(name,archive=self.archive)
+
+    def __symlinkDir(self,src,dest,toProcess,maxLevel,relPath,polyDirs,symlinks):
+        for f in toProcess:
+            there=path.join(src,f)
+            here=path.join(dest,f)
+            if path.islink(there) and not symlinks:
+                there=path.realpath(there)
+
+            doSymlink=False
+            done=False
+
+            if not path.isdir(there):
+                doSymlink=True
+                if path.basename(src)=="polyMesh":
+                    if f not in ["blockMeshDict","blockMeshDict.gz"]:
+                        doSymlink=False
+            else:
+                poly=[p for p in polyDirs if p.split(path.sep)[0]==f]
+                if maxLevel>0 or len(poly)>0:
+                    done=True
+                    mkdir(here)
+                    self.__symlinkDir(src=there,dest=here,
+                                      toProcess=[p for p in os.listdir(there) if p[0]!='.'],
+                                      maxLevel=max(0,maxLevel-1),
+                                      relPath=relPath,
+                                      polyDirs=[path.join(*p.split(path.sep)[1:]) for p in poly if len(p.split(path.sep))>1],
+                                      symlinks=symlinks)
+                else:
+                    doSymlink=True
+
+            if not done:
+                if doSymlink:
+                    if relPath:
+                        linkTo=path.relpath(there,dest)
+                    else:
+                        linkTo=path.abspath(there)
+                    os.symlink(linkTo,here)
+                else:
+                    self.copytree(there,here,symlinks=symlinks)
+
     def packCase(self,tarname,last=False,exclude=[],additional=[],base=None):
         """Packs all the important files into a compressed tarfile.
         Uses the essential-list and excludes the .svn-directories.
@@ -436,7 +529,8 @@ class SolutionDirectory(Utilities):
                      keepLast=False,
                      vtk=True,
                      keepRegular=False,
-                     functionObjectData=False):
+                     functionObjectData=False,
+                     additional=[]):
         """remove all time-directories after a certain time. If not time ist
         set the initial time is used
         @param after: time after which directories ar to be removed
@@ -446,7 +540,8 @@ class SolutionDirectory(Utilities):
         @param keepLast: Keep the data from the last timestep
         @param vtk: Remove the VTK-directory if it exists
         @param keepRegular: keep all the times (only remove processor and other stuff)
-        @param functionObjectData: tries do determine which data was written by function obejects and removes it"""
+        @param functionObjectData: tries do determine which data was written by function obejects and removes it
+        @param additional: List with glob-patterns that are removed too"""
 
         self.reread()
 
@@ -498,7 +593,7 @@ class SolutionDirectory(Utilities):
                         if path.exists(pth):
                             self.rmtree(pth)
 
-        additional=eval(conf().get("Clearing","additionalpatterns"))
+        additional+=eval(conf().get("Clearing","additionalpatterns"))
         for a in additional:
             self.clearPattern(a)
 
@@ -532,7 +627,8 @@ class SolutionDirectory(Utilities):
               vtk=True,
               keepRegular=False,
               clearHistory=False,
-              functionObjectData=False):
+              functionObjectData=False,
+              additional=[]):
         """One-stop-shop to remove data
         @param after: time after which directories ar to be removed
         @param processor: remove the processorXX directories
@@ -544,7 +640,8 @@ class SolutionDirectory(Utilities):
                           keepLast=keepLast,
                           vtk=vtk,
                           keepRegular=keepRegular,
-                          functionObjectData=functionObjectData)
+                          functionObjectData=functionObjectData,
+                          additional=additional)
         self.clearOther(pyfoam=pyfoam,
                         clearHistory=clearHistory)
 

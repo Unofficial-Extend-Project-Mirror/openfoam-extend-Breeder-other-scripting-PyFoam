@@ -363,6 +363,89 @@ nix "a=3+x;b=4;";
 
 theSuite.addTest(unittest.makeSuite(FoamStringParserTest,"test"))
 
+class ParsedParameterDictionaryMacroExpansion(unittest.TestCase):
+    def testSimpleSubst(self):
+        p1=FoamStringParser("""
+a 10;
+b $a;
+""",doMacroExpansion=True)
+        self.assertEqual(p1["b"],10)
+
+    def testSimpleSubstNoMacro(self):
+        p1=FoamStringParser("""
+a 10;
+b $a;
+        """,doMacroExpansion=False)
+        self.assertEqual(p1["b"],"$a")
+
+    def testSubdictSubst(self):
+        p1=FoamStringParser("""
+subdict
+{
+    a 10;
+}
+b $subdict.a;
+""",doMacroExpansion=True)
+        self.assertEqual(p1["b"],10)
+
+    def testParentDict(self):
+        p1=FoamStringParser("""
+a 10;
+
+subdict
+{
+    b $..a;  // double-dot takes scope up 1 level, then 'a' is available
+
+    subsubdict
+    {
+        c $:a; // colon takes scope to top level, then 'a' is available
+        d $...a;
+    }
+}
+""",doMacroExpansion=True)
+        self.assertEqual(p1["subdict"]["b"],10)
+        self.assertEqual(p1["subdict"]["subsubdict"]["c"],10)
+        self.assertEqual(p1["subdict"]["subsubdict"]["d"],10)
+
+    def testParentDictNoMacro(self):
+        p1=FoamStringParser("""
+a 10;
+
+subdict
+{
+    b $..a;  // double-dot takes scope up 1 level, then 'a' is available
+
+    subsubdict
+    {
+        c $:a; // colon takes scope to top level, then 'a' is available
+        d $...a;
+    }
+}
+        """,doMacroExpansion=False)
+        self.assertEqual(p1["subdict"]["b"],"$..a")
+        self.assertEqual(p1["subdict"]["subsubdict"]["c"],"$:a")
+        self.assertEqual(p1["subdict"]["subsubdict"]["d"],"$...a")
+
+    def testRedirect(self):
+        p1=FoamStringParser("""
+a 10;
+b a;
+c ${${b}}; // returns 10, since $b returns 'a', and $a returns 10
+        """,doMacroExpansion=True)
+        self.assertEqual(p1["b"],"a")
+        self.assertEqual(p1["c"],10)
+
+    def testRedirectNoMacro(self):
+        p1=FoamStringParser("""
+a 10;
+b a;
+c ${${b}}; // returns 10, since $b returns 'a', and $a returns 10
+        """,doMacroExpansion=False)
+        self.assertEqual(p1["b"],"a")
+        self.assertEqual(p1["c"],"${${b}}")
+
+theSuite.addTest(unittest.makeSuite(ParsedParameterDictionaryMacroExpansion,"test"))
+
 class ParsedBoundaryDictTest(unittest.TestCase):
     def setUp(self):
         self.theFile=mktemp()

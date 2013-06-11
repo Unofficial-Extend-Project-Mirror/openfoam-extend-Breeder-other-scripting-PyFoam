@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SolutionFile.py 12748 2013-01-03 23:07:08Z bgschaid $
+#  ICE Revision: $Id$
 """ Working with solutions """
 
 import re,os

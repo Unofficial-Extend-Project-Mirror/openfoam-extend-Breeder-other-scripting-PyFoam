@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CaseReport.py 12800 2013-03-04 15:22:51Z bgschaid $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamCasedReport.py
 """
@@ -563,13 +563,14 @@ respectivly
                 for i,p in enumerate(sol.processorDirs()):
                     try:
                         bound=ParsedBoundaryDict(sol.boundaryDict(processor=p,
-                                                                  treatBinaryAsASCII=self.opts.treatBinaryAsASCII,
                                                                   region=theRegion,
-                                                                  time=self.opts.time))
+                                                                  time=self.opts.time)
+                                                 ,treatBinaryAsASCII=self.opts.treatBinaryAsASCII)
                     except IOError:
                         bound=ParsedBoundaryDict(sol.boundaryDict(processor=p,
                                                                   treatBinaryAsASCII=self.opts.treatBinaryAsASCII,
-                                                                  region=theRegion))
+                                                                  region=theRegion)
+                                                 ,treatBinaryAsASCII=self.opts.treatBinaryAsASCII)
 
                     for j in range(sol.nrProcs()):
                         name="procBoundary%dto%d" %(j,i)

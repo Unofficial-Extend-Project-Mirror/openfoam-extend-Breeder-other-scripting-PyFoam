@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: UpgradeDictionariesTo17.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamUpgradeDictionariesTo17
 """
@@ -22,9 +22,18 @@ class DictionaryUpgradeInfo(object):
     def __init__(self):
         self.case=None
         self.enabled=True
+        self.fName=None
+        self.noHeader=False
+        self.listDict=False
+
+    def setFile(self,fName):
+        self.fName=fName
 
     def path(self):
-        return path.join(self.case,self.location())
+        if self.fName:
+            return self.fName
+        else:
+            return path.join(self.case,self.location())
 
     def disable(self):
         self.enabled=False
@@ -33,7 +42,9 @@ class DictionaryUpgradeInfo(object):
         self.disable()
 
     def needsUpgrade(self):
-        f=ParsedParameterFile(self.path())
+        f=ParsedParameterFile(self.path(),
+                              listDict=self.listDict,
+                              noHeader=self.noHeader)
         return self.checkUpgrade(f.content)
 
     def upgrade(self,force,printIt):
@@ -44,8 +55,12 @@ class DictionaryUpgradeInfo(object):
                     error("The backup-file",backup,"does already exist")
 
             copyfile(self.path(),backup)
-        f=ParsedParameterFile(self.path())
-        self.manipulate(f.content)
+        f=ParsedParameterFile(self.path(),
+                              listDict=self.listDict,
+                              noHeader=self.noHeader)
+        r=self.manipulate(f.content)
+        if r:
+            f.content=r
         if not printIt:
             f.writeFile()
         else:
@@ -63,6 +78,9 @@ class FvSolutionUpgradeInfo(DictionaryUpgradeInfo):
 
     def location(self):
         return path.join("system","fvSolution")
+
+    def name(self):
+        return "fvSolution17"
 
     def checkUpgrade(self,content):
         if "solvers" not in content:
@@ -89,6 +107,8 @@ class UpgradeDictionariesTo17(PyFoamApplication):
             description="""\
 Examines dictionaries in a case and tries to upgrade them to a form
 that is compatible with OpenFOAM 1.7
+
+If only a file is specified then the mode of that file has to be specified
         """
 
         self.dicts=[]
@@ -149,45 +169,85 @@ that is compatible with OpenFOAM 1.7
 
         self.parser.add_option_group(self.dictGroup)
 
-    def run(self):
-        case=self.parser.getArgs()[0]
-        self.checkCase(case)
-
-        if self.opts.verbose:
-            print_("Working on case",case)
+        self.modes={}
 
         for d in self.dicts:
-            d.case=case
+            self.modes[d.name()]=d
+
+        choices=self.modes.keys()
+        choices.sort()
+
+        behaveGroup.add_option("--file-mode",
+                               action="store",
+                               type="choice",
+                               dest="fileMode",
+                               default=None,
+                               choices=choices,
+                               help="The file should be treated as what while upgrading. Possible modes: "+", ".join(choices))
+
+    def run(self):
+        fName=self.parser.getArgs()[0]
+        if path.isdir(fName):
+            if self.opts.fileMode:
+                self.error("Filemode",self.opts.fileMode,"specified. But",
+                           fName,"is a directory")
+            case=fName
+            self.checkCase(case)
+
             if self.opts.verbose:
-                print_("  Checking",d.location())
+                print_("Working on case",case)
 
-            if not d.enabled:
+            for d in self.dicts:
+                d.case=case
                 if self.opts.verbose:
-                    print_("    Disabled")
-                continue
+                    print_("  Checking",d.location())
 
-            if not path.exists(d.path()):
-                d.disable()
-                if self.opts.verbose:
-                    print_("    Does not exist - disabling")
-                continue
+                if not d.enabled:
+                    if self.opts.verbose:
+                        print_("    Disabled")
+                    continue
 
+                if not path.exists(d.path()):
+                    d.disable()
+                    if self.opts.verbose:
+                        print_("    Does not exist - disabling")
+                    continue
+
+                if not d.needsUpgrade():
+                    d.disable()
+                    if self.opts.verbose:
+                        print_("    Does not need an upgrade - disabling")
+                    continue
+
+                print_(d.location(),"needs an upgrade")
+
+            if self.opts.applyChanges or self.opts.print_:
+                print_()
+                if self.opts.applyChanges:
+                    print_("Doing the upgrades")
+                for d in self.dicts:
+                    if d.enabled:
+                        if self.opts.verbose:
+                            print_("Upgrading",d.location())
+                        d.upgrade(self.opts.force,self.opts.print_)
+        else:
+            if not self.opts.fileMode:
+                self.error(fName,"is a file, but no --file-mode specified")
+            d=self.modes[self.opts.fileMode]
+            d.setFile(fName)
+            if self.opts.verbose:
+                print_("Handling",fName,"as",self.opts.fileMode)
             if not d.needsUpgrade():
                 d.disable()
                 if self.opts.verbose:
-                    print_("    Does not need an upgrade - disbling")
-                continue
-
-            print_(d.location(),"needs an upgrade")
-
-        if self.opts.applyChanges or self.opts.print_:
-            print_()
-            if self.opts.applyChanges:
-                print_("Doing the upgrades")
-            for d in self.dicts:
-                if d.enabled:
-                    if self.opts.verbose:
-                        print_("Upgrading",d.location())
+                    print_("    Does not need an upgrade")
+            else:
+                if self.opts.verbose:
+                    print_("    Needs an upgrade")
+            if self.opts.applyChanges or self.opts.print_:
+                print_()
+                if self.opts.verbose:
+                    print_("Upgrading",fName)
                     d.upgrade(self.opts.force,self.opts.print_)
 
 # Should work with Python3 and Python2

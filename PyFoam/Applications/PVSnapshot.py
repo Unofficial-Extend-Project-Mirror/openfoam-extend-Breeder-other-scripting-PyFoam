@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: PVSnapshot.py 12799 2013-03-04 11:39:49Z bgschaid $
+#  ICE Revision: $Id$
 """
 Class that implements pyFoamPVSnapshot
 """

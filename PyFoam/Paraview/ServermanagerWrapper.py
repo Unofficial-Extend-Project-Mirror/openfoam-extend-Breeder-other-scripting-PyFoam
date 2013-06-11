@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ServermanagerWrapper.py 12798 2013-03-04 10:41:53Z bgschaid $
+#  ICE Revision: $Id$
 """ Wrapper class for the paraview servermanager
 
 Sets up the servermanager to be used with OpenFOAM-Data. Especially makes sure that

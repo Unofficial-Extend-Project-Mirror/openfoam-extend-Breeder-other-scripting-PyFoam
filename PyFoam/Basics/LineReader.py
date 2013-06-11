@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: LineReader.py 12748 2013-01-03 23:07:08Z bgschaid $
+#  ICE Revision: $Id$
 """Read a file line by line"""
 
 from PyFoam.Infrastructure.Logging import foamLogger

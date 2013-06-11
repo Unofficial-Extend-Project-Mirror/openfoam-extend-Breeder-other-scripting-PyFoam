@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: OutFileCollection.py 12757 2013-01-03 23:08:34Z bgschaid $
+#  ICE Revision: $Id$
 """Collections of output files"""
 
 from os import path

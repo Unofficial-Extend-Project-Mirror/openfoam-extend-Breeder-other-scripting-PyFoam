@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ParameterFile.py 12566 2012-05-14 08:22:17Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """Working with parameter-files"""
 
 import re,os

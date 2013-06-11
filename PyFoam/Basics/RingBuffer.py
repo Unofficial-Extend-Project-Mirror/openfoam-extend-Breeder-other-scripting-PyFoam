@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: RingBuffer.py 12566 2012-05-14 08:22:17Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """A ring-buffer data structure"""
 
 class RingBuffer(object):

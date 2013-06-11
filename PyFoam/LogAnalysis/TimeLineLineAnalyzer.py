@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: TimeLineLineAnalyzer.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Line analyzer that collects datga in arrays"""
 
 from .GeneralLineAnalyzer import GeneralLineAnalyzer

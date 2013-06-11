@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: RestructuredTextHelper.py 12721 2012-11-27 17:39:55Z bgschaid $
+#  ICE Revision: $Id$
 """Helps formatting output for restructured text"""
 
 import os

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Error.py 12688 2012-11-06 18:33:16Z bgschaid $
+#  ICE Revision: $Id$
 """Standardized Error Messages"""
 
 import traceback

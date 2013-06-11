@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SimpleFilters.py 11898 2010-11-08 07:06:55Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """ Simple filters
 
 Builds and displays simple filters. Grants easy access to the actual filter

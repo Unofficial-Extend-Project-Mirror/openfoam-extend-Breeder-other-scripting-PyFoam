@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: NameFinderLineAnalyzer.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """A line analyzer that generates a list of names"""
 
 import re

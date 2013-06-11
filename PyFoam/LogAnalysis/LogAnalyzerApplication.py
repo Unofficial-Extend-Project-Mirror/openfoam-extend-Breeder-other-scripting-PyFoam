@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: LogAnalyzerApplication.py 7581 2007-06-27 15:29:14Z bgschaid $ 
+#  ICE Revision: $Id$ 
 """Wraps an Analyzer"""
 
 import sys

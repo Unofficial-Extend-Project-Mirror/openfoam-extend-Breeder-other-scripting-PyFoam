@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ExecutionTimeLineAnalyzer.py 12753 2013-01-03 23:08:03Z bgschaid $
+#  ICE Revision: $Id$
 """Check for Execution-Time information"""
 
 import re

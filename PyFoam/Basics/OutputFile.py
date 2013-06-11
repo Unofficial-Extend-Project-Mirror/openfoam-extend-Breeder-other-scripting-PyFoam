@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: OutputFile.py 12747 2013-01-03 23:06:57Z bgschaid $
+#  ICE Revision: $Id$
 """Output of time-dependent data"""
 
 from .BasicFile import BasicFile

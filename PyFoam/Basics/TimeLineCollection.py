@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: TimeLineCollection.py 12774 2013-01-23 17:43:56Z bgschaid $
+#  ICE Revision: $Id$
 """Collection of array of timelines"""
 
 from PyFoam.Error import error

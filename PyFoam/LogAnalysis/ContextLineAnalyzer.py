@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ContextLineAnalyzer.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Line analyzer that finds data n lines after a matching line"""
 
 import re

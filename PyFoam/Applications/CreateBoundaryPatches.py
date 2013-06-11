@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CreateBoundaryPatches.py 12763 2013-01-08 17:56:07Z bgschaid $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamCreateBoundaryPatches.py
 """

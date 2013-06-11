@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Utilities.py 12766 2013-01-14 13:18:41Z bgschaid $
+#  ICE Revision: $Id$
 """ Utility functions
 
 Can be used via a class or as functions"""
@@ -7,6 +7,7 @@ import sys
 from PyFoam.ThirdParty.six import print_
 from PyFoam.Error import warning
 import subprocess
+import os,fnmatch
 
 if sys.version_info<(2,6):
     from popen2 import popen4
@@ -155,6 +156,22 @@ FoamFile
         else:
             return fullname
 
+    def find(self,pattern, path,directoriesToo=True):
+        """Find all files whose names match
+        @param pattern: glob-style pattern
+        @param path: path under which this files are to be searched
+        @param directoriesToo: also match directories?"""
+        result = []
+        for root, dirs, files in os.walk(path):
+            for name in files:
+                if fnmatch.fnmatch(name, pattern):
+                    result.append(os.path.join(root, name))
+            if directoriesToo:
+                for name in dirs:
+                    if fnmatch.fnmatch(name, pattern):
+                        result.append(os.path.join(root, name))
+        return result
+
 def which(prog):
     """Calls the method of the same name from the Utilites class"""
     return Utilities().which(prog)
@@ -186,5 +203,9 @@ def remove(f):
 def copyfile(src,dest):
     """Calls the method of the same name from the Utilites class"""
     return Utilities().copyfile(src,dest)
+
+def find(pattern,path,directoriesToo=True):
+    """Calls the method of the same name from the Utilites class"""
+    return Utilities().find(pattern,path,directoriesToo=directoriesToo)
 
 # Should work with Python3 and Python2

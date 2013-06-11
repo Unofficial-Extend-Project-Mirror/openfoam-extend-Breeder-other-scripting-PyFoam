@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: Hardcoded.py 12760 2013-01-03 23:10:16Z bgschaid $
+#  ICE Revision: $Id$
 """Hardcoded values"""
 
 from os import path,makedirs,environ

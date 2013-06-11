@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: FileBasis.py 12750 2013-01-03 23:07:32Z bgschaid $
+#  ICE Revision: $Id$
 """Basis for the handling of OpenFOAM-files
 
 Transparently accepts gnuzipped files"""

@@ -229,9 +229,9 @@ TODO
 """
 
 # $HeadURL$
-# $Id: IPy.py 7581 2007-06-27 15:29:14Z bgschaid $
+# $Id$
 
-__rcsid__ = '$Id: IPy.py 7581 2007-06-27 15:29:14Z bgschaid $'
+__rcsid__ = '$Id$'
 __version__ = '0.51'
 
 import types

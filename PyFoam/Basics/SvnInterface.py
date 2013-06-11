@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: SvnInterface.py 12759 2013-01-03 23:08:52Z bgschaid $
+#  ICE Revision: $Id$
 """A VCS-interface to Mercurial"""
 
 from PyFoam.Error import warning,error,notImplemented

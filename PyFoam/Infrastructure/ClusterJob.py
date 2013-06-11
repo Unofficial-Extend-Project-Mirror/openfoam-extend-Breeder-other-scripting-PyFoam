@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ClusterJob.py 12758 2013-01-03 23:08:44Z bgschaid $
+#  ICE Revision: $Id$
 """Encapsulates all necessary things for a cluster-job, like setting
 up, running, restarting"""
 

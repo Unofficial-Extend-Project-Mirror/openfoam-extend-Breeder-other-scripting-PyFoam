@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GnuplotFile.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Analyze a file with GNUPLOT-Data"""
 
 import re

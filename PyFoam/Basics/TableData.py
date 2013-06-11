@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: TableData.py 12749 2013-01-03 23:07:19Z bgschaid $
+#  ICE Revision: $Id$
 """A simple object for table data where data is accessed with a tuple
 (rowLabel,colLabel)"""
 

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: CTestRun.py 12758 2013-01-03 23:08:44Z bgschaid $
+#  ICE Revision: $Id$
 """A wrapper to run a solver as a CTest"""
 
 import sys

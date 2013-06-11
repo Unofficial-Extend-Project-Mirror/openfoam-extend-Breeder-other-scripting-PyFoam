@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: EchoLogAnalyzer.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """Echos a log"""
 
 from .FoamLogAnalyzer import FoamLogAnalyzer

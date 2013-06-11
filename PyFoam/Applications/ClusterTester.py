@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: ClusterTester.py 12762 2013-01-03 23:11:02Z bgschaid $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamClusterTester
 """

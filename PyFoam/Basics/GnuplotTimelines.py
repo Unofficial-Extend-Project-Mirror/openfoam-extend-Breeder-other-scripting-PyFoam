@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: GnuplotTimelines.py 12769 2013-01-16 11:38:51Z bgschaid $
+#  ICE Revision: $Id$
 """Plots a collection of timelines"""
 
 from PyFoam.ThirdParty.Gnuplot import Gnuplot,Data
