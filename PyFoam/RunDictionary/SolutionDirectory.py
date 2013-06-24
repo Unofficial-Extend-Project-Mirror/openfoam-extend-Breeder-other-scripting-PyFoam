@@ -417,6 +417,20 @@ class SolutionDirectory(Utilities):
                 self.addToTar(tar,path.join(name,m),exclude=exclude,base=base)
         else:
             arcname=path.join(base,name[len(self.name)+1:])
+            if path.islink(name):
+                # if the symbolic link points to a file in the case keep it
+                # otherwise replace with the real file
+                lPath=path.os.readlink(name)
+                if not path.isabs(lPath):
+                    rPath=path.realpath(name)
+                    common=path.commonprefix([path.abspath(rPath),
+                                              path.abspath(base)])
+                    # if the path is shorter than the base it must be outside the case
+                    if len(common)<len(path.abspath(base)):
+                        name=path.abspath(rPath)
+                else:
+                    # use the abolute path
+                    name=lPath
             tar.add(name,arcname=arcname)
 
     def getParallelTimes(self):
