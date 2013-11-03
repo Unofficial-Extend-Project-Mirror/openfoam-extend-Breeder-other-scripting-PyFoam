@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PyFoamApplication.py 8460 2013-09-27T00:06:42.766705Z bgschaid  $
 """Base class for pyFoam-applications
 
 Classes can also be called with a command-line string"""
@@ -41,7 +41,11 @@ def pyFoamExceptionHook(type,value,tb,debugOnSyntaxError=False):
         warning("Syntax error. No debugger")
         sys.__excepthook__(type,value,tb)
     else:
-        import traceback,pdb
+        import traceback
+        try:
+             import ipdb as pdb
+        except ImportError:
+             import pdb
         traceback.print_exception(type,value,tb)
         print_()
         pdb.pm()
@@ -51,6 +55,15 @@ def pyFoamSIG1HandlerPrintStack(nr,frame):
      raise FatalErrorPyFoamException("Signal nr",nr,"sent")
 
 class PyFoamApplication(object):
+    """This class is the base for all pyFoam-utilities"""
+    class iDict(dict):
+         "This class is a quick and dirty wrapper to use a dictionary like a struct"
+         def __getattr__(self,key):
+              try:
+                   return self[key]
+              except KeyError:
+                   raise AttributeError(key)
+
     def __init__(self,
                  args=None,
                  description=None,
@@ -83,7 +96,7 @@ class PyFoamApplication(object):
 
         self.generalOpts=None
 
-        self.__appData={}
+        self.__appData=self.iDict()
         if inputApp:
             self.__appData["inputData"]=inputApp.getData()
 
@@ -187,7 +200,12 @@ class PyFoamApplication(object):
                        dest="developerMode",
                        default=False,
                        action="store_true",
-                       help="Switch on all of the above options. Usually this mkes only sense if you're developing PyFoam'")
+                       help="Switch on all of the above options. Usually this makes only sense if you're developing PyFoam'")
+        dbg.add_option("--interactive-after-execution",
+                       dest="interacticeAfterExecution",
+                       default=False,
+                       action="store_true",
+                       help="Instead of ending execution drop to an interactive shell (which is IPython if possible)")
 
         grp.add_option("--dump-application-data",
                        dest="dumpAppData",
@@ -314,6 +332,27 @@ with these option for commands that generate a lot of output""")
                     printer=pprint.PrettyPrinter()
                     printer.pprint(self.__appData)
 
+                if self.opts.interacticeAfterExecution:
+                     print_("\nDropping to interactive shell ... ",end="")
+                     ns={}
+                     ns.update(locals())
+                     ns.update(globals())
+                     try:
+                          import IPython
+                          print_("found IPython ...",end="")
+                          if "embed" in dir(IPython):
+                               print_("up-to-date IPython\n")
+                               IPython.embed(user_ns=ns)
+                          else:
+                               print_("old-school IPython\n")
+                               IPython.Shell.IPythonShellEmbed(argv="",user_ns=ns)()
+
+                     except ImportError:
+                          print_("no IPython -> regular shell\n")
+                          from code import InteractiveConsole
+                          c=InteractiveConsole(ns)
+                          c.interact()
+                     print_("\nEnding interactive shell\n")
                 return result
             except PyFoamException:
                 e=sys.exc_info()[1]
@@ -340,6 +379,12 @@ with these option for commands that generate a lot of output""")
 
     def iteritems(self):
         return iter(list(self.__appData.items()))
+
+    def __getattr__(self,key):
+         try:
+              return self.__appData[key]
+         except KeyError:
+              raise AttributeError(key)
 
     def getData(self):
         """Get the application data"""

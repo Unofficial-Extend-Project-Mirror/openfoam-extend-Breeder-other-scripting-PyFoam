@@ -61,8 +61,8 @@ if PyFoam.FoamInformation.oldAppConvention():
     print_("  This version of OpenFOAM uses the old calling convention")
 print_()
 print_("pyFoam-Version:",PyFoam.versionString())
-# hardcodedVersion=(0,6,2,"development")
-hardcodedVersion=(0,6,1)
+# hardcodedVersion=(0,6,3,"development")
+hardcodedVersion=(0,6,2)
 if PyFoam.version()!=hardcodedVersion:
     print_("ALERT: Reported version",PyFoam.version(),
            "is different from hardcoded version",
@@ -140,8 +140,12 @@ testLibrary("Tkinter","Not a problem. Used for the old version of DisplayBlockme
 testLibrary("mercurial","Not a problem. Used for experimental case handling")
 testLibrary("nose","Only needed for running the unit-tests (developers only)")
 testLibrary("twisted","Not yet used. Possibly reimplement MetaServer with it")
-testLibrary("pandas","Not yet used. Maybe handling of timelines will be reimplemented with it")
+testLibrary("pandas","Not a problem. Only used for handling of advanced data-handling")
+testLibrary("xlwt","Not a problem. Only used for exporting pandas-data to Excel-files")
+testLibrary("openpyxl","Not a problem. Only used for exporting pandas-data to Excel-files (advanced)")
 testLibrary("scipy","Not yet used. Possibly use signal-fitting etc")
+testLibrary("IPython","Not necessary. But the interactive shell may be more comfortable")
+testLibrary("ipdb","Not necessary. Only makes debugging more comfortable")
 
 print_()
 print_("Library locations")

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GeneralVCSInterface.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
 """General interface to VCS implementations"""
 
 from PyFoam.Error import notImplemented,error

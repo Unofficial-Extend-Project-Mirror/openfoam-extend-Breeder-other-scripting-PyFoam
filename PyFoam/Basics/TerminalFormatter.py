@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/TerminalFormatter.py 6709 2010-06-17T18:15:39.756487Z bgschaid  $ 
 """Formats the output on a terminal"""
 
 import os

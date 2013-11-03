@@ -1,8 +1,8 @@
 import unittest
 
-from PyFoam.RunDictionary.SampleDirectory import SampleDirectory,SampleTime,SampleData
+from PyFoam.RunDictionary.SampleDirectory import SampleDirectory
 
-from os import path,environ,system,mkdir
+from os import path,mkdir
 from shutil import rmtree
 from tempfile import mkdtemp
 
@@ -55,6 +55,26 @@ def createDirectory2():
 
     return theDir
 
+def createDirectory3():
+    theDir=mkdtemp()
+
+    mkdir(path.join(theDir,"samples"))
+    mkdir(path.join(theDir,"samples","0"))
+    open(path.join(theDir,"samples","0","forgetIt_prefix_line1"),"w").write(
+"""# time p p2 p3
+0 0 0 0
+1 0 0 1
+3 1 1 1
+""")
+    open(path.join(theDir,"samples","0","prefix_line2.xy"),"w").write(
+"""0 0 0 0
+1 0 1 2
+3 1 1 1
+""")
+    mkdir(path.join(theDir,"samples","5"))
+
+    return theDir
+
 class SampleDirectoryTest(unittest.TestCase):
     def setUp(self):
         self.theDir=createDirectory()
@@ -70,6 +90,25 @@ class SampleDirectoryTest(unittest.TestCase):
         self.assertEqual(len(sd.getData()),9)
 
 theSuite.addTest(unittest.makeSuite(SampleDirectoryTest,"test"))
+
+class SampleDirectoryTestPrenamed(unittest.TestCase):
+    def setUp(self):
+        self.theDir=createDirectory3()
+
+    def tearDown(self):
+        destroyDirectory(self.theDir)
+
+    def testFindCorrectNames(self):
+        sd=SampleDirectory(self.theDir,
+                           valueNames=["p","p2","p3"],
+                           linePattern=".*prefix_([^.]+).*",
+                           needsExtension=False)
+        self.assertEqual(len(sd),2)
+        self.assertEqual(len(sd.lines()),2)
+        self.assertEqual(len(sd.values()),3)
+        self.assertEqual(len(sd.getData()),6)
+
+theSuite.addTest(unittest.makeSuite(SampleDirectoryTestPrenamed,"test"))
 
 class SampleTimeTest(unittest.TestCase):
     def setUp(self):

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/GnuplotRunner.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
 """Runner that outputs the residuals of the linear solver with Gnuplot"""
 
 from .StepAnalyzedCommon import StepAnalyzedCommon

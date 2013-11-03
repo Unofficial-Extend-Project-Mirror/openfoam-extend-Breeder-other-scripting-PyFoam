@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SamplePlot.py 8488 2013-11-03T14:38:32.775063Z bgschaid  $
 """
 Application class that implements pyFoamSamplePlot.py
 """
@@ -50,6 +50,26 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                         default=None,
                         dest="field",
                         help="The fields that are plotted (can be used more than once). If none are specified all found fields are used")
+        data.add_option("--pattern-for-line",
+                        action="store",
+                        default=None,
+                        dest="linePattern",
+                        help="Usually the name of the line is automatically determined from the file name by taking the first part. If this regular expression is specified then it is used: the first group in the pattern will be the line name")
+        data.add_option("--default-value-names",
+                        action="store",
+                        default=None,
+                        dest="valueNames",
+                        help="Usually the names of the values automatically determined from the file. If they are specified (as a comma separated list of names) then these names are used and all the files MUST have these values")
+        data.add_option("--no-extension-needed",
+                        action="store_false",
+                        default=True,
+                        dest="needsExtension",
+                        help="The files do not have an extension")
+        data.add_option("--is-distribution",
+                        action="store_true",
+                        default=False,
+                        dest="isDistribution",
+                        help="The files in the directory are distributions. This sets the names of the lines and fields accordingly")
         data.add_option("--postfix-for-field-names",
                         action="append",
                         default=[],
@@ -201,6 +221,23 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                           dest="scaleAll",
                           default=False,
                           help="Use the same scale for all fields (else use one scale for each field)")
+        output.add_option("--scale-domain",
+                          action="store_true",
+                          dest="scaleDomain",
+                          default=False,
+                          help="Automatically scale the x-domain to the same length for all plots")
+        output.add_option("--domain-minimum",
+                          action="store",
+                          type="float",
+                          dest="domainMin",
+                          default=None,
+                          help="Use this value as the minimum for the x-domain for all plots")
+        output.add_option("--domain-maximum",
+                          action="store",
+                          type="float",
+                          dest="domainMax",
+                          default=None,
+                          help="Use this value as the maximum for the x-domain for all plots")
         output.add_option("--gnuplot-file",
                           action="store",
                           dest="gnuplotFile",
@@ -221,6 +258,21 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                           dest="csvFile",
                           default=None,
                           help="Write the data to a CSV-file instead of the gnuplot-commands")
+        output.add_option("--excel-file",
+                          action="store",
+                          dest="excelFile",
+                          default=None,
+                          help="Write the data to a Excel-file instead of the gnuplot-commands")
+        output.add_option("--pandas-data",
+                          action="store_true",
+                          dest="pandasData",
+                          default=False,
+                          help="Pass the raw data in pandas-format")
+        output.add_option("--numpy-data",
+                          action="store_true",
+                          dest="numpyData",
+                          default=False,
+                          help="Pass the raw data in numpy-format")
 
         data.add_option("--info",
                         action="store_true",
@@ -246,12 +298,12 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                           action="store_true",
                           dest="resampleReference",
                           default=False,
-                          help="Resample the reference value to the current x-axis (for CSV-output)")
+                          help="Resample the reference value to the current x-axis (for CSV or Excel-output)")
         output.add_option("--extend-data",
                           action="store_true",
                           dest="extendData",
                           default=False,
-                          help="Extend the data range if it differs (for CSV-files)")
+                          help="Extend the data range if it differs (for CSV or Excel-files)")
         output.add_option("--silent",
                           action="store_true",
                           dest="silent",
@@ -289,6 +341,13 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                             help="Use the reference-data as the basis for the numerical comparison. Otherwise the original data will be used")
 
     def run(self):
+        if self.opts.isDistribution:
+            if self.opts.valueNames or self.opts.linePattern:
+                self.error("The option --is-distribution can not be used with --pattern-for-line or --default-value-names")
+            self.opts.valueNames="normalized,raw"
+            self.opts.linePattern=".+istribution_(.+)"
+            self.opts.needsExtension=False
+
         # remove trailing slashif present
         if self.opts.dirName[-1]==path.sep:
             self.opts.dirName=self.opts.dirName[:-1]
@@ -298,12 +357,15 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
         samples=SampleDirectory(self.parser.getArgs()[0],
                                 dirName=self.opts.dirName,
                                 postfixes=self.opts.fieldPostfix,
-                                prefixes=self.opts.fieldPrefix)
+                                prefixes=self.opts.fieldPrefix,
+                                valueNames=self.opts.valueNames.split(","),
+                                linePattern=self.opts.linePattern,
+                                needsExtension=self.opts.needsExtension)
         reference=None
         if self.opts.reference and self.opts.referenceCase:
             self.error("Options --reference-directory and --reference-case are mutual exclusive")
-        if self.opts.csvFile and (self.opts.compare or self.opts.metrics):
-            self.error("Options --csv-file and --compare/--metrics are mutual exclusive")
+        if (self.opts.csvFile or self.opts.excelFile or self.opts.pandasData or self.opts.numpyData)  and (self.opts.compare or self.opts.metrics):
+            self.error("Options --csv-file/--excel-file/--pandas-data/--numpy-data and --compare/--metrics are mutual exclusive")
 
         if self.opts.reference:
             reference=SampleDirectory(self.parser.getArgs()[0],
@@ -554,6 +616,19 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
 
             plots.append(plot)
 
+        xMin,xMax=None,None
+        if self.opts.scaleDomain:
+            if self.opts.domainMin or self.opts.domainMax:
+                self.error("--scale-domain used. Can't use --domain-minimum or --domain-maximum")
+            xMin,xMax=1e40,-1e40
+            for p in plots:
+                for d in p:
+                    mi,mx=d.domain()
+                    xMin=min(xMin,mi)
+                    xMax=max(xMax,mx)
+        else:
+            xMin,xMax=self.opts.domainMin,self.opts.domainMax
+
         if self.opts.scaled:
             if self.opts.scaleAll:
                 vRange=None
@@ -643,7 +718,25 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
 
                 # only scale if extremas are sufficiently different
                 if abs(vRange[0]-vRange[1])>1e-5*max(abs(vRange[0]),abs(vRange[1])) and max(abs(vRange[0]),abs(vRange[1]))>1e-10:
-                    result+="[][%g:%g] " % vRange
+                    yRange="[%g:%g] " % vRange
+                else:
+                    yRange="[]"
+            else:
+                yRange="[]"
+
+            if xMin or xMax:
+                xRange="["
+                if xMin:
+                    xRange+=str(xMin)
+                xRange+=":"
+                if xMax:
+                    xRange+=str(xMax)
+                xRange+="]"
+            else:
+                xRange="[]"
+
+            if self.opts.scaled or xMin or xMax:
+                result+=xRange+yRange
 
             first=True
 
@@ -707,7 +800,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
 
             result+="\n"
 
-        if self.opts.csvFile:
+        if self.opts.csvFile or self.opts.excelFile or self.opts.pandasData or self.opts.numpyData:
             tmp=sum(plots,[])
             c=tmp[0]()
             for p in tmp[1:]:
@@ -728,7 +821,16 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                         self.warning("Try the --resample-option")
                         raise
 
-            c.writeCSV(self.opts.csvFile)
+            if self.opts.csvFile:
+                c.writeCSV(self.opts.csvFile)
+            if self.opts.excelFile:
+                c.getData().to_excel(self.opts.excelFile)
+            if self.opts.pandasData:
+                self.setData({"series":c.getSeries(),
+                              "dataFrame":c.getData()})
+            if self.opts.numpyData:
+                self.setData({"data":c.data.copy()})
+
         elif self.opts.compare or self.opts.metrics:
             statData={}
             if self.opts.compare:

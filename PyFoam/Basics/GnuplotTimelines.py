@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GnuplotTimelines.py 8463 2013-09-27T18:33:05.307083Z bgschaid  $
 """Plots a collection of timelines"""
 
 from PyFoam.ThirdParty.Gnuplot import Gnuplot,Data
@@ -22,7 +22,9 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
         """@param timelines: The timelines object
         @type timelines: TimeLineCollection
         @param custom: A CustomplotInfo-object. Values in this object usually override the
-        other options
+        other options. If the object has an attribute named gnuplotCommands
+        (which is assumed to be a string list) then these strings are executed during
+        initialization of the plot (the purpose of this is to set non-standard stuff)
         """
 
         GeneralPlotTimelines.__init__(self,timelines,custom,showWindow=showWindow,registry=registry)
@@ -86,6 +88,12 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
             self.set_string("terminal dumb")
 
         self.with_=self.spec.with_
+
+        try:
+            for l in custom.gnuplotCommands:
+                self(l)
+        except AttributeError:
+            pass
 
         self.redo()
 

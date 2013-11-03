@@ -20,12 +20,43 @@ class CommonClearCase(object):
                                     default=False,
                                     dest="clearComplete",
                                     help="Like clear-case but removes the function-object data as well")
+        self.generalOpts.add_option("--pyfoam-stuff-clear",
+                                    action="store_true",
+                                    dest="pyfoam",
+                                    default=False,
+                                    help="Keep the PyFoam-specific directories and logfiles. Will only be used with '--clear-case'")
+        self.generalOpts.add_option("--additional-clear",
+                                    action="append",
+                                    dest="additionalClear",
+                                    default=[],
+                                    help="Glob-pattern with additional files to be removes. Can be used more than once. Will only be used with '--clear-case'")
+        self.generalOpts.add_option("--history-clear",
+                                    action="store_true",
+                                    dest="clearHistory",
+                                    default=False,
+                                    help="Clear the PyFoamHistory-file. Will only be used with '--clear-case'")
+        self.generalOpts.add_option("--remove-processor-dirs",
+                                    action="store_true",
+                                    dest="removeProcessorDirs",
+                                    default=False,
+                                    help="Remove the whole processor directories")
+        self.generalOpts.add_option("--keep-postprocessing",
+                                    action="store_true",
+                                    dest="keepPostprocessing",
+                                    default=False,
+                                    help="Keep the directory 'postProcessing' where functionObjects write their stuff")
 
     def clearCase(self,sol):
+        if not self.opts.keepPostprocessing:
+            self.opts.additionalClear.append("postProcessing")
         if self.opts.clearComplete:
             self.opts.clearCase=True
         if self.opts.clearCase:
             print_("Clearing out old timesteps ....")
-            sol.clearResults(functionObjectData=self.opts.clearComplete)
+            sol.clear(additional=self.parser.getOptions().additionalClear,
+                      processor=self.parser.getOptions().removeProcessorDirs,
+                      pyfoam=self.parser.getOptions().pyfoam,
+                      clearHistory=self.parser.getOptions().clearHistory,
+                      functionObjectData=self.opts.clearComplete)
 
 # Should work with Python3 and Python2

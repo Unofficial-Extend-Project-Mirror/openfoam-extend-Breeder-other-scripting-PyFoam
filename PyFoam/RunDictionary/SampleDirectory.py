@@ -15,16 +15,29 @@ class SampleDirectory(object):
                  case,
                  dirName="samples",
                  postfixes=[],
-                 prefixes=[]):
+                 prefixes=[],
+                 valueNames=None,
+                 linePattern=None,
+                 needsExtension=True):
         """@param case: The case directory
         @param dirName: Name of the directory with the samples
         @param postfixes: list of possible extensions to a field name of the form
         name_postfix to help splitting such field names.
         @param prefixes: list of possible extensions to a field name of the form
-        prefix_name to help splitting such field names"""
+        prefix_name to help splitting such field names
+        @param valueNames: List of value names. If specified then the classes do
+        not try to determine the names automatically
+        @param linePattern: Regular expression to determine the name of the line
+        from the filename. The first group in the expression is the name. If unset
+        the linename is determined automatically
+        @param needsExtension: whether a file needs an extension"""
 
         self.dir=path.join(case,dirName)
         self.times=[]
+
+        self.__defaultNames=valueNames
+        self.__linePattern=linePattern
+        self.__needsExtension=needsExtension
 
         self.prefixes=prefixes
         self.postfixes=postfixes
@@ -47,14 +60,20 @@ class SampleDirectory(object):
             yield SampleTime(self.dir,
                              t,
                              prefixes=self.prefixes,
-                             postfixes=self.postfixes)
+                             postfixes=self.postfixes,
+                             valueNames=self.__defaultNames,
+                             linePattern=self.__linePattern,
+                             needsExtension=self.__needsExtension)
 
     def __getitem__(self,time):
         if time in self:
             return SampleTime(self.dir,
                               time,
                               prefixes=self.prefixes,
-                              postfixes=self.postfixes)
+                              postfixes=self.postfixes,
+                              valueNames=self.__defaultNames,
+                              linePattern=self.__linePattern,
+                              needsExtension=self.__needsExtension)
         else:
             raise KeyError(time)
 
@@ -137,7 +156,10 @@ class SampleTime(object):
                  sDir,
                  time,
                  postfixes=[],
-                 prefixes=[]):
+                 prefixes=[],
+                 valueNames=None,
+                 linePattern=None,
+                 needsExtension=True):
         """@param sDir: The sample-dir
         @param time: the timename
         @param postfixes: list of possible extensions to a field name of the form
@@ -153,9 +175,11 @@ class SampleTime(object):
         self.postfixes=postfixes
 
         self.__valueNames=None
+        self.__defaultValueNames=valueNames
+        self.__linePattern=linePattern
 
         for f in listdir(self.dir):
-            if f[0]=='.' or f[-1]=='~' or f.find(".")<0:
+            if f[0]=='.' or f[-1]=='~' or (f.find(".")<0 and needsExtension):
                 continue
             nm=self.extractLine(f)
             vals=self.extractValues(f)
@@ -172,10 +196,18 @@ class SampleTime(object):
 
     def extractLine(self,fName):
         """Extract the name of the line from a filename"""
-        return fName.split("_")[0]
+        if self.__linePattern:
+            expr=re.compile(self.__linePattern)
+            return expr.match(fName).groups(1)[0]
+        else:
+            return fName.split("_")[0]
 
     def extractValues(self,fName):
         """Extracts the names of the contained Values from a filename"""
+
+        if self.__defaultValueNames:
+            self.__valueNames=self.__defaultValueNames[:]
+            return self.__valueNames
 
         def preUnder(m):
             return "&"+m.group(1)+m.group(2)
@@ -222,17 +254,25 @@ class SampleTime(object):
             error("Can't find a file for the line",line,"and the value",val,"in the directory",self.dir)
 
         first=True
-        col0=[]
+        coord=[]
         data=[]
         index=None
 
         for l in open(path.join(self.dir,fName)).readlines():
+            if l.strip()[0]=='#':
+                continue
+
             tmp=l.split()
+            if self.__defaultValueNames:
+                if len(tmp)!=len(self.__defaultValueNames)+1:
+                    error("Number of items in line",l,
+                          "is not consistent with predefined name",
+                          self.__defaultValueNames)
             if first:
                 first=False
                 vector,index=self.determineIndex(fName,val,tmp)
 
-            col0.append(float(tmp[0]))
+            coord.append(float(tmp[0]))
             try:
                 if vector:
                     data.append(tuple(map(float,tmp[index:index+3])))
@@ -244,8 +284,9 @@ class SampleTime(object):
         if index!=None:
             self.cache[key]=SampleData(fName=path.join(self.dir,fName),
                                        name=val,
+                                       line=self.extractLine(fName),
                                        index=index,
-                                       col0=col0,
+                                       coord=coord,
                                        data=data)
 
             return self.cache[key]
@@ -262,6 +303,7 @@ class SampleTime(object):
         or the first component of the vector"""
 
         vals=self.extractValues(fName)
+
         if len(vals)+1==len(data):
             vector=False
         elif len(vals)*3+1==len(data):
@@ -283,8 +325,9 @@ class SampleData(object):
     def __init__(self,
                  fName,
                  name,
+                 line,
                  index,
-                 col0,
+                 coord,
                  data,
                  note="",
                  scale=(1,1),
@@ -292,15 +335,16 @@ class SampleData(object):
         """@param fName: Name of the file
         @param name: Name of the value
         @param index: Index of the data in the file
-        @param col0: Values that identify the data (the location)
+        @param coord: Values that identify the data (the location)
         @param data: The actual data
         @param scale: pair of factors with which the data is scaled when being plotted
         @param offset: pair of offsets"""
 
         self.file=fName
-        self.col0=col0
+        self.coord=coord
         self.data=data
         self.name=name
+        self.__line=line
         self.index=index
         self.note=note
         self.scale=scale
@@ -316,7 +360,7 @@ class SampleData(object):
 
     def line(self):
         """Get the line of the sample"""
-        return path.basename(self.file).split("_")[0]
+        return self.__line
 
     def time(self):
         """Get the time of the sample (as a string)"""
@@ -337,7 +381,7 @@ class SampleData(object):
 
     def domain(self):
         """Range of the data domain"""
-        return (min(self.col0),max(self.col0))
+        return (min(self.coord),max(self.coord))
 
     def component(self,component=None):
         """Return the data as a number of single scalars.
@@ -367,13 +411,13 @@ class SampleData(object):
 
         data=[]
         if self.isVector():
-            for i,c in enumerate(self.col0):
+            for i,c in enumerate(self.coord):
                 data.append([scaleX*c+offsetX]+[scaleData*v+offsetData for v in self.data[i]])
         else:
-            for i,c in enumerate(self.col0):
+            for i,c in enumerate(self.coord):
                 data.append([scaleX*c+offsetX,scaleData*self.data[i]+offsetData])
 
-        names=["col0"]
+        names=["coord"]
         if self.isVector():
             names+=[self.name+"_x",self.name+"_y",self.name+"_z"]
         else:

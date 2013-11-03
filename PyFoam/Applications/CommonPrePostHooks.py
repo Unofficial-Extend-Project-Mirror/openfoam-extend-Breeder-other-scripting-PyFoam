@@ -211,7 +211,8 @@ class CommonPrePostHooks(object):
                                                             "description",
                                                             default="None"))
             except configparser.NoOptionError:
-                self.error("Hook",h,"incompletely defined")
+                e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+                self.error("Hook",h,"incompletely defined (",e,")")
 
     def getHooksWithPrefix(self,prefix):
         lst=[]

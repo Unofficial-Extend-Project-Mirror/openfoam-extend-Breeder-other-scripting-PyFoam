@@ -145,13 +145,18 @@ class RunDatabase(object):
                     self.db.execute('ALTER TABLE "%s" ADD COLUMN "%s" TEXT' %
                                     (table,k))
 
-    def dumpToCSV(self,name,selection=None):
+    def dumpToCSV(self,
+                  fname,
+                  selection=None,
+                  disableRunData=None,
+                  pandasFormat=True,
+                  excel=False):
         """Dump the contents of the database to a csv-file
         @param name: the CSV-file
         @param selection: list of regular expressions. Only data
         entries fitting those will be added to the CSV-file (except
         for the basic run). If unset all data will be written"""
-        file=CSVCollection(name)
+        file=CSVCollection(fname)
 
         runCursor=self.db.cursor()
         runCursor.execute("SELECT * from theRuns")
@@ -162,12 +167,24 @@ class RunDatabase(object):
         allData=set()
         writtenData=set()
 
+        disabledStandard=set()
+
         for d in runCursor:
             id=d['runId']
             if self.verbose:
                 print_("Dumping run",id)
             for k in list(d.keys()):
-                file[k]=d[k]
+                writeEntry=True
+                if disableRunData:
+                    for e in disableRunData:
+                        exp=re.compile(e)
+                        if exp.search(k):
+                            writeEntry=False
+                            break
+                    if writeEntry:
+                        file[k]=d[k]
+                    else:
+                        disabledStandard.add(k)
             for t in tables:
                 if t=="theRuns":
                     continue
@@ -184,7 +201,7 @@ class RunDatabase(object):
                 for k in list(data[0].keys()):
                     if k in ["dataId","runId"]:
                         continue
-                    name=namePrefix+" "+k
+                    name=namePrefix+self.separator+k
                     allData.add(name)
                     writeEntry=True
                     if selection:
@@ -199,10 +216,25 @@ class RunDatabase(object):
                         file[name]=data[0][k]
 
             file.write()
+
         if self.verbose:
+            sep="\n    "
             if allData==writtenData:
-                print_("Added all data entries",allData)
+                print_("Added all data entries:",sep,sep.join(allData),sep="")
             else:
-                print_("Added parameters",writtenData,"of possible",allData)
+                print_("Added parameters:",sep,sep.join(writtenData),
+                       "\nUnwritten data:",sep,sep.join(allData-writtenData),sep="")
+            if len(disabledStandard)>0:
+                print_("Disabled standard entries:",sep,sep.join(disabledStandard),sep="")
+
+        f=file(pandasFormat)
+        if excel:
+            file(True).to_excel(fname)
+
+        if f:
+            return f
+        else:
+            # retry by forcing to numpy
+            return file(False)
 
 # Should work with Python3 and Python2

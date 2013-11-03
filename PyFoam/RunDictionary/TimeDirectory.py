@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/TimeDirectory.py 8435 2013-09-17T12:50:28.576631Z bgschaid  $
 """Working with direcotries from a time-step"""
 
 from PyFoam.RunDictionary.SolutionFile import SolutionFile
@@ -20,10 +20,12 @@ class TimeDirectory(object):
                  create=False,
                  region=None,
                  processor=None,
+                 tolerant=False,
                  yieldParsedFiles=False):
         """@param name: name of the case directory
         @param time: time in the directory
         @param create: Create the directory if it does not exist
+        @param tolerant: Do not fail if there are inconsistencies
         @param region: The mesh region for multi-region cases
         @param yieldParsedFiles: let the iterator return PasedParameterFile objects instead of SolutionFile"""
 
@@ -36,7 +38,7 @@ class TimeDirectory(object):
         self.name=path.join(self.name,time)
         if region!=None:
             self.name=path.join(self.name,region)
-            
+
         if path.exists(self.name):
             if not path.isdir(self.name):
                 error(self.name,"is not a directory")
@@ -44,26 +46,27 @@ class TimeDirectory(object):
             makedirs(self.name)
         else:
             error(self.name,"does not exist")
-            
+
         self.values=[]
 
         self.lastReread=0
+        self.tolerant=tolerant
         self.reread()
 
     def baseName(self):
         """The name of the directory"""
         return path.basename(self.name)
-    
+
     def reread(self,force=False):
         """Scan the directory for files with valid names"""
-        
+
         if not force and stat(self.name)[ST_CTIME]<=self.lastReread:
             return
-        
+
         self.values=[]
 
         ex=["*~",".svn"]
-        
+
         for f in listdir(self.name):
             matched=False
             for e in ex:
@@ -72,7 +75,7 @@ class TimeDirectory(object):
 
             if path.isdir(path.join(self.name,f)):
                 continue
-            
+
             if not matched:
                 nm=f
                 if len(nm)>3:
@@ -81,30 +84,33 @@ class TimeDirectory(object):
                 if nm not in self.values:
                     self.values.append(nm)
                 else:
-                    error(nm," already found, propably exists as zipped and unzipped")
+                    if not self.tolerant:
+                        error(nm," already found, propably exists as zipped and unzipped")
+                    else:
+                        warning(nm," already found, propably exists as zipped and unzipped")
 
         self.values.sort()
-        
+
         self.lastReread=stat(self.name)[ST_CTIME]
-        
+
     def getFiles(self):
         """Get a list of the solution files in that directory"""
 
         return self.values
-    
+
     def __contains__(self,item):
         self.reread()
         return item in self.values
-    
+
     def __len__(self):
         self.reread()
         return len(self.values)
-    
+
     def __getitem__(self,key):
         self.reread()
         if type(key)!=str:
             raise TypeError(type(key),"of",key,"is not 'str'")
-        
+
         if key not in self.values:
             raise KeyError(key)
         else:
@@ -119,16 +125,16 @@ class TimeDirectory(object):
         else:
             error("Problem:",key,"(",f,") is supposed to exists, but no file found")
         self.values.remove(key)
-        
+
     def __delitem__(self,key):
         self.reread()
         if key in self.values:
             self.__remove(key)
         else:
             raise KeyError(key)
-            
+
         self.reread(force=True)
-        
+
     def __setitem__(self,key,value):
         self.reread()
         if type(key)!=str:
@@ -136,14 +142,14 @@ class TimeDirectory(object):
 
         if key in self.values:
             self.__remove(key)
-            
+
         if FileBasis in value.__class__.__mro__:
             value.writeFileAs(path.join(self.name,key))
         else:
             f=FileBasis(path.join(self.name,key))
             f.writeFile(str(value))
         self.reread(force=True)
-        
+
     def __iter__(self):
         self.reread()
         for key in self.values:
@@ -161,7 +167,7 @@ class TimeDirectory(object):
             remove(nm+".gz")
 
         self.reread(force=True)
-            
+
     def copy(self,orig,purge=False,overwrite=True,mustExist=False,exclude=[],include=['*']):
         """Copy SolutionFiles from another TimeDirectory to the
         current TimeDirectory. Returns a list with the copied values
@@ -177,15 +183,15 @@ class TimeDirectory(object):
         if not overwrite and mustExist:
             warning("The options mustExist needs the option overwrite")
             overwrite=True
-            
+
         if type(orig)!=TimeDirectory:
             raise TypeError(type(value),"is not TimeDirectory")
 
         if purge:
             self.clear()
-            
+
         copied=[]
-        
+
         for v in orig:
             nm=v.baseName()
 
@@ -198,17 +204,17 @@ class TimeDirectory(object):
             for p in exclude:
                 if fnmatch(nm,p):
                     doIt=False
-                
+
             if not overwrite and nm in self:
                 doIt=False
 
             if mustExist and nm not in self:
                 doIt=False
-                
+
             if doIt:
                 copied.append(nm)
                 self[nm]=v
 
         return copied
-    
+
 # Should work with Python3 and Python2

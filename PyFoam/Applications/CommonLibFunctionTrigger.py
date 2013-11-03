@@ -1,7 +1,6 @@
 """Implements a trigger that removes the libs and/or function
 entry from the controlDict"""
 
-import re
 import sys
 
 from os import path

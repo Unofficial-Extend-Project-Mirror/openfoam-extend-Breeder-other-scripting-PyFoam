@@ -8,15 +8,18 @@ from stat import ST_MTIME
 import string
 import subprocess
 import re
+import os
 
 from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
-from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,PyFoamParserError
 
 from PyFoam import configuration
 
 from PyFoam.ThirdParty.six import print_,iteritems,PY3
+
+from PyFoam.Basics.Utilities import humanReadableSize
 
 if PY3:
     long=int
@@ -176,7 +179,21 @@ etc). Currently doesn't honor the parallel data
                             data["name"]=cName
                             data["diskusage"]=-1
                             if self.opts.diskusage:
-                                data["diskusage"]=int(subprocess.Popen(["du","-sm",cName], stdout=subprocess.PIPE).communicate()[0].split()[0])
+                                try:
+                                    data["diskusage"]=int(
+                                        subprocess.Popen(
+                                            ["du","-sb",cName],
+                                            stdout=subprocess.PIPE,
+                                            stderr=open(os.devnull,"w")
+                                        ).communicate()[0].split()[0])
+                                except IndexError:
+                                    # assume that this du does not support -b
+                                    data["diskusage"]=int(
+                                        subprocess.Popen(
+                                            ["du","-sk",cName],
+                                            stdout=subprocess.PIPE
+                                        ).communicate()[0].split()[0])*1024
+
                                 totalDiskusage+=data["diskusage"]
                             if self.opts.parallel:
                                 for f in listdir(cName):
@@ -203,7 +220,12 @@ etc). Currently doesn't honor the parallel data
                                     data["startedAt"]="nix"
 
                             if self.opts.startEndTime or self.opts.estimateEndTime:
-                                ctrlDict=ParsedParameterFile(sol.controlDict())
+                                try:
+                                    ctrlDict=ParsedParameterFile(sol.controlDict(),doMacroExpansion=True)
+                                except PyFoamParserError:
+                                    # Didn't work with Macro expansion. Let's try without
+                                    ctrlDict=ParsedParameterFile(sol.controlDict())
+
                                 data["startTime"]=ctrlDict["startTime"]
                                 data["endTime"]=ctrlDict["endTime"]
 
@@ -211,8 +233,11 @@ etc). Currently doesn't honor the parallel data
                                 data["endTimeEstimate"]=None
                                 if self.readState(sol,"TheState")=="Running":
                                     gone=time.time()-data["startedAt"]
-                                    current=float(self.readState(sol,"CurrentTime"))
-                                    frac=(current-data["startTime"])/(data["endTime"]-data["startTime"])
+                                    try:
+                                        current=float(self.readState(sol,"CurrentTime"))
+                                        frac=(current-data["startTime"])/(data["endTime"]-data["startTime"])
+                                    except ValueError:
+                                        frac=0
                                     if frac>0:
                                         data["endTimeEstimate"]=data["startedAt"]+gone/frac
 
@@ -252,6 +277,11 @@ etc). Currently doesn't honor the parallel data
                 except TypeError:
                     c[k]=None
 
+            try:
+                c["diskusage"]=humanReadableSize(c["diskusage"])
+            except KeyError:
+                pass
+
             for k,v in iteritems(c):
                 lens[k]=max(lens[k],len(str(v)))
 
@@ -260,7 +290,7 @@ etc). Currently doesn't honor the parallel data
         if self.opts.parallel:
             spec+=["| ","procs"," : ","pFirst"," - ","pLast"," (","nrParallel",") | "]
         if self.opts.diskusage:
-            spec+=["diskusage"," MB "]
+            spec+=["diskusage"," | "]
         if self.hasState:
             spec+=["nowTime"," s ","state"," | "]
             if self.opts.advancedState:
@@ -296,7 +326,7 @@ etc). Currently doesn't honor the parallel data
             print_(format % d)
 
         if self.opts.diskusage:
-            print_("Total disk-usage:",totalDiskusage,"MB")
+            print_("Total disk-usage:",humanReadableSize(totalDiskusage))
 
 
 # Should work with Python3 and Python2

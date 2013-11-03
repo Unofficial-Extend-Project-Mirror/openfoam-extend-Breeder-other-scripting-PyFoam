@@ -26,18 +26,25 @@ from PyFoam.Error import error,warning
 from PyFoam.ThirdParty.six import print_,iteritems
 
 class RedoPlot(PyFoamApplication):
-    def __init__(self):
+    def __init__(self,args=None):
         description="""\
 Either connects to a running pyFoam-Server and gets all the
 information for plotting or reads the relevant data from a pickle file
 and either displays the plot or writes the plots to file
         """
+        if args:
+            self.quiet=True
+        else:
+            self.quiet=False
+
         PyFoamApplication.__init__(self,
+                                   args=args,
                                    description=description,
                                    usage="%prog [options] (<host> <port>|<pickleFile>)",
                                    interspersed=True,
                                    nr=1,
                                    exactNr=False)
+
     def addOptions(self):
         mode=OptionGroup(self.parser,
                          "Input mode",
@@ -63,6 +70,26 @@ and either displays the plot or writes the plots to file
                           action="store_true",
                           default=False,
                           help="Write CSV-files instead of plotting")
+        output.add_option("--excel-files",
+                          dest="excelFiles",
+                          action="store_true",
+                          default=False,
+                          help="Write Excel-files (using pandas) instead of plotting")
+        output.add_option("--pandas-data",
+                          dest="pandasData",
+                          action="store_true",
+                          default=False,
+                          help="Pass the raw data in pandas-format")
+        output.add_option("--pandas-series",
+                          dest="pandasSeries",
+                          action="store_true",
+                          default=False,
+                          help="Pass the raw data in pandas-series")
+        output.add_option("--numpy-data",
+                          dest="numpyData",
+                          action="store_true",
+                          default=False,
+                          help="Pass the raw data in numpy")
         output.add_option("--file-prefix",
                           dest="filePrefix",
                           default="",
@@ -128,6 +155,8 @@ and either displays the plot or writes the plots to file
         if self.opts.server and self.opts.pickle:
             error("Both modes selected")
 
+        doPandas=self.opts.pandasData or self.opts.pandasSeries
+
         if self.opts.server:
             if len(self.parser.getArgs())!=2:
                 error("Need a server and a port to be specified")
@@ -148,7 +177,7 @@ and either displays the plot or writes the plots to file
             plotInfo=self.executeCommand("getPlots()")
             lineInfo=self.executeCommand("getPlotData()")
         else:
-            if len(self.parser.getArgs()[0])!=1:
+            if len(self.parser.getArgs())!=1:
                 warning("Only the first parameter is used")
 
             fName=self.parser.getArgs()[0]
@@ -157,34 +186,77 @@ and either displays the plot or writes the plots to file
             lineInfo=unpick.load()
             plotInfo=unpick.load()
 
-        print_("Found",len(plotInfo),"plots and",len(lineInfo),"data sets")
+        if not self.quiet:
+            print_("Found",len(plotInfo),"plots and",len(lineInfo),"data sets")
 
         registry=TimeLinesRegistry()
         for nr,line in iteritems(lineInfo):
-            print_("Adding line",nr)
+            if not self.quiet:
+                print_("Adding line",nr)
             TimeLineCollection(preloadData=line,registry=registry)
 
         registry.resolveSlaves()
 
-        if self.opts.csvFiles and self.opts.rawLines:
+        if (self.opts.csvFiles or self.opts.excelFiles or doPandas or self.opts.numpyData) and self.opts.rawLines:
+            rawData={}
+            rawSeries={}
+            rawNumpy={}
+
             for k,l in iteritems(registry.lines):
                 name=str(k)
                 if type(k)==int:
                     name="Line%d" % k
-                name=self.opts.filePrefix+name+".csv"
-                print_("Writing",k,"to",name)
-                l.getData().writeCSV(name)
-            return
+                csvName=self.opts.filePrefix+name+".csv"
+                if self.opts.csvFiles:
+                    if not self.quiet:
+                        print_("Writing",k,"to",csvName)
+                    l.getData().writeCSV(csvName)
+                if self.opts.excelFiles:
+                    xlsName=self.opts.filePrefix+name+".xls"
+                    if not self.quiet:
+                        print_("Writing",k,"to",xlsName)
+                    l.getData().getData().to_excel(xlsName)
+                if self.opts.pandasData:
+                    rawData[k]=l.getData().getData()
+                if self.opts.numpyData:
+                    rawNumpy[k]=l.getData().data.copy()
+                if self.opts.pandasSeries:
+                    rawSeries[k]=l.getData().getSeries()
+
+            if self.opts.numpyData:
+                self.setData({"rawNumpy":rawNumpy})
+            if self.opts.pandasData:
+                self.setData({"rawData":rawData})
+            if self.opts.pandasSeries:
+                self.setData({"rawSeries":rawSeries})
+
+            if self.opts.csvFiles or self.opts.excelFiles:
+                return
 
         pRegistry=PlotLinesRegistry()
 
+        plotNumpy={}
+        plotData={}
+        plotSeries={}
+
         for i,p in iteritems(plotInfo):
             theId=p["id"]
-            print_("Plotting",i,":",theId,end=" ")
+            if not self.quiet:
+                print_("Plotting",i,":",theId,end=" ")
             spec=CustomPlotInfo(raw=p["spec"])
             if len(registry.get(p["data"]).getTimes())>0 and registry.get(p["data"]).getValueNames()>0:
-                if self.opts.csvFiles:
-                    registry.get(p["data"]).getData().writeCSV(self.opts.filePrefix+theId+".csv")
+                if self.opts.csvFiles or self.opts.excelFiles or doPandas or self.opts.numpyData:
+                    dataSet=registry.get(p["data"]).getData()
+                    if self.opts.csvFiles:
+                        dataSet.writeCSV(self.opts.filePrefix+theId+".csv")
+                    if self.opts.excelFiles:
+                        dataSet.getData().to_excel(self.opts.filePrefix+theId+".xls")
+                    if self.opts.numpyData:
+                        plotNumpy[theId]=dataSet.data.copy()
+                    if self.opts.pandasData:
+                        plotData[theId]=dataSet.getData()
+                    if self.opts.pandasSeries:
+                        plotSeries[theId]=dataSet.getSeries()
                 else:
                     if self.opts.start or self.opts.end:
                         # rewrite CustomPlotInfo one of these days
@@ -208,12 +280,23 @@ and either displays the plot or writes the plots to file
                         if mp.hasData():
                             mp.doHardcopy(self.opts.prefix+theId,"png")
                         else:
-                            print_("has no data",end=" ")
-                print_()
+                            if not self.quiet:
+                                print_("has no data",end=" ")
+                if not self.quiet:
+                    print_()
             else:
-                print_("No data - skipping")
+                if not self.quiet:
+                    print_("No data - skipping")
 
-            sleep(self.opts.sleepTime) # there seems to be a timing issue with Gnuplot
+            if not(self.opts.csvFiles or doPandas):
+                sleep(self.opts.sleepTime) # there seems to be a timing issue with Gnuplot
+
+        if self.opts.numpyData:
+            self.setData({"plotNumpy":plotNumpy})
+        if self.opts.pandasData:
+            self.setData({"plotData":plotData})
+        if self.opts.pandasSeries:
+            self.setData({"plotSeries":plotSeries})
 
 
     def executeCommand(self,cmd):
@@ -224,17 +307,21 @@ and either displays the plot or writes the plots to file
                 return None
         except Fault:
             reason = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
-            print_("XMLRPC-problem:",reason.faultString)
+            if not self.quiet:
+                print_("XMLRPC-problem:",reason.faultString)
         except socket.error:
             reason = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
-            print_("Problem with socket (server propably dead):",reason)
+            if not self.quiet:
+                print_("Problem with socket (server propably dead):",reason)
         except TypeError:
             reason = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
-            print_("Type error: ",reason)
+            if not self.quiet:
+                print_("Type error: ",reason)
             result=None
         except SyntaxError:
             reason = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
-            print_("Syntax Error in:",cmd)
+            if not self.quiet:
+                print_("Syntax Error in:",cmd)
 
         return result
 

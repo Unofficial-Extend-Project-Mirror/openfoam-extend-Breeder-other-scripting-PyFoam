@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/TimelinePlot.py 8478 2013-10-03T16:42:16.004565Z bgschaid  $
 """
 Application class that implements pyFoamTimelinePlot.py
 """
@@ -151,6 +151,21 @@ the data can be written to a CSV-file.
                           dest="csvFile",
                           default=None,
                           help="Write the data to a CSV-file instead of the gnuplot-commands")
+        output.add_option("--excel-file",
+                          action="store",
+                          dest="excelFile",
+                          default=None,
+                          help="Write the data to a Excel-file instead of the gnuplot-commands")
+        output.add_option("--pandas-data",
+                          action="store_true",
+                          dest="pandasData",
+                          default=False,
+                          help="Pass the raw data in pandas-format")
+        output.add_option("--numpy-data",
+                          action="store_true",
+                          dest="numpyData",
+                          default=False,
+                          help="Pass the raw data in numpy-format")
         output.add_option("--reference-prefix",
                           action="store",
                           dest="refprefix",
@@ -166,12 +181,12 @@ the data can be written to a CSV-file.
                           action="store_true",
                           dest="resample",
                           default=False,
-                          help="Resample the reference value to the current x-axis (for CSV-output)")
+                          help="Resample the reference value to the current x-axis (for CSV and Excel-output)")
         output.add_option("--extend-data",
                           action="store_true",
                           dest="extendData",
                           default=False,
-                          help="Extend the data range if it differs (for CSV-files)")
+                          help="Extend the data range if it differs (for CSV and Excel-files)")
         output.add_option("--silent",
                           action="store_true",
                           dest="silent",
@@ -222,8 +237,8 @@ the data can be written to a CSV-file.
         reference=None
         if self.opts.reference and self.opts.referenceCase:
             self.error("Options --reference-directory and --reference-case are mutual exclusive")
-        if self.opts.csvFile and (self.opts.compare or self.opts.metrics):
-            self.error("Options --csv-file and --compare/--metrics are mutual exclusive")
+        if (self.opts.csvFile or self.opts.excelFile or self.opts.pandasData or self.opts.numpyData)  and (self.opts.compare or self.opts.metrics):
+            self.error("Options --csv-file/excel-file/--pandas-data/--numpy-data and --compare/--metrics are mutual exclusive")
 
         if self.opts.reference:
             reference=TimelineDirectory(self.parser.getArgs()[0],
@@ -439,9 +454,9 @@ the data can be written to a CSV-file.
         else:
             self.error("Not implemented basicMode",self.opts.basicMode)
 
-        if self.opts.csvFile:
+        if self.opts.csvFile or self.opts.excelFile or self.opts.pandasData or self.opts.numpyData:
             if self.opts.basicMode!='lines':
-                self.error("CSV-files currently only supported for lines-mode")
+                self.error("CSV and Excel-files currently only supported for lines-mode")
             spread=plots[0][-1]()
             for line in plots[1:]:
                 if line[3]==0:
@@ -462,7 +477,16 @@ the data can be written to a CSV-file.
                             self.warning("Try the --resample-option")
                             raise
 
-            spread.writeCSV(self.opts.csvFile)
+            if self.opts.csvFile:
+                spread.writeCSV(self.opts.csvFile)
+            if self.opts.excelFile:
+                spread.getData().to_excel(self.opts.excelFile)
+            if self.opts.pandasData:
+                self.setData({"series":spread.getSeries(),
+                              "dataFrame":spread.getData()})
+            if self.opts.numpyData:
+                self.setData({"data":spread.data.copy()})
+
         elif self.opts.compare  or self.opts.metrics:
             statData={}
             if self.opts.compare:

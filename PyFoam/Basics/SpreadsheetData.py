@@ -548,4 +548,31 @@ class SpreadsheetData(object):
                  "tMin": x[0],
                  "tMax": x[-1]}
 
+    def getData(self):
+        """Return a dictionary of the data in the DataFrame format of pandas"""
+        try:
+            import pandas
+        except ImportError:
+            warning("No pandas-library installed. Returning None")
+            return None
+
+        return pandas.DataFrame(self.getSeries())
+
+    def getSeries(self):
+        """Return a dictionary of the data-columns in the Series format of pandas"""
+        try:
+            import pandas
+        except ImportError:
+            warning("No pandas-library installed. Returning None")
+            return None
+        data={}
+
+        for n in self.names():
+            if n!=self.time:
+                data[n]=pandas.Series(self.data[n],
+                                      index=self.data[self.time],
+                                      name=n)
+
+        return data
+
 # Should work with Python3 and Python2

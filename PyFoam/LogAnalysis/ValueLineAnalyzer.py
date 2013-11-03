@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/ValueLineAnalyzer.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
 """Do analysis for a line with values"""
 
 from .FileLineAnalyzer import FileLineAnalyzer

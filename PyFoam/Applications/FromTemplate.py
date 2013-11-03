@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/FromTemplate.py 8448 2013-09-24T17:55:25.403256Z bgschaid  $
 """
 Application class that implements pyFoamFromTemplate
 """
@@ -15,12 +15,14 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from .CommonPickledDataInput import CommonPickledDataInput
 from .CommonTemplateFormat import CommonTemplateFormat
 
-from PyFoam.ThirdParty.six import print_
+from PyFoam.ThirdParty.six import print_,iteritems
+
+from os import path
 
 class FromTemplate(PyFoamApplication,
                    CommonPickledDataInput,
                    CommonTemplateFormat):
-    def __init__(self,args=None):
+    def __init__(self,args=None,parameters={}):
         description="""\
 Generates a file from a template file. Usually the name of the
 template file is the name of the file with the extension '.template'
@@ -40,7 +42,12 @@ uses these.
 
 In the new format expressions are delimited by |- at the start and -|
 at the end. These defaults can be changed
+
+@param parameters: Dictionary with parameters (only usable
+when called from a script)
         """
+
+        self.parameters=parameters.copy()
 
         PyFoamApplication.__init__(self,
                                    args=args,
@@ -74,6 +81,11 @@ at the end. These defaults can be changed
                           default=None,
                           dest="valuesDict",
                           help="Name of a dictionary-file in OpenFOAM-format. If this is unspecified too then values are taken from the pickled-input")
+        inputs.add_option("--no-defaults-file",
+                          action="store_false",
+                          default=True,
+                          dest="useDefaults",
+                          help="If a file with the same name as the template file but the extension '.defaults' is found then it is loaded before the other values are read. This option switches this off")
 
         outputs=OptionGroup(self.parser,
                            "Outputs",
@@ -84,6 +96,11 @@ at the end. These defaults can be changed
                            dest="stdout",
                            default=False,
                            help="Doesn't write to the file, but outputs the result on stdout")
+        outputs.add_option("--dump-used-values",
+                           action="store_true",
+                           dest="dumpUsed",
+                           default=False,
+                           help="Print the used parameters")
         outputs.add_option("--output-file",
                            action="store",
                            default=None,
@@ -141,16 +158,40 @@ at the end. These defaults can be changed
             else:
                 t=TemplateFileOldFormat(name=template)
         elif len(self.parser.getArgs())==0:
+            if self.opts.template==None and self.opts.outputFile!=None  and self.opts.outputFile!="stdin":
+                self.opts.template=self.opts.outputFile+".template"
+                self.warning("Automatically setting template to",self.opts.template)
+            vals={}
+            if self.opts.useDefaults and self.opts.template!=None and self.opts.template!="stdin":
+                name,ext=path.splitext(self.opts.template)
+                defaultName=name+".defaults"
+                if path.exists(defaultName):
+                    self.warning("Reading default values from",defaultName)
+                    vals=ParsedParameterFile(defaultName,
+                                             noHeader=True,
+                                             doMacroExpansion=True).getValueDict()
+
+            vals.update(self.parameters)
+
             if self.opts.values:
-                vals=eval(self.opts.values)
+                vals.update(eval(self.opts.values))
             elif self.opts.valuesDict:
-                vals=ParsedParameterFile(self.opts.valuesDict,
-                                         noHeader=True,
-                                         doMacroExpansion=True).getValueDict()
+                vals.update(ParsedParameterFile(self.opts.valuesDict,
+                                                noHeader=True,
+                                                doMacroExpansion=True).getValueDict())
             elif data:
-                vals=data["values"]
-            else:
+                vals.update(data["values"])
+            elif len(self.parameters)==0:
                 self.error("Either specify the values with --values-string or --values-dictionary or in the pickled input data")
+
+            if self.opts.dumpUsed:
+                maxLen=max([len(k) for k in vals.keys()])
+                formatString=" %%%ds | %%s" % maxLen
+                print_("Used values")
+                print_(formatString % ("Name","Value"))
+                print_("-"*(maxLen+30))
+                for k,v in iteritems(vals):
+                    print_(formatString % (k,v))
 
             if content:
                 t=TemplateFile(content=content,

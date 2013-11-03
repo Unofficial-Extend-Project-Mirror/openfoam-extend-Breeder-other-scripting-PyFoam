@@ -1,4 +1,178 @@
 # -*- mode: org -*-
+* Version 0.6.2 - 2013-11-03
+** Major changes
+*** Use of =pandas=-library
+    Starting with this version the =pandas=-library is used for
+    data-analysis. When possible and appropriate classes return
+    =pandas=-objects. Currently these are:
+    - =CSVCollection=. With a call-operator this class returns the
+      collected data as a =DataFrame= of the collected data
+    - =SpreadsheetData= now has methods to return =Series= and
+      =DataFrame= objects
+
+    It is not necessary to install =pandas= if these classes are not
+    used (and even then most of their functionality works)
+** Incompatibilities
+*** Different separator for databases in CSV-files
+    The class =RunDatabase= (and therefor also the utility
+    =pyFoamDumpRunDatabaseToCSV.py=) now write as a separator for data
+    from sub-tables a =//= instead of the space. This especially means
+    that scripts that rely on a data-item =foo= in =analyzed= might
+    break because this is now called =analyzed//foo= instead of
+    =analyzed foo=. On the other hand this makes the names more
+    consistent and easier to parse as =//= is the saperator for other
+    levels of dictionaries
+*** Change of independent variable name in sample data
+    Instead of =col0= this is now =coord=. This could cause problems
+    with scripts that use that column name in the resulting
+    =SpreadsheetData=-object
+** Bugfixes
+*** =pyFoamPackCase.py= does not handle symbolic links correctly
+    Symbolic links were copied as is and did not work correctly
+    afterwards. This is fixed. If the symbolic link is an absolute
+    path or points outside the case directory it is replaced with the
+    file it points to. Otherwise it is preserved as a symbolic link
+*** =pyFoamPotentialRunner.py= not working with OpenFOAM 2.0 or newer
+    These versions require an entry =potentialFlow= in the
+    =fvSolution=-file instead of the old =SIMPLE=
+*** =pyFoamListCase.py= fails with =controlDict= that use preprocessing
+    Fixed by first trying to read that with preprocessing. Without if
+    that fails
+*** Cloning fails in symlink-mode if files are specified twice
+    Now using a =set= instead of a =list= makes sure that no file is
+    cloned twice
+** Utilities
+*** =pyFoamPotentialRunner.py= now allows removing of =functions= and =libs=
+    The utility now allows removing these entries in case that they
+    don't work with =potentialFoam=
+*** The Runner-utilities now have more options for clearing
+    Some of the options of =pyFoamClearCase.py= for clearing cases
+    (for instance specifying additional files) have been ported to the
+    =Runner=-utilities. Also is the =postProcessing=-directory
+    removed by default
+** Library
+*** =SolutionDirectory= and =TimeDirectory= are more tolerant
+    If there are field files and their zipped counterpart than
+    instead of an error a warning *can* be given
+*** =ClusterJob= now handles template files
+    A new method =templateFile= gets the name of a file which is
+    constructed from a template of the same name plus the extension
+    =.template=
+*** Additional parameters in =ClusterJob=
+    The method =additionalParameters= can return a dictionary with
+    additional parameters
+*** Custom data in directory easier accessible
+    In the written data in the sub-dictionary =analyzed= there is now
+    a subdictionary =Custom= with the values of the custom expressions
+    with the prefix =CustomXX_= removed. This means that values that
+    were available as
+: data['Custom02_velCheck']['min']
+    are now available as
+: data['Custom']['velCheck']['min']
+    The advantage is that the number part which was dependent on the
+    order the expressions were specified is now no longer necessary
+    (this should make scripts more stable)
+
+    The old notation is still available but deprecated
+*** =SolverJob= now allows compression of output
+    The parameter =solverLogCompress= compresses the log-file while
+    writing it to disc. *Attention:* This may lead to corrupted
+    log-files if the run crashes
+*** =PyFoamApplication=-class now allows quick access to data
+    The dictionary returned by =getData()= now allows access to all
+    the elements as attributes.
+** New features/Utilities
+*** Post-run hook that sends mail at the end of run
+    The hook-module =MailToAddress= sends a mail at the end of a
+    run. Prerequisite is an SMTP-Server that doesn't need
+    authentication
+*** New utility =pyFoamCompressCases.py=
+    This utility goes through cases and compresses single files. The
+    cases can be searched recursively to.
+
+    Purpose of this utility is to shrink cases where
+    =writeCompression= was not turned on during the run
+*** Paraview-module to read additional data
+    A new module =PyFoam.Paraview.Data= reads additional data usually
+    written by OpenFOAM. These are converted to =vtkArray= using the
+    following functions and can be used in =Programmable filters=:
+    - setSampleData :: reads the data from sampled sets
+    - setTimelineData :: reads data from a timeline directory
+    - setPlotData :: reads pickled plot data using =RedoPlot=
+** Enhancements
+*** =pyFoamRedoPlot.py= can plot in XKCD-mode
+    When used with the option =--implementation=xkcd= and version of
+    =matplotlib= that supports it is installed then plots are done in
+    the style of the webcomics [[http://xkcd.com]]
+*** =pyFoamListCases.py= now displays disk usage in human readable form
+    If the disk usage of the cases is calculated then it is displayed
+    in human readable form (as KB, MB, GB or TB) for sizes larger than
+    one Kilobyte
+*** =pyFoamClearCase.py= more flexible in selection of data to be removed
+    Options to be more flexible in removing data are added:
+    - keep-interval :: keep timesteps at a specified interval. For
+                       instance =--keep-interval=0.1= will keep times
+                       like $1$, $1.1$ etc but remove $1.05$
+    - keep-parallel :: this will not remove any times in the
+                       =processor=-directories. Also are things like
+                       =keep-last= now honored for processor directories
+    - remove-analyzed :: Remove the directories with the analyzed data
+         too. Old behavior was to remove them. Now they are kept by default
+*** =pyFoamFromTemplate.py= automatically chooses template and default values
+    If an output file =foo= is specified and no template then the
+    utility looks for a file =foo.template= as a template.
+
+    If a file =foo.defaults= is present then this file is read and
+    used as default parameter values. Other specifications override
+    these defaults
+*** =pyFoamDumpRunDatabaseToCSV.py= can disable standard-fields
+    Additional option =--disable-run-data=
+*** =pyFoamDumpRunDatabaseToCSV.py= prints =pandas=-object
+    With the =-pandas-print=-option a =DataFrame= is generated and
+    printed
+*** Better debugging with =ipdb=
+    If the =ipdb=-package (basically =pdb= with =IPython=-additions)
+    is installed then it is used. This gives additions like
+    tab-completion
+*** Interactive shell after execution for utilities
+    The option =--interactive-after-execution= drops the user to an
+    interactive shell where the namespace can be inspected. If present
+    =IPython= will be used, otherwise the regular shell is used
+*** Utilities that read quantitative data convert to =pandas=-data and/or =numpy=
+    This is mainly to be used on the interactive shell to do further
+    analysis or write this data out. The utilities are:
+    - pyDumpRunDatabaseToCSV.py :: add an item =dump= with the whole
+         data as a =DataFrame=
+    - pyFoamTimelinePlot.py :: add element =series= with all the data
+         as =Series= and =dataFrame= with the same data as a =DataFrame=
+    - pyFoamSamplePlot.py :: Like =pyFoamTimelinePlot.py=
+    - pyFoamRedoPlot.py :: Now can get series and the whole plot data
+         as pandas-objects
+*** Utilities that read quantitative data write Excel files
+    The utilities =pyDumpRunDatabaseToCSV.py=,
+    =pyFoamTimelinePlot.py=, =pyFoamSamplePlot.py= and
+    =pyFoamRedoPlot.py= now have options to write Excel-files
+*** Specify additional settings for =GnuPlot= in =customRegexp=
+    If an item in =customRegexp= has an item =gnuplotCommands= then
+    it is assumed that this is a list of strings which are executed
+    before the first plotting. For instance
+:           gnuplotCommands (
+:              "set format y '%.2e'"
+:            );
+    changes the number format on the y-axis
+*** More flexible data specification for =pyFoamSamplePlot.py=
+    Instead of determining the names of the fields and lines form the
+    filenames it is now also possible to specify them through options.
+
+    The option =--is-distribution= is a shorthand that sets these
+    options for distribution files
+*** =pyFoamSamplePlot.py= now allows specification of x-range
+    The range of the x-axis of the plots can either be set by
+    automatically scaling to the domains of all the data sets with
+    =--scale-domain= or by specifying them with =--domain-minimum= or
+    =--domain-maximum=.
+
+    These domains are set for *all* plots
 * Version 0.6.1 - 2013-05-24
 ** Major changes
 ** Bugfixes

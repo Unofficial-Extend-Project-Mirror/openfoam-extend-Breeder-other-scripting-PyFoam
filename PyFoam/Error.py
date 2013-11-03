@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Error.py 8465 2013-09-30T18:03:29.575015Z bgschaid  $
 """Standardized Error Messages"""
 
 import traceback
@@ -25,13 +25,18 @@ def getLine(up=0):
 def __common(format,standard,*text):
     """Common function for errors and Warnings"""
     info=getLine(up=2)
-    if format and sys.stderr.isatty():
+    try:
+         isTerm=sys.stderr.isatty()
+    except AttributeError:
+              isTerm=True
+
+    if format and isTerm:
          print_(format, end=' ', file=sys.stderr)
     print_("PyFoam",standard.upper(),"on line",info[1],"of file",info[0],":", end=' ', file=sys.stderr)
     for t in text:
          print_(t, end=' ', file=sys.stderr)
 
-    if sys.stderr.isatty():
+    if isTerm:
         print_(defaultFormat.reset, file=sys.stderr)
 
 def warning(*text):

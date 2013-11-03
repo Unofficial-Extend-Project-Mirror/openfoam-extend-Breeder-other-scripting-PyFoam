@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/FoamLogAnalyzer.py 8451 2013-09-24T19:03:11.513979Z bgschaid  $
 """Analyze OpenFOAM logs"""
 
 from .TimeLineAnalyzer import TimeLineAnalyzer
@@ -10,6 +10,8 @@ from PyFoam.Basics.ProgressOutput import ProgressOutput
 from sys import stdout
 
 from copy import deepcopy
+
+import re
 
 class FoamLogAnalyzer(object):
     """Base class for all analyzers
@@ -27,6 +29,8 @@ class FoamLogAnalyzer(object):
         self.line=LineReader()
         self.timeListeners=[]
         self.timeTriggers=[]
+
+        self.customExpr=re.compile("Custom([0-9]+)_(.+)")
 
         self.progressOut=None
         if progress:
@@ -54,6 +58,15 @@ class FoamLogAnalyzer(object):
         for nm in self.analyzers:
             data=self.analyzers[nm].getCurrentData()
             if len(data)>0:
+                m=self.customExpr.match(nm)
+                if m:
+                    if not "Custom" in result:
+                        result["Custom"]={}
+                    nr,name=m.groups()
+                    result["Custom"][name]=data
+
+                # this will store custom data twice. But we'll keep it
+                    # for backward-compatibility
                 result[nm]=data
 
         return result

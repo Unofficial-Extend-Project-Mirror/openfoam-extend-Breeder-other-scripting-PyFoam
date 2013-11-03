@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/FoamInformation.py 8438 2013-09-19T16:12:40.138324Z bgschaid  $
 """Getting Information about the Foam-Installation (like the installation directory)"""
 
 from os import environ,path,listdir
@@ -39,11 +39,11 @@ def foamMPI():
     else:
         vStr=environ["WM_MPLIB"]
         return vStr
-    
+
 def foamVersionString(useConfigurationIfNoInstallation=False):
     """@return: string for the  Foam-version as found
     in $WM_PROJECT_VERSION"""
-    
+
     if "WM_PROJECT_VERSION" not in environ and not useConfigurationIfNoInstallation:
         return ""
     else:
@@ -51,7 +51,7 @@ def foamVersionString(useConfigurationIfNoInstallation=False):
             vStr=environ["WM_PROJECT_VERSION"]
         else:
             vStr=""
-            
+
         if vStr=="" and  useConfigurationIfNoInstallation:
             vStr=config().get("OpenFOAM","Version")
 
@@ -62,7 +62,7 @@ def foamVersion(useConfigurationIfNoInstallation=False):
     in $WM_PROJECT_VERSION"""
 
     vStr=foamVersionString(useConfigurationIfNoInstallation=useConfigurationIfNoInstallation)
-    
+
     if vStr=="":
         return ()
     else:
@@ -74,9 +74,9 @@ def foamVersion(useConfigurationIfNoInstallation=False):
                     res.append(int(e))
                 except:
                     res.append(e)
-                
+
         return tuple(res)
-    
+
 def foamVersionNumber(useConfigurationIfNoInstallation=False):
     """@return: tuple that represents the Foam-Version-Number (without
     strings"""
@@ -125,7 +125,7 @@ def findInstalledVersions(basedir,valid):
                     versions.add(m.groups(1)[0])
                 elif path.isdir(dotDir) and path.exists(path.join(dotDir,"bashrc")):
                     versions.add(m.groups(1)[0])
-    
+
     return versions
 
 def findBaseDir(newDir):
@@ -133,13 +133,13 @@ def findBaseDir(newDir):
         basedir=environ["WM_PROJECT_INST_DIR"]
     else:
         basedir=path.expanduser(config().get("OpenFOAM","Installation"))
-    
+
     for bdir in [basedir]+config().getList("OpenFOAM","AdditionalInstallation"):
         if path.exists(path.join(bdir,"OpenFOAM-"+newDir)):
             return (bdir,"OpenFOAM-")
         elif path.exists(path.join(bdir,"openfoam"+newDir)):
             return (bdir,"openfoam")
-    
+
     error("Can't find basedir for OpenFOAM-version",newDir)
 
 def foamInstalledVersions():
@@ -164,7 +164,7 @@ def foamInstalledVersions():
             versions |= findInstalledVersions(bdir,val)
 
     return list(versions)
-    
+
 def changeFoamVersion(new,force64=False,force32=False,compileOption=None):
     """Changes the used FoamVersion. Only valid during the runtime of
     the interpreter (the script or the Python session)
@@ -183,7 +183,7 @@ def changeFoamVersion(new,force64=False,force32=False,compileOption=None):
             warning(new,"is already being used")
     else:
         warning("No OpenFOAM-Version installed")
-        
+
     basedir,prefix=findBaseDir(new)
 
     if path.exists(path.join(basedir,prefix+new,"etc")):
@@ -200,7 +200,7 @@ def changeFoamVersion(new,force64=False,force32=False,compileOption=None):
     injectVariables(script,
                     forceArchOption=forceArchOption,
                     compileOption=compileOption)
-    
+
     try:
         if old==environ["WM_PROJECT_VERSION"]:
             warning("Problem while changing to version",new,"old version still used:",environ["WM_PROJECT_VERSION"])
@@ -226,8 +226,8 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
 
     if not path.exists(script):
         error("Can not execute",script,"it does not exist")
-        
-    try:    
+
+    try:
         if "SHELL" in environ:
             shell=environ["SHELL"]
 
@@ -261,7 +261,7 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
         p = Popen(cmd, shell=True,
                   stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
         (rein,raus)=(p.stdin,p.stdout)
-        
+
     lines=raus.readlines()
     rein.close()
     raus.close()
@@ -271,7 +271,7 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
     exp2=re.compile("export (.+)='(.*)'\n")
 
     cnt=0
-    
+
     for l in lines:
         m=exp.match(str(l))
         if not m:

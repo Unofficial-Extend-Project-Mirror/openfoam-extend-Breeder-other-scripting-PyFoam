@@ -6,6 +6,8 @@ from optparse import OptionGroup
 from .PyFoamApplication import PyFoamApplication
 from PyFoam.Basics.RunDatabase import RunDatabase
 
+from PyFoam.ThirdParty.six import print_
+
 class DumpRunDatabaseToCSV(PyFoamApplication):
     def __init__(self,args=None):
         description="""\
@@ -32,6 +34,26 @@ a CSV-file
                        dest="verbose",
                        default=False,
                        help="Tell about the data dumped")
+        how.add_option("--pandas-print",
+                       action="store_true",
+                       dest="pandas",
+                       default=False,
+                       help="Print the pandas-dataframe that is collected")
+        how.add_option("--excel-file",
+                       action="store_true",
+                       dest="excel",
+                       default=False,
+                       help="Write to Excel-file instead of plain CSV. Onle works with the python-libraries pandas and xlwt")
+        how.add_option("--no-write",
+                       action="store_true",
+                       dest="noWrite",
+                       default=False,
+                       help="Do not write the CSV-file (just do terminal-output)")
+        how.add_option("--use-numpy-instead-of-pandas",
+                       action="store_false",
+                       dest="usePandasFormat",
+                       default=True,
+                       help="For internal passing of data use numpy instead of pandas")
 
         what=OptionGroup(self.parser,
                          "What",
@@ -46,11 +68,21 @@ a CSV-file
                        specified) to select data with (all the basic
                        run-data will be dumped anyway)""")
 
+        what.add_option("--disable-run-data",
+                       action="append",
+                       dest="disableRunData",
+                       default=[],
+                       help="""Regular expression (more than one can be
+                       specified) to select fields from the standard run-data
+                       which should be disabled (use with care)""")
+
 
 
     def run(self):
         source=self.parser.getArgs()[0]
         dest=self.parser.getArgs()[1]
+        if self.opts.noWrite:
+            dest=None
 
         db=RunDatabase(source,
                        verbose=self.opts.verbose)
@@ -59,6 +91,21 @@ a CSV-file
         if self.opts.selection:
             selections=self.opts.selection
 
-        db.dumpToCSV(dest,selection=selections)
+        dump=db.dumpToCSV(dest,
+                          selection=selections,
+                          disableRunData=self.opts.disableRunData,
+                          pandasFormat=self.opts.usePandasFormat,
+                          excel=self.opts.excel)
+
+        if self.opts.pandas:
+            if not dump:
+                print_("No data. Seems that pandas is not installed")
+            else:
+                print_("Pandas data:\n",dump)
+
+        self.setData({
+             "database" : db ,
+             "dump"     : dump
+        })
 
 # Should work with Python3 and Python2

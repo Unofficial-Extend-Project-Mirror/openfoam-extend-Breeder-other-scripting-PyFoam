@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/Utilities.py 8435 2013-09-17T12:50:28.576631Z bgschaid  $
 """ Utility functions
 
 Can be used via a class or as functions"""
@@ -171,6 +171,19 @@ FoamFile
                     if fnmatch.fnmatch(name, pattern):
                         result.append(os.path.join(root, name))
         return result
+
+    def humanReadableSize(self,num):
+        """Lifted from http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
+        Gets a number in bytes and returns a human readable string"""
+        for x in ['bytes','KB','MB','GB']:
+            if num < 1024.0 and num > -1024.0:
+                return "%3.1f%s" % (num, x)
+            num /= 1024.0
+        return "%3.1f%s" % (num, 'TB')
+
+def humanReadableSize(num):
+    """Calls the method of the same name from the Utilites class"""
+    return Utilities().humanReadableSize(num)
 
 def which(prog):
     """Calls the method of the same name from the Utilites class"""

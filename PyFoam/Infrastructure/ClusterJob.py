@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/ClusterJob.py 8451 2013-09-24T19:03:11.513979Z bgschaid  $
 """Encapsulates all necessary things for a cluster-job, like setting
 up, running, restarting"""
 
@@ -10,6 +10,8 @@ from PyFoam.Applications.Decomposer import Decomposer
 from PyFoam.Applications.Runner import Runner
 from PyFoam.Applications.SteadyRunner import SteadyRunner
 from PyFoam.Applications.CloneCase import CloneCase
+from PyFoam.Applications.FromTemplate import FromTemplate
+
 from PyFoam.FoamInformation import changeFoamVersion
 from PyFoam.FoamInformation import foamVersion as getFoamVersion
 from PyFoam.Error import error,warning
@@ -145,7 +147,7 @@ class ClusterJob(object):
     def message(self,*txt):
         print_("=== CLUSTERJOB: ",end="")
         for t in txt:
-            print_(t,end="")
+            print_(t,end=" ")
         print_(" ===")
         sys.stdout.flush()
 
@@ -189,6 +191,8 @@ class ClusterJob(object):
         if self.arrayJob:
             for k,v in list(self.taskParameters(self.taskID).items()):
                 self.parameters[k]=v
+
+        self.parameters.update(self.additionalParameters())
 
         self.message("Parameters:",self.parameters)
         if not self.restarted:
@@ -273,12 +277,29 @@ class ClusterJob(object):
         self.message("Changing directory back to",oldDir)
         os.chdir(oldDir)
 
+    def templateFile(self,fileName):
+        """Looks for a template file and evaluates the template using
+        the usual parameters
+        @param fileName: the name of the file that will be
+        constructed. The template file is the same plus the extension '.template'"""
+
+        self.message("Building file",fileName,"from template with parameters",
+                     self.parameters)
+
+        argList=["--output-file=%s" % path.join(self.casedir(),fileName),
+                 "--dump-used-values"
+        ]
+
+        tmpl=FromTemplate(args=argList,
+                          parameters=self.parameters)
+
     def foamRun(self,application,
                 args=[],
                 foamArgs=[],
                 steady=False,
                 multiRegion=None,
                 progress=False,
+                compress=False,
                 noLog=False):
         """Runs a foam utility on the case.
         If it is a parallel job and the grid has
@@ -287,6 +308,7 @@ class ClusterJob(object):
         @param application: the Foam-Application that is to be run
         @param foamArgs: A list if with the additional arguments for the
         Foam-Application
+        @param compress: Compress the log-file
         @param args: A list with additional arguments for the Runner-object
         @param steady: Use the steady-runner
         @param multiRegion: Run this on multiple regions (if None: I don't have an opinion on this)
@@ -306,6 +328,8 @@ class ClusterJob(object):
             arglist+=["--progress"]
         if noLog:
             arglist+=["--no-log"]
+        if compress:
+            arglist+=["--compress"]
 
         if self.multiRegion:
             if multiRegion==None or multiRegion==True:
@@ -421,6 +445,14 @@ class ClusterJob(object):
 
         return {}
 
+    def additionalParameters(self):
+        """Additional parameters
+        @return: a dictionary with parameters for this task"""
+
+        warning("Method 'additionalParameters' not implemented. Not a problem. Just saying")
+
+        return {}
+
     def writeCheckpoint(self):
         if self.listenToTimer:
             f=open(path.join(self.basename,"write"),"w")
@@ -462,6 +494,7 @@ class SolverJob(ClusterJob):
                  progress=False,
                  solverProgress=False,
                  solverNoLog=False,
+                 solverLogCompress=False,
                  isDecomposed=False):
         """@param template: Name of the template-case. It is assumed that
         it resides in the same directory as the actual case
@@ -492,12 +525,14 @@ class SolverJob(ClusterJob):
                 args=cloneParameters+[template,self.casedir(),"--follow-symlinks"])
         self.solverProgress=solverProgress
         self.solverNoLog=solverNoLog
+        self.solverLogCompress=solverLogCompress
 
     def run(self,parameters):
         self.foamRun(self.solver,
                      steady=self.steady,
                      multiRegion=False,
                      progress=self.solverProgress,
-                     noLog=self.solverNoLog)
+                     noLog=self.solverNoLog,
+                     compress=self.solverLogCompress)
 
 # Should work with Python3 and Python2

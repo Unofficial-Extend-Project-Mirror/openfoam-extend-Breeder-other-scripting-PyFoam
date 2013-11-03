@@ -229,9 +229,9 @@ TODO
 """
 
 # $HeadURL$
-# $Id$
+# $Id: /local/openfoam/Python/PyFoam/PyFoam/ThirdParty/IPy.py 1532 2007-06-29T11:15:55.577361Z bgschaid  $
 
-__rcsid__ = '$Id$'
+__rcsid__ = '$Id: /local/openfoam/Python/PyFoam/PyFoam/ThirdParty/IPy.py 1532 2007-06-29T11:15:55.577361Z bgschaid  $'
 __version__ = '0.51'
 
 import types

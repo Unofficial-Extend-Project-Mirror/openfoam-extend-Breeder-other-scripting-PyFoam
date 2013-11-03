@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/PhaseChangerLineAnalyzer.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
 """Analyzes lines with regular expressions and changes the phase if it fits"""
 
 import re

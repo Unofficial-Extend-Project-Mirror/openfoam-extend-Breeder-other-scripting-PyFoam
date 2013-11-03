@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/ParsedParameterFile.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
 """Parameter file is read into memory and modified there"""
 
 from PyFoam.RunDictionary.FileBasis import FileBasisBackup

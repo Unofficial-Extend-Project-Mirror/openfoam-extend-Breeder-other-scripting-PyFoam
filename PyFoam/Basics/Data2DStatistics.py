@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/Data2DStatistics.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
 """Data structure to do some calculations on the results from
 SpreadSheetData-methods metrics and compare that are organized in 2
 dimensions"""

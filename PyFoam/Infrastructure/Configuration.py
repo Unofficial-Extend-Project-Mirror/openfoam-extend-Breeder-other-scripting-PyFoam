@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Configuration.py 8435 2013-09-17T12:50:28.576631Z bgschaid  $
 """Reads configuration-files that define defaults for various PyFoam-Settings
 
 Also hardcodes defaults for the settings"""
@@ -115,6 +115,20 @@ Machine: |-hostname-|
 Full command: |-commandLine-|""",
         "header_Content-type": "application/x-www-form-urlencoded",
         "templates":"title message"
+    },
+    "postRunHook_mailToMe" : {
+        "enabled":False,
+        "minRunTime":600,
+        "module":"MailToAddress",
+        "to":"nobody@here.there",
+        "from":"a_concerned_user@your.local.machine",
+        "smtpServer":"smtp.server.that.doesnt.need.authentication'",
+        "subject":"<!--(if OK)-->Finished<!--(else)-->Failed<!--(end)-->: |-casename-| (|-solver-|)",
+        "message":"""Case |-casefullname-| ended after |-wallTime-|s
+Last timestep: t=|-time-|
+Machine: |-hostname-|
+Full command: |-commandLine-|""",
+        "mailFields_Reply-To": "nobody@nowhere.com",
     },
     "Cloning" : {
         "addItem":"[]",

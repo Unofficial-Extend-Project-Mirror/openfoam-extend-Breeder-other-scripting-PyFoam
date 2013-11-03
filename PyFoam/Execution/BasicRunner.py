@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/BasicRunner.py 8425 2013-08-19T17:16:55.092271Z bgschaid  $
 """Run a OpenFOAM command"""
 
 import sys
@@ -494,7 +494,11 @@ class BasicRunnerCheck(object):
         """Does this line contain time information?"""
         m=self.timeExpr.match(line)
         if m:
-            return float(m.group(2))
+            try:
+                return float(m.group(2))
+            except ValueError:
+                warning("Problem while converting",m.group(2),"to float")
+                return None
         else:
             return None
 

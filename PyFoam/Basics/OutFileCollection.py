@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/OutFileCollection.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
 """Collections of output files"""
 
 from os import path

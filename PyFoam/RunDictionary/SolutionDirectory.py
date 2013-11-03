@@ -1,9 +1,9 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionDirectory.py 8448 2013-09-24T17:55:25.403256Z bgschaid  $
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
 from PyFoam.Basics.BasicFile import BasicFile
-from PyFoam.Error import warning
+from PyFoam.Error import warning,error
 from PyFoam import configuration as conf
 
 from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
@@ -45,11 +45,13 @@ class SolutionDirectory(Utilities):
                  paraviewLink=True,
                  parallel=False,
                  addLocalConfig=False,
+                 tolerant=False,
                  region=None):
         """@param name: Name of the solution directory
         @param archive: name of the directory where the lastToArchive-method
         should copy files, if None no archive is created
         @param paraviewLink: Create a symbolic link controlDict.foam for paraview
+        @param tolerant: do not fail for minor inconsistencies
         @param parallel: use the first processor-subdirectory for the authorative information
         @param region: Mesh region for multi-region cases"""
 
@@ -64,6 +66,7 @@ class SolutionDirectory(Utilities):
         self.backups=[]
 
         self.parallel=parallel
+        self.tolerant=tolerant
 
         self.lastReread=0
         self.reread()
@@ -72,9 +75,9 @@ class SolutionDirectory(Utilities):
         if self.processorDirs() and parallel:
             self.dirPrefix = self.processorDirs()[0]
 
-        self.essential=[self.systemDir(),
-                        self.constantDir(),
-                        self.initialDir()]
+        self.essential=set([self.systemDir(),
+                            self.constantDir(),
+                            self.initialDir()])
 
         # PyFoam-specific
         self.addToClone("PyFoamHistory")
@@ -158,7 +161,10 @@ class SolutionDirectory(Utilities):
     def __iter__(self):
         self.reread()
         for key in self.times:
-            yield TimeDirectory(self.name, self.fullPath(key), region=self.region)
+            yield TimeDirectory(self.name,
+                                self.fullPath(key),
+                                region=self.region,
+                                tolerant=self.tolerant)
 
     def timeName(self,item,minTime=False):
         """Finds the name of a directory that corresponds with the given parameter
@@ -233,10 +239,10 @@ class SolutionDirectory(Utilities):
         """add directory to the list that is needed to clone this case
         @param name: name of the subdirectory (the case directory is prepended)"""
         if path.exists(path.join(self.name,name)):
-            self.essential.append(path.join(self.name,name))
+            self.essential.add(path.join(self.name,name))
         elif self.parallel:
             if path.exists(path.join(self.name,"processor0",name)):
-                self.essential.append(path.join(self.name,name))
+                self.essential.add(path.join(self.name,name))
 
     def cloneCase(self,name,svnRemove=True,followSymlinks=False):
         """create a clone of this case directory. Remove the target directory, if it already exists
@@ -379,7 +385,7 @@ class SolutionDirectory(Utilities):
         @param base: Different name that is to be used as the baseName for the case inside the tar"""
 
         ex=["*~",".svn"]+exclude
-        members=self.essential[:]
+        members=list(self.essential)
         if last:
             if self.getLast()!=self.first:
                 members.append(self.latestDir())
@@ -543,6 +549,8 @@ class SolutionDirectory(Utilities):
                      keepLast=False,
                      vtk=True,
                      keepRegular=False,
+                     keepParallel=False,
+                     keepInterval=None,
                      functionObjectData=False,
                      additional=[]):
         """remove all time-directories after a certain time. If not time ist
@@ -552,6 +560,7 @@ class SolutionDirectory(Utilities):
         Otherwise the timesteps after last are removed from the
         processor-directories
         @param keepLast: Keep the data from the last timestep
+        @param keepInterval: if set: keep timesteps that are this far apart
         @param vtk: Remove the VTK-directory if it exists
         @param keepRegular: keep all the times (only remove processor and other stuff)
         @param functionObjectData: tries do determine which data was written by function obejects and removes it
@@ -570,15 +579,30 @@ class SolutionDirectory(Utilities):
         else:
             time=float(after)
 
+        lastKeptIndex=int(-1e5)
+
+        if keepInterval!=None:
+            if keepInterval<=0:
+                error("The keeping interval",keepInterval,"is smaller that 0")
+
         if not keepRegular:
             for f in self.times:
-                if float(f)>time and not (keepLast and f==last):
+                keep=False
+                if keepInterval!=None:
+                    thisIndex=int((float(f)+1e-10)/keepInterval)
+                    if thisIndex!=lastKeptIndex:
+                        keep=True
+                if float(f)>time and not (keepLast and f==last) and not keep:
+                    #                   print "Removing",path.join(self.name,f)
                     self.rmtree(path.join(self.name,f))
+                elif keepInterval!=None:
+                    lastKeptIndex=int((float(f)+1e-10)/keepInterval)
 
         if path.exists(path.join(self.name,"VTK")) and vtk:
             self.rmtree(path.join(self.name,"VTK"))
 
-        if self.nrProcs():
+        if self.nrProcs() and not keepParallel:
+            lastKeptIndex=int(-1e5)
             for f in listdir(self.name):
                 if re.compile("processor[0-9]+").match(f):
                     if removeProcs:
@@ -587,9 +611,16 @@ class SolutionDirectory(Utilities):
                         pDir=path.join(self.name,f)
                         for t in listdir(pDir):
                             try:
+                                keep=False
                                 val=float(t)
-                                if val>time:
+                                if keepInterval!=None:
+                                    thisIndex=int((float(f)+1e-10)/keepInterval)
+                                    if thisIndex!=lastKeptIndex:
+                                        keep=True
+                                if val>time and not (keepLast and f==last) and not keep:
                                     self.rmtree(path.join(pDir,t))
+                                elif keepInterval!=None:
+                                    lastKeptIndex=int((float(f)+1e-10)/keepInterval)
                             except ValueError:
                                 pass
 
@@ -623,13 +654,15 @@ class SolutionDirectory(Utilities):
 
     def clearOther(self,
                    pyfoam=True,
+                   removeAnalyzed=False,
                    clearHistory=False):
         """Remove additional directories
         @param pyfoam: rremove all directories typically created by PyFoam"""
 
         if pyfoam:
             self.clearPattern("PyFoam.?*")
-            self.clearPattern("*?.analyzed")
+            if removeAnalyzed:
+                self.clearPattern("*?.analyzed")
         if clearHistory:
             self.clearPattern("PyFoamHistory")
 
@@ -640,6 +673,9 @@ class SolutionDirectory(Utilities):
               keepLast=False,
               vtk=True,
               keepRegular=False,
+              keepParallel=False,
+              keepInterval=None,
+              removeAnalyzed=False,
               clearHistory=False,
               functionObjectData=False,
               additional=[]):
@@ -652,11 +688,14 @@ class SolutionDirectory(Utilities):
         self.clearResults(after=after,
                           removeProcs=processor,
                           keepLast=keepLast,
+                          keepInterval=keepInterval,
                           vtk=vtk,
                           keepRegular=keepRegular,
+                          keepParallel=keepParallel,
                           functionObjectData=functionObjectData,
                           additional=additional)
         self.clearOther(pyfoam=pyfoam,
+                        removeAnalyzed=removeAnalyzed,
                         clearHistory=clearHistory)
 
     def initialDir(self):

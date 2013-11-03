@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PotentialRunner.py 8486 2013-11-03T11:33:00.315346Z bgschaid  $
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -21,14 +21,16 @@ from .CommonParallel import CommonParallel
 from .CommonStandardOutput import CommonStandardOutput
 from .CommonServer import CommonServer
 from .CommonVCSCommit import CommonVCSCommit
+from .CommonLibFunctionTrigger import CommonLibFunctionTrigger
 
-from PyFoam.FoamInformation import oldTutorialStructure
+from PyFoam.FoamInformation import oldTutorialStructure,foamVersion
 
 from PyFoam.ThirdParty.six import print_
 
 class PotentialRunner(PyFoamApplication,
                       CommonStandardOutput,
                       CommonServer,
+                      CommonLibFunctionTrigger,
                       CommonParallel,
                       CommonVCSCommit):
     def __init__(self,args=None):
@@ -86,6 +88,7 @@ Copies the current fields for U and p to backup-files.
         CommonParallel.addOptions(self)
         CommonStandardOutput.addOptions(self)
         CommonServer.addOptions(self,False)
+        CommonLibFunctionTrigger.addOptions(self)
         CommonVCSCommit.addOptions(self)
 
     def run(self):
@@ -131,7 +134,9 @@ Copies the current fields for U and p to backup-files.
                               self.opts.tolerance,
                               self.opts.relTol,
                               pRefCell=self.opts.pRefCell,
-                              pRefValue=self.opts.pRefValue)
+                              pRefValue=self.opts.pRefValue,
+                              removeLibs=self.opts.removeLibs,
+                              removeFunctions=self.opts.removeFunctions)
         run.addEndTrigger(trig.resetIt)
 
         self.addToCaseLog(cName,"Starting")
@@ -142,11 +147,18 @@ Copies the current fields for U and p to backup-files.
 
         self.addToCaseLog(cName,"Ending")
 
-import re
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 class PotentialTrigger:
-    def __init__(self,sol,correctors,tolerance,relTol,pRefValue=None,pRefCell=None):
+    def __init__(self,
+                 sol,
+                 correctors,
+                 tolerance,
+                 relTol,
+                 pRefValue=None,
+                 pRefCell=None,
+                 removeLibs=False,
+                 removeFunctions=False):
         self.solution=ParsedParameterFile(path.join(sol.systemDir(),"fvSolution"),backup=True)
         self.schemes=ParsedParameterFile(path.join(sol.systemDir(),"fvSchemes"),backup=True)
         self.control=ParsedParameterFile(path.join(sol.systemDir(),"controlDict"),backup=True)
@@ -160,19 +172,25 @@ class PotentialTrigger:
         self.fresh=True
 
         try:
-            if "SIMPLE" not in self.solution:
+            if "SIMPLE" not in self.solution and foamVersion()[0]<2:
                 self.solution["SIMPLE"]=ParsedParameterFile(path.join(pot.systemDir(),"fvSolution"),backup=False)["SIMPLE"]
 
-            if "nNonOrthogonalCorrectors" not in self.solution["SIMPLE"] and correctors==None:
+            if foamVersion()[0]<2:
+                solutionBlock=self.solution["SIMPLE"]
+            else:
+                self.solution["potentialFlow"]={}
+                solutionBlock=self.solution["potentialFlow"]
+
+            if "nNonOrthogonalCorrectors" not in solutionBlock and correctors==None:
                 correctors=3
                 warning("Setting number of correctors to default value",correctors)
             if correctors!=None:
-                self.solution["SIMPLE"]["nNonOrthogonalCorrectors"]=correctors
+                solutionBlock["nNonOrthogonalCorrectors"]=correctors
 
             if pRefCell!=None:
-                self.solution["SIMPLE"]["pRefCell"]=pRefCell
+                solutionBlock["pRefCell"]=pRefCell
             if pRefValue!=None:
-                self.solution["SIMPLE"]["pRefValue"]=pRefValue
+                solutionBlock["pRefValue"]=pRefValue
 
             if tolerance!=None:
                 try:
@@ -190,10 +208,15 @@ class PotentialTrigger:
 
             self.schemes.content=ParsedParameterFile(path.join(pot.systemDir(),"fvSchemes"),backup=False).content
             self.control.content=ParsedParameterFile(path.join(pot.systemDir(),"controlDict"),backup=False).content
-            if "functions" in self.controlOrig:
+            for k in ["functions","libs"]:
+                if k in self.control:
+                    print_("Remove",k,"from controlDict")
+                    del self.control[k]
+
+            if "functions" in self.controlOrig and not removeFunctions:
                 print_("Copying functions over")
                 self.control["functions"]=self.controlOrig["functions"]
-            if "libs" in self.controlOrig:
+            if "libs" in self.controlOrig and not removeLibs:
                 print_("Copying libs over")
                 self.control["libs"]=self.controlOrig["libs"]
 

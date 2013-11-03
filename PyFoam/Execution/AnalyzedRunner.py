@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/AnalyzedRunner.py 8219 2012-09-25T21:49:18.793247Z bgschaid  $
 """Command is run and output is analyzed"""
 
 from PyFoam.Execution.BasicRunner import BasicRunner

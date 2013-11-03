@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$ 
+#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/RingBuffer.py 8033 2012-05-11T23:38:01.081636Z bgschaid  $ 
 """A ring-buffer data structure"""
 
 class RingBuffer(object):
