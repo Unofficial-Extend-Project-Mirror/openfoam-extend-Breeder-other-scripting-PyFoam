@@ -5,10 +5,10 @@ from __future__ import division
 import PyFoam.Basics.FoamFileGenerator
 
 from copy import deepcopy
-import string,math
+import math
 import re
 
-from PyFoam.ThirdParty.six import integer_types,PY3,iteritems
+from PyFoam.ThirdParty.six import integer_types,PY3,string_types
 
 if PY3:
     def cmp(a,b):
@@ -67,8 +67,12 @@ class Field(FoamDataType):
             if self.name:
                 result+=self.name+" "
 
-        result+=str(PyFoam.Basics.FoamFileGenerator.FoamFileGenerator(self.val,
-                                                    longListThreshold=-1))
+        result+=str(
+            PyFoam.Basics.FoamFileGenerator.FoamFileGenerator(
+                self.val,
+                longListThreshold=-1,
+                useFixedType=False
+            ))
         return result
 
     def __cmp__(self,other):
@@ -243,6 +247,81 @@ class SymmTensor(FixedLength):
     def __init__(self,v1,v2,v3,v4,v5,v6):
         FixedLength.__init__(self,[v1,v2,v3,v4,v5,v6])
 
+class BoolProxy(object):
+    """Wraps a boolean parsed from a file. Optionally stores a textual
+    representation
+    """
+
+    TrueStrings=["on",
+                 "yes",
+                 "true",
+#                "y"     # this breaks parsing certain files
+    ]
+    FalseStrings=[
+        "off",
+        "no",
+        "false",
+#        "n",           # this breaks parsing certain files
+        "none",
+        "invalid"
+    ]
+
+    def __init__(self,val=None,textual=None):
+        if val==None and textual==None:
+            raise TypeError("'BoolProxy' initialized without values")
+        elif val==None:
+            if textual in BoolProxy.TrueStrings:
+                self.val=True
+            elif textual in BoolProxy.FalseStrings:
+                self.val=False
+            else:
+                raise TypeError(str(textual)+" not in "+str(BoolProxy.TrueStrings)
+                                +" or "+str(BoolProxy.TrueStrings))
+        else:
+            if val not in [True,False]:
+                raise TypeError(str(val)+" is not a boolean")
+            self.val=val
+        self.textual=textual
+        if self.textual:
+            if self.val:
+                if self.textual not in BoolProxy.TrueStrings:
+                    raise TypeError(self.textual+" not in "
+                                    +str(BoolProxy.TrueStrings))
+            else:
+                if self.textual not in BoolProxy.FalseStrings:
+                    raise TypeError(self.textual+" not in "
+                                    +str(BoolProxy.FalseStrings))
+
+    def __nonzero__(self):
+        return self.val
+
+    # for Python 3
+    def __bool__(self):
+        return self.val
+
+    def __str__(self):
+        if self.textual==None:
+            if self.val:
+                return "yes"
+            else:
+                return "no"
+        else:
+            return self.textual
+
+    def __eq__(self,o):
+        if type(o) in [bool,BoolProxy]:
+            return self.val==o
+        elif isinstance(o,string_types):
+            if self.textual==o:
+                return True
+            else:
+                try:
+                    return self.val==BoolProxy(textual=o)
+                except TypeError:
+                    return False
+        else:
+            raise TypeError("Can't compare BoolProxy with "+str(type(o)))
+
 class DictRedirection(object):
     """This class is in charge of handling redirections to other directories"""
     def __init__(self,fullCopy,reference,name):
@@ -337,6 +416,24 @@ class DictProxy(dict):
                     return True
 
             return False
+
+    def __enforceString(self,v,toString):
+        if not isinstance(v,string_types) and toString:
+            return str(v)
+        else:
+            return v
+
+    def update(self,other=None,toString=False,**kwargs):
+        """Emulate the regular update of dict"""
+        if other:
+            if hasattr(other,"keys"):
+                for k in other.keys():
+                    self[k]=self.__enforceString(other[k],toString)
+            else:
+                for k,v in other:
+                    self[k]=self.__enforceString(v,toString)
+        for k in kwargs:
+            self[k]=self.__enforceString(kwargs[k],toString)
 
     def keys(self):
         return [x for x in self._order if type(x)!=DictRedirection]
@@ -434,5 +531,12 @@ class BinaryList(UnparsedList):
 
     def __init__(self,lngth,data):
         UnparsedList.__init__(self,lngth,data)
+
+def makePrimitiveString(val):
+    """Make strings of types that might get written to a directory"""
+    if isinstance(val,(Dimension,FixedLength,BoolProxy)):
+        return str(val)
+    else:
+        return val
 
 # Should work with Python3 and Python2

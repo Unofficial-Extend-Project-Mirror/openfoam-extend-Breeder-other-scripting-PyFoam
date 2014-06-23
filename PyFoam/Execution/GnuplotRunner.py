@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/GnuplotRunner.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """Runner that outputs the residuals of the linear solver with Gnuplot"""
 
 from .StepAnalyzedCommon import StepAnalyzedCommon
@@ -37,7 +37,8 @@ class GnuplotCommon(StepAnalyzedCommon):
                  end=None,
                  singleFile=False,
                  writePickled=True,
-                 plottingImplementation=None):
+                 plottingImplementation=None,
+                 adaptFrequency=True):
         """
         TODO: Docu
         """
@@ -50,7 +51,8 @@ class GnuplotCommon(StepAnalyzedCommon):
                                                         startTime=start,
                                                         endTime=end),
                                     writePickled=writePickled,
-                                    smallestFreq=smallestFreq)
+                                    smallestFreq=smallestFreq,
+                                    adaptFrequency=adaptFrequency)
 
         self.startTime=start
         self.endTime=end
@@ -127,7 +129,8 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                  plottingImplementation=None,
                  remark=None,
                  parameters=None,
-                 jobId=None):
+                 jobId=None,
+                 echoCommandLine=None):
         """@param smallestFreq: smallest Frequency of output
         @param persist: Gnuplot window persistst after run
         @param steady: Is it a steady run? Then stop it after convergence"""
@@ -143,6 +146,7 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                              logTail=logTail,
                              remark=remark,
                              parameters=parameters,
+                             echoCommandLine=echoCommandLine,
                              jobId=jobId)
         GnuplotCommon.__init__(self,
                                "Gnuplotting",
@@ -242,7 +246,8 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
                                end=end,
                                singleFile=singleFile,
                                writePickled=writePickled,
-                               plottingImplementation=plottingImplementation)
+                               plottingImplementation=plottingImplementation,
+                               adaptFrequency=False)
 
         self.hasPlotted=False
         self.replotFrequency=replotFrequency

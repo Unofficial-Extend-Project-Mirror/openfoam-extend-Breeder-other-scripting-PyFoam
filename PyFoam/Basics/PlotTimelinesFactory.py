@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/PlotTimelinesFactory.py 8419 2013-08-12T09:26:15.316903Z bgschaid  $
+#  ICE Revision: $Id$
 """Creates subclasses of GeneralPlotTimelines"""
 
 from PyFoam.Basics.GnuplotTimelines import GnuplotTimelines

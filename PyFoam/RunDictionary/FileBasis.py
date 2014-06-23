@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/FileBasis.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """Basis for the handling of OpenFOAM-files
 
 Transparently accepts gnuzipped files"""
@@ -135,6 +135,15 @@ class FileBasis(Utilities):
         """Build a string from self.content, to be overriden by sub-classes"""
 
         return self.content
+
+    def __enter__(self):
+        """Making the 'with'-statement happy"""
+        return self
+
+    def __exit__(self,typ,value,traceback):
+        """Making the 'with'-statement happy"""
+        if self.fh!=None:
+            self.closeFile()
 
     def makeTemp(self):
         """creates a temporary file"""

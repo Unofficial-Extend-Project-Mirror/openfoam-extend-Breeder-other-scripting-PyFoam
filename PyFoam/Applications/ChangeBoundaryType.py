@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ChangeBoundaryType.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamChangeBoundaryType.py
 """
@@ -6,16 +6,16 @@ Application class that implements pyFoamChangeBoundaryType.py
 from .PyFoamApplication import PyFoamApplication
 
 from os import path
-import sys
 from optparse import OptionGroup
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
-from PyFoam.RunDictionary.ListFile import ListFile
 
 from PyFoam.ThirdParty.six import print_
 
 class ChangeBoundaryType(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Changes the type of a boundary in the boundary-file
         """
@@ -24,7 +24,8 @@ Changes the type of a boundary in the boundary-file
                                    usage="%prog <caseDirectory> <boundaryName> <new type>",
                                    changeVersion=False,
                                    nr=3,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         change=OptionGroup(self.parser,

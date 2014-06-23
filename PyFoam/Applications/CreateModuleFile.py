@@ -22,13 +22,10 @@ Author:
 """
 
 import os
-import sys
 import string
-import re
 from optparse import OptionGroup
 
 from .PyFoamApplication import PyFoamApplication
-from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Basics.Utilities import execute
 from sets import Set
 from os import path
@@ -36,7 +33,9 @@ from os import path
 from PyFoam.ThirdParty.six import print_
 
 class CreateModuleFile(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""
 Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuration file': bashrc or cshrc file for OpenFOAM; usually $WM_PROJECT_DIR/etc/bashrc or $WM_PROJECT_DIR/etc/cshrc. Output parameter 'modulefile': the resulting module file. For more information on Modules,  visit the Environment  Modules Project:  http://http://modules.sourceforge.net
 """
@@ -46,7 +45,8 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
                                    usage="%prog OpenFOAM_cfgFile modulefile",
                                    interspersed=True,
                                    changeVersion=False,
-                                   nr=2)
+                                   nr=2,
+                                   **kwargs)
 
     def addOptions(self):
         module=OptionGroup(self.parser,

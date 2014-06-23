@@ -64,7 +64,7 @@ class CSVCollection(object):
         Otherwise numpy"""
         if usePandas:
             try:
-                import pandas
+                from PyFoam.Wrappers.Pandas import PyFoamDataFrame
 
                 data={}
                 for k in self.headers:
@@ -77,7 +77,7 @@ class CSVCollection(object):
 
                         vals.append(self.__makeSimple(v))
                     data[k]=vals
-                return pandas.DataFrame(data)
+                return PyFoamDataFrame(data)
             except ImportError:
                 warning("pandas-library not installed. Returning 'None'")
                 return None

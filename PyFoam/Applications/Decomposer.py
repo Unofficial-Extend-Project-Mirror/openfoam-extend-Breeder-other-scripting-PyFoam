@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Decomposer.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Class that implements pyFoamDecompose
 """
@@ -24,15 +24,18 @@ from .CommonVCSCommit import CommonVCSCommit
 from PyFoam.ThirdParty.six import print_
 
 from os import path,listdir,symlink
-import sys,string
 from glob import glob
+
+import string
 
 class Decomposer(PyFoamApplication,
                  CommonStandardOutput,
                  CommonServer,
                  CommonMultiRegion,
                  CommonVCSCommit):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Generates a decomposeParDict for a case and runs the decompose-Utility
 on that case
@@ -42,7 +45,8 @@ on that case
                                    description=description,
                                    usage="%prog [options] <case> <procnr>",
                                    interspersed=True,
-                                   nr=2)
+                                   nr=2,
+                                   **kwargs)
 
     decomposeChoices=["metis","simple","hierarchical","manual"]
     defaultMethod="metis"
@@ -122,6 +126,12 @@ on that case
                           action="store_false",
                           default=True,
                           help="Don't run the decomposer (only writes the dictionary")
+
+        behave.add_option("--do-function-objects",
+                          dest="doFunctionObjects",
+                          action="store_true",
+                          default=False,
+                          help="Allow the execution of function objects (default behaviour is switching them off)")
 
         behave.add_option("--decomposer",
                                dest="decomposer",
@@ -261,6 +271,8 @@ on that case
                     argv=[self.opts.decomposer,".",theCase]
                 else:
                     argv=[self.opts.decomposer,"-case",theCase]
+                    if foamVersion()>=(2,0) and not self.opts.doFunctionObjects:
+                        argv+=["-noFunctionObjects"]
                     if theRegion!=None and decomposeParWithRegion:
                         argv+=["-region",theRegion]
 
@@ -278,6 +290,7 @@ on that case
                                   server=self.opts.server,
                                   noLog=self.opts.noLog,
                                   logTail=self.opts.logTail,
+                                  echoCommandLine=self.opts.echoCommandPrefix,
                                   jobId=self.opts.jobId)
                 run.start()
 

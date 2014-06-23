@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/ParameterFile.py 8033 2012-05-11T23:38:01.081636Z bgschaid  $ 
+#  ICE Revision: $Id$ 
 """Working with parameter-files"""
 
 import re,os

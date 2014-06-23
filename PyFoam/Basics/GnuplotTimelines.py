@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GnuplotTimelines.py 8463 2013-09-27T18:33:05.307083Z bgschaid  $
+#  ICE Revision: $Id$
 """Plots a collection of timelines"""
 
 from PyFoam.ThirdParty.Gnuplot import Gnuplot,Data
@@ -112,7 +112,7 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
         if len(dt)>0:
             it=Data(tm,dt,title=title,with_=self.with_)
 
-            if name in self.alternate:
+            if self.testAlternate(name):
                 it.set_option(axes="x1y2")
 
             self.itemlist.append(it)

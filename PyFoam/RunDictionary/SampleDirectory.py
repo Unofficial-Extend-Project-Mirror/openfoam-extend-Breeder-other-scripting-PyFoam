@@ -18,6 +18,7 @@ class SampleDirectory(object):
                  prefixes=[],
                  valueNames=None,
                  linePattern=None,
+                 namesFromFirstLine=False,
                  needsExtension=True):
         """@param case: The case directory
         @param dirName: Name of the directory with the samples
@@ -38,6 +39,7 @@ class SampleDirectory(object):
         self.__defaultNames=valueNames
         self.__linePattern=linePattern
         self.__needsExtension=needsExtension
+        self.__namesFromFirstLine=namesFromFirstLine
 
         self.prefixes=prefixes
         self.postfixes=postfixes
@@ -62,6 +64,7 @@ class SampleDirectory(object):
                              prefixes=self.prefixes,
                              postfixes=self.postfixes,
                              valueNames=self.__defaultNames,
+                             namesFromFirstLine=self.__namesFromFirstLine,
                              linePattern=self.__linePattern,
                              needsExtension=self.__needsExtension)
 
@@ -72,6 +75,7 @@ class SampleDirectory(object):
                               prefixes=self.prefixes,
                               postfixes=self.postfixes,
                               valueNames=self.__defaultNames,
+                              namesFromFirstLine=self.__namesFromFirstLine,
                               linePattern=self.__linePattern,
                               needsExtension=self.__needsExtension)
         else:
@@ -158,6 +162,7 @@ class SampleTime(object):
                  postfixes=[],
                  prefixes=[],
                  valueNames=None,
+                 namesFromFirstLine=False,
                  linePattern=None,
                  needsExtension=True):
         """@param sDir: The sample-dir
@@ -177,11 +182,14 @@ class SampleTime(object):
         self.__valueNames=None
         self.__defaultValueNames=valueNames
         self.__linePattern=linePattern
+        self.__namesFromFirstLine=namesFromFirstLine
 
         for f in listdir(self.dir):
             if f[0]=='.' or f[-1]=='~' or (f.find(".")<0 and needsExtension):
                 continue
             nm=self.extractLine(f)
+            if nm==None:
+                continue
             vals=self.extractValues(f)
             if nm not in self.lines:
                 self.lines.append(nm)
@@ -198,7 +206,10 @@ class SampleTime(object):
         """Extract the name of the line from a filename"""
         if self.__linePattern:
             expr=re.compile(self.__linePattern)
-            return expr.match(fName).groups(1)[0]
+            try:
+                return expr.match(fName).groups(1)[0]
+            except AttributeError:
+                return None
         else:
             return fName.split("_")[0]
 
@@ -208,6 +219,13 @@ class SampleTime(object):
         if self.__defaultValueNames:
             self.__valueNames=self.__defaultValueNames[:]
             return self.__valueNames
+
+        if self.__namesFromFirstLine:
+            line=open(path.join(self.dir,fName)).readline().split()
+            if line[0]!="#":
+                error("First line of",path.join(self.dir,fName),
+                      "does not start with a '#'")
+            return line[2:]
 
         def preUnder(m):
             return "&"+m.group(1)+m.group(2)

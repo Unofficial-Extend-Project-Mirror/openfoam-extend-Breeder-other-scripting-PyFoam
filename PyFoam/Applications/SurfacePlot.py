@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SurfacePlot.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamSurfacePlot.py
 """
@@ -7,12 +7,12 @@ import sys,string
 from os import path
 from optparse import OptionGroup
 from copy import copy
-from math import ceil,sqrt
+from math import sqrt
 
 from .PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.SurfaceDirectory import SurfaceDirectory
 
-from PyFoam.Error import error,warning
+from PyFoam.Error import error
 
 from .PlotHelpers import cleanFilename
 
@@ -20,7 +20,9 @@ from PyFoam.ThirdParty.six import print_
 from PyFoam.ThirdParty.six.moves import input
 
 class SurfacePlot(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Searches for sampled surface in the VTK-format in a directory and
 makes pictures from them
@@ -32,7 +34,8 @@ makes pictures from them
                                    usage="%prog [options] <casedir>",
                                    nr=1,
                                    changeVersion=False,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         data=OptionGroup(self.parser,

@@ -5,9 +5,8 @@ Currently not optimal as it reads the files more often than necessary"""
 
 from os import path,listdir
 
-from PyFoam.Error import error
+from PyFoam.Error import error,warning
 import math
-import sys
 
 try:
     from sys.float_info import max as float_maximum
@@ -62,9 +61,11 @@ class TimelineDirectory(object):
         for v in listdir(self.dir):
             if v[0]=='.':
                 continue # Skip dot-files
-            self.values.append(v)
-            if TimelineValue(self.dir,v,self.usedTime).isVector:
-                self.vectors.append(v)
+            tv=TimelineValue(self.dir,v,self.usedTime)
+            if tv.isValid:
+                self.values.append(v)
+                if tv.isVector:
+                    self.vectors.append(v)
 
         self.allPositions=None
 
@@ -152,7 +153,7 @@ class TimelineDirectory(object):
                                                                  pos+1,pos+1,
                                                                  pos+2,pos+2)
                     else:
-                        error("Unsupported vector mode",vectorMode)
+                        error("Unsupported vector mode",vectorMode,"for",value)
                 try:
                     sets.append((fName,v,p,pos,TimelineValue(self.dir,v,self.usedTime)))
                 except IOError:
@@ -200,6 +201,7 @@ class TimelineValue(object):
         @param val: the value
         @param time: the timename"""
 
+        self.isValid=False
         self.val=val
         self.time=time
         self.file=path.join(sDir,val)
@@ -214,21 +216,25 @@ class TimelineValue(object):
         l2=data.readline()
 
         self._isProbe=True
-        if l2[0]!='#':
-            # Not a probe-file. The whole description is in the first line
-            poses=l1[1:].split()[1:]
-            firstData=l2
-            self._isProbe=False
-        else:
-            # probe-file so we need one more line
-            l3=data.readline()
-            x=l1[1:].split()[1:]
-            y=l2[1:].split()[1:]
-            z=l3[1:].split()[1:]
-            for i in range(len(x)):
-                poses.append("(%s %s %s)" % (x[i],y[i],z[i]))
-            data.readline()
-            firstData=data.readline()
+        try:
+            if l2[0]!='#':
+                # Not a probe-file. The whole description is in the first line
+                poses=l1[1:].split()[1:]
+                firstData=l2
+                self._isProbe=False
+            else:
+                # probe-file so we need one more line
+                l3=data.readline()
+                x=l1[1:].split()[1:]
+                y=l2[1:].split()[1:]
+                z=l3[1:].split()[1:]
+                for i in range(len(x)):
+                    poses.append("(%s %s %s)" % (x[i],y[i],z[i]))
+                data.readline()
+                firstData=data.readline()
+        except IndexError:
+            warning("Could not determine the type of",self.file)
+            return
 
         self.positions=[]
         self.positionIndex=[]
@@ -238,14 +244,19 @@ class TimelineValue(object):
                 if abs(float(v))<float_maximum:
                     self.positions.append(poses[i])
                     self.positionIndex.append(i)
-        else:
+        elif 3*len(poses)+1==len(firstData.split()):
             self.isVector=True
             for i,v in enumerate(firstData.split()[2::3]):
                 if abs(float(v))<float_maximum:
                     self.positions.append(poses[i])
                     self.positionIndex.append(i)
+        else:
+            warning(self.file,
+                    "is an unsupported type (neither vector nor scalar). Skipping")
+            return
 
         self.cache={}
+        self.isValid=True
 
     def __repr__(self):
         if self.isVector:
@@ -279,7 +290,7 @@ class TimelineValue(object):
     def getData(self,times,vectorMode=None):
         """Get the data values that are nearest to the actual times"""
         if self.isVector and vectorMode==None:
-            vectorMode="abs"
+            vectorMode="mag"
 
         dist=len(times)*[1e80]
         data=len(times)*[len(self.positions)*[1e80]]

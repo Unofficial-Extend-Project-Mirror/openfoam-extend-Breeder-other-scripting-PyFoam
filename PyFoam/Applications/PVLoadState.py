@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PVLoadState.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Class that implements pyFoamPVLoadState
 """
@@ -16,7 +16,9 @@ from os import path,unlink,system
 from PyFoam import configuration as config
 
 class PVLoadState(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Starts paraview with an OpenFOAM-case and a predefined
 paraview-State-File modifieing the state-File in such a way that it is
@@ -33,7 +35,8 @@ StateFile was generated using paraFoam)
                                    description=description,
                                    usage="%prog [options] <case>",
                                    interspersed=True,
-                                   nr=1)
+                                   nr=1,
+                                   **kwargs)
 
     def addOptions(self):
         paraview=OptionGroup(self.parser,

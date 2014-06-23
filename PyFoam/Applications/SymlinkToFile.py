@@ -10,7 +10,9 @@ from PyFoam.Basics.Utilities import copytree,remove
 from os import path,rename
 
 class SymlinkToFile(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""Takes a list of files. If they are symlinks
 then replace them with the file/directory they are pointing too.
 
@@ -24,7 +26,8 @@ Used to convert single files after using 'pyFoamCloneCase.py' ii
                                    changeVersion=False,
                                    interspersed=True,
                                    exactNr=False,
-                                   nr=1)
+                                   nr=1,
+                                   **kwargs)
 
     def addOptions(self):
         behave=OptionGroup(self.parser,

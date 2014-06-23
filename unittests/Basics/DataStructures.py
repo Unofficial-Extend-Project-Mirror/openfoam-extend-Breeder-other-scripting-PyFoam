@@ -2,7 +2,7 @@
 import unittest
 import math
 
-from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,TupleProxy,DictProxy,Tensor,SymmTensor,Codestream
+from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,TupleProxy,DictProxy,Tensor,SymmTensor,Codestream,BoolProxy
 
 from PyFoam.ThirdParty.six import iteritems
 
@@ -78,6 +78,59 @@ class VectorTest(unittest.TestCase):
         self.assertEqual(v,Vector(-3,2,1))
 
 theSuite.addTest(unittest.makeSuite(VectorTest,"test"))
+
+class BoolProxyTest(unittest.TestCase):
+    def testString(self):
+        v=BoolProxy(True)
+        self.assertEqual(str(v),'yes')
+        v=BoolProxy(False)
+        self.assertEqual(str(v),'no')
+
+    def testTextual(self):
+        v=BoolProxy(textual="on")
+        self.assert_(v)
+        self.assertEqual(str(v),'on')
+        v=BoolProxy(textual="off")
+        self.assert_(not v)
+        self.assertEqual(str(v),'off')
+
+    def testConstruction(self):
+        with self.assertRaises(TypeError):
+            v=BoolProxy(False,textual="on")
+        with self.assertRaises(TypeError):
+            v=BoolProxy()
+        with self.assertRaises(TypeError):
+            v=BoolProxy(textual="foo")
+        with self.assertRaises(TypeError):
+            v=BoolProxy(textual="foo")
+        with self.assertRaises(TypeError):
+            v=BoolProxy("yes")
+
+    def testNonZero(self):
+        v=BoolProxy(True)
+        self.assert_(v)
+        v=BoolProxy(False)
+        self.assert_(not v)
+
+    def testEqual(self):
+        v=BoolProxy(True)
+        self.assertEqual(v,True)
+        self.assertEqual(True,v)
+        v=BoolProxy(False)
+        self.assertEqual(v,False)
+        self.assertEqual(False,v)
+        v2=BoolProxy(False)
+        self.assertEqual(v,v2)
+        v2=BoolProxy(True)
+        self.assertNotEqual(v,v2)
+        self.assertEqual(v,"no")
+        self.assertEqual(v,"off")
+        self.assertEqual(v2,"yes")
+        self.assertEqual(v2,"on")
+        self.assertEqual("on",v2)
+        self.assertNotEqual(v,"foo")
+
+theSuite.addTest(unittest.makeSuite(BoolProxyTest,"test"))
 
 class VectorOperatorTest(unittest.TestCase):
     def testAdd(self):

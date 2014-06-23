@@ -1,9 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpgradeDictionariesTo17.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamUpgradeDictionariesTo17
 """
 
-import sys,re
 from optparse import OptionGroup
 from os import path
 
@@ -102,7 +101,8 @@ class FvSolutionUpgradeInfo(DictionaryUpgradeInfo):
 class UpgradeDictionariesTo17(PyFoamApplication):
     def __init__(self,
                  args=None,
-                 description=None):
+                 description=None,
+                 **kwargs):
         if not description:
             description="""\
 Examines dictionaries in a case and tries to upgrade them to a form
@@ -121,7 +121,8 @@ If only a file is specified then the mode of that file has to be specified
                                    usage="%prog [options] <case>",
                                    changeVersion=False,
                                    nr=1,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addDicts(self):
         self.dicts.append(FvSolutionUpgradeInfo())

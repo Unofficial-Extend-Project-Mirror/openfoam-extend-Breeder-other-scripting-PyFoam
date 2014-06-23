@@ -1,10 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/FoamFileGenerator.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """Transform a Python data-structure into a OpenFOAM-File-Representation"""
 
 from PyFoam.Error import error,PyFoamException
-from PyFoam.Basics.DataStructures import Vector,Field,Dimension,TupleProxy,DictProxy,Tensor,SymmTensor,Unparsed,UnparsedList,Codestream,DictRedirection,BinaryList
-
-import string
+from PyFoam.Basics.DataStructures import Vector,Field,Dimension,TupleProxy,DictProxy,Tensor,SymmTensor,Unparsed,UnparsedList,Codestream,DictRedirection,BinaryList,BoolProxy
 
 from PyFoam.ThirdParty.six import string_types,integer_types
 
@@ -17,7 +15,8 @@ class FoamFileGenerator(object):
     def __init__(self,
                  data,
                  header=None,
-                 longListThreshold=20):
+                 longListThreshold=20,
+                 useFixedType=True):
         """@param data: data structure that will be turned into a
         Foam-compatible file
         @param header: header information that is to be prepended
@@ -29,9 +28,29 @@ class FoamFileGenerator(object):
         self.data=data
         self.header=header
         self.longListThreshold=longListThreshold
+        self.useFixedType=useFixedType
 
     def __str__(self):
         return self.makeString()
+
+    def __quoteString(self,val):
+        """Quote the string if it contains illegal characters"""
+        if len(val)==0:
+            return val
+        if val[0] in ["'",'"']:
+            return val
+        quote=False
+        for c in r'\{}/;"': # list from word::stripInvalid
+            if val.find(c)>=0:
+                quote=True
+                break
+        if quote:
+            if val.find('"')>=0:
+                return "'"+val+"'"
+            else:
+                return '"'+val+'"'
+        else:
+            return val
 
     def makeString(self,firstLevel=False):
         """turns the data into a string"""
@@ -45,7 +64,7 @@ class FoamFileGenerator(object):
             result+=self.strTuple(self.data)
         elif type(self.data) in [list,UnparsedList,BinaryList]:
             result+=self.strList(self.data)
-        elif self.data==None:
+        elif self.data is None:
             raise FoamFileGeneratorError("<None> found")
         else:
             result+=self.strPrimitive(self.data)
@@ -58,7 +77,11 @@ class FoamFileGenerator(object):
                 return "yes"
             else:
                 return "no"
-        elif isinstance(pri,integer_types+(float,)+string_types):
+        elif type(pri)==BoolProxy:
+            return str(pri)
+        elif isinstance(pri,string_types):
+            return self.__quoteString(pri)
+        elif isinstance(pri,integer_types+(float,)):
             return str(pri)
         elif pri.__class__ in self.primitiveTypes:
             return str(pri)
@@ -109,7 +132,7 @@ class FoamFileGenerator(object):
                     s+=str(v)
                     s+=";"+end
                 else:
-                    s+=" "+v+";"+end
+                    s+=" "+self.__quoteString(v)+";"+end
             elif type(v) in [dict,DictProxy]:
                 s+="\n"+(" "*indent)+"{\n"
                 s+=self.strDict(v,indent+2)
@@ -122,7 +145,7 @@ class FoamFileGenerator(object):
                 s+=";"+end
             elif type(v) in [tuple,TupleProxy]:
                 s+=" "+self.strTuple(v,indent+2)+";"+end
-            elif type(v)==bool:
+            elif type(v) in [bool,BoolProxy]:
                 if v:
                     s+=" yes;\n"
                 else:
@@ -131,7 +154,7 @@ class FoamFileGenerator(object):
                 s+=" "+str(v)+";"+end
             elif v.__class__ in self.primitiveTypes:
                 s+=" "+str(v)+";"+end
-            elif v==None:
+            elif type(v)==type(None):
                 s+=" /* empty */ ;"+end
             elif type(v)==DictRedirection:
                 s+=";"+end
@@ -162,7 +185,7 @@ class FoamFileGenerator(object):
                 theLen=len(lst)/2
 
         isFixedType=False
-        if len(lst)==3 or len(lst)==9 or len(lst)==6:
+        if self.useFixedType and (len(lst)==3 or len(lst)==9 or len(lst)==6):
             isFixedType=True
             for l in lst:
                 try:

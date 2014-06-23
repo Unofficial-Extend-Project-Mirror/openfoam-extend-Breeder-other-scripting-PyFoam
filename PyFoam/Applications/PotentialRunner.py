@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PotentialRunner.py 8486 2013-11-03T11:33:00.315346Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamSteadyRunner
 """
@@ -33,7 +33,9 @@ class PotentialRunner(PyFoamApplication,
                       CommonLibFunctionTrigger,
                       CommonParallel,
                       CommonVCSCommit):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Runs the potentialFoam solver on a case to get a decent initial
 condition.
@@ -46,7 +48,8 @@ Copies the current fields for U and p to backup-files.
                                    description=description,
                                    usage="%prog [options] <caseDirectory>",
                                    interspersed=True,
-                                   nr=1)
+                                   nr=1,
+                                   **kwargs)
 
     def addOptions(self):
         pot=OptionGroup(self.parser,
@@ -126,6 +129,7 @@ Copies the current fields for U and p to backup-files.
                         silent=self.opts.progress or self.opts.silent,
                         lam=lam,
                         logTail=self.opts.logTail,
+                        echoCommandLine=self.opts.echoCommandPrefix,
                         noLog=self.opts.noLog)
 
         print_("Setting system-directory for potentialFoam")

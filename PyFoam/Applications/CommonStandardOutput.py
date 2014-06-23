@@ -23,6 +23,11 @@ class CommonStandardOutput(object):
                        default=False,
                        dest="silent",
                        help="Do not print any output")
+        grp.add_option("--echo-command-prefix",
+                       action="store",
+                       default=None,
+                       dest="echoCommandPrefix",
+                       help="Do not print any output")
         grp.add_option("--logname",
                        dest="logname",
                        default=logname,

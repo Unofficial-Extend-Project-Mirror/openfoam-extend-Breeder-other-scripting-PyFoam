@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UtilityRunnerApp.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamUtilityRunner
 """
@@ -13,7 +13,9 @@ import sys
 from os import path
 
 class UtilityRunnerApp(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Runs a OpenFoam Utility and analyzes the output.  Needs a regular
 expression to look for.  The next 3 arguments are the usual OpenFoam
@@ -27,7 +29,8 @@ the regexp (the pattern groups).
         PyFoamApplication.__init__(self,
                                    exactNr=False,
                                    args=args,
-                                   description=description)
+                                   description=description,
+                                   **kwargs)
 
     def addOptions(self):
         self.parser.add_option("-r",

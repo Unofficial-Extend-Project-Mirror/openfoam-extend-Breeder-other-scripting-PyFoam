@@ -26,7 +26,9 @@ from PyFoam.Error import error,warning
 from PyFoam.ThirdParty.six import print_,iteritems
 
 class RedoPlot(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Either connects to a running pyFoam-Server and gets all the
 information for plotting or reads the relevant data from a pickle file
@@ -43,7 +45,8 @@ and either displays the plot or writes the plots to file
                                    usage="%prog [options] (<host> <port>|<pickleFile>)",
                                    interspersed=True,
                                    nr=1,
-                                   exactNr=False)
+                                   exactNr=False,
+                                   **kwargs)
 
     def addOptions(self):
         mode=OptionGroup(self.parser,

@@ -9,7 +9,6 @@ Author:
 from .PyFoamApplication import PyFoamApplication
 
 from os import path
-import sys
 from optparse import OptionGroup
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
@@ -18,7 +17,9 @@ from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
 from PyFoam.ThirdParty.six import print_
 
 class ChangeBoundaryName(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Changes the name of a boundary in the boundary-file. Also if a
 time-step is specified
@@ -28,7 +29,8 @@ time-step is specified
                                    usage="%prog <caseDirectory> <boundaryName> <new name>",
                                    changeVersion=False,
                                    nr=3,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         change=OptionGroup(self.parser,

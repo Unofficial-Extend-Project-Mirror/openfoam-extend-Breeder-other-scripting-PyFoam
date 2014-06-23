@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/ClusterJob.py 8451 2013-09-24T19:03:11.513979Z bgschaid  $
+#  ICE Revision: $Id$
 """Encapsulates all necessary things for a cluster-job, like setting
 up, running, restarting"""
 
@@ -117,8 +117,11 @@ class ClusterJob(object):
             if self.nproc>1:
                 # self.hostfile=os.environ["PE_HOSTFILE"]
                 self.hostfile=path.join(os.environ["TMP"],"machines")
-                self.message("Using the machinefile",self.hostfile)
-                self.message("Contents of the machinefile:",open(self.hostfile).readlines())
+                if config().getboolean("ClusterJob","useMachineFile"):
+                    self.message("Using the machinefile",self.hostfile)
+                    self.message("Contents of the machinefile:",open(self.hostfile).readlines())
+                else:
+                    self.message("No machinefile used because switched off with 'useMachineFile'")
 
         self.ordinaryEnd=True
         self.listenToTimer=False
@@ -297,7 +300,7 @@ class ClusterJob(object):
                 args=[],
                 foamArgs=[],
                 steady=False,
-                multiRegion=None,
+                multiRegion=True,
                 progress=False,
                 compress=False,
                 noLog=False):
@@ -321,8 +324,11 @@ class ClusterJob(object):
             arglist+=["--parameter=%s:%s" % (str(k),str(v))]
 
         if self.isDecomposed and self.nproc>1:
-            arglist+=["--procnr=%d" % self.nproc,
-                      "--machinefile=%s" % self.hostfile]
+            arglist+=["--procnr=%d" % self.nproc]
+            if config().getboolean("ClusterJob","useMachineFile"):
+                arglist+=["--machinefile=%s" % self.hostfile]
+
+        arglist+=["--echo-command-prefix='=== Executing'"]
 
         if progress:
             arglist+=["--progress"]
@@ -332,9 +338,9 @@ class ClusterJob(object):
             arglist+=["--compress"]
 
         if self.multiRegion:
-            if multiRegion==None or multiRegion==True:
+            if multiRegion:
                 arglist+=["--all-regions"]
-        elif multiRegion and not self.multiRegion:
+        elif multiRegion:
             warning("This is not a multi-region case, so trying to run stuff multi-region won't do any good")
 
         if self.restarted:

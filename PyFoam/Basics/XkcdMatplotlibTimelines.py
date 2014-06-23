@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/XkcdMatplotlibTimelines.py 8419 2013-08-12T09:26:15.316903Z bgschaid  $
+#  ICE Revision: $Id$
 """Plots a collection of timelines"""
 
 from PyFoam.Error import warning,error

@@ -1,9 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ClearInternalField.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamClearInternalField.py
 """
 
-import re
 from os import path
 
 from .PyFoamApplication import PyFoamApplication
@@ -15,7 +14,9 @@ from PyFoam.ThirdParty.six import print_
 import sys
 
 class ClearInternalField(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Takes a field-file and makes the whole internal field uniform. Either
 taking the value from a patch or using a user-specified value
@@ -27,7 +28,8 @@ taking the value from a patch or using a user-specified value
                                    usage="%prog [options] <fieldfile>",
                                    changeVersion=False,
                                    nr=1,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         self.parser.add_option("--patch",

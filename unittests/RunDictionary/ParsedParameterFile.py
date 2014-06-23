@@ -75,6 +75,22 @@ class FoamStringParserTest(unittest.TestCase):
         p1=FoamStringParser("test 1;")
         self.assertEqual(p1["test"],1)
 
+    def testParseBool(self):
+        p1=FoamStringParser("test yes;")
+        self.assertEqual(p1["test"],True)
+        self.assertEqual(p1["test"],"yes")
+        p1=FoamStringParser("test on;")
+        self.assertEqual(p1["test"],"on")
+        self.assertEqual(p1["test"],True)
+        p1=FoamStringParser("test off;")
+        self.assertEqual(p1["test"],False)
+        p1=FoamStringParser("test no;")
+        self.assertEqual(p1["test"],False)
+
+    def testParseBoolKey(self):
+        p1=FoamStringParser("yes test;")
+        self.assertEqual(p1["yes"],"test")
+
     def testParseWithTab(self):
         p1=FoamStringParser("test\t1;")
         self.assertEqual(p1["test"],1)
@@ -116,6 +132,11 @@ der name
 
     def testParseFieldNonniform(self):
         p1=FoamStringParser('test  nonuniform 4(42 66 34 44);')
+        self.assertEqual(type(p1["test"]),Field)
+        self.assert_(not p1["test"].isUniform())
+
+    def testParseFieldNonniformLengthThree(self):
+        p1=FoamStringParser('test  nonuniform 3(42 66 34);')
         self.assertEqual(type(p1["test"]),Field)
         self.assert_(not p1["test"].isUniform())
 

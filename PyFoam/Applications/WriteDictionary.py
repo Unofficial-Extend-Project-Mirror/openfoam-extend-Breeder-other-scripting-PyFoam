@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/WriteDictionary.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamWriteDictionary
 """
@@ -12,7 +12,9 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.ThirdParty.six import print_,exec_
 
 class WriteDictionary(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Write a value to a Foam-Dictionary.  The description of the value is
 word. If the value is non-atomic (a list or a dictionary) it has to be
@@ -29,7 +31,8 @@ Example of usage:
                                    usage="%prog [options] <dictfile> <key> <val>",
                                    changeVersion=False,
                                    nr=3,
-                                   interspersed=False)
+                                   interspersed=False,
+                                   **kwargs)
 
     def addOptions(self):
         self.parser.add_option("--test",

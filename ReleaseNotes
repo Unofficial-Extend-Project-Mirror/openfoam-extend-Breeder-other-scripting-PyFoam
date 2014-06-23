@@ -1,4 +1,284 @@
 # -*- mode: org -*-
+* Version 0.6.3 - 2014-06-23
+** Requirements
+   The only requirement is a python-installation. The main testing and
+   development has been done with 2.7 and 2.6. Python 2.5 should work
+   but not for all utilities. Unit tests run on Python 3.4 but it is
+   currently not used in a production environment (reports of success
+   or failure most welcome)
+
+   Certain functionalities need special Python-libraries. The main one
+   is =numpy= for plotting. Other libraries that might be of interest
+   are =matplotlib=, =pandas= and =IPython=. For
+   =pyFoamDisplayBlockmesh.py= the libraries =PyQt4= and =vtk= are
+   needed. Other libraries are tested for and reported by
+   =pyFoamVersion.py= but not required (only install if you're sure
+   that you need it)
+** Major changes
+*** Version changing supports forks of OpenFOAM
+    Now =pyFoam= supports different versions of OpenFOAM for switching.
+    Out of the box =openfoam= and =extend= are supported. If only the
+    version number is specified (for instance by =--foamVersion=1.7.x=)
+    and such a version exists only for one fork it is correctly
+    expanded with the correct fork( in the example with
+    =openfoam-1.7.x=). If more than one fork has the same version then
+    the fork name has to be specified as well
+
+    Note: additional forks can be easily specified with the
+    configurations. In section =OpenFOAM= the parameter =forks= has to
+    be extended. For each new fork a =dirpatterns= and
+    =installation=-parameter has to be specified
+** Incompatibilities
+*** Change of command interface of =pyFoamSTLUtility.py=
+    The selection of what is to be done is now selected by subcommands
+    instead of options. This will break scripts using this
+*** If =0.org= is present =pyFoamCloneCase.py= and =pyFoamPackCase.py= ignore =0=
+    The reason is that the utilities assume that this directory is
+    produced from =0.org=
+** Bugfixes
+*** PlotWatcher has long times between updates if pickling takes long
+    The reason was that it used the same throttling that made sense
+    for the PlotRunner. Fixed
+*** =pyFoamPVSnapshot.py= fails for newer paraview-versions
+    Reason is that the class =vtkPythonStdStreamCaptureHelper= does
+    not support =isatty=
+*** SamplePlot failed when valueNames are unspecified
+    Reported in
+    https://sourceforge.net/apps/mantisbt/openfoam-extend/view.php?id=208
+    and fixed
+*** =pyFoamTimelinePlot.py= failed Numpy/Pandas output of vector fields
+    Vector fields only were added to the data fields if they were the
+    first in the list. Fixed
+*** =alternateAxis= ignored for slave
+    This is now fixed. The alternate values have to be specified in
+    the master (specifying in the slave gives an error)
+*** =pyFoamCaseReport.py= more stable for binary =boundary=-files
+    Usually these files are =ascii= (even if the header says
+    =binary=). In some cases the parsing failed for these. Fixed by
+    enforcing reading as =ascii=. Can be switched off
+*** =SpreadsheetData= returns data which breaks certain Pandas-operations
+    The reason was that if there were duplicate times in the table the
+    index was non-unique which certain Pandas-operations don't
+    appreciate. Solved by dropping duplicate times. Can be switched off
+*** =pyFoamCloneCase.py= added duplicates to the archive
+    If things are specified twice they were added twice. Now it is
+    checked whether the item already exists in the tar-file before
+    adding them
+*** =nonuniform= of length 3 not correctly printed
+    The reason was that this was interpreted as a vector and the
+    numeric prefix was removed. Reported at
+    http://sourceforge.net/apps/mantisbt/openfoam-extend/view.php?id=218
+
+    Fixed by introducing an extra parameter to =FoamFileGenerator=
+** New features/Utilities
+*** =pyFoamPrepareCase.py= for case preparation
+    This utility aims to reduce the need for boilerplate scripts to
+    set up cases. The steps it executes are
+    1. Clear old data from the case (including processor directories)
+    2. if a folder =0.org= is present remove the =0= folder too
+    3. go through all folders and for every found file with the
+       extension =.template= do template expansion using the
+       pyratemp-engine
+    4. create a mesh (either by using a script or if a =blockMeshDict=
+       is present by running blockMesh. If none of these is present
+       assume that there is a valid mesh present)
+    5. copy every =foo.org= that is found to to =foo= (recursively if directory)
+    6. do template replacement for every =.postTemplate=
+    7. execute another preparation script
+*** =pyFoamIPythonNotebook.py= for generating and manipulating IPython-notebooks
+    This utility creates and manipulates IPython-notebooks for
+    analyzing OpenFOAM cases. It has a number of subcommands:
+    - create :: this is the main command. All other commands assume
+                that the notebooks they work with were created with
+                this.
+
+		The utility looks at the case specified and creates a
+                notebook that has the capabilities to quickly build a
+                report about the case:
+      - reporting general properties of the case. This
+	basically is the capability of the
+	=pyFoamCaseReport.py=-utility
+      - It searches for data that can be visualized by
+        =pyFoamTimelinePlot.py= or =pyFoamSamplePlot.py= and
+        generates selectors that allow the user to select
+        which data to import. The selectors import the data as
+        Pandas-=DataFrames= and create the commands
+        necessary to do this. It is recommended to erase the
+        selector afterwards
+      - Selectors for pickled case data and pickled plot
+        generated by PyFoam
+      - Capability to store read data *in* the notebook
+        file. This feature is experimental and has
+        performance issues for medium to large datasets
+      The created notebook can be executed but needs to be
+      edited to be useful
+    - clear :: removes selected cells (but only cells created with
+               =create=) or output from the notebook.
+    - info :: prints information about the notebook
+    - copy :: copies notebook to a different case and rewrites it so
+              that data is read from that case
+    Recommended way of working with this utility is
+    1. Create notebook with utility
+    2. Edit it to contain standardized evaluations
+    3. Copy it over to another, similar case
+*** Additional sub-module =PyFoam.IPython=
+    The purpose of this submodule is to support
+    =pyFoamIPythonNotebook.py=. It has the classes
+    - Notebook :: read a file and interpret it as an
+                  IPython-notebook. Do manipulations on this notebook
+    - PermanentStorage :: Implements permanent storage in an
+         IPython-notebook. Only works inside a notebook and allows
+         only one instance at once. Passing the data from the notebook
+         (through JavaScript) to Python currently is a performance
+         bottleneck
+    - Case :: Convenience object that exposes the functionality of
+              some of the PyFoam-utilities through a simple interface
+*** Additional sub-module =PyFoam.Wrappers=
+    Wraps popular Python-libraries to add functions that make it
+    easier to work with OpenFOAM-data.
+
+    Currently only one Wrapper is implemented:
+**** =Pandas=-wrappers
+     This provides =PyFoamDataFrame= as a wrapper for =DataFrame=. The
+     functionality added is
+     - addData :: Conveniently add new data from different =Series=,
+                  =DataFrames=. It is assumed that the index is the
+                  same property (time or for samples the distance) but
+                  with a different resolution. The indexes are joined
+                  and missing data is interpolated
+     - integrate, validLength, weightedAverage :: uses the index as
+          the $x$-axis and calculates these properties for a
+          =Series=. =validLength= is the extent on which data is
+          defined (=weightedAverage= is basically =integrate= divided
+          by =validLength=). For =integrate= the trapezoid-rule is used
+     - describe :: adds the three above quantities to the regular
+                   =describe=-command
+** Enhancements to Utilities
+*** =pyFoamSampleplot= has option to use index instead of time in filenames
+    The option =-index-instead-of-filename= switches this on. This
+    makes it easier to generate movies from the files
+*** =pyFoamListCases.py= Allows addition of custom data
+    The option =--custom-data= now allows the specification of custom
+    data items. These are read from the =pickledData=-files and
+    displayed in the table like regular data items
+*** Switch compiler versions
+    Now all utilities allow switching the compiler version (for
+    instance from =Gcc47= to =Gcc48=). The relevant options are
+    =--force-system-compiler=, =--force-openfoam-compiler= and
+    =--force-compiler=
+*** =pyFoamVersion.py= reports the installed versions better
+    Now the location of the installations is reported as well
+*** Offscreen rendering can be switched off in =pyFoamPVSnapshot.py=
+    This is a workaround where the writer produces a segmentation
+    fault
+*** Write 3D-data in =pyFoamPVSnapshot.py=
+    In addition to writing out bitmaps allows writing out 3D-data (for
+    importing into other applications). Sources can be selected by name
+*** Added capabilities to =pyFoamSTLUtility=
+    The utility can now also:
+    - erase selected patches
+    - merge selected patches into one
+*** =pyFoamDecomposer.py= switches off function objects
+    This now automatically happens for OF-versions that support
+    it (2.0 and greater). They can be switched on again
+*** =pyFoamCloneCase.py= clones more stuff
+    Files that are assumed to be used by =pyFoamPrepareCase.py= are
+    automatically added to the clone. This includes all files (and
+    directories) with the extensions =.sh=, =.template= and
+    =.org=. Also IPython notebooks (extension =.ipynb= are added)
+** Enhancements to the Library
+*** =BasicRunner= now can print the command line that is actually used
+    This should help with diagnosing problems with MPI etc.
+
+    Can be switched on in some utilities with =--echo-command-prefix=
+*** =ClusterJob= now can live without a machinefile
+    Using the machine-file now can be switched off for job-schedulers
+    with a tight integration
+*** Enhanced treatment of symlinks during cloning
+    If a item in the case itself is a symlink then it used to be a
+    copy of the file the symlink is pointing to. Now it is created as
+    a symlink to the target the original symlink. If the
+    =--follow-symlink=-option is used the old behaviour is used
+    (copying). In this case the option =noForceSymlink= in the
+    =Cloning=-section of the configuration can be used to change this
+    behaviour for selected files
+*** =AnalyzedCommon= clears the =analyzed=-directory
+    The directory is cleared if it exits from a previous run.
+*** =TimelineDirectory= is more tolerant
+    Used to fail if incompatible data types were used. Now ignores
+    them
+*** Possibility of a subcommand-interface for utilities
+    The subclass =SubclassFoamOptionParser= now allows the parsing of
+    subclasses. The base class for utilities =PyFoamApplication= now
+    supports this as an option. As an example this is implemented in
+    =pyFoamSTLUtilities.py=
+*** =STLUtility= accepts file-handles
+    The class checks whether arguments are filehandles and in this
+    case doesn't try to open a file for reading or writing but uses
+    the handle
+*** =addClone= in =SolutionDirectory= accepts glob patterns
+    If no file matching the name is found it is assumed that this is a
+    glob-pattern and all matching files are added. This affects all
+    utilities that use that method (especially =pyFoamCloneCase.py=)
+*** =execute= in =Utilities= allows specification of working directory and echoing of output
+    This method now allows the specification of a working
+    directory. Before executing the command the method changes to the
+    working directory. Afterwards it changes back to the regular
+    working directory.
+
+    There is also an option =echo= that immediately prints the output
+    to the screen
+*** =rmtree= and =copytree= more tolerant
+    =rmtree= now also works if the "tree" is a file.
+
+    =copytree= now has a parameter =force= that allows removing the
+    destination directory if it exists
+*** Enhanced support for booleans in the parser
+    Strings that are usually interpreted as boolean in OF-dictionaries
+    (for instance =on=, =yes=, ...) are now stored as a special type
+    that allows treating them like 'real' booleans.
+
+    For instance an expression =test no;= in a dictionary now allows
+    things like =if d['test']:= in the script
+*** Application classes now allow specifying options as keyword parameters
+    Until now the options to be used had to be specified as a list of
+    string modeled on the way the command line looked like. This is
+    still possible. In addition it is now possible to specify these
+    things as keyword parameters on the command line. Rudimentary type
+    checking is done. The names of the parameters are generated from
+    the command line options: the =-= are removed and the words are
+    converted to CamelCase. So for instance =--list-custom-Regexp =
+    becomes =listCustomRegexp=. Also for switches like these a boolean
+    value has to be passed. So the correct usage in a call would be
+    ~listCustomRegexp=True~.
+*** =SolutionDirector= now can classify directories in the =postProcessing=-directory
+    A number of properties has been added that list data generated by
+    function objects:
+    - timelines :: timeline data (like =propes=) that can be
+                   visualized by =pyFoamTimelinePlot.py=
+    - samples :: data from =set= (assuming it is in =raw=-format) that
+                 can be processed by =pyFoamSamplePlot.py=
+    - surfaces :: data from =surface= (assumes =VTK=-format) that can
+                  be used by =pyFoamSurfacePlot.py=
+    - distributions :: special cases of =sample= with distribution
+                       data
+    These properties only list the subdirectories of the case with
+    that data
+
+    Additional properties are
+    - pickledData :: a list of pickled data files that are found
+    - pickledPlots :: list of found pickled plots
+    These lists are sorted in descending temporal order (newest first)
+*** =pyFoamSamplePlot.py= now more flexible for distributions
+    Tries to determine the names of the values from the first line in
+    the files
+*** =DictProxy= now has a =dict=-like =update=-method
+    This also allows enforcing string values
+*** =FoamFileGenerator= automatically quotes strings
+    If strings are unquoted but contain characters that make it
+    illegal as a word then the string is quoted before output
+*** Children of =FileBasis= now can be used with the =with=-statement
+    This mainly concerns =ParsedParameterFile=
 * Version 0.6.2 - 2013-11-03
 ** Major changes
 *** Use of =pandas=-library

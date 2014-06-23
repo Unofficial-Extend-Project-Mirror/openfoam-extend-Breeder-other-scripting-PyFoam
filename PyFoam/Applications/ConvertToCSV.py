@@ -9,7 +9,9 @@ from PyFoam.Basics.SpreadsheetData import SpreadsheetData
 from os import path
 
 class ConvertToCSV(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Takes a plain file with column-oriented data and converts it to a
 csv-file.  If more than one file are specified, they are joined
@@ -24,7 +26,8 @@ Note: the first file determines the resolution of the time-axis
                                    interspersed=True,
                                    changeVersion=False,
                                    nr=2,
-                                   exactNr=False)
+                                   exactNr=False,
+                                   **kwargs)
 
     def addOptions(self):
         data=OptionGroup(self.parser,

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotWatcher.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Class that implements pyFoamPlotWatcher
 """
@@ -22,7 +22,9 @@ if PY3:
 class PlotWatcher(PyFoamApplication,
                   CommonPlotOptions,
                   CommonPlotLines):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Gets the name of a logfile which is assumed to be the output of a
 OpenFOAM-solver. Parses the logfile for information about the
@@ -38,7 +40,8 @@ file until interrupted.
                                    usage="%prog [options] <logfile>",
                                    changeVersion=False,
                                    interspersed=True,
-                                   nr=1)
+                                   nr=1,
+                                   **kwargs)
 
     def addOptions(self):
         CommonPlotOptions.addOptions(self)

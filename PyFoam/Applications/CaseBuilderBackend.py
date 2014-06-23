@@ -3,13 +3,12 @@ Represents the actual CaseBuilder-File and other things that have to do with the
 """
 
 from xml.dom.minidom import parse
-import xml.dom
 from os import path
 import os
 import shutil
 import glob
 
-from PyFoam.Error import error,warning
+from PyFoam.Error import error
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,FoamStringParser
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.FoamInformation import oldAppConvention as oldApp

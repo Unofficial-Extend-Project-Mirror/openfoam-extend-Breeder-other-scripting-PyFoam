@@ -18,7 +18,9 @@ from .PlotHelpers import cleanFilename
 from PyFoam.ThirdParty.six import print_
 
 class SamplePlot(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Reads data from the sample-dictionary and generates appropriate
 gnuplot-commands. As an option the data can be written to a CSV-file.
@@ -30,7 +32,8 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                                    usage="%prog [options] <casedir>",
                                    nr=1,
                                    changeVersion=False,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     modeChoices=["separate","timesInOne","fieldsInOne","linesInOne","complete"]
 
@@ -289,6 +292,11 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                           dest="cleanFilename",
                           default=False,
                           help="Clean filenames so that they can be used in HTML or Latex-documents")
+        output.add_option("--index-instead-of-time",
+                          action="store_true",
+                          dest="indexInsteadOfTime",
+                          default=False,
+                          help="Use an index instead of the time in the filename (mainly needed if the files are used to make a movie with FFMPEG)")
         output.add_option("--reference-prefix",
                           action="store",
                           dest="refprefix",
@@ -344,7 +352,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
         if self.opts.isDistribution:
             if self.opts.valueNames or self.opts.linePattern:
                 self.error("The option --is-distribution can not be used with --pattern-for-line or --default-value-names")
-            self.opts.valueNames="normalized,raw"
+            #            self.opts.valueNames="normalized,raw"
             self.opts.linePattern=".+istribution_(.+)"
             self.opts.needsExtension=False
 
@@ -354,11 +362,17 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
 
         usedDirName=self.opts.dirName.replace("/","_")
 
+        if self.opts.valueNames==None:
+            usedValueNames=None
+        else:
+            usedValueNames=self.opts.valueNames.split(","),
+
         samples=SampleDirectory(self.parser.getArgs()[0],
                                 dirName=self.opts.dirName,
                                 postfixes=self.opts.fieldPostfix,
                                 prefixes=self.opts.fieldPrefix,
-                                valueNames=self.opts.valueNames.split(","),
+                                valueNames=usedValueNames,
+                                namesFromFirstLine=self.opts.isDistribution,
                                 linePattern=self.opts.linePattern,
                                 needsExtension=self.opts.needsExtension)
         reference=None
@@ -675,7 +689,11 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
 
             if self.opts.mode=="separate":
                 name+="_%s"        % (p[0].line())
-                name+="_%s_%04d"   % (p[0].name,tIndex)
+                if self.opts.indexInsteadOfTime:
+                    name+="_%s_%04d"   % (p[0].name,tIndex)
+                else:
+                    name+="_%s_t=%f"   % (p[0].name,float(p[0].time()))
+
                 title="%s at t=%f on %s" % (p[0].name,float(p[0].time()),p[0].line())
             elif self.opts.mode=="timesInOne":
                 name+="_%s"        % (p[0].line())
@@ -695,7 +713,10 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                 name+="_%s"        % (p[0].name)
                 if self.opts.line!=None:
                     name+="_"+string.join(self.opts.line,"_")
-                name+="_t=%f" % float(p[0].time())
+                if self.opts.indexInsteadOfTime:
+                    name+="_%04d" % tIndex
+                else:
+                    name+="_t=%f" % float(p[0].time())
                 title="%s at t=%f" % (p[0].name,float(p[0].time()))
             elif self.opts.mode=="complete":
                 pass

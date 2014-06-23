@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/RunDictionary/SolutionDirectory.py 8448 2013-09-24T17:55:25.403256Z bgschaid  $
+#  ICE Revision: $Id$
 """Working with a solution directory"""
 
 from PyFoam.Basics.Utilities import Utilities
@@ -76,8 +76,11 @@ class SolutionDirectory(Utilities):
             self.dirPrefix = self.processorDirs()[0]
 
         self.essential=set([self.systemDir(),
-                            self.constantDir(),
-                            self.initialDir()])
+                            self.constantDir()])
+
+        # only add the initial directory if no template exists
+        if not path.exists(path.join(self.name,"0.org")) and not self.initialDir() is None:
+            self.addToClone(self.initialDir())
 
         # PyFoam-specific
         self.addToClone("PyFoamHistory")
@@ -87,7 +90,8 @@ class SolutionDirectory(Utilities):
         # this usually comes with the tutorials
         self.addToClone("Allclean")
         self.addToClone("Allrun")
-#         self.addToClone("0.org")
+
+        self.addToClone("*.ipynb")
 
         emptyFoamFile=path.join(self.name,path.basename(self.name)+".foam")
         if paraviewLink and not path.exists(emptyFoamFile):
@@ -95,6 +99,16 @@ class SolutionDirectory(Utilities):
 
         if addLocalConfig:
             self.addLocalConfig()
+
+        # These are used by PrepareCase
+        self.addToClone("*.org")
+        self.addToClone("*.template")
+        self.addToClone("*.sh")
+
+        self.__postprocDirs=[]
+        self.__postprocInfo={}
+        self.addPostprocDir(".")
+        self.addPostprocDir("postProcessing",fail=False)
 
     def setToParallel(self):
         """Use the parallel times instead of the serial.
@@ -243,6 +257,11 @@ class SolutionDirectory(Utilities):
         elif self.parallel:
             if path.exists(path.join(self.name,"processor0",name)):
                 self.essential.add(path.join(self.name,name))
+        else:
+            # check whether this is a file pattern
+            for f in glob.glob(path.join(self.name,name)):
+                # no check for existence necessary
+                self.essential.add(f)
 
     def cloneCase(self,name,svnRemove=True,followSymlinks=False):
         """create a clone of this case directory. Remove the target directory, if it already exists
@@ -257,10 +276,6 @@ class SolutionDirectory(Utilities):
         for a in additional:
             self.addToClone(a)
 
-        cpOptions="-R"
-        if followSymlinks:
-            cpOptions+=" -L"
-
         if path.exists(name):
             self.rmtree(name)
         mkdir(name)
@@ -270,16 +285,25 @@ class SolutionDirectory(Utilities):
 
         for d in self.essential:
             if d!=None:
+                fs=followSymlinks
+                if fs:
+                    noForce=eval(conf().get("Cloning","noForceSymlink"))
+                    pth,fl=path.split(d)
+                    for n in noForce:
+                        if fnmatch.fnmatch(fl,n):
+                            fs=False
+                            break
+
                 if self.parallel:
                     pth,fl=path.split(d)
                     if path.exists(path.join(pth,"processor0",fl)):
                         for i in range(self.nrProcs()):
                             self.copytree(path.join(pth,"processor%d" % i,fl),
                                           path.join(name,"processor%d" % i),
-                                          symlinks=not followSymlinks)
+                                          symlinks=not fs)
 
                 if path.exists(d):
-                    self.copytree(d,name,symlinks=not followSymlinks)
+                    self.copytree(d,name,symlinks=not fs)
 
         if svnRemove:
             self.execute("find "+name+" -name .svn -exec rm -rf {} \\; -prune")
@@ -408,36 +432,45 @@ class SolutionDirectory(Utilities):
 
         tar.close()
 
-    def addToTar(self,tar,name,exclude=[],base=None):
+    def addToTar(self,tar,pattern,exclude=[],base=None):
         """The workhorse for the packCase-method"""
 
         if base==None:
             base=path.basename(self.name)
 
-        for e in exclude:
-            if fnmatch.fnmatch(path.basename(name),e):
-                return
+        for name in glob.glob(pattern):
+            excluded=False
+            for e in exclude:
+                if fnmatch.fnmatch(path.basename(name),e):
+                    excluded=True
+            if excluded:
+                continue
 
-        if path.isdir(name):
-            for m in listdir(name):
-                self.addToTar(tar,path.join(name,m),exclude=exclude,base=base)
-        else:
-            arcname=path.join(base,name[len(self.name)+1:])
-            if path.islink(name):
-                # if the symbolic link points to a file in the case keep it
-                # otherwise replace with the real file
-                lPath=path.os.readlink(name)
-                if not path.isabs(lPath):
-                    rPath=path.realpath(name)
-                    common=path.commonprefix([path.abspath(rPath),
-                                              path.abspath(base)])
-                    # if the path is shorter than the base it must be outside the case
-                    if len(common)<len(path.abspath(base)):
-                        name=path.abspath(rPath)
-                else:
-                    # use the abolute path
-                    name=lPath
-            tar.add(name,arcname=arcname)
+            if path.isdir(name):
+                for m in listdir(name):
+                    self.addToTar(tar,path.join(name,m),exclude=exclude,base=base)
+            else:
+                arcname=path.join(base,name[len(self.name)+1:])
+                if path.islink(name):
+                    # if the symbolic link points to a file in the case keep it
+                    # otherwise replace with the real file
+                    lPath=path.os.readlink(name)
+                    if not path.isabs(lPath):
+                        rPath=path.realpath(name)
+                        common=path.commonprefix([path.abspath(rPath),
+                                                  path.abspath(base)])
+                        # if the path is shorter than the base it must be outside the case
+                        if len(common)<len(path.abspath(base)):
+                            name=path.abspath(rPath)
+                    else:
+                        # use the abolute path
+                        name=lPath
+                try:
+                    tar.getmember(arcname)
+                    # don't add ... the file is already there'
+                except KeyError:
+                    # file not in tar
+                    tar.add(name,arcname=arcname)
 
     def getParallelTimes(self):
         """Get a list of the times in the processor0-directory"""
@@ -625,7 +658,7 @@ class SolutionDirectory(Utilities):
                                 pass
 
         if functionObjectData:
-            cd=ParsedParameterFile(self.controlDict())
+            cd=ParsedParameterFile(self.controlDict(),doMacroExpansion=True)
             if "functions" in cd:
                 if type(cd["functions"]) in [DictProxy,dict]:
                     for f in cd["functions"]:
@@ -655,7 +688,8 @@ class SolutionDirectory(Utilities):
     def clearOther(self,
                    pyfoam=True,
                    removeAnalyzed=False,
-                   clearHistory=False):
+                   clearHistory=False,
+                   clearParameters=False):
         """Remove additional directories
         @param pyfoam: rremove all directories typically created by PyFoam"""
 
@@ -663,6 +697,8 @@ class SolutionDirectory(Utilities):
             self.clearPattern("PyFoam.?*")
             if removeAnalyzed:
                 self.clearPattern("*?.analyzed")
+        if clearParameters:
+            self.clearPattern("PyFoamPrepareCaseParameters")
         if clearHistory:
             self.clearPattern("PyFoamHistory")
 
@@ -677,6 +713,7 @@ class SolutionDirectory(Utilities):
               keepInterval=None,
               removeAnalyzed=False,
               clearHistory=False,
+              clearParameters=False,
               functionObjectData=False,
               additional=[]):
         """One-stop-shop to remove data
@@ -696,6 +733,7 @@ class SolutionDirectory(Utilities):
                           additional=additional)
         self.clearOther(pyfoam=pyfoam,
                         removeAnalyzed=removeAnalyzed,
+                        clearParameters=clearParameters,
                         clearHistory=clearHistory)
 
     def initialDir(self):
@@ -936,6 +974,157 @@ class SolutionDirectory(Utilities):
             return "svn"
         else:
             return None
+
+    def addPostprocDir(self,dirName,fail=True):
+        if dirName in self.__postprocDirs:
+            return
+        full=path.join(self.name,dirName)
+        if not path.isdir(full):
+            if fail:
+                error(full,"does not exist or is no directory")
+            else:
+                return
+
+        self.__postprocDirs.append(dirName)
+        self.__postprocInfo={}
+
+    def __classifyDirectory(self,dPath):
+        cnt=0
+        minimum="1e40"
+        for d in listdir(dPath):
+            full=path.join(dPath,d)
+            if not path.isdir(full):
+                continue
+            try:
+                if float(d)<float(minimum):
+                    minimum=d
+                cnt+=1
+            except ValueError:
+                continue
+        if cnt<=0:
+            return None
+        first=path.join(dPath,minimum)
+        hypothesis=None
+        for f in listdir(first):
+            ff=path.join(first,f)
+            if not path.isfile(ff):
+                continue
+            try:
+                float(f)
+                continue
+            except ValueError:
+                pass
+            b,e=path.splitext(f)
+            if e==".xy":
+                newHypothesis="sample"
+            elif e==".vtk":
+                newHypothesis="surface"
+            elif e=="":
+                if b.find("istribution")>0:
+                    newHypothesis="distribution"
+                else:
+                    newHypothesis="timeline"
+            else:
+                newHypothesis=None
+
+            if hypothesis==None:
+                hypothesis=newHypothesis
+            elif hypothesis!=newHypothesis and newHypothesis:
+                error("Can not decide between",hypothesis,
+                "and",newHypothesis,"for",full)
+        return hypothesis
+
+    def __scanForPostproc(self,dirName):
+        for d in listdir(path.join(self.name,dirName)):
+            full=path.join(self.name,dirName,d)
+            if not path.isdir(full):
+                continue
+            try:
+                # we don't want time directories
+                float(d)
+                continue
+            except ValueError:
+                pass
+            c=self.__classifyDirectory(full)
+            use=path.join(dirName,d)
+            if c=="timeline":
+                self.__postprocInfo["timelines"].append(use)
+            elif c=="sample":
+                self.__postprocInfo["samples"].append(use)
+            elif c=="surface":
+                self.__postprocInfo["surfaces"].append(use)
+            elif c=="distribution":
+                self.__postprocInfo["distributions"].append(use)
+            elif c==None:
+                pass
+            else:
+                error("Unknown classification",c,"for",full)
+
+    def __scanPostproc(self):
+        self.__postprocInfo={"timelines":[],
+                             "samples":[],
+                             "distributions":[],
+                             "surfaces":[]}
+        for d in self.__postprocDirs:
+            self.__scanForPostproc(d)
+
+    @property
+    def pickledData(self):
+        """Get the pickled data files. Newest first"""
+        dirAndTime=[]
+        for f in ["pickledData","pickledUnfinishedData","pickledStartData"]:
+            for g in glob.glob(path.join(self.name,"*.analyzed")):
+                pName=path.join(g,f)
+                if path.exists(pName):
+                    dirAndTime.append((path.getmtime(pName),pName))
+        dirAndTime.sort(cmp=lambda x,y:cmp(y[0],x[0]))
+        return [s[len(self.name)+1:] for t,s in dirAndTime]
+
+    @property
+    def pickledPlots(self):
+        """Get the pickled plot files. Newest first"""
+        dirAndTime=[]
+        for g in glob.glob(path.join(self.name,"*.analyzed")):
+            pName=path.join(g,"pickledPlots")
+            if path.exists(pName):
+                dirAndTime.append((path.getmtime(pName),pName))
+        dirAndTime.sort(cmp=lambda x,y:cmp(y[0],x[0]))
+        return [s[len(self.name)+1:] for t,s in dirAndTime]
+
+    @property
+    def timelines(self):
+        """Return sub-directories that contain timeline-data"""
+        if "timelines" not in self.__postprocInfo:
+            self.__scanPostproc()
+        return self.__postprocInfo["timelines"]
+
+    @property
+    def distributions(self):
+        """Return sub-directories that contain distribution-data"""
+        if "distributions" not in self.__postprocInfo:
+            self.__scanPostproc()
+        return self.__postprocInfo["distributions"]
+
+    @property
+    def samples(self):
+        """Return sub-directories that contain sample-data"""
+        if "samples" not in self.__postprocInfo:
+            self.__scanPostproc()
+        return self.__postprocInfo["samples"]
+
+    @property
+    def surfaces(self):
+        if "surfaces" not in self.__postprocInfo:
+            self.__scanPostproc()
+        return self.__postprocInfo["surfaces"]
+
+    def getParametersFromFile(self):
+        """Get Parameters from the file created by PrepareCase"""
+        fName=path.join(self.name,"PyFoamPrepareCaseParameters")
+        if path.exists(fName):
+            return ParsedParameterFile(fName,noHeader=True).content
+        else:
+            return {}
 
 class ChemkinSolutionDirectory(SolutionDirectory):
     """Solution directory with a directory for the Chemkin-files"""

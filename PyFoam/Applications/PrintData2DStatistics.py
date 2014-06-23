@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PrintData2DStatistics.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamPrintData2DStatistics
 """
@@ -15,7 +15,10 @@ from PyFoam.ThirdParty.six import print_
 
 class PrintData2DStatistics(PyFoamApplication,
                             CommonPickledDataInput):
-    def __init__(self,args=None,inputApp=None):
+    def __init__(self,
+                 args=None,
+                 inputApp=None,
+                 **kwargs):
         description="""\
 Reads a file with pickled information with statistics about data
 series (as it is usually gnerated by pyFoamTimelinePlot.py and
@@ -29,7 +32,8 @@ pyFoamSamplePlot.py) and prints it in a human-readable form.
                                    nr=0,
                                    changeVersion=False,
                                    interspersed=True,
-                                   inputApp=inputApp)
+                                   inputApp=inputApp,
+                                   **kwargs)
 
     def addOptions(self):
         CommonPickledDataInput.addOptions(self)

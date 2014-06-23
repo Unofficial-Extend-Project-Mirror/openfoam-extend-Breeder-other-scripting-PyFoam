@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/FoamLogAnalyzer.py 8451 2013-09-24T19:03:11.513979Z bgschaid  $
+#  ICE Revision: $Id$
 """Analyze OpenFOAM logs"""
 
 from .TimeLineAnalyzer import TimeLineAnalyzer

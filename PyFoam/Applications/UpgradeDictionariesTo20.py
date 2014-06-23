@@ -1,14 +1,12 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpgradeDictionariesTo20.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamUpgradeDictionariesTo20
 """
 
-import sys,re
 from os import path
 
 from .UpgradeDictionariesTo17 import UpgradeDictionariesTo17,DictionaryUpgradeInfo
 
-from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.Basics.DataStructures import DictProxy,TupleProxy
 from PyFoam.Error import error,warning
 
@@ -270,7 +268,9 @@ class ThermophysicalDataUpgradeInfo(DictionaryUpgradeInfo):
         return content
 
 class UpgradeDictionariesTo20(UpgradeDictionariesTo17):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Examines dictionaries in a case and tries to upgrade them to a form
 that is compatible with OpenFOAM 2.0
@@ -278,7 +278,8 @@ that is compatible with OpenFOAM 2.0
 
         UpgradeDictionariesTo17.__init__(self,
                                          args=args,
-                                         description=description)
+                                         description=description,
+                                         **kwargs)
 
     def addDicts(self):
         UpgradeDictionariesTo17.addDicts(self)

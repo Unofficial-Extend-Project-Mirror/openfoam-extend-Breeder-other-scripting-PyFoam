@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/BasicRunner.py 8425 2013-08-19T17:16:55.092271Z bgschaid  $
+#  ICE Revision: $Id$
 """Run a OpenFOAM command"""
 
 import sys
@@ -11,6 +11,7 @@ from time import time,asctime
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 from PyFoam.ThirdParty.six import print_
+from PyFoam.Basics.DataStructures import makePrimitiveString
 
 if not 'curdir' in dir(path) or not 'sep' in dir(path):
     print_("Warning: Inserting symbols into os.path (Python-Version<2.3)")
@@ -61,7 +62,8 @@ class BasicRunner(object):
                  remark=None,
                  jobId=None,
                  parameters=None,
-                 writeState=True):
+                 writeState=True,
+                 echoCommandLine=None):
         """@param argv: list with the tokens that are the command line
         if not set the standard command line is used
         @param silent: if True no output is sent to stdout
@@ -76,7 +78,9 @@ class BasicRunner(object):
         @param parameters: User defined dictionary with parameters for
                  documentation purposes
         @param jobId: Job ID of the controlling system (Queueing system)
-        @param writeState: Write the state to some files in the case"""
+        @param writeState: Write the state to some files in the case
+        @param echoCommandLine: Prefix that is printed with the command line. If unset nothing is printed
+        """
 
         if sys.version_info < (2,3):
             # Python 2.2 does not have the capabilities for the Server-Thread
@@ -107,6 +111,7 @@ class BasicRunner(object):
             e = sys.exc_info()[1] # compatible with 2.x and 3.x
             error("Solution directory",self.dir,"does not exist. No use running. Problem:",e)
 
+        self.echoCommandLine=echoCommandLine
         self.silent=silent
         self.lam=lam
         self.origArgv=self.argv
@@ -194,8 +199,15 @@ class BasicRunner(object):
             self.data["remark"]="No remark given"
         if jobId:
             self.data["jobId"]=jobId
+        parameterFile=sol.getParametersFromFile()
+        if len(parameterFile):
+            self.data["parameters"]={}
+            for k,v in parameterFile.items():
+                self.data["parameters"][k]=makePrimitiveString(v)
         if parameters:
-            self.data["parameters"]=parameters
+            if "parameters" not in self.data:
+                self.data["parameters"]={}
+            self.data["parameters"].update(parameters)
         self.data["starttime"]=asctime()
 
     def appendTailLine(self,line):
@@ -232,6 +244,9 @@ class BasicRunner(object):
         self.writeTheState("Running")
 
         check=BasicRunnerCheck()
+
+        if self.echoCommandLine:
+            print_(self.echoCommandLine+" "+" ".join(self.argv))
 
         self.run.start()
         interrupted=False

@@ -14,6 +14,7 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 from .CommonPickledDataInput import CommonPickledDataInput
 from .CommonTemplateFormat import CommonTemplateFormat
+from .CommonTemplateBehaviour import CommonTemplateBehaviour
 
 from PyFoam.ThirdParty.six import print_,iteritems
 
@@ -21,8 +22,12 @@ from os import path
 
 class FromTemplate(PyFoamApplication,
                    CommonPickledDataInput,
+                   CommonTemplateBehaviour,
                    CommonTemplateFormat):
-    def __init__(self,args=None,parameters={}):
+    def __init__(self,
+                 args=None,
+                 parameters={},
+                 **kwargs):
         description="""\
 Generates a file from a template file. Usually the name of the
 template file is the name of the file with the extension '.template'
@@ -56,7 +61,8 @@ when called from a script)
                                    nr=0,
                                    changeVersion=False,
                                    interspersed=True,
-                                   exactNr=False)
+                                   exactNr=False,
+                                   **kwargs)
 
     def addOptions(self):
         CommonPickledDataInput.addOptions(self)
@@ -109,20 +115,7 @@ when called from a script)
 
         CommonTemplateFormat.addOptions(self)
 
-        behaviour=OptionGroup(self.parser,
-                              "Behaviour",
-                              "The behaviour of the parser")
-        self.parser.add_option_group(behaviour)
-        behaviour.add_option("--tolerant-expression-evaluation",
-                             action="store_true",
-                             default=False,
-                             dest="tolerantRender",
-                             help="Instead of failing when encountering a problem during an evaluation a string with the error message is inserted into the output")
-        behaviour.add_option("--allow-exec-instead-of-assignment",
-                             action="store_true",
-                             default=False,
-                             dest="allowExec",
-                             help="Allows exectution of non-assignments in $$-lines. This is potentially unsafe as it allows 'import' and calling of external programs")
+        CommonTemplateBehaviour.addOptions(self)
 
     def run(self):
         if self.opts.template=="stdin" and self.opts.pickledFileRead=="stdin":

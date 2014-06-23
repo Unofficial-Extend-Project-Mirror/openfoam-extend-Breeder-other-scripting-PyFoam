@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Runner.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamRunner
 """
@@ -42,7 +42,9 @@ class Runner(PyFoamApplication,
              CommonStandardOutput,
              CommonVCSCommit,
              CommonPrePostHooks):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Runs an OpenFoam solver.  Needs the usual 3 arguments (<solver>
 <directory> <case>) and passes them on (plus additional arguments).
@@ -57,7 +59,8 @@ variables
         PyFoamApplication.__init__(self,
                                    exactNr=False,
                                    args=args,
-                                   description=description)
+                                   description=description,
+                                   **kwargs)
 
     def addOptions(self):
         CommonClearCase.addOptions(self)
@@ -126,6 +129,7 @@ variables
                                noLog=self.opts.noLog,
                                remark=self.opts.remark,
                                parameters=self.getRunParameters(),
+                               echoCommandLine=self.opts.echoCommandPrefix,
                                jobId=self.opts.jobId)
 
             run.createPlots(customRegexp=self.lines_,

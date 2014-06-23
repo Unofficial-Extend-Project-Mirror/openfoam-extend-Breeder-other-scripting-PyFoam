@@ -9,7 +9,9 @@ from PyFoam.Basics.RunDatabase import RunDatabase
 from PyFoam.ThirdParty.six import print_
 
 class DumpRunDatabaseToCSV(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Dump the contents of a SQLite database that holds run information to
 a CSV-file
@@ -21,7 +23,8 @@ a CSV-file
                                    interspersed=True,
                                    changeVersion=False,
                                    nr=2,
-                                   exactNr=True)
+                                   exactNr=True,
+                                   **kwargs)
 
     def addOptions(self):
         how=OptionGroup(self.parser,

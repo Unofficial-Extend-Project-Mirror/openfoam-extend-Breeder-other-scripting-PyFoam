@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/SvnInterface.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """A VCS-interface to Mercurial"""
 
 from PyFoam.Error import warning,error,notImplemented

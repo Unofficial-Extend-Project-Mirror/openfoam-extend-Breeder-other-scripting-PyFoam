@@ -14,7 +14,9 @@ from os import path
 from PyFoam.Basics.GeneralVCSInterface import getVCS
 
 class CloneCase(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Clones a case by copying the system, constant and 0-directories
 
@@ -26,7 +28,8 @@ If the case is under VCS then the cloning mechanism of the VCS is used
                                    usage="%prog <source> <destination>",
                                    changeVersion=False,
                                    interspersed=True,
-                                   nr=2)
+                                   nr=2,
+                                   **kwargs)
 
     def addOptions(self):
         what=OptionGroup(self.parser,

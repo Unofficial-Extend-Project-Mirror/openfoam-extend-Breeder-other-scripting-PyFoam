@@ -3,7 +3,6 @@ Application-class that implements pyFoamCaseBuilder.py
 """
 from optparse import OptionGroup
 from os import path
-import os
 import shutil
 
 from .PyFoamApplication import PyFoamApplication
@@ -16,7 +15,9 @@ from PyFoam.ThirdParty.six import print_
 
 class CaseBuilder(PyFoamApplication,
                   CommonCaseBuilder):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Gets a XML-file that describes how to build a case from a case
 template and some parameters
@@ -27,7 +28,8 @@ template and some parameters
                                    usage="%prog <DescriptionFile>",
                                    interspersed=True,
                                    nr=0,
-                                   exactNr=False)
+                                   exactNr=False,
+                                   **kwargs)
 
     def addOptions(self):
         info=OptionGroup(self.parser,

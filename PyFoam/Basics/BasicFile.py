@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/BasicFile.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """Basic file output"""
 
 class BasicFile(object):
@@ -85,6 +85,5 @@ class BasicFile(object):
             self.handle.close()
             self.handle=None
             self.isOpen=False
-
 
 # Should work with Python3 and Python2

@@ -2,7 +2,7 @@
 import unittest
 
 from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator,makeString,FoamFileGeneratorError
-from PyFoam.Basics.DataStructures import DictProxy,TupleProxy,Unparsed,UnparsedList
+from PyFoam.Basics.DataStructures import DictProxy,TupleProxy,Unparsed,UnparsedList,BoolProxy
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,FoamStringParser
 
 from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
@@ -173,6 +173,16 @@ c {
         g=FoamFileGenerator([i for i in range(21)],longListThreshold=None)
         testString="(\n  0"
         self.assertEqual(str(g)[0:len(testString)],testString)
+
+    def testBool(self):
+        g=FoamFileGenerator({'a':True})
+        self.assertEqual(str(g),"a yes;\n")
+        g=FoamFileGenerator({'a':False})
+        self.assertEqual(str(g),"a no;\n")
+        g=FoamFileGenerator({'a':BoolProxy(True)})
+        self.assertEqual(str(g),"a yes;\n")
+        g=FoamFileGenerator({'a':BoolProxy(True,textual="on")})
+        self.assertEqual(str(g),"a yes;\n")
 
 theSuite.addTest(unittest.makeSuite(FoamFileGeneratorTest,"test"))
 
@@ -409,6 +419,10 @@ class MakeStringFunction(unittest.TestCase):
     def testNonunifomLength(self):
         p1=FoamStringParser('test  nonuniform 2(1 2);')
         self.assertEqual(str(p1),"test nonuniform 2\n(\n  1\n  2\n)\n;\n")
+
+    def testNonunifomLengthThree(self):
+        p1=FoamStringParser('test  nonuniform 2(1 2 3);')
+        self.assertEqual(str(p1),"test nonuniform 3\n(\n  1\n  2\n  3\n)\n;\n")
 
     def testNonunifomLengthZero(self):
         p1=FoamStringParser('test  nonuniform 0();')

@@ -10,7 +10,9 @@ from os import path
 from optparse import OptionGroup
 
 class PackCase(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Packs a case into a tar-file copying the system, constant and
 0-directories.  Excludes all .svn-direcotries and all files ending
@@ -22,7 +24,8 @@ with ~. Symbolic links are replaced with the actual files
                                    usage="%prog <case>",
                                    interspersed=True,
                                    changeVersion=False,
-                                   nr=1)
+                                   nr=1,
+                                   **kwargs)
 
     def addOptions(self):
         what=OptionGroup(self.parser,

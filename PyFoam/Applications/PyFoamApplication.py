@@ -1,11 +1,11 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PyFoamApplication.py 8460 2013-09-27T00:06:42.766705Z bgschaid  $
+#  ICE Revision: $Id$
 """Base class for pyFoam-applications
 
 Classes can also be called with a command-line string"""
 
 from optparse import OptionGroup
-from PyFoam.Basics.FoamOptionParser import FoamOptionParser
-from PyFoam.Error import error,warning,FatalErrorPyFoamException,PyFoamException
+from PyFoam.Basics.FoamOptionParser import FoamOptionParser,SubcommandFoamOptionParser
+from PyFoam.Error import error,warning,FatalErrorPyFoamException,PyFoamException,isatty
 from PyFoam.RunDictionary.SolutionDirectory import NoTouchSolutionDirectory
 
 from PyFoam.Basics.TerminalFormatter import TerminalFormatter
@@ -30,11 +30,12 @@ class PyFoamApplicationException(FatalErrorPyFoamException):
      def __str__(self):
           return FatalErrorPyFoamException.__str__(self)+" in Application-class: "+self.app.__class__.__name__
 
+
 def pyFoamExceptionHook(type,value,tb,debugOnSyntaxError=False):
     if hasattr(sys,'ps1'):
         warning("Interactive mode. No debugger")
         sys.__excepthook__(type,value,tb)
-    elif not (sys.stderr.isatty() and sys.stdin.isatty() and sys.stdout.isatty()):
+    elif not (isatty(sys.stderr) and isatty(sys.stdin) and isatty(sys.stdout)):
         warning("Not on a terminal. No debugger")
         sys.__excepthook__(type,value,tb)
     elif issubclass(type,SyntaxError) and not debugOnSyntaxError:
@@ -72,7 +73,9 @@ class PyFoamApplication(object):
                  nr=None,
                  changeVersion=True,
                  exactNr=True,
-                 inputApp=None):
+                 subcommands=None,
+                 inputApp=None,
+                 **kwArgs):
         """
         @param description: description of the command
         @param usage: Usage
@@ -81,12 +84,27 @@ class PyFoamApplication(object):
         @param nr: Number of required arguments
         @param changeVersion: May this application change the version of OF used?
         @param exactNr: Must not have more than the required number of arguments
+        @param subcommands: parse and use subcommands from the command line. Either True or a list with subcommands
         @param inputApp: Application with input data. Used to allow a 'pipe-like' behaviour if the class is used from a Script
         """
-        self.parser=FoamOptionParser(args=args,
-                                     description=description,
-                                     usage=usage,
-                                     interspersed=interspersed)
+        if subcommands:
+             self.subs=True
+             if interspersed:
+                  self.error("Subcommand parser does not work with 'interspersed'")
+             if subcommands==True:
+                  subcommands=[]
+             self.parser=SubcommandFoamOptionParser(args=args,
+                                                    description=description,
+                                                    usage=usage,
+                                                    subcommands=subcommands)
+             nr=None
+             exactNr=False
+        else:
+             self.subs=False
+             self.parser=FoamOptionParser(args=args,
+                                          description=description,
+                                          usage=usage,
+                                          interspersed=interspersed)
 
         self.calledName=sys.argv[0]
         self.calledAsClass=(args!=None)
@@ -109,7 +127,7 @@ class PyFoamApplication(object):
             grp.add_option("--foamVersion",
                            dest="foamVersion",
                            default=None,
-                           help="Change the OpenFOAM-version that is to be used")
+                           help="Change the OpenFOAM-version that is to be used. To get a list of know Foam-versions use the pyFoamVersion.py-utility")
             if "WM_PROJECT_VERSION" in environ:
                 grp.add_option("--currentFoamVersion",
                                dest="foamVersion",
@@ -140,6 +158,23 @@ class PyFoamApplication(object):
                            default=None,
                            action="store_const",
                            help="Forces the value Opt for the WM_COMPILE_OPTION. Only used when --foamVersion is used")
+            grp.add_option("--force-system-compiler",
+                           dest="foamCompiler",
+                           const="system",
+                           default=None,
+                           action="store_const",
+                           help="Force using a 'system' compiler (compiler installed in the system)")
+            grp.add_option("--force-openfoam-compiler",
+                           dest="foamCompiler",
+                           const="OpenFOAM",
+                           default=None,
+                           action="store_const",
+                           help="Force using a 'OpenFOAM' compiler (compiler installed in ThirdParty)")
+            grp.add_option("--force-compiler",
+                           dest="wmCompiler",
+                           default=None,
+                           action="store",
+                           help="Overwrite value for WM_COMPILER (for instance Gcc47 ...)")
 
         grp.add_option("--psyco-accelerated",
                        dest="psyco",
@@ -229,7 +264,11 @@ with these option for commands that generate a lot of output""")
 
         self.addOptions()
         self.parser.parse(nr=nr,exactNr=exactNr)
+        if len(kwArgs)>0:
+            self.parser.processKeywordArguments(kwArgs)
         self.opts=self.parser.getOptions()
+        if self.subs:
+            self.cmdname=self.parser.cmdname
 
         if "WM_PROJECT_VERSION" not in environ:
              warning("$WM_PROJECT_VERSION unset. PyFoam will not be able to determine the OpenFOAM-version and behave strangely")
@@ -429,13 +468,15 @@ with these option for commands that generate a lot of output""")
         Prints an error message and exits
         @param args: Arguments that are to be printed
         """
-        if sys.stdout.isatty():
+        if isatty(sys.stdout):
             print_(format.error, end=' ')
         print_("Error in",self.calledName,":", end=' ')
         for a in args:
             print_(a, end=' ')
-        if sys.stdout.isatty():
+        if isatty(sys.stdout):
             print_(format.reset)
+        else:
+            print_()
         sys.exit(-1)
 
     def warning(self,*args):
@@ -443,13 +484,15 @@ with these option for commands that generate a lot of output""")
         Prints a warning message
         @param args: Arguments that are to be printed
         """
-        if sys.stdout.isatty():
+        if isatty(sys.stdout):
             print_(format.warn, end=' ')
         print_("Warning in",self.calledName,":", end=' ')
         for a in args:
             print_(a, end=' ')
-        if sys.stdout.isatty():
+        if isatty(sys.stdout):
             print_(format.reset)
+        else:
+            print_()
 
     def silent(self,*args):
         """

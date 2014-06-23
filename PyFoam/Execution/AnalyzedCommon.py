@@ -1,8 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/AnalyzedCommon.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """Common stuff for classes that use analyzers"""
 
 from os import path,mkdir
-from shutil import move
+from shutil import move,rmtree
 
 from PyFoam.Basics.PlotTimelinesFactory import createPlotTimelines,createPlotTimelinesDirect
 from PyFoam.Basics.TimeLineCollection import signedMax
@@ -38,8 +38,10 @@ class AnalyzedCommon(object):
         else:
             self.logDir=filename+".analyzed"
 
-        if not path.exists(self.logDir):
-            mkdir(self.logDir)
+        if path.exists(self.logDir):
+            # Clean away
+            rmtree(self.logDir,ignore_errors=True)
+        mkdir(self.logDir)
 
         self.doPickling=doPickling
         if self.doPickling:
@@ -290,6 +292,11 @@ class AnalyzedCommon(object):
                         plotCustom.setTitle(custom.theTitle)
                         plots["custom%04d" % i]=plotCustom
                     else:
+                        if custom.type!="slave":
+                            error("'master' only makes sense if type is 'slave' for",custom.name)
+                        if getattr(custom,"alternateAxis",None):
+                            error("Specify alternate values in 'alternateAxis' of master",
+                                  custom.master,"for",custom.name)
                         slaves.append(custom)
 
             for s in slaves:

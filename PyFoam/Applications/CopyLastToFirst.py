@@ -5,14 +5,15 @@ Application-class that implements pyFoamCopyLastToFirst.py
 from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
-from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
 
 from PyFoam.Error import error
 
 from PyFoam.ThirdParty.six import print_
 
 class CopyLastToFirst(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Copies the contents of the last time-step of the source case to the
 first time-step of the destination case (thus using it as initial
@@ -26,7 +27,8 @@ of this script"""
                                    usage="%prog [options] <source caseDirectory> <destination caseDirectory>",
                                    interspersed=True,
                                    changeVersion=False,
-                                   nr=2)
+                                   nr=2,
+                                   **kwargs)
 
     def addOptions(self):
         self.parser.add_option("--no-overwrite",

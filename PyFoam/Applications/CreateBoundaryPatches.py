@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CreateBoundaryPatches.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamCreateBoundaryPatches.py
 """
@@ -17,7 +17,9 @@ from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.ThirdParty.six import print_
 
 class CreateBoundaryPatches(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Takes a field-file. Looks up the polyMesh/boundary-file of the case
 and adds the corresponding patches to the boundary field setting it to
@@ -30,7 +32,8 @@ zeroGradient for all patches and walls
                                    usage="%prog [options] <fieldfile>",
                                    changeVersion=False,
                                    nr=1,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         self.parser.add_option("--clear-unused",

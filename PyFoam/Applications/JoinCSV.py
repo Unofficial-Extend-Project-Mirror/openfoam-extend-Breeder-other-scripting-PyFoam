@@ -9,7 +9,9 @@ from PyFoam.Basics.SpreadsheetData import SpreadsheetData
 from os import path
 
 class JoinCSV(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Join together two or more CSV-files. Data is resampled to fit the
 timescale of the the first CSV-file
@@ -21,7 +23,8 @@ timescale of the the first CSV-file
                                    interspersed=True,
                                    changeVersion=False,
                                    nr=3,
-                                   exactNr=False)
+                                   exactNr=False,
+                                   **kwargs)
 
     def addOptions(self):
         data=OptionGroup(self.parser,

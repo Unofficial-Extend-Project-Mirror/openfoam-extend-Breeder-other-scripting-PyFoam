@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/ReadDictionary.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamReadDictionary
 """
@@ -12,7 +12,9 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.ThirdParty.six import print_
 
 class ReadDictionary(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Reads a value from a Foam-Dictionary and prints it to the screen.  The
 description of the value is word. If the value is non-atomic (a list
@@ -30,7 +32,8 @@ Example of usage:
                                    usage="%prog [options] <dictfile> <key>",
                                    nr=2,
                                    changeVersion=False,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         self.parser.add_option("--debug",

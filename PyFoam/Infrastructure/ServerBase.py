@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/ServerBase.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """Basis for the XMLRPC-Servers in PyFoam
 
 Based on 15.5 in "Python Cookbook" for faster restarting"""

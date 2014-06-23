@@ -231,7 +231,7 @@ class RunDatabase(object):
         if excel:
             file(True).to_excel(fname)
 
-        if f:
+        if not f is None:
             return f
         else:
             # retry by forcing to numpy

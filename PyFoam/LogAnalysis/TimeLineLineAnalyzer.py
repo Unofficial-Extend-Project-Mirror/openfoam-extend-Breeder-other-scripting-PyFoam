@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/LogAnalysis/TimeLineLineAnalyzer.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """Line analyzer that collects datga in arrays"""
 
 from .GeneralLineAnalyzer import GeneralLineAnalyzer

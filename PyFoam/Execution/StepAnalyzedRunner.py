@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/StepAnalyzedRunner.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """An Analyzed Runner that does something at every time-step"""
 
 from .BasicRunner import BasicRunner
@@ -16,7 +16,8 @@ class StepAnalyzedRunner(StepAnalyzedCommon,BasicRunner):
                  server=False,
                  remark=None,
                  parameters=None,
-                 jobId=None):
+                 jobId=None,
+                 echoCommandLine=None):
         """@param smallestFreq: the smallest intervall of real time (in seconds) that the time change is honored"""
         BasicRunner.__init__(self,
                              argv,
@@ -25,6 +26,7 @@ class StepAnalyzedRunner(StepAnalyzedCommon,BasicRunner):
                              server=server,
                              remark=remark,
                              parameters=parameters,
+                             echoCommandLine=echoCommandLine,
                              jobId=jobId)
         StepAnalyzedCommon.__init__(self,
                                     logname,

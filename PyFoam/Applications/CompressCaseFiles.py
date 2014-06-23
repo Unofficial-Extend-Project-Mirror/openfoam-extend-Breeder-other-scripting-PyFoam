@@ -2,21 +2,16 @@
 Application-class that implements pyFoamCompressCaseFiles.py
 """
 from optparse import OptionGroup
-from os import path,listdir,stat
-import time,datetime
-from stat import ST_MTIME
-import string
+from os import path,listdir
 import subprocess
-import re,sys
+import sys
 from glob import glob
 
 from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
-from PyFoam import configuration
-
-from PyFoam.ThirdParty.six import print_,iteritems,PY3
+from PyFoam.ThirdParty.six import print_,PY3
 
 from PyFoam.Basics.Utilities import humanReadableSize
 
@@ -24,7 +19,9 @@ if PY3:
     long=int
 
 class CompressCaseFiles(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Gets a number of directories. If these are OpenFOAM-cases then it goes through them
 and checks for large uncompressed files and gnuzips them
@@ -36,7 +33,8 @@ and checks for large uncompressed files and gnuzips them
                                    interspersed=True,
                                    changeVersion=False,
                                    nr=1,
-                                   exactNr=False)
+                                   exactNr=False,
+                                   **kwargs)
 
     def addOptions(self):
         compress=OptionGroup(self.parser,

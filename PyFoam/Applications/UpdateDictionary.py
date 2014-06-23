@@ -1,11 +1,10 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/UpdateDictionary.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamUpdateDictionary.py
 """
 
 import sys
 
-import re
 from os import path
 
 from .PyFoamApplication import PyFoamApplication
@@ -31,7 +30,9 @@ f.getConfigFormat("input")
 
 class UpdateDictionary(PyFoamApplication,
                        CommonParserOptions):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Takes two dictionary and modifies the second one after the example of
 the first. If the dictionaries do not have the same name, it looks for
@@ -45,7 +46,8 @@ destination case
                                    usage="%prog [options] <source> <destination-case>",
                                    nr=2,
                                    changeVersion=False,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         self.parser.add_option("--interactive",

@@ -1,7 +1,6 @@
 """Implements a trigger that manipulates the controlDict in
 such a way that every time-step is written to disk"""
 
-import re
 import sys
 
 from os import path

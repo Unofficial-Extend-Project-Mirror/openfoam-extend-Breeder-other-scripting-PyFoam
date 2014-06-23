@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/FoamInformation.py 8438 2013-09-19T16:12:40.138324Z bgschaid  $
+#  ICE Revision: $Id$
 """Getting Information about the Foam-Installation (like the installation directory)"""
 
 from os import environ,path,listdir
@@ -105,8 +105,10 @@ def oldTutorialStructure():
     """
     return foamVersionNumber()<(1,6)
 
-def findInstalledVersions(basedir,valid):
-    versions=set()
+def findInstalledVersions(basedir,valid,forkName="openfoam"):
+    versions={}
+
+    basedir=path.abspath(basedir)
 
     try:
         candidates=listdir(basedir)
@@ -122,74 +124,100 @@ def findInstalledVersions(basedir,valid):
                 dotDir=path.join(dname,".OpenFOAM-"+name)
                 etcDir=path.join(dname,"etc")
                 if path.isdir(etcDir) and path.exists(path.join(etcDir,"bashrc")):
-                    versions.add(m.groups(1)[0])
+                    versions[(forkName,m.groups(1)[0])]=dname
                 elif path.isdir(dotDir) and path.exists(path.join(dotDir,"bashrc")):
-                    versions.add(m.groups(1)[0])
+                    versions[(forkName,m.groups(1)[0])]=dname
 
     return versions
 
-def findBaseDir(newDir):
-    if "WM_PROJECT_INST_DIR" in environ:
-        basedir=environ["WM_PROJECT_INST_DIR"]
+__foamInstallations=None
+
+def findInstallationDir(newVersion):
+    installed=foamInstalledVersions()
+    found=[]
+
+    for fork,version in installed.keys():
+        if newVersion==version:
+            found.append((fork,version))
+        elif newVersion==(fork+"-"+version):
+            found.append((fork,version))
+
+    if len(found)==0:
+        error("Can't find basedir for OpenFOAM-version",newVersion,"in",
+              ", ".join([ a[0]+"-"+a[1] for a in installed.keys() ]))
+    elif len(found)==1:
+        return found[0][0],found[0][1],installed[found[0]]
     else:
-        basedir=path.expanduser(config().get("OpenFOAM","Installation"))
-
-    for bdir in [basedir]+config().getList("OpenFOAM","AdditionalInstallation"):
-        if path.exists(path.join(bdir,"OpenFOAM-"+newDir)):
-            return (bdir,"OpenFOAM-")
-        elif path.exists(path.join(bdir,"openfoam"+newDir)):
-            return (bdir,"openfoam")
-
-    error("Can't find basedir for OpenFOAM-version",newDir)
+        error("Requested version:",newVersion,"Matches found:",
+              ", ".join([ a[0]+"-"+a[1] for a in found ]))
 
 def foamInstalledVersions():
     """@return: A list with the installed versions of OpenFOAM"""
+    global __foamInstallations
 
-    versions=set()
+    if __foamInstallations:
+        return __foamInstallations
 
-    valid=re.compile("^OpenFOAM-([0-9]\.[0-9].*)$")
-    valid2=re.compile("^openfoam([0-9]+)$")
+    __foamInstallations={}
 
-    if "WM_PROJECT_INST_DIR" in environ:
-        basedir=environ["WM_PROJECT_INST_DIR"]
-    else:
-        basedir=path.expanduser(config().get("OpenFOAM","Installation"))
+    "^OpenFOAM-([0-9]\.[0-9].*)$","^openfoam([0-9]+)$"
+    forks=config().getList("OpenFOAM","Forks")
 
-    if not path.exists(basedir) or not path.isdir(basedir):
-        warning("Basedir",basedir,"does not exist or is not a directory")
-        return []
+    for fork in forks:
+        currentFork=foamFork()
 
-    for bdir in [basedir]+config().getList("OpenFOAM","AdditionalInstallation"):
-        for val in [valid,valid2]:
-            versions |= findInstalledVersions(bdir,val)
+        if "WM_PROJECT_INST_DIR" in environ and currentFork==fork:
+            basedir=environ["WM_PROJECT_INST_DIR"]
+        else:
+            basedir=path.expanduser(config().get("OpenFOAM","Installation-"+fork))
 
-    return list(versions)
+        if not path.exists(basedir) or not path.isdir(basedir):
+            warning("Basedir",basedir,"for fork",fork,"does not exist or is not a directory")
+            continue
 
-def changeFoamVersion(new,force64=False,force32=False,compileOption=None):
+        for bdir in [basedir]+config().getList("OpenFOAM","AdditionalInstallation"):
+            for val in [re.compile(s) for s in config().getList("OpenFOAM","DirPatterns-"+fork)]:
+                __foamInstallations.update(findInstalledVersions(bdir,val,fork))
+
+    return __foamInstallations
+
+def foamFork():
+    """The currently used fork of OpenFOAM/Foam"""
+    try:
+        return environ["WM_FORK"]
+    except KeyError:
+        return "openfoam"
+
+def changeFoamVersion(new,
+                      force64=False,
+                      force32=False,
+                      compileOption=None,
+                      foamCompiler=None,
+                      wmCompiler=None):
     """Changes the used FoamVersion. Only valid during the runtime of
     the interpreter (the script or the Python session)
     @param new: The new Version
     @param force64: Forces the 64-bit-version to be chosen
     @param force32: Forces the 32-bit-version to be chosen
-    @param compileOption: Forces Debug or Opt"""
+    @param compileOption: Forces Debug or Opt
+    @param wmCompiler: Force new value for WM_COMPILER
+    @param foamCompiler: Force system or OpenFOAM-Compiler"""
 
-    if not new in foamInstalledVersions():
-        error("Version",new,"is not an installed version: ",foamInstalledVersions())
+    newFork,newVersion,basedir=findInstallationDir(new)
 
     old=None
+    oldFork=foamFork()
     if "WM_PROJECT_VERSION" in environ:
         old=environ["WM_PROJECT_VERSION"]
-        if new==old:
-            warning(new,"is already being used")
+        if newVersion==old and newFork==oldFork:
+            warning(old+"-"+foamFork(),"is already being used")
     else:
         warning("No OpenFOAM-Version installed")
 
-    basedir,prefix=findBaseDir(new)
-
-    if path.exists(path.join(basedir,prefix+new,"etc")):
-        script=path.join(basedir,prefix+new,"etc","bashrc")
+    if path.exists(path.join(basedir,"etc")):
+        script=path.join(basedir,"etc","bashrc")
     else:
-        script=path.join(basedir,prefix+new,".OpenFOAM-"+new,"bashrc")
+        script=path.join(basedir,".OpenFOAM-"+new,"bashrc")
 
     forceArchOption=None
     if force64:
@@ -199,20 +227,28 @@ def changeFoamVersion(new,force64=False,force32=False,compileOption=None):
 
     injectVariables(script,
                     forceArchOption=forceArchOption,
-                    compileOption=compileOption)
+                    compileOption=compileOption,
+                    foamCompiler=foamCompiler,
+                    wmCompiler=wmCompiler)
 
     try:
-        if old==environ["WM_PROJECT_VERSION"]:
-            warning("Problem while changing to version",new,"old version still used:",environ["WM_PROJECT_VERSION"])
+        if old==environ["WM_PROJECT_VERSION"] and oldFork==foamFork():
+            warning("Problem while changing to version",new,"old version still used:",foamFork()+"-"+environ["WM_PROJECT_VERSION"])
     except KeyError:
         pass
 
-def injectVariables(script,forceArchOption=None,compileOption=None):
+def injectVariables(script,
+                    forceArchOption=None,
+                    compileOption=None,
+                    foamCompiler=None,
+                    wmCompiler=None):
     """Executes a script in a subshell and changes the current
     environment with the enivironment after the execution
     @param script: the script that is executed
     @param forceArchOption: To which architecture Option should be forced
-    @param compileOption: to which value the WM_COMPILE_OPTION should be forced"""
+    @param compileOption: to which value the WM_COMPILE_OPTION should be forced
+    @param wmCompiler: Force new value for WM_COMPILER
+    @param foamCompiler: Force system or OpenFOAM-Compiler"""
 
     # Certan bashrc-s fail if these are set
     for v in ["FOAM_INST_DIR",
@@ -248,6 +284,12 @@ def injectVariables(script,forceArchOption=None,compileOption=None):
         if compileOption!=None:
             cmd+="export WM_COMPILE_OPTION="+compileOption+"; "
             postCmd+=" WM_COMPILE_OPTION="+compileOption
+        if foamCompiler!=None:
+            cmd+="export foamCompiler="+foamCompiler+"; "
+            postCmd+=" foamCompiler="+foamCompiler
+        if wmCompiler!=None:
+            cmd+="export WM_COMPILER="+wmCompiler+"; "
+            postCmd+=" WM_COMPILER="+wmCompiler
         cmd+=". "+script+postCmd+'; echo "Starting The Dump Of Variables"; export'
     except KeyError:
         # Instead of 'KeyError as name'. This is compatible with 2.4-3.2

@@ -14,7 +14,9 @@ from PyFoam.ThirdParty.six import print_
 import sys
 
 class AddCaseDataToDatabase(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Adds the content of a number of pickledData-files to a sqlite database
 """
@@ -25,7 +27,8 @@ Adds the content of a number of pickledData-files to a sqlite database
                                    interspersed=True,
                                    changeVersion=False,
                                    nr=2,
-                                   exactNr=False)
+                                   exactNr=False,
+                                   **kwargs)
 
     def addOptions(self):
         how=OptionGroup(self.parser,

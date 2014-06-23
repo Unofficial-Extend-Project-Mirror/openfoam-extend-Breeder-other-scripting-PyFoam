@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/RunAtMultipleTimes.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamRunAtMultipleTimes
 """
@@ -16,9 +16,6 @@ from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 from PyFoam.ThirdParty.six import print_
 
-import sys
-from os import path
-
 class RunAtMultipleTimes(PyFoamApplication,
                          CommonReportUsage,
                          CommonReportRunnerData,
@@ -26,7 +23,9 @@ class RunAtMultipleTimes(PyFoamApplication,
                          CommonParallel,
                          CommonServer,
                          CommonStandardOutput):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Runs a OpenFoam Utility that only supports being run for one or all
 times to be run at multiple selected times
@@ -34,7 +33,8 @@ times to be run at multiple selected times
         PyFoamApplication.__init__(self,
                                    exactNr=False,
                                    args=args,
-                                   description=description)
+                                   description=description,
+                                   **kwargs)
 
     def addOptions(self):
         CommonStandardOutput.addOptions(self,logname="RunAtMultipleTimes")
@@ -65,6 +65,7 @@ times to be run at multiple selected times
                               compressLog=self.opts.compress,
                               logTail=self.opts.logTail,
                               noLog=self.opts.noLog,
+                              echoCommandLine=self.opts.echoCommandPrefix,
                               lam=lam)
 
             self.addToCaseLog(cName,"Starting for t=%s",t)

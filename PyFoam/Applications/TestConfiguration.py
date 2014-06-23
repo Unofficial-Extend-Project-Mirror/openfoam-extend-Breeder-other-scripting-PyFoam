@@ -1,9 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/TestConfiguration.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamTestConfiguration.py
 """
 
-import sys,re
 from PyFoam.ThirdParty.six.moves import configparser as ConfigParser
 from PyFoam.ThirdParty.six import print_
 
@@ -16,7 +15,9 @@ from PyFoam import configuration as config
 
 class TestConfiguration(PyFoamApplication,
                      CommonParserOptions):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Tests what value a section/option pair gives for a specific
 OpenFOAM-version
@@ -29,7 +30,8 @@ Used to find configuration problems
                                    description=description,
                                    usage="%prog [options] <section> <option>",
                                    nr=2,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         CommonParserOptions.addOptions(self)

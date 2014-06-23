@@ -22,7 +22,9 @@ def addRegexpExclude(option,opt,value,parser,*args,**kwargs):
     ruleList.append((False,value))
 
 class InitVCSCase(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 This utility initializes a Version Control System (VCS) in an
 OpenFOAM-directory. Certain parts of PyFoam take advantages of this.
@@ -36,7 +38,8 @@ Currenty only Mercurial is supported as a VCS-backend
                                    interspersed=True,
                                    changeVersion=False,
                                    nr=1,
-                                   exactNr=False)
+                                   exactNr=False,
+                                   **kwargs)
 
     def addOptions(self):
         what=OptionGroup(self.parser,

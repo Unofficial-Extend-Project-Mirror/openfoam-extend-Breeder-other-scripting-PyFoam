@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/STLFile.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """Read a STL file and do simple manipulations"""
 
 from os import path
@@ -15,12 +15,24 @@ class STLFile(object):
         """
 	@param fName: filename of the STL-file. If None then an empty file is created
 	"""
-        self._filename=fName
-
-        if fName!=None:
-            self._contents=[l.strip() for l in open(fName).readlines()]
+        self._fp=None
+        if hasattr(fName, 'read'):
+            # seems to be a filehandle
+            self._fp=fName
+            if hasattr(fName,'name'):
+                self._filename=fName.name
+            else:
+                self._filename="<filehandle>"
         else:
-            self._contents=[]
+            self._filename=fName
+
+        if self._fp==None:
+            if fName!=None:
+                self._contents=[l.strip() for l in open(fName).readlines()]
+            else:
+                self._contents=[]
+        else:
+            self._contents=[l.strip() for l in self._fp.readlines()]
 
         self.resetInfo()
 
@@ -38,6 +50,69 @@ class STLFile(object):
     def expectedToken(self,l,token,i):
         if l.strip().find(token)!=0:
             error("'%s' expected in line %d of %s" % (token,i+1,self.filename()))
+
+    def erasePatches(self,patchNames):
+        """Erase the patches in the list"""
+        processed=[]
+
+        keep=True
+        currentName=None
+
+        for l in self._contents:
+            nextState=keep
+            parts=l.split()
+            if len(parts)>0:
+                if parts[0]=="endsolid":
+                    nextState=True
+                    if currentName!=parts[1]:
+                        error("Patch name",parts[1],"Expected",currentName)
+                    currentName=None
+                elif parts[0]=="solid":
+                    currentName=parts[1]
+                    if currentName in patchNames:
+                        keep=False
+                        nextState=False
+            if keep:
+                processed.append(l)
+            keep=nextState
+
+        self._contents=processed
+
+    def mergePatches(self,patchNames,targetPatchName):
+        """Merge the patches in the list and put them into a new patch"""
+
+        processed=[]
+        saved=[]
+
+        keep=True
+        currentName=None
+
+        for l in self._contents:
+            nextState=keep
+            parts=l.split()
+            if len(parts)>0:
+                if parts[0]=="endsolid":
+                    nextState=True
+                    if currentName!=parts[1]:
+                        error("Patch name",parts[1],"Expected",currentName)
+                    currentName=None
+                elif parts[0]=="solid":
+                    currentName=parts[1]
+                    if currentName in patchNames:
+                        keep=False
+                        nextState=False
+            if keep:
+                processed.append(l)
+            elif len(parts)>0:
+                if parts[0] not in ["solid","endsolid"]:
+                    saved.append(l)
+            keep=nextState
+
+        self._contents=processed
+
+        self._contents.append("solid "+targetPatchName)
+        self._contents+=saved
+        self._contents.append("endsolid "+targetPatchName)
 
     def patchInfo(self):
         """Get info about the patches. A list of dictionaries with the relevant information"""
@@ -97,7 +172,11 @@ class STLFile(object):
 
     def writeTo(self,fName):
         """Write to a file"""
-        f=open(fName,"w")
+        if hasattr(fName, 'write'):
+            f=fName
+        else:
+            f=open(fName,"w")
+
         f.write("\n".join(self._contents))
 
     def __iter__(self):
@@ -113,7 +192,7 @@ class STLFile(object):
         nr=1
 
         for l in other:
-            if l.strip().find("solid")==0:
+            if l.strip().find("solid")==0 or l.strip().find("endsolid")==0:
                 parts=l.split()
                 if len(parts)==1:
                     l=parts[0]+" "+fName
@@ -121,7 +200,8 @@ class STLFile(object):
                         l+="_%04d" % nr
                 else:
                     l=parts[0]+" %s:%s" %(fName," ".join(parts[1:]))
-                nr+=1
+                if parts[0]=="solid":
+                    nr+=1
 
             self._contents.append(l)
 

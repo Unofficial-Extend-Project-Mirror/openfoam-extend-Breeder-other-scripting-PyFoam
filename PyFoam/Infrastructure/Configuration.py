@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Infrastructure/Configuration.py 8435 2013-09-17T12:50:28.576631Z bgschaid  $
+#  ICE Revision: $Id$
 """Reads configuration-files that define defaults for various PyFoam-Settings
 
 Also hardcodes defaults for the settings"""
@@ -37,8 +37,12 @@ _defaults={
     "server" : "INFO",
     },
     "OpenFOAM": {
-    "Installation" : "~/OpenFOAM",
-    "AdditionalInstallation" : "~/OpenFOAM",
+    "Forks" : 'openfoam,extend',
+    "DirPatterns-openfoam" : '"^OpenFOAM-([0-9]\.[0-9].*)$","^openfoam([0-9]+)$"',
+    "DirPatterns-extend" : '"^foam-extend-([0-9]\.[0-9].*)$"',
+    "Installation-openfoam" : "~/OpenFOAM",
+    "Installation-extend" : "~/foam",
+    "AdditionalInstallation-openfoam" : '"~/OpenFOAM"',
     "Version" : "1.5",
     },
     "MPI": {
@@ -58,6 +62,7 @@ _defaults={
     "path":"/opt/openmpi/bin",
     "ldpath":"/opt/openmpi/lib",
     "doAutoReconstruct":"True",
+    "useMachineFile":"True",
     },
     "Debug": {
 #    "ParallelExecution":"True",
@@ -132,6 +137,11 @@ Full command: |-commandLine-|""",
     },
     "Cloning" : {
         "addItem":"[]",
+        "noForceSymlink":"[]",
+    },
+    "PrepareCase" : {
+        "MeshCreateScript":"meshCreate.sh",
+        "CaseSetupScript":"caseSetup.sh",
     },
     }
 
@@ -251,18 +261,25 @@ class Configuration(configparser.ConfigParser):
 
         return result
 
-    def getList(self,section,option,default="",splitchar=","):
+    def getList(self,section,option,default="",splitchar=",",stripQuotes=True):
         """Get a list of strings (in the original they are separated by commas)
         @param section: the section
         @param option: the option
         @param default: if set and the option is not found, then this value is used
-        @param splitchar: the character by which the values are separated"""
+        @param splitchar: the character by which the values are separated
+        @param stripQuotes: remove quotes if present"""
 
         val=self.get(section,option,default=default)
         if val=="":
             return []
         else:
-            return val.split(splitchar)
+            result=[]
+            for v in val.split(splitchar):
+                if v[0]=='"' and v[-1]=='"':
+                    result.append(v[1:-1])
+                else:
+                    result.append(v)
+            return result
 
     def getboolean(self,section,option,default=None):
         """Overrides the original implementation from ConfigParser

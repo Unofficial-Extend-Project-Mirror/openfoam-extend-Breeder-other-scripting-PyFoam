@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/BuildHelper.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamBuildHelper
 """
@@ -7,7 +7,6 @@ from .PyFoamApplication import PyFoamApplication
 from PyFoam.Basics.GeneralVCSInterface import whichVCS,getVCS
 from PyFoam.Error import FatalErrorPyFoamException
 
-from subprocess import call
 from optparse import OptionGroup
 from os import environ,path
 from platform import uname
@@ -18,7 +17,9 @@ from PyFoam.ThirdParty.six import print_
 import sys
 
 class BuildHelper(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 This application helps with updating a
 project and the projects it depends on. A phase (or a desired output)
@@ -37,7 +38,8 @@ other projects that are injected between these two
                                    args=args,
                                    usage="%prog [options] <directories> [arguments]",
                                    description=description,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         projects=OptionGroup(self.parser,

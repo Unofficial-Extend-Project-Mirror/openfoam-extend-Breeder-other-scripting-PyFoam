@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/GeneralPlotTimelines.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """Plots a collection of timelines. General superclass for te other implementations"""
 
 from PyFoam.Basics.CustomPlotInfo import readCustomPlotInfo,CustomPlotInfo
@@ -66,6 +66,15 @@ class GeneralPlotTimelines(object):
         if registry==None:
             registry=allPlots()
         self.nr=registry.add(self)
+
+    def testAlternate(self,name):
+        if name in self.alternate:
+            return True
+        if name.find("_slave")>0:
+            for a in self.alternate:
+                if name[:name.find("_slave")]==a:
+                    return True
+        return False
 
     def getNames(self):
         """Get the names of the data items"""

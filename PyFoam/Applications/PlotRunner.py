@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/PlotRunner.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Class that implements pyFoamPlotRunner
 """
@@ -8,8 +8,6 @@ from .PyFoamApplication import PyFoamApplication
 from PyFoam.Execution.GnuplotRunner import GnuplotRunner
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
-
-from PyFoam.Error import warning
 
 from .CommonStandardOutput import CommonStandardOutput
 from .CommonPlotLines import CommonPlotLines
@@ -25,8 +23,6 @@ from .CommonLibFunctionTrigger import CommonLibFunctionTrigger
 from .CommonServer import CommonServer
 from .CommonVCSCommit import CommonVCSCommit
 
-from os import path
-
 class PlotRunner(PyFoamApplication,
                  CommonPlotOptions,
                  CommonPlotLines,
@@ -41,7 +37,9 @@ class PlotRunner(PyFoamApplication,
                  CommonRestart,
                  CommonStandardOutput,
                  CommonVCSCommit):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Runs an OpenFoam solver needs the usual 3 arguments (<solver>
 <directory> <case>) and passes them on (plus additional arguments).
@@ -57,7 +55,8 @@ read and the regular expressions in it are displayed
         PyFoamApplication.__init__(self,
                                    exactNr=False,
                                    args=args,
-                                   description=description)
+                                   description=description,
+                                   **kwargs)
 
     def addOptions(self):
         CommonClearCase.addOptions(self)
@@ -131,6 +130,7 @@ read and the regular expressions in it are displayed
                           singleFile=self.opts.singleDataFilesOnly,
                           remark=self.opts.remark,
                           parameters=self.getRunParameters(),
+                          echoCommandLine=self.opts.echoCommandPrefix,
                           jobId=self.opts.jobId)
 
         self.addSafeTrigger(run,sol,steady=self.opts.steady)

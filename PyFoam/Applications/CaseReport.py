@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CaseReport.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamCasedReport.py
 """
 
-import sys,string
+import sys
 from optparse import OptionGroup
 
 from fnmatch import fnmatch
@@ -18,15 +18,15 @@ from PyFoam.Basics.DataStructures import DictProxy,Field
 
 from PyFoam.Error import error,warning
 
-from PyFoam.ThirdParty.six import print_,iteritems
+from PyFoam.ThirdParty.six import print_,iteritems,string_types
 
 from math import log10,ceil
 from os import path
 
-import sys
-
 class CaseReport(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Produces human-readable reports about a case. Attention: the amount of
 information in the reports is limited. The truth is always in the
@@ -43,7 +43,8 @@ respectivly
                                    usage="%prog [options] <casedir>",
                                    nr=1,
                                    changeVersion=False,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         report=OptionGroup(self.parser,
@@ -166,6 +167,12 @@ respectivly
                           dest="treatBinaryAsASCII",
                           help="Try to treat binary dictionaries as ASCII anyway")
 
+        internal.add_option("--no-treat-boundary-binary-as-ascii",
+                          action="store_false",
+                          default=True,
+                          dest="boundaryTreatBinaryAsASCII",
+                          help="If 'boundary'-files are written as binary read them as such (default assumes that these files are ASCII whatever the header says)")
+
         select.add_option("--patches",
                           action="append",
                           default=None,
@@ -197,18 +204,28 @@ respectivly
                                help="Reports the size of the parallel decomposition")
 
     def run(self):
-        if self.opts.file:
-            sys.stdout=open(self.opts.file,"w")
+        oldStdout=None
 
-        if self.opts.allRegions:
-            sol=SolutionDirectory(self.parser.getArgs()[0],
-                                  archive=None,
-                                  parallel=self.opts.parallel,
-                                  paraviewLink=False)
-            for r in sol.getRegions():
-                self.doRegion(r)
-        else:
-            self.doRegion(self.opts.region)
+        try:
+            if self.opts.file:
+                oldStdout=sys.stdout
+                if isinstance(self.opts.file,string_types):
+                    sys.stdout=open(self.opts.file,"w")
+                else:
+                    sys.stdout=self.opts.file
+
+            if self.opts.allRegions:
+                sol=SolutionDirectory(self.parser.getArgs()[0],
+                                      archive=None,
+                                      parallel=self.opts.parallel,
+                                      paraviewLink=False)
+                for r in sol.getRegions():
+                    self.doRegion(r)
+            else:
+                self.doRegion(self.opts.region)
+        finally:
+            if oldStdout:
+                sys.stdout=oldStdout
 
     def doRegion(self,theRegion):
         ReST=RestructuredTextHelper(defaultHeading=self.opts.headingLevel)
@@ -265,7 +282,7 @@ respectivly
             boundary=BoundaryDict(sol.name,
                                   region=theRegion,
                                   time=self.opts.time,
-                                  treatBinaryAsASCII=self.opts.treatBinaryAsASCII,
+                                  treatBinaryAsASCII=self.opts.boundaryTreatBinaryAsASCII,
                                   processor=defaultProc)
 
             boundMaxLen=0
@@ -407,12 +424,12 @@ respectivly
                             nFaces= ParsedBoundaryDict(sol.boundaryDict(processor=p,
                                                                         region=theRegion,
                                                                         time=self.opts.time),
-                                                       treatBinaryAsASCII=self.opts.treatBinaryAsASCII
+                                                       treatBinaryAsASCII=self.opts.boundaryTreatBinaryAsASCII
                                                        )[b]["nFaces"]
                         except IOError:
                             nFaces= ParsedBoundaryDict(sol.boundaryDict(processor=p,
                                                                         region=theRegion),
-                                                       treatBinaryAsASCII=self.opts.treatBinaryAsASCII
+                                                       treatBinaryAsASCII=self.opts.boundaryTreatBinaryAsASCII
                                                        )[b]["nFaces"]
                         except KeyError:
                             nFaces=0
@@ -565,12 +582,12 @@ respectivly
                         bound=ParsedBoundaryDict(sol.boundaryDict(processor=p,
                                                                   region=theRegion,
                                                                   time=self.opts.time)
-                                                 ,treatBinaryAsASCII=self.opts.treatBinaryAsASCII)
+                                                 ,treatBinaryAsASCII=self.opts.boundaryTreatBinaryAsASCII)
                     except IOError:
                         bound=ParsedBoundaryDict(sol.boundaryDict(processor=p,
-                                                                  treatBinaryAsASCII=self.opts.treatBinaryAsASCII,
+                                                                  treatBinaryAsASCII=self.opts.boundaryTreatBinaryAsASCII,
                                                                   region=theRegion)
-                                                 ,treatBinaryAsASCII=self.opts.treatBinaryAsASCII)
+                                                 ,treatBinaryAsASCII=self.opts.boundaryTreatBinaryAsASCII)
 
                     for j in range(sol.nrProcs()):
                         name="procBoundary%dto%d" %(j,i)
@@ -605,7 +622,10 @@ respectivly
                 info={}
                 if type(raw) in [dict,DictProxy]:
                     # fvSolution format in 1.7
-                    info["solver"]=raw["solver"]
+                    try:
+                        info["solver"]=raw["solver"]
+                    except KeyError:
+                        info["solver"]="<none>"
                     solverData=raw
                 else:
                     info["solver"]=raw[0]
@@ -642,13 +662,22 @@ respectivly
             fvSol=ParsedParameterFile(path.join(sol.systemDir(),"fvSolution"),
                                       treatBinaryAsASCII=self.opts.treatBinaryAsASCII)
             if "relaxationFactors" in fvSol:
+                relax=fvSol["relaxationFactors"]
                 tab=ReST.table()
                 tab[0]=["Name","Factor"]
                 tab.addLine(head=True)
                 nr=0
-                for n,f in iteritems(fvSol["relaxationFactors"]):
-                    nr+=1
-                    tab[nr]=[n,f]
+                if "fields" in relax or "equations" in relax:
+                    # New syntax
+                    for k in ["fields","equations"]:
+                        if k in relax:
+                            for n,f in iteritems(relax[k]):
+                                nr+=1
+                                tab[nr]=[k+": "+n,f]
+                else:
+                    for n,f in iteritems(relax):
+                        nr+=1
+                        tab[nr]=[n,f]
                 print_(tab)
             else:
                 print_("No relaxation factors defined for this case")

@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Execution/AnalyzedRunner.py 8219 2012-09-25T21:49:18.793247Z bgschaid  $
+#  ICE Revision: $Id$
 """Command is run and output is analyzed"""
 
 from PyFoam.Execution.BasicRunner import BasicRunner
@@ -22,7 +22,8 @@ class AnalyzedRunner(StepAnalyzedCommon,BasicRunner):
                  remark=None,
                  parameters=None,
                  jobId=None,
-                 smallestFreq=60.):
+                 smallestFreq=60.,
+                 echoCommandLine=None):
         """ @param analyzer: the analyzer for the output
         argv, silent, logname, server, lam, noLog - see BasicRunner"""
         BasicRunner.__init__(self,argv,silent,logname,
@@ -34,6 +35,7 @@ class AnalyzedRunner(StepAnalyzedCommon,BasicRunner):
                              logTail=logTail,
                              remark=remark,
                              parameters=parameters,
+                             echoCommandLine=echoCommandLine,
                              jobId=jobId)
         StepAnalyzedCommon.__init__(self,
                                     logname,

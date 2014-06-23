@@ -1,17 +1,13 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SteadyRunner.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamSteadyRunner
 """
-
-from os import path
 
 from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.Execution.ConvergenceRunner import ConvergenceRunner
 from PyFoam.LogAnalysis.BoundingLogAnalyzer import BoundingLogAnalyzer
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
-
-from PyFoam.Error import warning
 
 from .CommonParallel import CommonParallel
 from .CommonRestart import CommonRestart
@@ -37,7 +33,9 @@ class SteadyRunner(PyFoamApplication,
                    CommonRestart,
                    CommonStandardOutput,
                    CommonVCSCommit):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Runs an OpenFoam steady solver.  Needs the usual 3 arguments (<solver>
 <directory> <case>) and passes them on (plus additional arguments)
@@ -54,7 +52,8 @@ stopped and the last simulation state is written to disk
         CommonPlotLines.__init__(self)
         PyFoamApplication.__init__(self,
                                    args=args,
-                                   description=description)
+                                   description=description,
+                                   **kwargs)
 
     def addOptions(self):
         CommonClearCase.addOptions(self)
@@ -100,6 +99,7 @@ stopped and the last simulation state is written to disk
                               noLog=self.opts.noLog,
                               remark=self.opts.remark,
                               parameters=self.getRunParameters(),
+                              echoCommandLine=self.opts.echoCommandPrefix,
                               jobId=self.opts.jobId)
 
         run.createPlots(customRegexp=self.lines_,

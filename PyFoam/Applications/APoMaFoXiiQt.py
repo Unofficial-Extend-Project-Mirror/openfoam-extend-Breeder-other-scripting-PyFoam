@@ -1,10 +1,7 @@
 """
 Application-class that implements pyFoamAPoMaFoX.py (A Poor Man's FoamX)
 """
-from optparse import OptionGroup
 from os import path
-import os
-import shutil
 import sys
 
 from PyFoam.Applications.PyFoamApplication import PyFoamApplication

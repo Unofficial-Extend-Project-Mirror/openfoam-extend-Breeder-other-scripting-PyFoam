@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/Utilities.py 8435 2013-09-17T12:50:28.576631Z bgschaid  $
+#  ICE Revision: $Id$
 """ Utility functions
 
 Can be used via a class or as functions"""
@@ -32,13 +32,18 @@ class Utilities(object):
     def __init__(self):
         pass
 
-    def execute(self,cmd,debug=False):
-        """Execute the command cmd
+    def execute(self,cmd,debug=False,workdir=None,echo=None):
+        """Execute the command cmd. If specified change the working directory
 
         Currently no error-handling is done
         @return: A list with all the output-lines of the execution"""
         if debug:
             print_(cmd)
+
+        oldDir=None
+        if workdir:
+            oldDir=os.getcwd()
+            os.chdir(workdir)
 
         if sys.version_info<(2,6):
             raus,rein = popen4(cmd)
@@ -46,11 +51,21 @@ class Utilities(object):
             p = Popen(cmd, shell=True,
                       stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
             (rein,raus)=(p.stdin,p.stdout)
-        tmp=raus.readlines()
+        if echo!=None:
+            tmp=[]
+            while p.poll()==None:
+                l=raus.readline()
+                print_(echo,l,end="")
+                tmp.append(l)
+        else:
+            tmp=raus.readlines()
         # line=raus.readline()
         # while line!="":
         #     print line
         #     line=raus.readline()
+
+        if oldDir:
+            os.chdir(oldDir)
 
         return tmp
 
@@ -59,22 +74,33 @@ class Utilities(object):
         if path.exists(f):
             removeFile(f)
 
-    def rmtree(self,path,ignore_errors=False):
+    def rmtree(self,dst,ignore_errors=False):
         """Encapsulates the shutil rmtree and provides an alternative for
         old Python-version"""
         try:
-            shutil.rmtree(path,ignore_errors=ignore_errors)
+            if path.isdir(dst):
+                shutil.rmtree(dst,ignore_errors=ignore_errors)
+            else:
+                os.remove(dst)
         except NameError:
-            self.execute("rm -rf "+path)
+            self.execute("rm -rf "+dst)
 
     def copytree(self,src,dst,
-                 symlinks=False):
+                 symlinks=False,force=False):
         """Encapsulates the shutil copytree and provides an alternative for
         old Python-version"""
+        if force and path.exists(dst):
+            if path.isdir(dst):
+                self.rmtree(dst)
+            else:
+                os.remove(dst)
         try:
             if path.isdir(dst):
                 dst=path.join(dst,path.basename(path.abspath(src)))
-            if path.isdir(src):
+
+            if path.islink(src) and symlinks:
+                os.symlink(path.realpath(src),dst)
+            elif path.isdir(src):
                 shutil.copytree(src,dst,
                                 symlinks=symlinks)
             else:
@@ -189,9 +215,9 @@ def which(prog):
     """Calls the method of the same name from the Utilites class"""
     return Utilities().which(prog)
 
-def execute(cmd,debug=False):
+def execute(cmd,debug=False,workdir=None,echo=None):
     """Calls the method of the same name from the Utilites class"""
-    return Utilities().execute(cmd,debug)
+    return Utilities().execute(cmd,debug,workdir,echo)
 
 def writeDictionaryHeader(f):
     """Calls the method of the same name from the Utilites class"""
@@ -205,9 +231,9 @@ def rmtree(path,ignore_errors=False):
     """Calls the method of the same name from the Utilites class"""
     return Utilities().rmtree(path,ignore_errors=ignore_errors)
 
-def copytree(src,dest,symlinks=False):
+def copytree(src,dest,symlinks=False,force=False):
     """Calls the method of the same name from the Utilites class"""
-    return Utilities().copytree(src,dest,symlinks=symlinks)
+    return Utilities().copytree(src,dest,symlinks=symlinks,force=force)
 
 def remove(f):
     """Calls the method of the same name from the Utilites class"""

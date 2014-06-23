@@ -1,9 +1,8 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/CompareDictionary.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamCompareDictionary.py
 """
 
-import re
 from os import path
 
 import sys
@@ -30,7 +29,9 @@ f.getConfigFormat("error",shortName="name")
 
 class CompareDictionary(PyFoamApplication,
                         CommonParserOptions):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Takes two dictionary and compares them semantically (by looking at the
 structure, not the textual representation. If the dictionaries do not
@@ -46,7 +47,8 @@ equivalents to the other files are searched there.
                                    usage="%prog [options] <source> <destination-case>",
                                    nr=2,
                                    exactNr=False,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         self.parser.add_option("--not-equal",

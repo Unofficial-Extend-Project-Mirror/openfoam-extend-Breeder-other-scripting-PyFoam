@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/Benchmark.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Class that implements pyFoamBenchmark
 """
@@ -7,7 +7,7 @@ from .PyFoamApplication import PyFoamApplication
 
 from fnmatch import fnmatch
 
-import sys,string
+import string
 
 from PyFoam.ThirdParty.six.moves import configparser as ConfigParser
 
@@ -28,11 +28,19 @@ from PyFoam.FoamInformation import oldAppConvention as oldApp
 from PyFoam.ThirdParty.six import print_
 
 class Benchmark(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Runs a set of benchmarks specified in a config files
         """
-        PyFoamApplication.__init__(self,args=args,description=description,usage="%prog [options] <specification>",interspersed=True,nr=1)
+        PyFoamApplication.__init__(self,
+                                   args=args,
+                                   description=description,
+                                   usage="%prog [options] <specification>",
+                                   interspersed=True,
+                                   nr=1,
+                                   **kwargs)
 
     def addOptions(self):
         self.parser.add_option("--nameAddition",

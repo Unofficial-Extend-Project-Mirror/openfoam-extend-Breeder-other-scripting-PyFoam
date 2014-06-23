@@ -1,9 +1,9 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/EchoDictionary.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamEchoDictionary
 """
 
-import sys,re
+import sys
 
 from .PyFoamApplication import PyFoamApplication
 
@@ -11,13 +11,13 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 from .CommonParserOptions import CommonParserOptions
 
-from PyFoam.Error import PyFoamException
-
 from PyFoam.ThirdParty.six import print_
 
 class EchoDictionary(PyFoamApplication,
                      CommonParserOptions):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Reads a Foam-Dictionary and prints it to the screen. Mainly for
 reformatting unformated dictionaries and debugging the parser
@@ -29,7 +29,8 @@ reformatting unformated dictionaries and debugging the parser
                                    usage="%prog [options] <dictfile>",
                                    nr=1,
                                    changeVersion=False,
-                                   interspersed=True)
+                                   interspersed=True,
+                                   **kwargs)
 
     def addOptions(self):
         CommonParserOptions.addOptions(self)

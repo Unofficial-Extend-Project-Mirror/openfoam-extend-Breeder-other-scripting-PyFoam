@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Basics/MatplotlibTimelines.py 8415 2013-07-26T11:32:37.193675Z bgschaid  $
+#  ICE Revision: $Id$
 """Plots a collection of timelines"""
 
 from PyFoam.Error import warning,error
@@ -89,7 +89,7 @@ class MatplotlibTimelines(GeneralPlotTimelines):
         @param title: the title under which this will be displayed"""
 
         a=self.axis1
-        if name in self.alternate:
+        if self.testAlternate(name):
             a=self.axis2
         data=self.data.getValues(name)
         tm=times

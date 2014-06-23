@@ -12,13 +12,14 @@ Author:
 from .PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from os import path
-import sys
 import re
 
 from PyFoam.ThirdParty.six import print_
 
 class ModifyGGIBoundary(PyFoamApplication):
-    def __init__(self,args=None):
+    def __init__(self,
+                 args=None,
+                 **kwargs):
         description="""\
 Modify GGI boundary condition parameters
 """
@@ -28,7 +29,8 @@ Modify GGI boundary condition parameters
                                    usage="%prog <caseDirectory> ggiPatchName",
                                    interspersed=True,
                                    changeVersion=False,
-                                   nr=2)
+                                   nr=2,
+                                   **kwargs)
 
     def addOptions(self):
         self.parser.add_option("--shadowName",

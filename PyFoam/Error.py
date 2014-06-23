@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Error.py 8465 2013-09-30T18:03:29.575015Z bgschaid  $
+#  ICE Revision: $Id$
 """Standardized Error Messages"""
 
 import traceback
@@ -22,13 +22,20 @@ def getLine(up=0):
              pass
          return ('', 0, '', None)
 
+def isatty(s):
+     """Workaround for outputstreams that don't implement isatty
+     (specifically vtkPythonStdStreamCaptureHelper)
+     """
+     try:
+          return s.isatty
+     except AttributeError:
+          return False
+
 def __common(format,standard,*text):
     """Common function for errors and Warnings"""
     info=getLine(up=2)
-    try:
-         isTerm=sys.stderr.isatty()
-    except AttributeError:
-              isTerm=True
+
+    isTerm=isatty(sys.stderr)
 
     if format and isTerm:
          print_(format, end=' ', file=sys.stderr)

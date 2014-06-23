@@ -548,18 +548,20 @@ class SpreadsheetData(object):
                  "tMin": x[0],
                  "tMax": x[-1]}
 
-    def getData(self):
-        """Return a dictionary of the data in the DataFrame format of pandas"""
+    def getData(self,reindex=True):
+        """Return a dictionary of the data in the DataFrame format of pandas
+        @param: drop duplicate times (setting it to False might break certain Pandas-operations)"""
         try:
-            import pandas
+            from PyFoam.Wrappers.Pandas import PyFoamDataFrame
         except ImportError:
             warning("No pandas-library installed. Returning None")
             return None
 
-        return pandas.DataFrame(self.getSeries())
+        return PyFoamDataFrame(self.getSeries(reindex=reindex))
 
-    def getSeries(self):
-        """Return a dictionary of the data-columns in the Series format of pandas"""
+    def getSeries(self,reindex=True):
+        """Return a dictionary of the data-columns in the Series format of pandas
+        @param: drop duplicate times (setting it to False might break certain Pandas-operations)"""
         try:
             import pandas
         except ImportError:
@@ -567,11 +569,18 @@ class SpreadsheetData(object):
             return None
         data={}
 
+        if reindex:
+            realindex=numpy.unique(self.data[self.time])
+
         for n in self.names():
             if n!=self.time:
                 data[n]=pandas.Series(self.data[n],
                                       index=self.data[self.time],
                                       name=n)
+                if reindex:
+                    if len(data[n])!=len(realindex):
+                        data[n].axes[0].is_unique=True
+                        data[n]=data[n].reindex_axis(realindex)
 
         return data
 
