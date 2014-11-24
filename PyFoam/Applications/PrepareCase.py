@@ -11,6 +11,8 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,WritePa
 from PyFoam.Basics.TemplateFile import TemplateFile
 from PyFoam.Execution.BasicRunner import BasicRunner
 
+from PyFoam.FoamInformation import foamFork,foamVersion
+
 from .CommonTemplateFormat import CommonTemplateFormat
 from .CommonTemplateBehaviour import CommonTemplateBehaviour
 
@@ -18,7 +20,8 @@ from PyFoam.ThirdParty.six import print_,iteritems
 
 from PyFoam import configuration
 
-from os import path,listdir
+from os import path,listdir,mkdir
+from shutil import copymode,copy
 
 class PrepareCase(PyFoamApplication,
                   CommonTemplateBehaviour,
@@ -28,34 +31,61 @@ class PrepareCase(PyFoamApplication,
 
     def __init__(self,
                  args=None,
+                 exactNr=True,
+                 interspersed=True,
+                 usage="%prog <caseDirectory>",
+                 examples=None,
+                 nr=1,
+                 description=None,
                  **kwargs):
         self.defaultMeshCreate=configuration().get("PrepareCase","MeshCreateScript")
         self.defaultCaseSetup=configuration().get("PrepareCase","CaseSetupScript")
 
-        description="""\
+        description2="""\
 Prepares a case for running. This is intended to be the replacement for
 boiler-plate scripts. The steps done are
-1. Clear old data from the case (including processor directories)
-2. if a folder 0.org is present remove the 0 folder too
-3. go through all folders and for every found file with the extension .template
+
+  1. Clear old data from the case (including processor directories)
+
+  2. if a folder 0.org is present remove the 0 folder too
+
+  3. go through all folders and for every found file with the extension .template
 do template expansion using the pyratemp-engine (automatically create variables
 casePath and caseName)
-4. create a mesh (either by using a script or if a blockMeshDict is present by
+
+  4. create a mesh (either by using a script or if a blockMeshDict is present by
 running blockMesh. If none of these is present assume that there is a valid mesh
 present)
-5. copy every foo.org that is found to to foo (recursively if directory)
-6. do template-expansion for every file with the extension .postTemplate
-7. execute another preparation script
+
+  5. copy every foo.org that is found to to foo (recursively if directory)
+
+  6. do template-expansion for every file with the extension .postTemplate
+
+  7. execute another preparation script
 
 The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are used by other utilities
 """
+        examples2="""\
+%prog . --paramter-file=parameters.base
+
+  Prepare the current case with the parameters list in parameters.base
+
+%prog . --paramter-file=parameters.base --values-string="{'visco':1e-3}"
+
+  Changes the value of the parameter visco
+
+%prog . --no-mesh-create
+
+  Skip the mesh creation phase
+"""
         PyFoamApplication.__init__(self,
                                    args=args,
-                                   description=description,
-                                   usage="%prog <caseDirectory>",
-                                   interspersed=True,
-                                   nr=1,
-                                   exactNr=True,
+                                   description=description if description else description2,
+                                   usage=usage,
+                                   examples=examples if examples else examples2,
+                                   interspersed=interspersed,
+                                   nr=nr,
+                                   exactNr=exactNr,
                                    **kwargs)
 
     def addOptions(self):
@@ -68,9 +98,9 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           dest="fatal",
                         default=False,
                         help="If non-cases are specified the program should abort")
-        output.add_option("--silent",
+        output.add_option("--no-complain",
                           action="store_true",
-                          dest="silent",
+                          dest="noComplain",
                           default=False,
                           help="Don't complain about non-case-files")
         output.add_option("--quiet",
@@ -130,6 +160,11 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           default=["0"],
                           dest="cleanDirectories",
                           help="Directory from which templates are cleaned (to avoid problems with decomposePar). Can be specified more than once. Default: %default")
+        special.add_option("--overload-directory",
+                           action="append",
+                           default=[],
+                           dest="overloadDirs",
+                           help="Before starting the preparation process load files from this directory recursively into this case. Caution: existing files will be overwritten. Can be specified more than once. Directories are then copied in the specified order")
 
         CommonTemplateFormat.addOptions(self)
         CommonTemplateBehaviour.addOptions(self)
@@ -271,13 +306,44 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                                tolerantRender=self.opts.tolerantRender,
                                allowExec=self.opts.allowExec,
                                expressionDelimiter=self.opts.expressionDelimiter,
+                               assignmentDebug=self.pickAssignmentDebug(fName),
                                assignmentLineStart=self.opts.assignmentLineStart)
                 t.writeToFile(fName,values)
+                copymode(fName+templateExt,fName)
+
+    def overloadDir(self,here,there):
+        """Copy files recursively. Overwrite local copies if they exist"""
+        for f in listdir(there):
+            fSrc=path.join(there,f)
+            fDst=path.join(here,f)
+            if path.isdir(fSrc):
+                if not path.exists(fDst):
+                    if self.opts.verbose:
+                        print_("Creating directory",fDst)
+                    mkdir(fDst)
+                elif not path.isdir(fDst):
+                    self.error("Destination path",fDst,"exists, but is no directory")
+                self.overloadDir(fDst,fSrc)
+            elif path.isfile(fSrc):
+                if path.exists(fDst):
+                    if not path.isfile(fDst):
+                        self.error("Desination",fDst,"exists but is no file")
+                if self.opts.verbose:
+                    print_("Copying",fSrc,"to",fDst)
+                copy(fSrc,fDst)
+            else:
+                self.errr("Source file",fSrc,"is neither file nor directory")
+
     def run(self):
         cName=self.parser.getArgs()[0]
-        if self.checkCase(cName,fatal=self.opts.fatal,verbose=not self.opts.silent):
+        if self.checkCase(cName,fatal=self.opts.fatal,verbose=not self.opts.noComplain):
             self.addLocalConfig(cName)
         sol=SolutionDirectory(cName,archive=None,paraviewLink=False)
+        self.prepare(sol,cName=cName)
+
+    def prepare(self,sol,cName=None,overrideParameters=None):
+        if cName==None:
+            cName=sol.name
 
         if self.opts.onlyVariables:
             self.opts.verbose=True
@@ -285,6 +351,8 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
         vals={}
         vals["casePath"]='"'+path.abspath(cName)+'"'
         vals["caseName"]='"'+path.basename(path.abspath(cName))+'"'
+        vals["foamVersion"]=foamVersion()
+        vals["foamFork"]=foamFork()
 
         if self.opts.verbose:
             print_("Looking for template values",cName)
@@ -298,6 +366,9 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
             if self.opts.verbose:
                 print_("Updating values",v)
             vals.update(eval(v))
+
+        if overrideParameters:
+            vals.update(overrideParameters)
 
         if self.opts.verbose and len(vals)>0:
             print_("\nUsed values\n")
@@ -333,9 +404,15 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 print_("Writing parameters to",fName)
             with WriteParameterFile(fName,noHeader=True) as w:
                 w.content.update(vals,toString=True)
+                w["foamVersion"]=vals["foamVersion"]
                 w.writeFile()
 
         self.addToCaseLog(cName)
+
+        for over in self.opts.overloadDirs:
+            if self.opts.verbose:
+                print_("Overloading files from",over)
+                self.overloadDir(sol.name,over)
 
         zeroOrig=path.join(sol.name,"0.org")
 

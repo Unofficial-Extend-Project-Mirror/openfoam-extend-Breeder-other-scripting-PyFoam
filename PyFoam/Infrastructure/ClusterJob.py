@@ -11,6 +11,8 @@ from PyFoam.Applications.Runner import Runner
 from PyFoam.Applications.SteadyRunner import SteadyRunner
 from PyFoam.Applications.CloneCase import CloneCase
 from PyFoam.Applications.FromTemplate import FromTemplate
+from PyFoam.Applications.PrepareCase import PrepareCase
+from PyFoam.Applications.RunParameterVariation import RunParameterVariation
 
 from PyFoam.FoamInformation import changeFoamVersion
 from PyFoam.FoamInformation import foamVersion as getFoamVersion
@@ -498,6 +500,7 @@ class SolverJob(ClusterJob):
                  multiRegion=False,
                  parameters={},
                  progress=False,
+                 solverArgs=[],
                  solverProgress=False,
                  solverNoLog=False,
                  solverLogCompress=False,
@@ -532,13 +535,121 @@ class SolverJob(ClusterJob):
         self.solverProgress=solverProgress
         self.solverNoLog=solverNoLog
         self.solverLogCompress=solverLogCompress
+        self.solverArgs=solverArgs
 
     def run(self,parameters):
         self.foamRun(self.solver,
                      steady=self.steady,
+                     foamArgs=self.solverArgs,
                      multiRegion=False,
                      progress=self.solverProgress,
                      noLog=self.solverNoLog,
                      compress=self.solverLogCompress)
+
+class PrepareCaseJob(SolverJob):
+    """Assumes that the case is prepared to be set up with
+    =pyFoamPrepareCase.py= and automatically sets it up with
+    this. Needs one parameterfile to be specified and then a list of
+    name/value-pairs
+    """
+
+    def __init__(self,basename,solver,
+                 parameterfile,
+                 arguments,
+                 parameters={},
+                 **kwargs):
+        self.__parameterfile=parameterfile
+
+        para={}
+        if type(arguments)==list:
+            if len(arguments) % 2 !=0:
+                error("Length of arguments should be an even number. Is",len(arguments),
+                      ":",arguments)
+
+            # make all string arguments that could be boolean boolean values
+            from PyFoam.Basics.DataStructures import BoolProxy
+
+            for k,v in dict(zip(arguments[::2],arguments[1::2])).items():
+                try:
+                    try:
+                        para[k]=BoolProxy(textual=v).val
+                    except TypeError:
+                        para[k]=int(v)
+                except ValueError:
+                    try:
+                        para[k]=float(v)
+                    except ValueError:
+                        try:
+                            para[k]=eval(v)
+                        except (SyntaxError,NameError):
+                            para[k]="'"+v+"'"
+        elif type(arguments)==dict:
+            para=arguments
+        else:
+            error("Type of arguments is ",type(arguments),"Should be 'dict' or 'list':",arguments)
+
+        self.__parametervalues=para
+
+        parameters.update(self.__parametervalues)
+
+        print_("Parameter file",self.__parameterfile)
+        print_("Parameter values",self.__parametervalues)
+
+        SolverJob.__init__(self,basename,solver,
+                           parameters=parameters,
+                           **kwargs)
+
+    def setup(self,parameters):
+        parameterString=",".join(["'%s':%s"%i for i in parameters.items()])
+        PrepareCase(args=[self.casedir(),
+                          "--allow-exec",
+                          "--parameter="+path.join(self.casedir(),self.__parameterfile),
+                          "--values={"+parameterString+"}"])
+
+class VariationCaseJob(SolverJob):
+    """Assumes that the case is prepared to be set up with
+    =pyFoamRunParameterVariation.py= and automatically sets it up with
+    this. Needs one parameterfile and a variation-file
+    """
+
+    def __init__(self,basename,
+                 parameterfile,
+                 variationfile,
+                 template=None,
+                 **kwargs):
+        self.__parameterfile=parameterfile
+        self.__variationfile=variationfile
+
+        print_("Parameter file",self.__parameterfile)
+        print_("Variation file",self.__variationfile)
+
+        data=RunParameterVariation(args=[template,
+                                         path.join(template,self.__variationfile),
+                                         "--parameter="+path.join(template,self.__parameterfile),
+                                         "--list-variations"]).getData()
+        taskID=int(os.environ["SGE_TASK_ID"])-1
+        if "solver" in data["variations"][taskID]:
+            solver=data["variations"][taskID]["solver"]
+        else:
+            solver=data["fixed"]["solver"]
+
+        SolverJob.__init__(self,basename,solver,
+                           arrayJob=True,
+                           template=template,
+                           **kwargs)
+
+    def taskParameters(self,id):
+        return {}
+
+    def setup(self,parameters):
+        RunParameterVariation(args=[self.casedir(),
+                                    path.join(self.casedir(),self.__variationfile),
+                                    "--allow-exec",
+                                    "--parameter-file="+path.join(self.casedir(),self.__parameterfile),
+                                    "--single-variation=%d" % (self.taskID-1),
+                                    "--no-execute-solver",
+                                    "--auto-create-database",
+                                    "--no-database-write",
+                                    "--inplace-execution"])
 
 # Should work with Python3 and Python2

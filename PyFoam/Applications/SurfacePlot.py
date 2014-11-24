@@ -131,7 +131,7 @@ makes pictures from them
                           dest="colorMap",
                           default="blueToRed",
                           choices=colorMaps,
-                          help="Sets the used colormap to one of "+string.join(colorMaps,", ")+" with the default: %default")
+                          help="Sets the used colormap to one of "+", ".join(colorMaps)+" with the default: %default")
 
         data.add_option("--info",
                         action="store_true",
@@ -315,7 +315,7 @@ makes pictures from them
         boundRange=[(xMax-xMin,0),
                     (yMax-yMin,1),
                     (zMax-zMin,2)]
-        boundRange.sort(lambda a,b:cmp(b[0],a[0]))
+        boundRange.sort(key=lambda a:a[0],reverse=True)
         focalPoint=[0.5*(xMax+xMin),0.5*(yMax+yMin),0.5*(zMax+zMin)]
         position=copy(focalPoint)
         if self.opts.autoCamera:

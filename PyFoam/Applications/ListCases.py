@@ -8,7 +8,6 @@ from PyFoam.ThirdParty.six.moves import cPickle as pickle
 from PyFoam.ThirdParty.six import string_types
 import time,datetime
 from stat import ST_MTIME
-import subprocess
 import re
 import os
 
@@ -21,7 +20,7 @@ from PyFoam import configuration
 
 from PyFoam.ThirdParty.six import print_,iteritems,PY3
 
-from PyFoam.Basics.Utilities import humanReadableSize
+from PyFoam.Basics.Utilities import humanReadableSize,diskUsage
 
 if PY3:
     long=int
@@ -213,21 +212,7 @@ etc). Currently doesn't honor the parallel data
                             data["name"]=cName
                             data["diskusage"]=-1
                             if self.opts.diskusage:
-                                try:
-                                    data["diskusage"]=int(
-                                        subprocess.Popen(
-                                            ["du","-sb",cName],
-                                            stdout=subprocess.PIPE,
-                                            stderr=open(os.devnull,"w")
-                                        ).communicate()[0].split()[0])
-                                except IndexError:
-                                    # assume that this du does not support -b
-                                    data["diskusage"]=int(
-                                        subprocess.Popen(
-                                            ["du","-sk",cName],
-                                            stdout=subprocess.PIPE
-                                        ).communicate()[0].split()[0])*1024
-
+                                data["diskusage"]=diskUsage(cName)
                                 totalDiskusage+=data["diskusage"]
                             if self.opts.parallel:
                                 for f in listdir(cName):
@@ -258,10 +243,16 @@ etc). Currently doesn't honor the parallel data
                                     ctrlDict=ParsedParameterFile(sol.controlDict(),doMacroExpansion=True)
                                 except PyFoamParserError:
                                     # Didn't work with Macro expansion. Let's try without
-                                    ctrlDict=ParsedParameterFile(sol.controlDict())
-
-                                data["startTime"]=ctrlDict["startTime"]
-                                data["endTime"]=ctrlDict["endTime"]
+                                    try:
+                                        ctrlDict=ParsedParameterFile(sol.controlDict())
+                                    except PyFoamParserError:
+                                        ctrlDict=None
+                                if ctrlDict:
+                                    data["startTime"]=ctrlDict["startTime"]
+                                    data["endTime"]=ctrlDict["endTime"]
+                                else:
+                                    data["startTime"]=None
+                                    data["endTime"]=None
 
                             if self.opts.estimateEndTime:
                                 data["endTimeEstimate"]=None
@@ -277,6 +268,7 @@ etc). Currently doesn't honor the parallel data
 
                             if len(customData)>0:
                                 fn=None
+                                pickleFile=None
                                 if useSolverInData:
                                     data["solver"]="none found"
                                     # try to find the oldest pickled file
@@ -291,7 +283,7 @@ etc). Currently doesn't honor the parallel data
                                                 solverName=None
                                             if path.exists(pName):
                                                 dirAndTime.append((path.getmtime(pName),solverName,pName))
-                                        dirAndTime.sort(cmp=lambda x,y:cmp(x[0],y[0]))
+                                        dirAndTime.sort(key=lambda x:x[0])
                                         if len(dirAndTime)>0:
                                             data["solver"]=dirAndTime[-1][1]
                                             pickleFile=dirAndTime[-1][2]
@@ -300,7 +292,6 @@ etc). Currently doesn't honor the parallel data
                                     solverName=data["solver"]
                                 else:
                                     solverName=self.opts.solverNameForCustom
-                                    pickleFile=None
 
                                 if pickleFile:
                                     fn=pickleFile
@@ -334,10 +325,8 @@ etc). Currently doesn't honor the parallel data
         if self.opts.progress:
             print_("Sorting data")
 
-        if self.opts.reverse:
-            cData.sort(lambda x,y:cmp(y[self.opts.sort],x[self.opts.sort]))
-        else:
-            cData.sort(lambda x,y:cmp(x[self.opts.sort],y[self.opts.sort]))
+
+        cData.sort(key=lambda x:x[self.opts.sort],reverse=self.opts.reverse)
 
         if len(cData)==0:
             print_("No cases found")

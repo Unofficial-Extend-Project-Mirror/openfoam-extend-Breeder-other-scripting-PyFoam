@@ -15,6 +15,8 @@ from shutil import rmtree,copytree,copyfile
 
 from PyFoam.ThirdParty.six import PY3,u
 
+from PyFoam.Error import error
+
 if PY3:
     long=int
 

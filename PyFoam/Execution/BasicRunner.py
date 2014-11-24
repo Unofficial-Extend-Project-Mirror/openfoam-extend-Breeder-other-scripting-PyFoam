@@ -11,6 +11,7 @@ from time import time,asctime
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 from PyFoam.ThirdParty.six import print_
+import PyFoam.Basics.FoamFileGenerator
 from PyFoam.Basics.DataStructures import makePrimitiveString
 
 if not 'curdir' in dir(path) or not 'sep' in dir(path):

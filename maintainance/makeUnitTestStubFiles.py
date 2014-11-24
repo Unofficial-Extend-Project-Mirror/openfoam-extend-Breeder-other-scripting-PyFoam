@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 from os import path,listdir,mkdir
+from PyFoam.ThirdParty.six import print_
 
 libStart="PyFoam"
 testStart="unittests"
@@ -13,13 +14,13 @@ def checkForTests(lib,test):
 
     libDir=path.join(*lib)
     testDir=path.join(*test)
-    print "Comparing",libDir,"to",testDir
+    print_("Comparing",libDir,"to",testDir)
     for f in listdir(libDir):
         if f[:2]=="__" or f in ["ThirdParty","Paraview"]:
             continue
         if path.isdir(path.join(libDir,f)):
             if not path.exists(path.join(testDir,f)):
-                print "Subdirectory",f,"missing in",testDir
+                print_("Subdirectory",f,"missing in",testDir)
                 mkdir(path.join(testDir,f))
                 dMissing+=1
             checkForTests(lib+[f],test+[f])
@@ -27,7 +28,7 @@ def checkForTests(lib,test):
             newFile=path.join(testDir,f)
             className=f[:-3]
             if not path.exists(newFile):
-                print "Creating",newFile
+                print_("Creating",newFile)
                 open(newFile,"w").write("""import unittest
 
 from %s import %s
@@ -38,6 +39,6 @@ theSuite=unittest.TestSuite()
 
 checkForTests([libStart],[testStart])
 
-print
-print dMissing,"directories missing"
-print fCreated,"files created"
+print_()
+print_(dMissing,"directories missing")
+print_(fCreated,"files created")

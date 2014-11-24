@@ -15,6 +15,10 @@ class PlotLinesRegistry(object):
     def __init__(self):
         self.plots={}
 
+    def clear(self):
+        PlotLinesRegistry.nr=1
+        self.plots={}
+
     def add(self,plot):
         nr=PlotLinesRegistry.nr
         PlotLinesRegistry.nr+=1

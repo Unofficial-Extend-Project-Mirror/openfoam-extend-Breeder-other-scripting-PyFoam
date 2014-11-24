@@ -66,7 +66,7 @@ on that case
                         dest="method",
                         action="store",
                         choices=self.decomposeChoices,
-                        help="The method used for decomposing (Choices: "+string.join(self.decomposeChoices,", ")+") Default: %default")
+                        help="The method used for decomposing (Choices: "+", ".join(self.decomposeChoices)+") Default: %default")
 
         spec.add_option("--n",
                         dest="n",

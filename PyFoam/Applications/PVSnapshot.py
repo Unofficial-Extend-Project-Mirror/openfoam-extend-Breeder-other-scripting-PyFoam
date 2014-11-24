@@ -76,7 +76,7 @@ casename. Additional replacements can be specified
                             type="choice",
                             choices=self.picTypeTable.keys(),
                             default="png",
-                            help="The type of the bitmap-file. Possibilities are "+string.join(self.picTypeTable.keys(),", ")+". Default: %default")
+                            help="The type of the bitmap-file. Possibilities are "+", ".join(self.picTypeTable.keys())+". Default: %default")
         paraview.add_option("--no-progress",
                             dest="progress",
                             action="store_false",
@@ -97,7 +97,7 @@ casename. Additional replacements can be specified
                             type="choice",
                             choices=self.geomTypeTable.keys(),
                             default=None,
-                            help="The type of the geometry-files. Possibilities are "+string.join(self.geomTypeTable.keys(),", ")+". Default: unset. Nothing is written")
+                            help="The type of the geometry-files. Possibilities are "+", ".join(self.geomTypeTable.keys())+". Default: unset. Nothing is written")
         geometry.add_option("--no-picture-with-geometry",
                             dest="pictureWithGeometry",
                             action="store_false",

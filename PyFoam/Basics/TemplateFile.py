@@ -62,6 +62,7 @@ class PyratempPreprocessor(object):
                  expressionDelimiter="$",
                  assignmentLineStart="$$",
                  allowExec=False,
+                 assignmentDebug=None,
                  specials=[]):
         """Create the regexp once for performance reasons
         @param dovarline: look for variable lines that start with $$
@@ -69,6 +70,7 @@ class PyratempPreprocessor(object):
         @param expressionDelimiter: character/string that is used before and after an
         expression. After the expression the reverse of the string is used
         @param assignmentLineStart: character sequence that signals an assignment line
+        @param assignmentDebug: Add a commented line to debug assignments. Prefix used is this parameter
         @param allowExec: allows execution of code. This is potentially unsafe
         @param specials: a list. If any expression starts with one of these values then
         the full expression (including delimiters) is left verbatim in the template"""
@@ -81,10 +83,13 @@ class PyratempPreprocessor(object):
 
         self.expressionDelimiter=re.escape(expressionDelimiter)
         self.expressionDelimiterEnd=re.escape("".join(tmp))
+        self.expressionDelimiterRaw=expressionDelimiter
+        self.expressionDelimiterEndRaw="".join(tmp)
 
         #        print self.expressionDelimiter,self.expressionDelimiterEnd
 
         self.assignmentLineStart=assignmentLineStart
+        self.assignmentDebug=assignmentDebug
 
         self.expr=re.compile("%s[^$!\n]+?%s" % (self.expressionDelimiter,self.expressionDelimiterEnd))
         self.dovarline=dovarline
@@ -124,7 +129,11 @@ class PyratempPreprocessor(object):
                     exprStr=tmp[1].replace("\\","\\\\").replace("\"","\\\"")
                     result+='$!setvar("%s", "%s")!$#!' % (tmp[0].strip(),exprStr.strip())
                     result+="\n"
-            elif self.doexpr:
+                    if self.assignmentDebug and self.doexpr:
+                         l=self.assignmentDebug+" "+tmp[0].strip()+" "+self.expressionDelimiterRaw+tmp[0].strip()+self.expressionDelimiterEndRaw
+                    else:
+                         continue
+            if self.doexpr:
                 nl=""
                 iStart=0
                 for m in self.expr.finditer(l):
@@ -214,7 +223,7 @@ class TemplateFileOldFormat(object):
             symbols[n]="("+str(e)+")"
 
         keys=list(symbols.keys())
-        #        keys.sort(lambda x,y:cmp(len(y),len(x)))
+
         keys.sort(key=len,reverse=True)
 
         input=self.template[:]
@@ -329,6 +338,7 @@ class TemplateFile(TemplateFileOldFormat):
                  encoding="utf-8",
                  expressionDelimiter="|",
                  assignmentLineStart="$$",
+                 assignmentDebug=None,
                  specials=[],
                  renderer_class=None,
                  tolerantRender=False,
@@ -339,11 +349,13 @@ class TemplateFile(TemplateFileOldFormat):
         @param content: Content of the template
         @param expressionDelimiter: character/string that delimits expression strings.
         @param assignmentLineStart: Start of a line that holds an assignment operation
+        @param assignmentDebug: Add a commented line to debug assignments. Prefix used is this parameter
         @param allowExec: allow execution  (and import). This is potentially unsafe
         @param special: list with strings that leave expression untreated"""
 
         self.expressionDelimiter=expressionDelimiter
         self.assignmentLineStart=assignmentLineStart
+        self.assignmentDebug=assignmentDebug
         self.specials=specials
         self.allowExec=allowExec
 
@@ -384,6 +396,7 @@ class TemplateFile(TemplateFileOldFormat):
     def buildTemplate(self,template):
         self.template=PyratempPreprocessor(assignmentLineStart=self.assignmentLineStart,
                                            expressionDelimiter=self.expressionDelimiter,
+                                           assignmentDebug=self.assignmentDebug,
                                            specials=self.specials,
                                            allowExec=self.allowExec
                                        )(template)

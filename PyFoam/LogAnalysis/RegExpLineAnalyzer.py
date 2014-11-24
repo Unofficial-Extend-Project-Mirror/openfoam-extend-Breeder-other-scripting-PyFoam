@@ -53,12 +53,33 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
         self.name=name
         self.idNr=idNr
 
+        self.multiLine=False
+        self.linesToMatch=None
+
         exp=exp.replace("%f%",self.floatRegExp)
 
         self.strExp=exp
-        self.exp=re.compile(self.strExp)
+        reFlags=0
+
+        if self.strExp.find(r"\n")>-1:
+            self.multiLine=True
+            from collections import deque
+
+            self.linesToMatch=deque([],maxlen=1+self.strExp.count(r'\n'))
+            reFlags=re.MULTILINE
+
+        self.exp=re.compile(self.strExp,reFlags)
 
         self.data={}
+
+    def stringToMatch(self,line):
+        """Returns string to match. To be overriden for multi-line expressions"""
+        if self.multiLine:
+            self.linesToMatch.append(line)
+
+            return "\n".join(self.linesToMatch)
+        else:
+            return line
 
     def startAnalysis(self,match):
         self.tm=self.parent.getTime()

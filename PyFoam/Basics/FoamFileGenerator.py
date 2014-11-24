@@ -143,7 +143,7 @@ class FoamFileGenerator(object):
                 if s[-1]=="\n":
                     s=s[:-1]
                 s+=";"+end
-            elif type(v) in [tuple,TupleProxy]:
+            elif isinstance(v,(tuple,TupleProxy)):
                 s+=" "+self.strTuple(v,indent+2)+";"+end
             elif type(v) in [bool,BoolProxy]:
                 if v:

@@ -26,7 +26,7 @@ class SurfaceDirectory(object):
                 except ValueError:
                     pass
 
-        self.times.sort(self.sorttimes)
+        self.times.sort(key=float)
 
     def __iter__(self):
         for t in self.times:
@@ -40,15 +40,6 @@ class SurfaceDirectory(object):
 
     def __contains__(self,time):
         return time in self.times
-
-    def sorttimes(self,x,y):
-        """Sort function for the solution files"""
-        if(float(x)==float(y)):
-            return 0
-        elif float(x)<float(y):
-            return -1
-        else:
-            return 1
 
     def surfaces(self):
         """Returns all the found surfaces"""

@@ -1192,7 +1192,7 @@ class ParsedBoundaryDict(ParsedParameterFile):
         for k,v in iteritems(self.content):
             temp.append((k,v))
 
-        temp.sort(lambda x,y:cmp(int(x[1]["startFace"]),int(y[1]["startFace"])))
+        temp.sort(key=lambda x:int(x[1]["startFace"]))
 
         temp2=[]
 

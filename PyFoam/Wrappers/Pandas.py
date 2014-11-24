@@ -26,7 +26,7 @@ class PyFoamDataFrame(DataFrame):
         #     self.axes[0].is_unique=True
 
     def __allStrings(self,keys=None):
-        if keys==None:
+        if keys is None:
             keys=self.keys()
         return keys.map(lambda k:isinstance(k,string_types)).all()
 
@@ -73,12 +73,13 @@ class PyFoamDataFrame(DataFrame):
                  minOld=min(self.index)
                  maxOld=max(self.index)
 
-                 result=self.reindex(index=ni,copy=False).interpolate(
-                    method=interpolationMethod)
+                 result=self.reindex(index=ni,copy=True).interpolate(
+                    method=interpolationMethod,limit=1)
 
                  if not allowExtrapolate:
-                     result[result.index<minOld]=float("NaN")
-                     result[result.index>maxOld]=float("NaN")
+                     for s in result:
+                         result[s][result.index<minOld]=float("NaN")
+                         result[s][result.index>maxOld]=float("NaN")
              else:
                   # make sure we have values at the current position
 #                  o=o.reindex_axis(ni,axis='index').interpolate(method=interpolationMethod)
@@ -93,7 +94,7 @@ class PyFoamDataFrame(DataFrame):
         for k,v in keys.items():
             result[v]=o[k]
             if interpolate:
-                result[v]=result[v].interpolate(method=interpolationMethod)
+                result[v]=result[v].interpolate(method=interpolationMethod,limit=1)
                 if not allowExtrapolate:
                      result[v][result.index<minOld]=float("NaN")
                      result[v][result.index>maxOld]=float("NaN")
@@ -123,7 +124,7 @@ class PyFoamDataFrame(DataFrame):
         return result
 
     def __integrateInternal(self,columns):
-        if columns==None:
+        if columns is None:
             columns=self.keys()
         integrals={}
         lengths={}

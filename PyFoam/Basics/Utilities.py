@@ -5,7 +5,7 @@ Can be used via a class or as functions"""
 
 import sys
 from PyFoam.ThirdParty.six import print_
-from PyFoam.Error import warning
+from PyFoam.Error import warning,error
 import subprocess
 import os,fnmatch
 
@@ -45,11 +45,23 @@ class Utilities(object):
             oldDir=os.getcwd()
             os.chdir(workdir)
 
+        if type(cmd)==list:
+            fpath=cmd[0]
+        else:
+            fpath=cmd.split(" ")[0]
+
+        # Check if the file is there. Then we assume that this is a script
+        if os.path.exists(fpath):
+            # Script seems to be unexecutable
+            if not os.access(fpath, os.X_OK):
+                error("The script file",fpath,"is not executable")
+
         if sys.version_info<(2,6):
             raus,rein = popen4(cmd)
         else:
             p = Popen(cmd, shell=True,
-                      stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+                      stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True,
+                      universal_newlines=True)
             (rein,raus)=(p.stdin,p.stdout)
         if echo!=None:
             tmp=[]
@@ -167,20 +179,24 @@ FoamFile
 
     def which(self,progname):
         """Get the full path. Return None if not found"""
-        pipe = subprocess.Popen('which '+progname,
-                                shell=True,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
+        try:
+            return shutil.which(progname)
+        except AttributeError:
+            # shutil has no which
+            pipe = subprocess.Popen('which '+progname,
+                                    shell=True,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
 
-        (fullname, errout) = pipe.communicate(input=input)
+            (fullname, errout) = pipe.communicate(input=input)
 
-        stat = pipe.returncode
+            stat = pipe.returncode
 
-        if stat:
-            warning("which can not find a match for",progname)
-            return None
-        else:
-            return fullname
+            if stat:
+                warning("which can not find a match for",progname)
+                return None
+            else:
+                return fullname
 
     def find(self,pattern, path,directoriesToo=True):
         """Find all files whose names match
@@ -206,6 +222,27 @@ FoamFile
                 return "%3.1f%s" % (num, x)
             num /= 1024.0
         return "%3.1f%s" % (num, 'TB')
+
+    def diskUsage(self,fpath):
+        """Calculate the disk space used at the specified path in bytes"""
+        try:
+            return int(
+                subprocess.Popen(
+                    ["du","-sb",fpath],
+                    stdout=subprocess.PIPE,
+                    stderr=open(os.devnull,"w")
+                ).communicate()[0].split()[0])
+        except IndexError:
+            # assume that this du does not support -b
+            return int(
+                subprocess.Popen(
+                    ["du","-sk",fpath],
+                    stdout=subprocess.PIPE
+                ).communicate()[0].split()[0])*1024
+
+def diskUsage(fpath):
+    """Calls the method of the same name from the Utilites class"""
+    return Utilities().diskUsage(fpath)
 
 def humanReadableSize(num):
     """Calls the method of the same name from the Utilites class"""

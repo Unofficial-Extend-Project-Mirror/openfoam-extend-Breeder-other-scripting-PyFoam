@@ -121,10 +121,14 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
         else:
             return [],[]
 
+    def stringToMatch(self,line):
+        """Returns string to match. To be overriden for multi-line expressions"""
+        return line
+
     def doAnalysis(self,line):
         """General analysis method. Derived classes should instead override callbacks"""
 
-        m=self.exp.match(line)
+        m=self.exp.match(self.stringToMatch(line))
         if m!=None:
             self.startAnalysis(m)
 

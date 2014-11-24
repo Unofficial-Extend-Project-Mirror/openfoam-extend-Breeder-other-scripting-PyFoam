@@ -14,7 +14,10 @@ class LineReader(object):
     The line is stripped of whitespaces at the start and the end of
     the line and stored in a variable self.line"""
 
-    def __init__(self):
+    def __init__(self,stripAllSpaces=True):
+        """@param stripAllSpaces: remove all spaces from the line (instead of
+        only those on the left side)"""
+        self.stripAll=stripAllSpaces
         self.line=""
         self.goOn=True
         self.wasInterupted=False
@@ -58,7 +61,10 @@ class LineReader(object):
             status=True
         else:
             status=False
-        self.line=self.line.strip()
+        if self.stripAll:
+            self.line=self.line.strip()
+        else:
+            self.line=self.line.rstrip()
 
         return status
 

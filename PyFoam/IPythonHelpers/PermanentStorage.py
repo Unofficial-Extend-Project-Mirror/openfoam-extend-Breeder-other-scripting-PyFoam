@@ -58,10 +58,10 @@ class PermanentStorage(object):
             display(Javascript(self.__outputHandle+"""
 function ensurePyFoamStorage() {
   if (typeof IPython =="undefined") {
-      alert("Trying to use PyFoam.IPython.PermanentStorage outside of IPython");
+      alert("Trying to use PyFoam.IPythonHelpers.PermanentStorage outside of IPython");
       return;
   } else if(IPython.notebook==undefined) {
-      alert("Trying to use PyFoam.IPython.PermanentStorage outside of an IPython-notebook");
+      alert("Trying to use PyFoam.IPythonHelpers.PermanentStorage outside of an IPython-notebook");
       return;
   } else if(IPython.notebook.metadata.pyFoam==undefined) {
       IPython.notebook.metadata.pyFoam=Object();
@@ -77,7 +77,7 @@ function ensurePyFoamStorage() {
   }
 
   var store=IPython.notebook.metadata.pyFoam.storedData;
-  var expr="from PyFoam.IPython.PermanentStorage import PermanentStorage as perm\\nperm._data={}";
+  var expr="from PyFoam.IPythonHelpers.PermanentStorage import PermanentStorage as perm\\nperm._data={}";
   status="Starting transfer";
   var kernel=IPython.notebook.kernel;
   kernel.execute(expr, callbacks, {silent:false});

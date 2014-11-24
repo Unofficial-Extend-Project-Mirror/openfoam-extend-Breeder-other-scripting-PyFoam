@@ -35,8 +35,10 @@ elif sys.version_info<(2,4):
     print_("\nThis Python version does not support all features needed by PyFoam (get at least 2.4. Recommended is 2.6 or 2.7")
 elif sys.version_info<(2,6):
     print_("This version may not work anymore due to the port of PyFoam to Python 3")
+elif sys.version_info<(3,):
+    print_("Python 2.7 is one development platform for PyFoam (along with Python 3)")
 elif sys.version_info>=(3,):
-    print_("PyFoam is not yet fully functional with Python 3")
+    print_("Python 3 is supported with PyFoam")
 
 try:
     print_("PYTHONPATH:", os.environ["PYTHONPATH"])
@@ -61,7 +63,7 @@ installed=PyFoam.FoamInformation.foamInstalledVersions()
 print_("Version", PyFoam.FoamInformation.foamVersion(),
        "Fork",PyFoam.FoamInformation.foamFork(),
        "of the installed",len(installed),"versions:")
-installedKeys=installed.keys()
+installedKeys=list(installed.keys())
 installedKeys.sort()
 
 formatString="%%%ds : %%s" % max([1+len(a[0])+len(a[1]) for a in installedKeys])
@@ -72,8 +74,8 @@ if PyFoam.FoamInformation.oldAppConvention():
     print_("  This version of OpenFOAM uses the old calling convention")
 print_()
 print_("pyFoam-Version:",PyFoam.versionString())
-# hardcodedVersion=(0,6,4,"development")
-hardcodedVersion=(0,6,3)
+hardcodedVersion=(0,6,4,"development")
+# hardcodedVersion=(0,6,3)
 if PyFoam.version()!=hardcodedVersion:
     print_("ALERT: Reported version",PyFoam.version(),
            "is different from hardcoded version",
@@ -140,6 +142,12 @@ def testLibrary(name,
             print_("\t",textMissing, end=' ')
         print_()
         return False
+    except ValueError:
+        print_("Value Error", end=' ')
+        if textMissing:
+            print_("\t",textMissing, end=' ')
+        print_()
+        return False
 
 print_("\nInstalled libraries:")
 testLibrary("cython","Not used. Maybe will by used later to spped up parts of PyFoam")
@@ -156,12 +164,7 @@ testLibrary("matplotlib","Only Gnuplot-plotting possible")
 testLibrary("mercurial","Not a problem. Used for experimental case handling",
             subModule="config",versionAttribute="util.version()")
 testLibrary("nose","Only needed for running the unit-tests (developers only)")
-numericPresent=testLibrary("Numeric","Not supported anymore. No need to install it")
 numpyPresent=testLibrary("numpy","Plotting and data comparison won't work")
-if not numpyPresent and numericPresent:
-    print_("Numeric no longer supported for plotting. Install numpy")
-if numpyPresent and numericPresent:
-    print_("numpy will be used for plotting (Numeric is no longer supported)")
 if not numpyPresent:
     numpypyPresent=testLibrary("numpypy","This workaround for PyPy does not work","This seems to by PyPy")
     if numpypyPresent:
@@ -181,10 +184,70 @@ testLibrary("vtk","Not a problem. Only used for some utilities",
             versionAttribute="VTK_VERSION")
 testLibrary("xlwt","Not a problem. Only used for exporting pandas-data to Excel-files",
             versionAttribute="__VERSION__")
+testLibrary("xlrd","Not a problem. Only used for importing Excel-files to pandas-data",
+            versionAttribute="__VERSION__")
 
 print_()
 print_("Library locations")
-for l in sorted(libLoc.keys(),lambda a,b:cmp(a.lower(),b.lower())):
+for l in sorted(libLoc.keys(),key=lambda a:a.lower()):
     print_("%-20s : %s" % (l,libLoc[l]))
+
+from os import path
+
+print_()
+print_("Checking additional envirnoment variables")
+
+def checkVar(name,description,additionalCheck):
+    print_("\nChecking for",name,":",description)
+    if name in os.environ:
+        print_(name,"set to",os.environ[name])
+        if not path.isdir(os.environ[name]):
+            print_("MISCONFIGURATION:",os.environ[name],"is no directory")
+        else:
+           additionalCheck(name)
+    else:
+        print_(name,"missing from environment")
+
+def checkPyFoamLocation(name):
+    expectedPath=path.split(path.split(path.abspath(sys.argv[0]))[0])[0]
+    if not path.samefile(expectedPath,os.environ[name]):
+        print_("MISCONFIGURATION: PYFOAM_DIR expected to be",expectedPath)
+
+checkVar("PYFOAM_DIR",
+         "Location of the PyFoam-installation. Not strictly necessary",
+         checkPyFoamLocation)
+
+def checkPyFoamSiteLocation(name):
+    binDir=path.join(os.environ[name],"bin")
+    etcDir=path.join(os.environ[name],"etc")
+    libDir=path.join(os.environ[name],"lib")
+    if not path.isdir(binDir):
+        print_("MISCONFIGURATION: no directory",binDir,"for site-specific scripts")
+    else:
+        found=False
+        for p in os.environ["PATH"].split(":"):
+            if path.isdir(p):
+                if path.samefile(p,binDir):
+                    found=True
+                    break
+        if not found:
+            print_("MISCONFIGURATION:",binDir,"is not in the PATH",os.environ["PATH"])
+        else:
+            print_("Site-specific scripts should be added to",binDir)
+
+    if not path.isdir(etcDir):
+        print_("MISCONFIGURATION: no directory",etcDir,"for site-specific configurations")
+    else:
+        print_("Site-specific configurations can be added to",etcDir)
+
+    if not path.isdir(libDir):
+        print_("MISCONFIGURATION: no directory",libDir,"for site-specific library files")
+    else:
+        print_("Site-specific library files can be added to",libDir,
+               "Do NOT add to PYTHONPATH but import as PyFoam.Site")
+
+checkVar("PYFOAM_SITE_DIR",
+         "Location of non-PyFoam-disctributions script. Set and used by some Foam-distributions",
+         checkPyFoamSiteLocation)
 
 # Should work with Python3 and Python2

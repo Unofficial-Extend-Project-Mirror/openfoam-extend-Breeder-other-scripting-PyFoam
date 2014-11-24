@@ -30,11 +30,15 @@ class TimeLinesRegistry(object):
     def __init__(self):
         self.lines={}
 
+    def clear(self):
+        self.lines={}
+        TimeLinesRegistry.nr=1
+
     def add(self,line,nr=None):
         if nr:
             if nr in self.lines:
-                error("Number",nr,"already existing")
-            TimeLinesRegistry.nr=max(nr+1,TimeLinesRegistry)
+                 error("Number",nr,"already existing")
+            TimeLinesRegistry.nr=max(nr+1,TimeLinesRegistry.nr)
         else:
             nr=TimeLinesRegistry.nr
             TimeLinesRegistry.nr+=1

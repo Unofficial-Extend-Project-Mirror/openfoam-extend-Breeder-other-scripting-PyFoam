@@ -68,6 +68,8 @@ class PyFoamApplication(object):
     def __init__(self,
                  args=None,
                  description=None,
+                 epilog=None,
+                 examples=None,
                  usage=None,
                  interspersed=False,
                  nr=None,
@@ -78,6 +80,8 @@ class PyFoamApplication(object):
                  **kwArgs):
         """
         @param description: description of the command
+        @param epilog: text to be printed after the options-help
+        @param examples: usage examples to be printed after the epilog
         @param usage: Usage
         @param interspersed: Is the command line allowed to be interspersed (options after the arguments)
         @param args: Command line arguments when using the Application as a 'class' from a script
@@ -95,6 +99,8 @@ class PyFoamApplication(object):
                   subcommands=[]
              self.parser=SubcommandFoamOptionParser(args=args,
                                                     description=description,
+                                                    epilog=epilog,
+                                                    examples=examples,
                                                     usage=usage,
                                                     subcommands=subcommands)
              nr=None
@@ -103,6 +109,8 @@ class PyFoamApplication(object):
              self.subs=False
              self.parser=FoamOptionParser(args=args,
                                           description=description,
+                                          epilog=epilog,
+                                          examples=examples,
                                           usage=usage,
                                           interspersed=interspersed)
 
@@ -407,6 +415,12 @@ with these option for commands that generate a lot of output""")
         except KeyError:
             print_("available keys:",list(self.__appData.keys()))
             raise
+
+    def __setitem__(self,key,value):
+        """Set data. Only if key does not exist (data can only be set once)"""
+        if key in self.__appData:
+            self.error(key,"does already exist in app-data")
+        self.__appData[key]=deepcopy(value)
 
     def __iter__(self):
         """Iterate over the application data"""

@@ -91,7 +91,7 @@ find. Cluster in this context means the Sun Grid Engine
                 if k=="PATH" or k=="LD_LIBRARY_PATH":
                     tmp=os.environ[k].split(":")
                     vals=[item for item in tmp if item.find("OpenFOAM")<0]
-                    os.environ[k]=string.join(vals,":")
+                    os.environ[k]=":".join(vals)
 
         tmpdir=path.join("/tmp","pyClusterTest.%d" % self.opts.jobid)
         os.environ["TMP"]=tmpdir

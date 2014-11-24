@@ -1,11 +1,12 @@
 from distutils.core import setup
 
-import glob,os
+import glob,os,sys
 
 scriptlist =glob.glob(os.path.join('bin', '*.py'))
 scriptlist+=glob.glob(os.path.join('sbin', '*.py'))
 
 from PyFoam import versionString
+from PyFoam.ThirdParty.six import print_
 
 setup(name='PyFoam',
       version=versionString(),
@@ -13,11 +14,12 @@ setup(name='PyFoam',
                 'PyFoam.Applications',
                 'PyFoam.Basics',
                 'PyFoam.Execution',
-                'PyFoam.IPython',
+                'PyFoam.Infrastructure',
+                'PyFoam.IPythonHelpers',
                 'PyFoam.LogAnalysis',
                 'PyFoam.RunDictionary',
-                'PyFoam.Infrastructure',
                 'PyFoam.Paraview',
+                'PyFoam.Site',
                 'PyFoam.ThirdParty',
                 'PyFoam.ThirdParty.ply',
                 'PyFoam.ThirdParty.Gnuplot',
@@ -25,19 +27,13 @@ setup(name='PyFoam',
       description='Python Utilities for OpenFOAM',
       url='http://www.ice-sf.at',
       author='Bernhard Gschaider',
-      author_email='Bernhard.Gschaider@ice-sf.at',
+      author_email='bgschaid@ice-sf.at',
       scripts=scriptlist,
       )
 
 try:
     import numpy
-except ImportError,e:
-    try:
-        import Numeric
-        print "\n\n"
-        print "numpy python-package not installed. Using Numeric instead"
-        print "\n\n"
-    except ImportError,e:
-        print "\n\n"
-        print "Neither numpy nor Numeric python-package installed. Plotting won't work"
-        print "\n\n"
+except ImportError:
+    print_("\n\n")
+    print_("numpy python-package not installed. Plotting won't work")
+    print_("\n\n")

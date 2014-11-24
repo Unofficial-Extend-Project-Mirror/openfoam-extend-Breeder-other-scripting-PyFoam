@@ -12,7 +12,7 @@ import gzip
 from PyFoam.Basics.Utilities import Utilities
 from PyFoam.Basics.LineReader import LineReader
 
-from PyFoam.Error import warning
+from PyFoam.Error import warning,error
 
 from PyFoam.ThirdParty.six import PY3
 
@@ -27,50 +27,66 @@ class FileBasis(Utilities):
 
     def __init__(self,name,createZipped=True):
         """@param name: Name of the file. If the field is zipped the .gz is
-        appended
+        appended. Alternatively it can be a filehandle
         @param createZipped: if the file doesnot exist: should it be created
         as a zipped file?"""
-        self.name = path.abspath(name)
-        self.exists = False
-
-        if path.exists(self.name):
-            self.exists = True
-            self.zipped=False
-            if path.splitext(self.name)[1]==".gz":
-                self.zipped=True
-            elif path.exists(self.name+".gz"):
-                warning(self.name+".gz","and",self.name,"existing - using the unzipped")
-        elif path.exists(self.name+".gz"):
-            self.zipped=True
-            self.exists = True
+        if hasattr(name,"read"):
+            self.name=None
+            self.exists=True
+            self.zipped=None
+            self.fh=name
         else:
-            self.zipped=createZipped
+            self.name = path.abspath(name)
+            self.exists = False
 
-        if path.splitext(self.name)[1]==".gz":
-            self.name=self.name[:-3]
+            if path.exists(self.name):
+                self.exists = True
+                self.zipped=False
+                if path.splitext(self.name)[1]==".gz":
+                    self.zipped=True
+                elif path.exists(self.name+".gz"):
+                    warning(self.name+".gz","and",self.name,"existing - using the unzipped")
+            elif path.exists(self.name+".gz"):
+                self.zipped=True
+                self.exists = True
+            else:
+                self.zipped=createZipped
 
-        self.fh=None
+            if path.splitext(self.name)[1]==".gz":
+                self.name=self.name[:-3]
+
+            self.fh=None
         self.content=None
 
     def realName(self):
         """The full filename with appended .gz (if zipped)"""
-        if self.zipped:
-            return self.name+".gz"
+        if self.name:
+            if self.zipped:
+                return self.name+".gz"
+            else:
+                return self.name
         else:
-            return self.name
+            return str(self.fh)
 
     def baseName(self):
         """Returns the basic file name (without .gz)"""
-        return path.basename(self.name)
+        if self.name:
+            return path.basename(self.name)
+        else:
+            return path.basename(self.fh.name)
 
     def openFile(self,keepContent=False,mode="r"):
         """opens the file. To be overloaded by derived classes"""
         if not keepContent:
             self.content=None
-        if self.zipped:
-            self.fh=gzip.open(self.name+".gz",mode)
+        if self.name:
+            if self.zipped:
+                self.fh=gzip.open(self.name+".gz",mode)
+            else:
+                self.fh=open(self.name,mode)
         else:
-            self.fh=open(self.name,mode)
+            if mode!="r":
+                error("File-handle",str(self.fh),"can only be used with mode 'r'")
 
     def closeFile(self):
         """ closes the file"""
@@ -89,13 +105,16 @@ class FileBasis(Utilities):
     def writeFile(self,content=None):
         """ write the whole File from memory
         @param content: content that should replace the old content"""
-        if content!=None:
-            self.content=content
-        if self.content!=None:
-            self.openFile(keepContent=True,mode="w")
-            txt=str(self)
-            self.fh.write(self.encode(txt))
-            self.closeFile()
+        if self.name:
+            if content!=None:
+                self.content=content
+            if self.content!=None:
+                self.openFile(keepContent=True,mode="w")
+                txt=str(self)
+                self.fh.write(self.encode(txt))
+                self.closeFile()
+        else:
+            error("File-handle",str(self.fh),"can not be written")
 
     def encode(self,txt):
         """Encode a string to byte if necessary (for Python3)"""
@@ -108,9 +127,10 @@ class FileBasis(Utilities):
         """ Writes a copy of the file. Extends with .gz if the original
         is zipped
         @param name: Name under which the file is written"""
-        if path.abspath(self.name)==path.abspath(name):
-            warning(name,"and",self.name,"seem to be the same. Nothing done")
-            return
+        if self.name:
+            if path.abspath(self.name)==path.abspath(name):
+                warning(name,"and",self.name,"seem to be the same. Nothing done")
+                return
 
         erase=False
         if self.content==None:
@@ -118,9 +138,11 @@ class FileBasis(Utilities):
             self.readFile()
 
         tmp=self.name
+        fh=self.fh
         self.name=name
         self.writeFile()
         self.name=tmp
+        self.fh=fh
 
         if erase:
             self.content=None
@@ -147,7 +169,12 @@ class FileBasis(Utilities):
 
     def makeTemp(self):
         """creates a temporary file"""
-        fn=mktemp(dir=path.dirname(self.name))
+        if self.name:
+            fName=self.name
+        else:
+            fName=self.fh.name
+
+        fn=mktemp(dir=path.dirname(fName))
         if self.zipped:
             fh=gzip.open(fn,"w")
         else:
@@ -207,6 +234,9 @@ class FileBasis(Utilities):
         """Undo all the manipulations done by PyFOAM
 
         Goes through the file and removes all lines that were added"""
+        if not self.name:
+            error("File-handle",str(self.fh),"can not be purged")
+
         rmExp= re.compile("^"+self.removedString+"(.*)$")
         addExp=re.compile("^(.*)"+self.addedString+"$")
 
@@ -236,10 +266,15 @@ class FileBasis(Utilities):
         """Return the path to the case of this file (if any valid case is found).
         Else return None"""
 
+        if self.name:
+            fName=self.name
+        else:
+            fName=self.fh.name
+
         from .SolutionDirectory import NoTouchSolutionDirectory
 
         caseDir=None
-        comp=path.split(self.name)[0]
+        comp=path.split(fName)[0]
         while len(comp)>1:
             if NoTouchSolutionDirectory(comp).isValid():
                 caseDir=comp
@@ -258,6 +293,11 @@ class FileBasisBackup(FileBasis):
         @type name: str
         @param backup: create a backup-copy of the file
         @type backup: boolean"""
+
+        if hasattr(name,"read"):
+            if backup:
+                warning(str(name),"is a file-handle. No backup possible")
+            backup=False
 
         FileBasis.__init__(self,name,createZipped=createZipped)
 

@@ -42,21 +42,27 @@ This utility does some basic manipulations with STL-files
                             aliases=("list",),
                             nr=0,
                             exactNr=False)
-        self.parser.addSubcommand(namesCmd)
+        self.parser.addSubcommand(
+            namesCmd,
+            usage="%prog COMMAND [<source.stl> ... ]")
 
         infoCmd=Subcommand(name='info',
                            help="Reports about the STL-files",
                            aliases=("report",),
                            nr=0,
                            exactNr=False)
-        self.parser.addSubcommand(infoCmd)
+        self.parser.addSubcommand(
+            infoCmd,
+            usage="%prog COMMAND [<source.stl> ... ]")
 
         removeCmd=Subcommand(name='remove',
                              help="Remove patches from the STL-file",
                              aliases=("erase","blank",),
                              nr=0,
                              exactNr=False)
-        self.parser.addSubcommand(removeCmd)
+        self.parser.addSubcommand(
+            removeCmd,
+            usage="%prog COMMAND [<source.stl>]")
 
         mergeCmd=Subcommand(name='merge',
                              help="Merge patches and put them into a new patch",

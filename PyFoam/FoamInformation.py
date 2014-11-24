@@ -57,6 +57,19 @@ def foamVersionString(useConfigurationIfNoInstallation=False):
 
     return vStr
 
+class VersionTuple(tuple):
+    """Wrapper around the regular tuple that is printed in a way that
+    can be parsed as a tuple in a OF-dictionary
+
+    """
+
+    # Python3 doesn't like this. But it was only here out of courtesy
+#    def __init__(self,data):
+#        tuple.__init__(self,data)
+
+    def __str__(self):
+        return ".".join([str(e) for e in self])
+
 def foamVersion(useConfigurationIfNoInstallation=False):
     """@return: tuple that represents the Foam-version as found
     in $WM_PROJECT_VERSION"""
@@ -75,7 +88,7 @@ def foamVersion(useConfigurationIfNoInstallation=False):
                 except:
                     res.append(e)
 
-        return tuple(res)
+        return VersionTuple(res)
 
 def foamVersionNumber(useConfigurationIfNoInstallation=False):
     """@return: tuple that represents the Foam-Version-Number (without
@@ -91,7 +104,7 @@ def foamVersionNumber(useConfigurationIfNoInstallation=False):
         else:
             break
 
-    return tuple(nr)
+    return VersionTuple(nr)
 
 def oldAppConvention():
     """Returns true if the version of OpenFOAM is older than 1.5 and
@@ -104,6 +117,10 @@ def oldTutorialStructure():
     it therefor uses the 'old' (flat) structure for the tutorials
     """
     return foamVersionNumber()<(1,6)
+
+def installationPath():
+    """Path to the installation"""
+    return path.abspath(environ["WM_PROJECT_DIR"])
 
 def findInstalledVersions(basedir,valid,forkName="openfoam"):
     versions={}
@@ -304,13 +321,13 @@ def injectVariables(script,
                   stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
         (rein,raus)=(p.stdin,p.stdout)
 
-    lines=raus.readlines()
+    lines=[l.strip().decode() for l in raus.readlines()]
     rein.close()
     raus.close()
 
     # clumsy but avoids more complicated expressions
-    exp=re.compile('export (.+)="(.*)"\n')
-    exp2=re.compile("export (.+)='(.*)'\n")
+    exp=re.compile('export (.+)="(.*)"$')
+    exp2=re.compile("export (.+)='(.*)'$")
 
     cnt=0
 

@@ -1,4 +1,250 @@
 # -*- mode: org -*-
+* Version 0.6.4 - 2014-11-24
+** Requirements
+   The only requirement is a python-installation. The main testing and
+   development has been done with 2.7 and 2.6. Python 2.5 should work
+   but not for all utilities. Currently 2.6, 2.7 and 3.4 are used
+   during development.
+
+   Certain functionalities need special Python-libraries. The main one
+   is =numpy= for plotting. Other libraries that might be of interest
+   are =matplotlib=, =pandas= and =IPython=. For
+   =pyFoamDisplayBlockmesh.py= the libraries =PyQt4= and =vtk= are
+   needed. Other libraries are tested for and reported by
+   =pyFoamVersion.py= but not required (only install if you're sure
+   that you need it)
+** Future changes
+*** Redundant utilities =pyFoamJoinCSV.py= and =pyFoamConvertToCSV.py= unified
+    These two utilities are almost indistinguishable and will be
+    unified into one
+** Major changes
+*** Multi-line regular expressions in =customRegexp=
+    If in =customRegexp= an =expr= is found with =\n= then this
+    expression is matched over multiple consecutive lines. Types like
+    =dynamic= work as usual.
+
+    This makes it possible to match for instance the output of the
+    =forces=-function objects
+*** Enhancement of =pyFoamPrepare.py=
+    The utility which was introduced in the last version is becomong
+    more usable and will be central to all things that set up the case
+    (for instance a special =ClusterJob=)
+*** Enhancements of the CSV-utilities
+    These utilities are now more flexible and allow writing and
+    reading of Excel-files too
+*** Environment variable =PYFOAM_SITE_DIR= and =PYFOAM_DIR=
+    Both variables are not necessary but =PYFOAM_SITE_DIR= allows
+    consistent insertion of site-specific libraries and utilities.
+
+    =PYFOAM_DIR= is set by some Foam-distributions and tested for by
+    =pyFoamVersion.py=. It is supposed to point to the currents
+    PyFoam-installation.
+
+    =PYFOAM_SITE_DIR= points to a directory with site-specific scripts
+    and configurations. The sub-directories supported (and thested py
+    =pyFoamVersion.py=) are
+    - bin :: directory with scripts. It has to be added to the =PATH=
+             outside of PyFoam (for instance in the =.bashrc=)
+    - etc :: Optional directory which is searched for configuration
+             files. Priority is below the user settings and above the
+             global settings
+    - lib :: Optional directory to allow mixing in site-specific
+             library files. Imported as =PyFoam.Site=: For instance if
+             a file =Foo.py= is present in =lib= it can be imported as
+             =PyFoam.Site.Foo=. This directory does not have to be (in
+             fact: it *shouldn't*) added to =PYTHONPATH=
+    Purpose of =PYFOAM_SITE_DIR= is to allow administrators to provide
+    site-wide scripts and settings for all users on a site
+** Incompatibilities
+*** Option =--silent= removed from =pyFoamPrepareCase.py=
+    Option has been renamed to =--no-complain=
+*** Keys in =RunDatabase= with column-names that contain upper-case letters change
+    SQLite does not support case-sensitive column-names (=s_max= and
+    =S_max= are the same). To change this the upper case letters in
+    the column names are replaced by an underscore and the letter
+    (=S_max= becomes =_s__max=)
+
+    This means that old databases might not be read correctly
+*** Change in unique variable names in =pyFoamConvertToCSV.py=
+    The algorithm to make variable names unique has changed (basically
+    it uses the part of the filenames that differ) and scripts relying
+    on these names might fail
+*** =PyFoam.IPython=-module renamed to =PyFoam.IPythonHelpers=
+    The name of the module crashed in certain instances (especially
+    unit-testing) with the regular =IPython=-library. To avoid these
+    crashes it has been renamed to =IPythonHelpers=. This raises two
+    potential problems:
+    - scripts that =import= the module have to be adapted to the new name
+    - IPython-notebooks created with =pyFoamIPythonNotebook.py= have
+      two imports pointing to this module. These notebooks have to be
+      adapted to be usable again
+** Bugfixes
+*** Templates in =pyFoamPrepareCase.py= did not keep permissions
+    This was a problem for script-templates which were not executable
+    any more. Fixed
+*** =pyFoamComparator.py= failed due to circular dependency
+    This has been fixed by adding an import in =BasicRunner.py=
+*** =pyFoamDumpRunDatabaseToCSV.py= fails if Pandas-data is requested
+    This is now fixed
+*** =sort= for list broke code on Python 3
+    Some calls for =sort= still used the =cmp=-parameter which does
+    not exist for Python3 anymore. These calls have been replaced with
+    =key= and =reverse=
+*** Changing the OF-version does not work in Python 3
+    Because the output of =subprocess= is now /binary/ instead of a
+    regular string. Fixed
+*** =addData= in =PyFoamDataFrame= extrapolates for invalid values
+    This was due to incorrect use of the =interpolate=-method
+*** =--keep-last= did not work for =pyFoamClearCase.py= and parallel cases
+    This was because there was a problem in the library code and the
+    utility did not consider the parallel time-steps. Fixed
+*** =pyFoamDumpRunDatabaseToCSV.py= does not add basic run information
+    Basic run information was not added to the file. Now it is with
+    the prefix =runInfo//=
+*** Restore of =FileBasisBackup= did not work
+    The logic for checking whether a file was "backupable" was
+    wrong. This affected the proper restore of files with utilities
+    for instance for =--write-all=
+*** Remove circular dependency in =DataStructures=
+    According to the bug
+    http://sourceforge.net/p/openfoam-extend/ticketspyfoam/219/ it was
+    not possible to import =DataStructures= because of a circular
+    dependency with =FoamFileGenerator=. Fixed by moving an import to
+    the back of the file
+** New features/Utilities
+*** =pyFoamRunParameterVariation.py=
+    This utility takes a template case and a file specifying the
+    parameter variation and creates cases with the
+    =pyFoamPrepareCase.py=-engine, runs a solver on these cases and
+    collects the data into a database. The database can then be
+    extracted with =pyFoamDumpRunDatabaseToCSV.py=
+*** =pyFoamBinarySize.py=
+    Calculates the size of the binaries in an OpenFOAM-installation
+    separated by compile-option
+*** =pyFoamBlockMeshRewrite.py=
+    Assists the user in rewriting the =blockMeshDict= by doing simple,
+    but error-prone transformations. Assumes "sensible" formatting:
+    one block/vertex etc per line.
+
+    Sub-commands are:
+    - refine :: refines mesh by multiplying cell numbers in the blocks
+    - number :: Adds comments with the vertex numbers. Should help the
+                user when editing/modifying the mesh
+    - stripNumber :: Remove the comments added by =number=
+    - mergeVertices :: Adds vertices from other blockMeshes that
+                       are not present in the current blockMesh
+    - renumberVertices :: Take another =blockMeshDict=, copy over the
+         =vertices=-section of that mesh and rewrite =blocks= and
+         =patches= so that they conform to these =vertices=. The
+         original =vertices= have to be a sub-set of the =vertices= in
+         the other mesh
+    - normalizePatches :: Rotates patches so that the lowest number is
+         in front
+** Enhancements to Utilities
+*** =pyFoamChangeBoundaryType.py= allows setting additional values
+    The option =--additional-values= allows specifying a dictionary
+    with additional values for the boundary (stuff that is needed by
+    =mappedWall= etc)
+*** =pyFoamPrepareCase.py= now has OF-version and fork as defined variables
+    This allows to write case-templates that can distinguish between
+    different OF-versions
+*** =pyFoamPrepareCase.py= now allows "overloading" another directory
+    Before doing anything else the contents of different directories
+    are copied into the current case. This allows for instance to use
+    tutorial cases as the basis for a case
+*** =pyFoamIPythonNotebook.py= adds improvements to the notebook
+    Additional code added to the generated notebook:
+    - Code to change the default size of the plots
+    - Distribution-directories in subdirectories =distributions=
+      (generated by some =swak=-function objects) added
+*** =pyFoamListCases.py= more tolerant to faulty =controlDict=
+    If the =controlDict= is acceptable to OpenFOAM but syntactically
+    incorrect for PyFoam (for instance because of a missing semicolon)
+    the utility does not fail anymore (but no data is collected for
+    that case).
+*** =pyFoamDumpConfiguration.py= prints sections and keys alphabetically
+    This should make it easier to find items
+*** =pyFoamJoinCSV.py= and =pyFoamConvertToCSV.py= read and write Excel-files
+    Both utilities now allow writing Excel-files
+
+    In addition to regular text files the first sheet from =xls=-files
+    can be read
+*** Flexible variable filtering in =pyFoamJoinCSV.py= and =pyFoamConvertToCSV.py=
+    Now it is possible to filter for regular expressions
+
+    The functionality of the two utilities now is very similar and it
+    is possible that one of them will be discontinued
+*** Columns in =pyFoamJoinCSV.py= and =pyFoamConvertToCSV.py= can be recalculated
+    The two utilities now can add columns or recalculate columns
+    based on the existing column values
+*** Testing for =Numeric= removed from =pyFoamVersion.py=
+    Testing for the library =Numeric= library removed as it is no
+    longer supported as a fallback for =numpy=. Test also removed from
+    =setup.py=
+** Enhancements to the Library
+*** Subclass of =ClusterJob= that support =PrepareCase=
+    The class =PrepareCaseJob= supports cases that are set up with
+    =pyFoamPrepareCase.py=. Additional parameters to the constructor are
+    - the name of the parameter-file
+    - a list with the parameters. The list is composed of
+      name/value-pairs
+*** Subclass of =ClusterJob= that support =RunParameterVariation=
+    The class =VariationCaseJob= supports cases that are set up with
+    =pyFoamRunParameterVariation.py=. Additional parameters to the constructor are
+    - the name of the parameter-file
+    - the name of the variations-file
+*** =execute= in =PyFoam/Utilities= fails if script is not executable
+    The function checks if the file exists and is *not*
+    executable. The program fails in that case
+*** =foamVersion= uses a separate wrapper class for =tuple=
+    This ensures that it is printed in a form that is valid in
+    OF-dictionaries
+*** Move calculation of disk usage to =Utilities=
+    This has until now only been used in =ListCases= but moved to a
+    separate method/function =diskUsage= in the =Utilities=-module
+*** Enhancement of =--help=
+    Added the possibility to have an epilog and usage examples with
+    the =epilog= and  =examples=-keyword arguments for applications.
+
+    These and descriptions now have the possibility for line-breaks:
+    if two line-breaks are encountered in the text a new paragraph is
+    created
+*** =which=-routine in =Utitlities= uses native Python-routine
+    For Python-version where =shutil= has a =which=-function this is
+    used instead of calling an external program
+*** =FileBasis= now allows file handles instead of the filename
+    This currently only works for reading, Backups, zipping etc won't
+    work but it makes algorithms more flexible
+*** =BlockMesh= doesn't force writing to file anymore
+    Instead content is stored in memory. Old behaviour is the default
+    to preserve compatibility with old scripts
+*** Additional methods for =BlockMesh=-class
+    - numberVertices :: Adds comments with the vertex numbers to the
+                        vertices
+*** =LineReader= allows keeping spaces on left
+    Previous behaviour was stripping all spaces from the lines. Now
+    the left hand spaces can be ket. Old behaviour is still default
+    for compatibility
+*** =TemplateFile= now allows writing of assignment-results in file
+    This allows faster debugging of template-files. This can be
+    enabled with a switch in the utilities using templates
+*** =SolverJob= now allows passing of parameters to the solver
+    And additional parameter =solverArgs= will now be passed to the
+    solver (if the solver accepts arguments)
+*** =SpreadsheetData= now allows reading from an Excel file
+    During construction if an Excel-file is specified and the
+    =xlrd=-library and =pandas= are installed then the first sheet in
+    the file is read
+*** =SpreadsheetData= allows recalculating columns
+    Columns can be recalculated using expressions. This includes other
+    data items. Currently present column names are available as
+    variables. There is also a variable =data= that can be subscripted
+    for items that are not valid variable names. A variable =this=
+    points to the item to be recalculated
+** Known bugs
+*** Timelines not forgotten for multiple runner calls
+    This manifests with =pyFoamRunParameterVariation.py=. The custom
+    timelines are still kept in memory. Not a problem. Just annoying
 * Version 0.6.3 - 2014-06-23
 ** Requirements
    The only requirement is a python-installation. The main testing and

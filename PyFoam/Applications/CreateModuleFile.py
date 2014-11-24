@@ -73,7 +73,7 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
             if e not in checked:
                 checked.append(e)
 
-        return string.join(checked, ':')
+        return ":".join(checked)
 
     def removeComponentWithSubstrFromPathEnvVar(self, pathEnvVar, removeSubStr):
         """Remove components from PATH env var where a substring is present. Order preserving"""
@@ -84,7 +84,7 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
             if e.find(removeSubStr) < 0:
                 keepComponents.append(e)
 
-        return string.join(keepComponents, ':')
+        return ":".join(keepComponents)
 
     def removeComponentFromPathEnvVar(self, pathEnvVar, removePathComponents):
         """Remove components from PATH env var. Order preserving"""
@@ -96,7 +96,7 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
             if e not in removeComponents:
                 keepComponents.append(e)
 
-        return string.join(keepComponents, ':')
+        return ":".join(keepComponents)
 
 
     def writeModuleFileHeader(self, fid, version):

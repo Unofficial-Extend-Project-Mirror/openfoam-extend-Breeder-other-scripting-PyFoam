@@ -143,7 +143,7 @@ class FoamAnswerer(object):
     def commandLine(self):
         """The command line"""
         if self._master:
-            return string.join(self._master.origArgv)
+            return " ".join(self._master.origArgv)
         else:
             return ""
 

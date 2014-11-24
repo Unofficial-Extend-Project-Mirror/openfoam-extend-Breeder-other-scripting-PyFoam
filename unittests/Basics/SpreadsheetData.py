@@ -26,6 +26,27 @@ class SpreadsheetDataTest(unittest.TestCase):
         sp=sp1+sp2
         self.assertEqual(len(names1)+len(names2)-1,len(sp.names()))
 
+    def testSpreadsheetScaleData(self):
+        sp1=SpreadsheetData(data=data1,names=names1)
+        self.assertAlmostEqual(min(sp1.data["t"]),0)
+        self.assertAlmostEqual(max(sp1.data["t"]),5.0)
+        self.assertAlmostEqual(min(sp1.data["p1"]),0)
+        self.assertAlmostEqual(max(sp1.data["p1"]),10.0)
+        self.assertAlmostEqual(min(sp1.data["p2"]),0)
+        self.assertAlmostEqual(max(sp1.data["p2"]),15.0)
+        sp1.recalcData("t","t/60")
+        self.assertAlmostEqual(min(sp1.data["t"]),0)
+        self.assertAlmostEqual(max(sp1.data["t"]),5.0/60.)
+        sp1.recalcData("p 3","p1+p2",create=True)
+        self.assertAlmostEqual(min(sp1.data["p 3"]),0)
+        self.assertAlmostEqual(max(sp1.data["p 3"]),25.0)
+        sp1.recalcData("p4","data['p1']+data['p2']",create=True)
+        self.assertAlmostEqual(min(sp1.data["p4"]),0)
+        self.assertAlmostEqual(max(sp1.data["p4"]),25.0)
+        sp1.recalcData("p1","this/10+1")
+        self.assertAlmostEqual(min(sp1.data["p1"]),1)
+        self.assertAlmostEqual(max(sp1.data["p1"]),2)
+
     def testSpreadsheetDataExtend(self):
         sp1=SpreadsheetData(data=data1,names=names1)
         sp1.append("test",[i*i for i in range(len(data1))])

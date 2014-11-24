@@ -90,12 +90,13 @@ class CommonStandardOutput(object):
 
     def setLogname(self,
                    default="PyFoamRunner",
-                   useApplication=True):
+                   useApplication=True,
+                   force=False):
         """Builds a logfile-name
         @param default: Default value if no prefix for the logfile-has been defined
         @param useApplication: append the name of the application to the prefix"""
 
-        if self.opts.logname==None:
+        if self.opts.logname==None or force:
             self.opts.logname=default
         if useApplication:
             self.opts.logname+="."+path.basename(self.parser.getArgs()[0])

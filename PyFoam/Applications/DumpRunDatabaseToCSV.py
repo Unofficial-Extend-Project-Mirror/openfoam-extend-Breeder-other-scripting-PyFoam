@@ -101,7 +101,7 @@ a CSV-file
                           excel=self.opts.excel)
 
         if self.opts.pandas:
-            if not dump:
+            if dump is None:
                 print_("No data. Seems that pandas is not installed")
             else:
                 print_("Pandas data:\n",dump)

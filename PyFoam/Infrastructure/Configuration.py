@@ -6,9 +6,9 @@ Also hardcodes defaults for the settings"""
 from PyFoam.ThirdParty.six.moves import configparser
 from PyFoam.ThirdParty.six import iteritems,PY3
 
-from PyFoam.Infrastructure.Hardcoded import globalConfigFile,userConfigFile,globalDirectory,userDirectory,globalConfigDir,userConfigDir
+from PyFoam.Infrastructure.Hardcoded import globalConfigFile,userConfigFile,globalDirectory,userDirectory,globalConfigDir,userConfigDir,pyFoamSiteVar,siteConfigDir,siteConfigFile
 
-from os import path
+from os import path,environ
 import glob,re
 
 _defaults={
@@ -220,9 +220,12 @@ class Configuration(configparser.ConfigParser):
         """Defines a search path for the configuration files as a pare of type/name
         pairs"""
         files=[("file",globalConfigFile()),
-               ("directory",globalConfigDir()),
-               ("file",userConfigFile()),
-               ("directory",userConfigDir())]
+               ("directory",globalConfigDir())]
+        if pyFoamSiteVar in environ:
+            files+=[("file",siteConfigFile()),
+                    ("directory",siteConfigDir())]
+        files+=[("file",userConfigFile()),
+                ("directory",userConfigDir())]
         return files
 
     def configFiles(self):
@@ -253,9 +256,9 @@ class Configuration(configparser.ConfigParser):
         """Dumps the contents in INI-Form
         @return: a string with the contents"""
         result=""
-        for section in self.sections():
+        for section in sorted(self.sections(),key=lambda x:x.lower()):
             result+="[%s]\n" % (section)
-            for key,value in self.items(section):
+            for key,value in sorted(self.items(section),key=lambda x:x[0].lower()):
                 result+="%s: %s\n" % (key,value)
             result+="\n"
 
@@ -339,7 +342,7 @@ class Configuration(configparser.ConfigParser):
 
         return re.compile(self.get(section,option).replace("%f%",floatRegExp))
 
-    def get(self,section,option,default=None):
+    def get(self,section,option,default=None,**kwargs):
         """Overrides the original implementation from ConfigParser
         @param section: the section
         @param option: the option
@@ -347,8 +350,9 @@ class Configuration(configparser.ConfigParser):
 
         try:
             return configparser.ConfigParser.get(self,
-                                    self.bestSection(section,option),
-                                    option)
+                                                 self.bestSection(section,option),
+                                                 option,
+                                                 **kwargs)
         except configparser.NoOptionError:
             if default!=None:
                 return default

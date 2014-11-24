@@ -186,23 +186,31 @@ when called from a script)
                 for k,v in iteritems(vals):
                     print_(formatString % (k,v))
 
+            if self.opts.outputFile:
+                assignmentDebug=self.pickAssignmentDebug(self.opts.outputFile)
+            else:
+                assignmentDebug=None
+
             if content:
                 t=TemplateFile(content=content,
                                tolerantRender=self.opts.tolerantRender,
                                allowExec=self.opts.allowExec,
                                expressionDelimiter=self.opts.expressionDelimiter,
+                               assignmentDebug=assignmentDebug,
                                assignmentLineStart=self.opts.assignmentLineStart)
             elif data:
                 t=TemplateFile(content=data["template"],
                                tolerantRender=self.opts.tolerantRender,
                                allowExec=self.opts.allowExec,
                                expressionDelimiter=self.opts.expressionDelimiter,
+                               assignmentDebug=assignmentDebug,
                                assignmentLineStart=self.opts.assignmentLineStart)
             elif self.opts.template:
                 t=TemplateFile(name=self.opts.template,
                                tolerantRender=self.opts.tolerantRender,
                                allowExec=self.opts.allowExec,
                                expressionDelimiter=self.opts.expressionDelimiter,
+                               assignmentDebug=assignmentDebug,
                                assignmentLineStart=self.opts.assignmentLineStart)
             else:
                 self.error("Template unspecified")

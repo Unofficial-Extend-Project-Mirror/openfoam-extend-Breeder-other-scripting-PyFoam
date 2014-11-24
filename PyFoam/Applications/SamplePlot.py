@@ -213,7 +213,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
                           dest="mode",
                           action="store",
                           choices=self.modeChoices,
-                          help="What kind of plots are generated: a) separate for every time, line and field b) all times of a field in one plot c) all fields of a time in one plot d) all lines in one plot e) everything in one plot (Names: "+string.join(self.modeChoices,", ")+") Default: %default")
+                          help="What kind of plots are generated: a) separate for every time, line and field b) all times of a field in one plot c) all fields of a time in one plot d) all lines in one plot e) everything in one plot (Names: "+", ".join(self.modeChoices)+") Default: %default")
         output.add_option("--unscaled",
                           action="store_false",
                           dest="scaled",
@@ -685,7 +685,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
             title=None
             tIndex=times.index(p[0].time())
 
-            #            name+="_"+string.join(self.opts.line,"_")
+            #            name+="_"+"_".join(self.opts.line)
 
             if self.opts.mode=="separate":
                 name+="_%s"        % (p[0].line())
@@ -704,7 +704,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
             elif self.opts.mode=="fieldsInOne":
                 name+="_%s"        % (p[0].line())
                 if self.opts.field!=None:
-                    name+="_"+string.join(self.opts.field,"_")
+                    name+="_"+"_".join(self.opts.field)
                 if self.opts.time!=None:
                     name+="_"+"_".join(["t="+t for t in self.opts.time])
                 name+="_%04d" % tIndex
@@ -712,7 +712,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
             elif self.opts.mode=="linesInOne":
                 name+="_%s"        % (p[0].name)
                 if self.opts.line!=None:
-                    name+="_"+string.join(self.opts.line,"_")
+                    name+="_"+"_".join(self.opts.line)
                 if self.opts.indexInsteadOfTime:
                     name+="_%04d" % tIndex
                 else:

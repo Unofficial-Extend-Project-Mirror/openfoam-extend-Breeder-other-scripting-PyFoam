@@ -1,5 +1,5 @@
 import unittest
 
-from PyFoam.IPython.Case import Case
+from PyFoam.IPythonHelpers.Case import Case
 
 theSuite=unittest.TestSuite()

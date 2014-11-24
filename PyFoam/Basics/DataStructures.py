@@ -2,11 +2,11 @@
 
 from __future__ import division
 
-import PyFoam.Basics.FoamFileGenerator
-
 from copy import deepcopy
 import math
 import re
+
+# import FoamFileGenerator in the end to avoid circular dependencies
 
 from PyFoam.ThirdParty.six import integer_types,PY3,string_types
 
@@ -419,7 +419,10 @@ class DictProxy(dict):
 
     def __enforceString(self,v,toString):
         if not isinstance(v,string_types) and toString:
-            return str(v)
+            r=str(v)
+            if isinstance(v,(list,dict)):
+                r='"'+r+'"'
+            return r
         else:
             return v
 
@@ -538,5 +541,8 @@ def makePrimitiveString(val):
         return str(val)
     else:
         return val
+
+# Moved to the end to avoid circular dependencies
+import PyFoam.Basics.FoamFileGenerator
 
 # Should work with Python3 and Python2

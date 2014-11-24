@@ -8,6 +8,8 @@ _pyFoamDirName="pyFoam"
 
 _pyFoamConfigName="pyfoamrc"
 
+pyFoamSiteVar="PYFOAM_SITE_DIR"
+
 def globalDirectory():
     """@return: the global directory"""
     return path.join("/etc",_pyFoamDirName)
@@ -19,6 +21,27 @@ def globalConfigFile():
 def globalConfigDir():
     """@return: The name of the global configuration directory where .cfg-files can be placed"""
     return globalConfigFile()+".d"
+
+def siteDirectory():
+    """@return: the site directory"""
+    if pyFoamSiteVar in environ:
+        return path.join(environ[pyFoamSiteVar],"etc")
+    else:
+        return None
+
+def siteConfigFile():
+    """@return: The name of the site configuration File"""
+    if pyFoamSiteVar in environ:
+        return path.join(siteDirectory(),_pyFoamConfigName)
+    else:
+        return None
+
+def siteConfigDir():
+    """@return: The name of the site configuration directory where .cfg-files can be placed"""
+    if pyFoamSiteVar in environ:
+        return siteConfigFile()+".d"
+    else:
+        return None
 
 def userDirectory():
     """@return: the user directory"""

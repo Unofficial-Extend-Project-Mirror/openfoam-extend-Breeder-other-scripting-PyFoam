@@ -10,7 +10,7 @@ from optparse import OptionGroup
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
-from PyFoam.ThirdParty.six import print_
+from PyFoam.ThirdParty.six import print_,string_types
 
 class ChangeBoundaryType(PyFoamApplication):
     def __init__(self,
@@ -51,6 +51,12 @@ Changes the type of a boundary in the boundary-file
                           dest="time",
                           help="Time to use. If unset the mesh in 'constant'' is used")
 
+        change.add_option("--additional-values",
+                          action="store",
+                          default=None,
+                          dest="additionalValues",
+                          help="Dictionary in Python-format with additional values to add to the boundary")
+
     def run(self):
         fName=self.parser.getArgs()[0]
         bName=self.parser.getArgs()[1]
@@ -74,6 +80,13 @@ Changes the type of a boundary in the boundary-file
                 found=True
             elif found:
                 val["type"]=tName
+                if self.opts.additionalValues:
+                    vals=self.opts.additionalValues
+                    if isinstance(vals,string_types):
+                        # we're called from the command line. Convert string to usable format
+                        vals=eval(vals)
+                    for k in vals:
+                        val[k]=vals[k]
                 break
 
         if not found:

@@ -16,6 +16,22 @@ from PyFoam.ThirdParty.six import string_types,integer_types
 from os import path,environ
 from copy import deepcopy
 
+class FoamHelpFormatter(TitledHelpFormatter):
+    """For description and epilog preserve double newlines as one newline"""
+    def format_description(self, description):
+        if description:
+            return "".join(
+                 [TitledHelpFormatter.format_description(self,d) for d in description.split("\n\n")])
+        else:
+            return ""
+
+    def format_epilog(self,epilog):
+        if epilog:
+            return "\n"+("-"*int(self.width/2))+"\n"+"".join(
+                 [TitledHelpFormatter.format_epilog(self,d) for d in epilog.split("\n\n")])
+        else:
+            return ""
+
 class FoamOptionParser(OptionParser):
     """Wrapper to the usual OptionParser to honor the conventions of OpenFOAM-utilities
 
@@ -26,11 +42,15 @@ class FoamOptionParser(OptionParser):
                  usage=None,
                  version=None,
                  description=None,
+                 epilog=None,
+                 examples=None,
                  interspersed=False):
         """
         @param usage: usage string. If missing a default is used
         @param version: if missing the PyFoam-version is used
         @param description: description of the utility
+        @param epilog: Text to be displayed in the help after the options
+        @param examples: Usage examples to be displayed after the epilog
         @param interspersed: needs to be false if options should be passed to an OpenFOAM-utility
         @param args: Command line arguments. If unset sys.argv[1:] is used.
         Can be a string: it will be splitted then unsing the spaces (very primitive), or a list of strings (prefered)
@@ -51,12 +71,25 @@ class FoamOptionParser(OptionParser):
         else:
             self.argLine=map(str,args)
 
+        if examples:
+            if epilog is None:
+                epilog=""
+            else:
+                epilog+="\n\n"
+            usageText="Usage examples:"
+#            epilog+=usageText+"\n\n"+("="*len(usageText))+"\n\n"+examples
+            epilog+=usageText+"\n\n"+examples
+
         OptionParser.__init__(self,
                               usage=usage,
                               # prog=self.__type__.__name__,
                               version=version,
                               description=description,
-                              formatter=TitledHelpFormatter())
+                              epilog=epilog,
+                              formatter=FoamHelpFormatter())
+
+        if self.epilog:
+             self.epilog=self.expand_prog_name(self.epilog)
 
         if interspersed:
             self.enable_interspersed_args()
@@ -276,6 +309,8 @@ class SubcommandFoamOptionParser(FoamOptionParser):
                   args=None,
                   usage=None,
                   version=None,
+                  epilog=None,
+                  examples=None,
                   description=None,
                   subcommands=[]):
           """
@@ -295,7 +330,9 @@ class SubcommandFoamOptionParser(FoamOptionParser):
                                     args,
                                     usage,
                                     version,
-                                    description,
+                                    description=description,
+                                    epilog=epilog,
+                                    examples=examples,
                                     interspersed=False)
 
           self.subcommands=subcommands[:]

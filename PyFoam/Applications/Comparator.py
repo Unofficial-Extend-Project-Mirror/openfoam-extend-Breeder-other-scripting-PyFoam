@@ -661,9 +661,9 @@ class FoamCommand(Command):
 
     def execute(self,para,log):
         argv=[self.utility,".",para['case']]+self.options.split()
-        print_("     Executing",string.join(argv),end=" ")
+        print_("     Executing"," ".join(argv),end=" ")
         sys.stdout.flush()
-        run=BasicRunner(argv,silent=True,lam=Command.parallel,logname=string.join(argv,"_"))
+        run=BasicRunner(argv,silent=True,lam=Command.parallel,logname="_".join(argv))
         run.start()
         if run.runOK():
             print_()
@@ -680,9 +680,9 @@ class FoamUtilityCommand(FoamCommand):
 
     def execute(self,para,log):
         argv=[self.utility,".",para['case']]+self.options.split()
-        print_("     Executing and analyzing",string.join(argv),end=" ")
+        print_("     Executing and analyzing"," ".join(argv),end=" ")
         sys.stdout.flush()
-        run=UtilityRunner(argv,silent=True,lam=Command.parallel,logname=string.join(argv,"_"))
+        run=UtilityRunner(argv,silent=True,lam=Command.parallel,logname="_".join(argv))
         run.add("data",self.regexp)
         run.start()
         data=run.analyzer.getData("data")

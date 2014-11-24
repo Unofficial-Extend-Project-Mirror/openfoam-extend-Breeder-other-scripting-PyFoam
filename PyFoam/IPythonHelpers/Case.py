@@ -16,8 +16,8 @@ from PyFoam.ThirdParty.six import string_types,StringIO,print_
 from PyFoam.ThirdParty.six.moves import cPickle as pickle
 from PyFoam.Error import error
 
-from PyFoam.IPython import create_code_cell
-from PyFoam.IPython.PermanentStorage import PermanentStorage
+from PyFoam.IPythonHelpers import create_code_cell
+from PyFoam.IPythonHelpers.PermanentStorage import PermanentStorage
 
 from IPython.display import HTML,display
 from IPython.html import widgets
@@ -318,7 +318,7 @@ class Case(object):
                     cmd="%s=%s" % (v,cmdBase)
                     val=self.sampleField(directoryName,l,f)
             else:
-                print "Unknown mode",mode
+                print_("Unknown mode",mode)
                 return
             create_code_cell(cmd,"below")
             get_ipython().push({v:val})

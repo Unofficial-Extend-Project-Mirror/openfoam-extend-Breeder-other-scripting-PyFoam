@@ -11,6 +11,7 @@ except ImportError:
     import numpy
 
 import copy
+import re
 
 from PyFoam.Error import error,FatalErrorPyFoamException,warning
 
@@ -29,8 +30,10 @@ class SpreadsheetData(object):
     def __init__(self,
                  timeName=None,
                  validData=None,
+                 validMatchRegexp=False,
                  csvName=None,
                  txtName=None,
+                 excelName=None,
                  data=None,
                  names=None,
                  title=None):
@@ -38,16 +41,23 @@ class SpreadsheetData(object):
 
         @param timeName: the data colum that is to be considered the time in this file
         @param validData: names of the valid data columns (all others should be discarded)
+        @param validMatchRegexp: Should the validData be interpreted as regular expressions
         @param csvName: name of the CSV-file the data should be constructed from,
         @param txtName: name of a file the data should be constructed from,
+        @param excelName: name of a Excel-file the data should be constructed from (uses the first sheet in the file),
         @param data: the actual data to use
         @param names: the names for the column header
         @param title: a name that is used to make unique heades names"""
 
         self.title=title
 
-        if (csvName or txtName) and data:
+        nrFileSpec=len([1 for i in [csvName,txtName,excelName] if not i is None])
+
+        if (nrFileSpec>0) and not data is None:
             error("SpreadsheetData is either constructed from data or from a file")
+
+        if data is None and nrFileSpec>1:
+            error("Only one file specification allowed")
 
         if csvName:
             try:
@@ -67,7 +77,16 @@ class SpreadsheetData(object):
             try:
                 rec=numpy.recfromtxt(txtName,names=True)
                 data=[tuple(float(x) for x in i) for i in rec]
-                names=list(rec.dtype.names)
+                if names is None:
+                    names=list(rec.dtype.names)
+                else:
+                    nr=len(list(rec.dtype.names))
+                    if title is None:
+                        off=len(names)-nr+1
+                        self.title="_".join(names[:off])
+                        names=names[:off]+["index"]+names[off:]
+                    names=names[-nr:]
+
             except AttributeError:
                 # for old numpy-versions
                 data=list(map(tuple,numpy.loadtxt(txtName)))
@@ -75,8 +94,15 @@ class SpreadsheetData(object):
 
             # redo this to make sure that everything is float
             self.data=numpy.array(data,dtype=list(zip(names,['f8']*len(names))))
+        elif excelName:
+            import pandas
+            rec=pandas.read_excel(excelName).to_records()
+            data=[tuple(float(x) for x in i) for i in rec]
+            names=list(rec.dtype.names)
+
+            self.data=numpy.array(data,dtype=list(zip(names,['f8']*len(names))))
         else:
-            if data!=None and names==None:
+            if data is not None and names is None:
                 error("No names given for the data")
 
             self.data=numpy.array(list(map(tuple,data)),
@@ -96,7 +122,7 @@ class SpreadsheetData(object):
             usedNames=[]
 
             for n in self.data.dtype.names:
-                if n==self.time or n in validData:
+                if n==self.time or self.validName(n,validData,validMatchRegexp):
                     usedData.append(tuple(self.data[n]))
                     usedNames.append(n)
 
@@ -107,6 +133,21 @@ class SpreadsheetData(object):
 
         if self.title!=None:
             self.data.dtype.names=[self.title+" "+x for x in self.data.dtype.names[0:index]]+[self.data.dtype.names[index]]+[self.title+" "+x for x in self.data.dtype.names[index+1:]]
+
+    def validName(self,n,validData,validMatchRegexp=False):
+        if n in validData:
+            return True
+        elif validMatchRegexp:
+            for r in validData:
+                exp=None
+                try:
+                    exp=re.compile(r)
+                except:
+                    pass
+                if not exp is None:
+                    if exp.search(n):
+                        return True
+        return False
 
     def names(self):
         return copy.copy(self.data.dtype.names)
@@ -181,6 +222,26 @@ class SpreadsheetData(object):
     def __add__(self,other):
         """Convinience function for joining data"""
         return self.join(other)
+
+    def recalcData(self,name,expr,create=False):
+        """Recalc or add a column to the data
+        @param name: the colum (must exist if it is not created. Otherwise it must not exist)
+        @param expr: the expression to calculate. All present column names are usable as variables.
+        There is also a variable data for subscripting if the data is not a valid variable name. If
+        the column is not create then there is also a variable this that is an alias for the name
+        @param create: whether a new data item should be created"""
+        if create and name in self.names():
+            error("Item",name,"already exists in names",self.names())
+        elif not create and not name in self.names():
+            error("Item",name,"not in names",self.names())
+
+        result=eval(expr,dict([(n,self.data[n]) for n in self.names()]+[("data",self.data)]+
+                              ([("this",self.data[name] if not create else [])])))
+
+        if not create:
+            self.data[name]=result
+        else:
+            self.append(name,result)
 
     def append(self,
                name,

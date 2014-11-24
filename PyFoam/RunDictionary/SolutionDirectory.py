@@ -627,7 +627,8 @@ class SolutionDirectory(Utilities):
                         keep=True
                 if float(f)>time and not (keepLast and f==last) and not keep:
                     #                   print "Removing",path.join(self.name,f)
-                    self.rmtree(path.join(self.name,f))
+                    if path.exists(path.join(self.name,f)):
+                        self.rmtree(path.join(self.name,f))
                 elif keepInterval!=None:
                     lastKeptIndex=int((float(f)+1e-10)/keepInterval)
 
@@ -650,8 +651,9 @@ class SolutionDirectory(Utilities):
                                     thisIndex=int((float(f)+1e-10)/keepInterval)
                                     if thisIndex!=lastKeptIndex:
                                         keep=True
-                                if val>time and not (keepLast and f==last) and not keep:
-                                    self.rmtree(path.join(pDir,t))
+                                if val>time and not (keepLast and t==last) and not keep:
+                                    if path.exists(path.join(pDir,t)):
+                                        self.rmtree(path.join(pDir,t))
                                 elif keepInterval!=None:
                                     lastKeptIndex=int((float(f)+1e-10)/keepInterval)
                             except ValueError:
@@ -1060,6 +1062,12 @@ class SolutionDirectory(Utilities):
             else:
                 error("Unknown classification",c,"for",full)
 
+            # Pick up additional distributions certain swak-functionobjects generate
+            if path.exists(path.join(full,"distributions")):
+                c=self.__classifyDirectory(path.join(full,"distributions"))
+                if c=="distribution":
+                    self.__postprocInfo["distributions"].append(path.join(use,"distributions"))
+
     def __scanPostproc(self):
         self.__postprocInfo={"timelines":[],
                              "samples":[],
@@ -1077,7 +1085,7 @@ class SolutionDirectory(Utilities):
                 pName=path.join(g,f)
                 if path.exists(pName):
                     dirAndTime.append((path.getmtime(pName),pName))
-        dirAndTime.sort(cmp=lambda x,y:cmp(y[0],x[0]))
+        dirAndTime.sort(key=lambda x:x[0],reverse=True)
         return [s[len(self.name)+1:] for t,s in dirAndTime]
 
     @property
@@ -1088,7 +1096,7 @@ class SolutionDirectory(Utilities):
             pName=path.join(g,"pickledPlots")
             if path.exists(pName):
                 dirAndTime.append((path.getmtime(pName),pName))
-        dirAndTime.sort(cmp=lambda x,y:cmp(y[0],x[0]))
+        dirAndTime.sort(key=lambda x:x[0],reverse=True)
         return [s[len(self.name)+1:] for t,s in dirAndTime]
 
     @property

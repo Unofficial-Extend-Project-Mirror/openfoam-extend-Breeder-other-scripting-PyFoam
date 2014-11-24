@@ -4,7 +4,7 @@ Application-class that implements pyFoamIPythonNotebook.py
 from optparse import OptionGroup
 
 from .PyFoamApplication import PyFoamApplication
-from PyFoam.IPython.Notebook import Notebook
+from PyFoam.IPythonHelpers.Notebook import Notebook
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.Basics.FoamOptionParser import Subcommand
 
@@ -244,6 +244,11 @@ OpenFOAM-cases. The Notebooks are only used as a start for the own evaluations o
 except ImportError:
     print 'No mpld3-library. No interactive plots'""",classes="additional")
                     nb.addMarkdown(
+"""Uncomment this code to change the size of the plots""")
+                    nb.addCode(
+"""# import matplotlib.pylab as pylab
+# pylab.rcParams["figure.figsize"]=(12,8)""")
+                    nb.addMarkdown(
 """Wrapper with additional functionality to the regular Pandas-`DataFrame`:
 
 * `addData()` for adding columns from other data sets (with resampling
@@ -256,7 +261,7 @@ Most Pandas-operations (like slicing) will return a Pandas-`DataFrame`. By enclo
                               level=2,classes=("heading"))
                 nb.addMarkdown("This is the support for permanently storing data into the notebook",
                                classes="comment")
-                nb.addCode("from PyFoam.IPython import storage")
+                nb.addCode("from PyFoam.IPythonHelpers import storage")
                 nb.addMarkdown("Due to technical problems the next line has to be executed 'by hand' (it will not work poperly if called from `Run All` or similar). When reopening the page the JavaScript-error is normal (it will go away once the cell is executed). Reading can take some time and the next command will appear to 'hang'",
                                classes="comment")
                 nb.addCode("store=storage()")
@@ -270,7 +275,7 @@ Most Pandas-operations (like slicing) will return a Pandas-`DataFrame`. By enclo
                               level=2,classes=("heading"))
                 nb.addMarkdown("This class makes it easy to access case data. Use tab-completion for available methods",
                                classes="comment")
-                nb.addCode("from PyFoam.IPython.Case import Case")
+                nb.addCode("from PyFoam.IPythonHelpers.Case import Case")
                 nb.addHeading("The Case",classes="heading")
                 v=self.opts.caseVariable
                 nb.addCode("%s=Case('%s')" % (v,usedDest),classes="case",
