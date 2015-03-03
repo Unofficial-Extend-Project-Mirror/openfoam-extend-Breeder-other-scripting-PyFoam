@@ -305,7 +305,7 @@ Create a Modules modulefile for OpenFOAM. Input parameter 'OpenFOAM configuratio
         # Iterate through environment variables and store in dictionary
         for v in moduleEnv:
             if v.find('=') > -1:
-                key, value = v.split('=')
+                key, value = v.split('=', 1)
 
                 # Minor cleanup
                 value = value.replace('\n', '')
