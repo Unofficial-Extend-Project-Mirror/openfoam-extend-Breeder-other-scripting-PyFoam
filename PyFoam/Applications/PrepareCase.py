@@ -6,22 +6,40 @@ from optparse import OptionGroup
 from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+from PyFoam.Basics.DataStructures import DictProxy
 from PyFoam.Basics.Utilities import rmtree,copytree,execute,remove
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,WriteParameterFile
 from PyFoam.Basics.TemplateFile import TemplateFile
 from PyFoam.Execution.BasicRunner import BasicRunner
+from PyFoam.Basics.RestructuredTextHelper import RestructuredTextHelper
 
 from PyFoam.FoamInformation import foamFork,foamVersion
 
 from .CommonTemplateFormat import CommonTemplateFormat
 from .CommonTemplateBehaviour import CommonTemplateBehaviour
 
-from PyFoam.ThirdParty.six import print_,iteritems
+from PyFoam.ThirdParty.six import print_,iteritems,exec_
 
 from PyFoam import configuration
 
 from os import path,listdir,mkdir
-from shutil import copymode,copy
+from shutil import copymode,copy,move
+from collections import OrderedDict
+import time
+
+def buildFilenameExtension(paraList,valueStrings):
+    ext=""
+    if len(paraList)>0:
+        ext="_".join([path.basename(p) for p in paraList])
+    if len(valueStrings)>0:
+        d={}
+        for v in valueStrings:
+            d.update(eval(v))
+        ext+="_"+"_".join(["%s=%s" % (n,str(v)) for n,v in iteritems(d)])
+    if ext=="":
+        return "_vanilla"
+    else:
+        return "_"+ext
 
 class PrepareCase(PyFoamApplication,
                   CommonTemplateBehaviour,
@@ -40,6 +58,7 @@ class PrepareCase(PyFoamApplication,
                  **kwargs):
         self.defaultMeshCreate=configuration().get("PrepareCase","MeshCreateScript")
         self.defaultCaseSetup=configuration().get("PrepareCase","CaseSetupScript")
+        self.defaultParameterFile=configuration().get("PrepareCase","DefaultParameterFile")
 
         description2="""\
 Prepares a case for running. This is intended to be the replacement for
@@ -61,7 +80,9 @@ present)
 
   6. do template-expansion for every file with the extension .postTemplate
 
-  7. execute another preparation script
+  7. execute another preparation script (caseSetup.sh)
+
+  8. do final template-expansion for every file with the extension .finalTemplate
 
 The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are used by other utilities
 """
@@ -86,6 +107,7 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                                    interspersed=interspersed,
                                    nr=nr,
                                    exactNr=exactNr,
+                                   findLocalConfigurationFile=self.localConfigInArgs,
                                    **kwargs)
 
     def addOptions(self):
@@ -113,6 +135,16 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           dest="writeParameters",
                           default=True,
                           help="Usually a file '"+self.parameterOutFile+"' with a dictionary of the used parameters is written to the case directory. ")
+        output.add_option("--no-write-report",
+                          action="store_false",
+                          dest="writeReport",
+                          default=True,
+                          help="Usually a file '"+self.parameterOutFile+".rst' with a ReST-file that reports the used parameters is written to the case directory. ")
+        output.add_option("--warn-on-wrong-options",
+                          action="store_false",
+                          dest="failOnWrongOption",
+                          default=True,
+                          help="Only issue a warning if a value was set that is not found in the list of valid options")
 
         extensions=OptionGroup(self.parser,
                                "Extensions",
@@ -128,11 +160,21 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                               dest="postTemplateExt",
                               default=".postTemplate",
                               help="Extension for post-template files. Default: %default")
+        extensions.add_option("--final-template-extension",
+                              action="store",
+                              dest="finalTemplateExt",
+                              default=".finalTemplate",
+                              help="Extension for final-template files. Default: %default")
         extensions.add_option("--original-extension",
                               action="store",
                               dest="originalExt",
                               default=".org",
                               help="Extension for files and directories that are copied. Default: %default")
+        extensions.add_option("--extension-addition",
+                              action="append",
+                              dest="extensionAddition",
+                              default=[],
+                              help="Addtional extension that is added to templates and originals to allow overrides. For instance if an addition 'steady' is specified and a file 'T.template' and 'T.template.steady' is found then the later is used. Can be specied more than once. The last instance is used.")
 
         inputs=OptionGroup(self.parser,
                            "Inputs",
@@ -143,7 +185,12 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           action="append",
                           default=[],
                           dest="valuesDicts",
-                          help="Name of a dictionary-file in OpenFOAM-format. Can be specified more than once. Values in later files override old values")
+                          help="Name of a dictionary-file in OpenFOAM-format. Can be specified more than once. Values in later files override old values. If a file "+self.defaultParameterFile+" is present it is read before all other paraemter files")
+        inputs.add_option("--no-default-parameter-file",
+                          action="store_false",
+                          default=True,
+                          dest="useDefaultParameterFile",
+                          help="Even if present do NOT use the file "+self.defaultParameterFile+" before the other parameter files")
         inputs.add_option("--values-string",
                           action="append",
                           default=[],
@@ -165,7 +212,15 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                            default=[],
                            dest="overloadDirs",
                            help="Before starting the preparation process load files from this directory recursively into this case. Caution: existing files will be overwritten. Can be specified more than once. Directories are then copied in the specified order")
-
+        special.add_option("--clone-case",
+                          default=None,
+                          dest="cloneCase",
+                           help="If this is set then this directory is cloned to the specified directory and setup is done there (the target directory must not exist except if the name is build with --automatic-casename)")
+        special.add_option("--automatic-casename",
+                           action="store_true",
+                           dest="autoCasename",
+                           default=False,
+                           help="If used with --clone-case then the casename is built from the original casename, the names of the parameter-files and the set values")
         CommonTemplateFormat.addOptions(self)
         CommonTemplateBehaviour.addOptions(self)
 
@@ -216,6 +271,12 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           default=True,
                           help="Do not execute a script to set initial conditions etc")
 
+        stages.add_option("--no-final-templates",
+                          action="store_false",
+                          dest="doFinalTemplates",
+                          default=True,
+                          help="Do not rework the final-templates")
+
         stages.add_option("--no-template-clean",
                           action="store_false",
                           dest="doTemplateClean",
@@ -232,31 +293,93 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           dest="meshCreateScript",
                           default=None,
                           help="Script that is executed after the template expansion to create the mesh. If not specified then the utility looks for "+self.defaultMeshCreate+" and executes this. If this is also not found blockMesh is executed if a blockMeshDict is found")
+        stages.add_option("--no-keep-zero-directory-from-mesh-create",
+                          action="store_false",
+                          dest="keepZeroDirectoryFromMesh",
+                          default=True,
+                          help="If the script that creates the mesh generates a '0'-directory with data then this data will be removed. Otherwise it is kept")
         scripts.add_option("--case-setup-script",
                           action="store",
                           dest="caseSetupScript",
                           default=None,
                           help="Script that is executed after the original files have been copied to set initial conditions or similar. If not specified then the utility looks for "+self.defaultCaseSetup+" and executes this.")
+        scripts.add_option("--derived-parameters-script",
+                          action="store",
+                          dest="derivedParametersScript",
+                          default="derivedParameters.py",
+                          help="If this script is found then it is executed after the parameters are read. All variables set in this script can then be used in the templates. Default: %default")
+        scripts.add_option("--allow-derived-changes",
+                          action="store_true",
+                          dest="allowDerivedChanges",
+                          default=False,
+                          help="Allow that the derived script changes existing values")
+
+        variables=OptionGroup(self.parser,
+                              "Variables",
+                              "Variables that are automatically defined")
+        self.parser.add_option_group(variables)
+        variables.add_option("--number-of-processors",
+                             action="store",
+                             type=int,
+                             dest="numberOfProcessors",
+                             default=1,
+                             help="Value of the variable numberOfProcessors. Default: %default")
+
+    def info(self,*args):
+        """Information output"""
+        if self.opts.verbose:
+            print_(*args)
+
+    def listdir(self,d,ext):
+        """Private copy of listdir. Returns a list of pairs: first element is
+        the real file-name. Second the name with the extensions stripped off or
+        None if the file doesn't match any extensions"""
+
+        extAdditions=[""]+["."+e for e in self.opts.extensionAddition]
+        allFiles=listdir(d)
+        result=[]
+        templated=set()
+
+        for f in allFiles:
+            isPlain=True
+            for e in extAdditions:
+                ee=ext+e
+                if len(f)>len(ee):
+                    if f[-len(ee):]==ee:
+                        isPlain=False
+                        templated.add(f[:-len(ee)])
+            if isPlain:
+                result.append((f,None))
+
+        for t in templated:
+            found=None
+            for e in extAdditions:
+                tt=t+ext+e
+                if tt in allFiles:
+                    found=tt
+            if found==None:
+                self.error("This should not happen. Nothing found for",t,"with extensions",
+                           extAdditions,"in files",allFiles)
+            else:
+                result.append((found,t))
+
+        return result
 
     def copyOriginals(self,startDir):
         """Go recursivly through directories and copy foo.org to foo"""
-        if self.opts.verbose:
-            print_("Looking for originals in",startDir)
-        for f in listdir(startDir):
+        self.info("Looking for originals in",startDir)
+        for f,t in self.listdir(startDir,self.opts.originalExt):
             if f[0]==".":
-                if self.opts.verbose:
-                    print_("Skipping",f)
+                self.info("Skipping",f)
                 continue
             src=path.join(startDir,f)
-            if path.splitext(f)[1]==self.opts.originalExt:
-                dst=path.join(startDir,path.splitext(f)[0])
+            if t!=None:
+                dst=path.join(startDir,t)
                 if path.exists(dst):
-                    if self.opts.verbose:
-                        print_("Replacing",dst,"with",src)
+                    self.info("Replacing",dst,"with",src)
                     rmtree(dst)
                 else:
-                    if self.opts.verbose:
-                        print_("Copying",src,"to",dst)
+                    self.info("Copying",src,"to",dst)
                 copytree(src,dst,force=True)
             elif path.isdir(src):
                 self.copyOriginals(src)
@@ -265,19 +388,18 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                        startDir,
                        ext):
         """Go recursivly through directories and remove all files that have a specific extension"""
-        if self.opts.verbose:
-            print_("Looking for extension",ext,"in",startDir)
+        self.info("Looking for extension",ext,"in",startDir)
         for f in listdir(startDir):
             if f[0]==".":
-                if self.opts.verbose:
-                    print_("Skipping",f)
+                self.info("Skipping",f)
                 continue
+
             src=path.join(startDir,f)
-            if path.splitext(f)[1]==ext and not path.isdir(src):
-                if self.opts.verbose:
-                    print_("Removing",src)
-                remove(src)
-            elif path.isdir(src):
+            if path.splitext(src)[1]==ext or path.splitext(path.splitext(src)[0])[1]==ext:
+                if not path.isdir(src):
+                    self.info("Removing",src)
+                    remove(src)
+            if path.isdir(src):
                 self.cleanExtension(src,ext)
 
     def searchAndReplaceTemplates(self,
@@ -286,30 +408,28 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                                   templateExt):
         """Go through the directory recursively and replate foo.template with
         foo after inserting the values"""
-        if self.opts.verbose:
-            print_("Looking for templates with extension",templateExt,"in ",startDir)
-        for f in listdir(startDir):
+        self.info("Looking for templates with extension",templateExt,"in ",startDir)
+        for f,t in self.listdir(startDir,templateExt):
             if f[0]==".":
-                if self.opts.verbose:
-                    print_("Skipping",f)
+                self.info("Skipping",f)
                 continue
             if path.isdir(path.join(startDir,f)):
                 self.searchAndReplaceTemplates(
                     path.join(startDir,f),
                     values,
                     templateExt)
-            elif path.splitext(f)[1]==templateExt:
-                fName=path.join(startDir,path.splitext(f)[0])
-                if self.opts.verbose:
-                    print_("Found template for",fName)
-                t=TemplateFile(name=fName+templateExt,
+            elif t!=None:
+                tName=path.join(startDir,t)
+                fName=path.join(startDir,f)
+                self.info("Found template for",tName)
+                t=TemplateFile(name=fName,
                                tolerantRender=self.opts.tolerantRender,
                                allowExec=self.opts.allowExec,
                                expressionDelimiter=self.opts.expressionDelimiter,
                                assignmentDebug=self.pickAssignmentDebug(fName),
                                assignmentLineStart=self.opts.assignmentLineStart)
-                t.writeToFile(fName,values)
-                copymode(fName+templateExt,fName)
+                t.writeToFile(tName,values)
+                copymode(fName,tName)
 
     def overloadDir(self,here,there):
         """Copy files recursively. Overwrite local copies if they exist"""
@@ -318,8 +438,7 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
             fDst=path.join(here,f)
             if path.isdir(fSrc):
                 if not path.exists(fDst):
-                    if self.opts.verbose:
-                        print_("Creating directory",fDst)
+                    self.info("Creating directory",fDst)
                     mkdir(fDst)
                 elif not path.isdir(fDst):
                     self.error("Destination path",fDst,"exists, but is no directory")
@@ -328,20 +447,168 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 if path.exists(fDst):
                     if not path.isfile(fDst):
                         self.error("Desination",fDst,"exists but is no file")
-                if self.opts.verbose:
-                    print_("Copying",fSrc,"to",fDst)
+                self.info("Copying",fSrc,"to",fDst)
                 copy(fSrc,fDst)
             else:
                 self.errr("Source file",fSrc,"is neither file nor directory")
 
     def run(self):
         cName=self.parser.getArgs()[0]
-        if self.checkCase(cName,fatal=self.opts.fatal,verbose=not self.opts.noComplain):
-            self.addLocalConfig(cName)
-        sol=SolutionDirectory(cName,archive=None,paraviewLink=False)
+        if self.opts.cloneCase:
+            if self.opts.autoCasename:
+                cName=path.join(cName,
+                                path.basename(self.opts.cloneCase)+
+                                buildFilenameExtension(self.opts.valuesDicts,
+                                                       self.opts.values))
+            if path.exists(cName):
+                self.error(cName,"already existing (case should not exist when used with --clone-case)")
+            if self.checkCase(self.opts.cloneCase,
+                              fatal=self.opts.fatal,
+                              verbose=not self.opts.noComplain):
+                self.addLocalConfig(self.opts.cloneCase)
+            orig=SolutionDirectory(self.opts.cloneCase,
+                                   archive=None,paraviewLink=False)
+            sol=orig.cloneCase(cName)
+        else:
+            if self.checkCase(cName,
+                              fatal=self.opts.fatal,
+                              verbose=not self.opts.noComplain):
+                self.addLocalConfig(cName)
+            sol=SolutionDirectory(cName,archive=None,paraviewLink=False)
         self.prepare(sol,cName=cName)
 
-    def prepare(self,sol,cName=None,overrideParameters=None):
+    def __strip(self,val):
+        """Strip extra " from strings"""
+        if isinstance(val,(str,)):
+            if len(val)>2:
+                if val[0]=='"' and val[-1]=='"':
+                    return val[1:-1]
+        return val
+
+    def processDefault(self,raw):
+        """Process a dictionary and return a 'flattened' dictionary with the
+        values and a dictionary with the meta-data"""
+        values=OrderedDict()
+        meta=OrderedDict()
+        meta[""]={}
+
+        for k,v in iteritems(raw):
+            isNormal=True
+
+            if isinstance(v,(DictProxy,dict)):
+                if "description" in v:
+                    if "default" in v:
+                        if "values" in v:
+                            self.warning(k+" has also a 'values'-entry. Might be a subgroup")
+                        vMeta={}
+                        for a in v:
+                            if a=="description":
+                                vMeta[a]=self.__strip(v[a])
+                            else:
+                                vMeta[a]=v[a]
+                        meta[""][k]=vMeta
+                    elif "values" in v:
+                        isNormal=False
+
+            if isNormal:
+                if k in values:
+                    self.error(k,"defined twice in defaults")
+                if not k in meta[""]:
+                    meta[""][k]={"default":v}
+                    values[k]=v
+                else:
+                    values[k]=meta[""][k]["default"]
+            else:
+                pVal,pMeta=self.processDefault(v["values"])
+                meta[k]=(self.__strip(v["description"]),pMeta)
+                for a in pVal:
+                    if a in values:
+                        self.error(a,"already defined in sub-directory")
+                    else:
+                        values[a]=pVal[a]
+
+        return values,meta
+
+    def getDefaultValues(self,cName):
+        """Process the file with the default values - if present
+        Returns a dictionary with the values and a dictionary with the meta-data
+        about the parameters"""
+        defFile=path.join(path.abspath(cName),self.defaultParameterFile)
+        if self.opts.useDefaultParameterFile and path.exists(defFile):
+            self.info("Using default values from",defFile)
+            return self.processDefault(
+                ParsedParameterFile(defFile,
+                                    noHeader=True,
+                                    doMacroExpansion=True).getValueDict())
+        else:
+            return {},{}
+
+    def addDictValues(self,name,description,values):
+        """Add values from a dictionary"""
+        meta=dict([(k,{"default":v}) for k,v in iteritems(values)])
+        self.metaData[name]=(description,{"":meta})
+        return values
+
+    def makeReport(self,values,level=2,meta=None):
+        if meta is None:
+            meta=self.metaData
+        helper=RestructuredTextHelper(defaultHeading=level)
+        val=""
+
+        for k in meta:
+            if k=="":
+                if len(meta[k])==0:
+                    continue
+                tab=helper.table(labeled=True)
+                for kk in meta[k]:
+                    if "default" in meta[k][kk] and values[kk]!=meta[k][kk]["default"]:
+                        changed=True
+                        tab.addRow(helper.strong(kk))
+                    else:
+                        changed=False
+                        tab.addRow(kk)
+                    for a,v in iteritems(meta[k][kk]):
+                        tab.addItem(a,v)
+                    if changed:
+                        tab.addItem("Value",helper.strong(values[kk]))
+                    else:
+                        tab.addItem("Value",values[kk])
+                val+=str(tab)
+            else:
+                descr,newMeta=meta[k]
+                val+=helper.heading(descr)
+                val+="\nShort name: "+helper.literal(k)+"\n"
+                val+=self.makeReport(values,
+                                     level=level+1,
+                                     meta=newMeta)
+        return val
+
+    def checkCorrectOptions(self,values,meta=None):
+        if meta is None:
+            meta=self.metaData
+
+        for k in meta:
+            if k=="":
+                for kk in meta[k]:
+                    if "options" in meta[k][kk] and values[kk] not in meta[k][kk]["options"]:
+                        if self.opts.failOnWrongOption:
+                            func=self.error
+                        else:
+                            func=self.warning
+                        func("Value",values[kk],"for parameter",kk,
+                             "not in list of allowed options:",
+                             ", ".join([str(v) for v in meta[k][kk]["options"]]))
+            else:
+                self.checkCorrectOptions(values,meta[k][1])
+
+    def prepare(self,sol,
+                cName=None,
+                overrideParameters=None,
+                numberOfProcessors=None):
+        """Do the actual preparing
+        @param numberOfProcessors: If set this overrides the value set in the
+        command line"""
+
         if cName==None:
             cName=sol.name
 
@@ -349,26 +616,44 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
             self.opts.verbose=True
 
         vals={}
-        vals["casePath"]='"'+path.abspath(cName)+'"'
-        vals["caseName"]='"'+path.basename(path.abspath(cName))+'"'
-        vals["foamVersion"]=foamVersion()
-        vals["foamFork"]=foamFork()
+        vals,self.metaData=self.getDefaultValues(cName)
+        vals.update(self.addDictValues("System",
+                                       "Automatically defined values",
+                                       {
+                                           "casePath" : '"'+path.abspath(cName)+'"',
+                                           "caseName" : '"'+path.basename(path.abspath(cName))+'"',
+                                           "foamVersion" : foamVersion(),
+                                           "foamFork" : foamFork(),
+                                           "numberOfProcessors" : numberOfProcessors if numberOfProcessors!=None else self.opts.numberOfProcessors
+                                       }))
 
-        if self.opts.verbose:
-            print_("Looking for template values",cName)
+        if len(self.opts.extensionAddition)>0:
+            vals.update(self.addDictValues("ExtensionAdditions",
+                                           "Additional extensions to be processed",
+                                           dict((e,True) for e in self.opts.extensionAddition)))
+
+        valsWithDefaults=set(vals.keys())
+
+        self.info("Looking for template values",cName)
         for f in self.opts.valuesDicts:
-            if self.opts.verbose:
-                print_("Reading values from",f)
+            self.info("Reading values from",f)
             vals.update(ParsedParameterFile(f,
                                             noHeader=True,
                                             doMacroExpansion=True).getValueDict())
+
+        setValues={}
         for v in self.opts.values:
-            if self.opts.verbose:
-                print_("Updating values",v)
+            self.info("Updating values",v)
             vals.update(eval(v))
+            setValues.update(eval(v))
 
         if overrideParameters:
             vals.update(overrideParameters)
+
+        unknownValues=set(vals.keys())-valsWithDefaults
+        if len(unknownValues)>0:
+            self.warning("Values for which no default was specified: "+
+                         ", ".join(unknownValues))
 
         if self.opts.verbose and len(vals)>0:
             print_("\nUsed values\n")
@@ -380,15 +665,43 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
             for k,v in sorted(iteritems(vals)):
                 print_(format % (k,v))
             print_("")
-        elif self.opts.verbose:
-            print_("\nNo values specified\n")
+        else:
+            self.info("\nNo values specified\n")
+
+        self.checkCorrectOptions(vals)
+
+        derivedScript=path.join(cName,self.opts.derivedParametersScript)
+        if path.exists(derivedScript):
+            self.info("Deriving variables in script",derivedScript)
+            scriptText=open(derivedScript).read()
+            glob={}
+            oldVals=vals.copy()
+            exec_(scriptText,glob,vals)
+            added=[]
+            changed=[]
+            for k,v in iteritems(vals):
+                if k not in oldVals:
+                    added.append(k)
+                elif vals[k]!=oldVals[k]:
+                    changed.append(k)
+            if len(changed)>0 and (not self.opts.allowDerivedChanges and not configuration().getboolean("PrepareCase","AllowDerivedChanges")):
+                self.error(self.opts.derivedParametersScript,
+                           "changed values of"," ".join(changed),
+                           "\nTo allow this set --allow-derived-changes or the configuration item 'AllowDerivedChanges'")
+            if len(added)>0:
+                self.info("Added values:"," ".join(added))
+            if len(changed)>0:
+                self.info("Changed values:"," ".join(changed))
+            if len(added)==0 and len(changed)==0:
+                self.info("Nothing added or changed")
+        else:
+            self.info("No script",derivedScript,"for derived values")
 
         if self.opts.onlyVariables:
             return
 
         if self.opts.doClear:
-            if self.opts.verbose:
-                print_("Clearing",cName)
+            self.info("Clearing",cName)
             sol.clear(processor=True,
                       pyfoam=True,
                       vtk=True,
@@ -400,48 +713,86 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
 
         if self.opts.writeParameters:
             fName=path.join(cName,self.parameterOutFile)
-            if self.opts.verbose:
-                print_("Writing parameters to",fName)
+            self.info("Writing parameters to",fName)
             with WriteParameterFile(fName,noHeader=True) as w:
                 w.content.update(vals,toString=True)
                 w["foamVersion"]=vals["foamVersion"]
                 w.writeFile()
 
+        if self.opts.writeReport:
+            fName=path.join(cName,self.parameterOutFile+".rst")
+            self.info("Writing report to",fName)
+            with open(fName,"w") as w:
+                helper=RestructuredTextHelper(defaultHeading=1)
+                w.write(".. title:: "+self.__strip(vals["caseName"])+"\n")
+                w.write(".. sectnum::\n")
+                w.write(".. header:: "+self.__strip(vals["caseName"])+"\n")
+                w.write(".. header:: "+time.asctime()+"\n")
+                w.write(".. footer:: ###Page### / ###Total###\n\n")
+
+                w.write("Parameters set in case directory "+
+                        helper.literal(self.__strip(vals["casePath"]))+" at "+
+                        helper.emphasis(time.asctime())+"\n\n")
+                w.write(".. contents::\n\n")
+                if len(self.opts.valuesDicts):
+                    w.write(helper.heading("Parameter files"))
+                    w.write("Parameters read from files\n\n")
+                    w.write(helper.enumerateList([helper.literal(f) for f in self.opts.valuesDicts]))
+                    w.write("\n")
+                if len(setValues)>0:
+                    w.write(helper.heading("Overwritten parameters"))
+                    w.write("These parameters were set from the command line\n\n")
+                    w.write(helper.definitionList(setValues))
+                    w.write("\n")
+                w.write(helper.heading("Parameters with defaults"))
+                w.write(self.makeReport(vals))
+                if len(unknownValues)>0:
+                    w.write(helper.heading("Unspecified parameters"))
+                    w.write("If these parameters are actually used then specify them in "+
+                            helper.literal(self.defaultParameterFile)+"\n\n")
+                    tab=helper.table(True)
+                    for u in unknownValues:
+                        tab.addRow(u)
+                        tab.addItem("Value",vals[u])
+                    w.write(str(tab))
+
         self.addToCaseLog(cName)
 
         for over in self.opts.overloadDirs:
-            if self.opts.verbose:
-                print_("Overloading files from",over)
-                self.overloadDir(sol.name,over)
+            self.info("Overloading files from",over)
+            self.overloadDir(sol.name,over)
 
         zeroOrig=path.join(sol.name,"0.org")
 
         hasOrig=path.exists(zeroOrig)
+        cleanZero=True
+
         if not hasOrig:
-            if self.opts.verbose:
-                print_("Not going to clean '0'")
+            self.info("Not going to clean '0'")
             self.opts.cleanDirectories.remove("0")
+            cleanZero=False
 
         if self.opts.doCopy:
             if hasOrig:
-                if self.opts.verbose:
-                    print_("Found 0.org. Clearing 0")
+                self.info("Found 0.org. Clearing 0")
                 zeroDir=path.join(sol.name,"0")
                 if path.exists(zeroDir):
                     rmtree(zeroDir)
-                elif self.opts.verbose:
-                    print_("No 0-directory")
+                else:
+                    self.info("No 0-directory")
 
-            if self.opts.verbose:
-                print_("")
+            self.info("")
+        else:
+            cleanZero=False
 
         if self.opts.doTemplates:
             self.searchAndReplaceTemplates(sol.name,
                                            vals,
                                            self.opts.templateExt)
 
-            if self.opts.verbose:
-                print_("")
+            self.info("")
+
+        backupZeroDir=None
 
         if self.opts.doMeshCreate:
             if self.opts.meshCreateScript:
@@ -454,8 +805,7 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 scriptName=None
 
             if scriptName:
-                if self.opts.verbose:
-                    print_("Executing",scriptName,"for mesh creation")
+                self.info("Executing",scriptName,"for mesh creation")
                 if self.opts.verbose:
                     echo="Mesh: "
                 else:
@@ -463,31 +813,53 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 result="".join(execute([scriptName],workdir=sol.name,echo=echo))
                 open(scriptName+".log","w").write(result)
             else:
-                if self.opts.verbose:
-                    print_("No script for mesh creation found. Looking for 'blockMeshDict'")
+                self.info("No script for mesh creation found. Looking for 'blockMeshDict'")
                 if sol.blockMesh()!="":
-                    if self.opts.verbose:
-                        print_(sol.blockMesh(),"found. Executing 'blockMesh'")
+                    self.info(sol.blockMesh(),"found. Executing 'blockMesh'")
                     bm=BasicRunner(argv=["blockMesh","-case",sol.name])
                     bm.start()
                     if not bm.runOK():
                         self.error("Problem with blockMesh")
-            if self.opts.verbose:
-                print_("")
+                for r in sol.regions():
+                    self.info("Checking region",r)
+                    s=SolutionDirectory(sol.name,region=r,
+                                        archive=None,paraviewLink=False)
+                    if s.blockMesh()!="":
+                        self.info(s.blockMesh(),"found. Executing 'blockMesh'")
+                        bm=BasicRunner(argv=["blockMesh","-case",sol.name,
+                                             "-region",r])
+                        bm.start()
+                        if not bm.runOK():
+                            self.error("Problem with blockMesh")
+
+            self.info("")
+
+            if cleanZero and path.exists(zeroDir):
+                self.warning("Mesh creation recreated 0-directory")
+                if self.opts.keepZeroDirectoryFromMesh:
+                    backupZeroDir=zeroDir+".bakByPyFoam"
+                    self.info("Backing up",zeroDir,"to",backupZeroDir)
+                    move(zeroDir,backupZeroDir)
+                else:
+                    self.info("Data in",zeroDir,"will be removed")
 
         if self.opts.doCopy:
             self.copyOriginals(sol.name)
 
-            if self.opts.verbose:
-                print_("")
+            self.info("")
+
+            if backupZeroDir:
+                self.info("Copying backups from",backupZeroDir,"to",zeroDir)
+                self.overloadDir(zeroDir,backupZeroDir)
+                self.info("Removing backup",backupZeroDir)
+                rmtree(backupZeroDir)
 
         if self.opts.doPostTemplates:
             self.searchAndReplaceTemplates(sol.name,
                                            vals,
                                            self.opts.postTemplateExt)
 
-            if self.opts.verbose:
-                print_("")
+            self.info("")
 
         if self.opts.doCaseSetup:
             if self.opts.caseSetupScript:
@@ -500,8 +872,7 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 scriptName=None
 
             if scriptName:
-                if self.opts.verbose:
-                    print_("Executing",scriptName,"for case setup")
+                self.info("Executing",scriptName,"for case setup")
                 if self.opts.verbose:
                     echo="Case:"
                 else:
@@ -509,19 +880,21 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 result="".join(execute([scriptName],workdir=sol.name,echo=echo))
                 open(scriptName+".log","w").write(result)
             else:
-                if self.opts.verbose:
-                    print_("No script for case-setup found. Nothing done")
-            if self.opts.verbose:
-                print_("")
+                self.info("No script for case-setup found. Nothing done")
+            self.info("")
+
+        if self.opts.doFinalTemplates:
+            self.searchAndReplaceTemplates(sol.name,
+                                           vals,
+                                           self.opts.finalTemplateExt)
 
         if self.opts.doTemplateClean:
-            if self.opts.verbose:
-                print_("Clearing templates")
+            self.info("Clearing templates")
             for d in self.opts.cleanDirectories:
-                for e in [self.opts.templateExt,self.opts.postTemplateExt]:
+                for e in [self.opts.templateExt,
+                          self.opts.postTemplateExt,
+                          self.opts.finalTemplateExt]:
                     self.cleanExtension(path.join(sol.name,d),e)
-            if self.opts.verbose:
-                print_("")
+            self.info("")
 
-        if self.opts.verbose:
-            print_("Case setup finished")
+        self.info("Case setup finished")

@@ -1,4 +1,3 @@
-
 import unittest
 
 from PyFoam.Basics.TemplateFile import TemplateFile,TemplateFileOldFormat,PyratempPreprocessor
@@ -48,6 +47,15 @@ templateBuiltIn="""
 <!--(if not False)-->FALSE<!--(end)-->
 @!min(2,3)!@ @!max(2,3)!@
 @!chr(42)!@ @!ord(' ')!@
+"""
+
+templateVariablesIn3="""
+$$ duesenAus=[0,2,3]
+$$ duesenNamen=["B30"]+["B%d_%d" % (29-i,j) for i in range(7) for j in [2,1]]
+$$ removeDuesen=[duesenNamen[i] for i in duesenAus]
+<!--(for d in removeDuesen)-->
+|-d-|
+<!--(end)-->
 """
 
 class TemplateFileTest(unittest.TestCase):
@@ -100,6 +108,14 @@ class TemplateFileTest(unittest.TestCase):
         t=TemplateFile(content=templateBuiltIn)
         self.assertEqual(t.getString({}),"\nTRUE\nFALSE\n2 3\n* 32\n")
 theSuite.addTest(unittest.makeSuite(TemplateFileTest,"test"))
+
+class TemplateFileAllowExecutionTest(unittest.TestCase):
+    def testAssignmentNotWorkingInPython3(self):
+        t=TemplateFile(content=templateVariablesIn3,
+                       expressionDelimiter="|-",
+                       allowExec=True)
+
+        self.assertEqual(t.getString({}),"\nB30\nB29_1\nB28_2\n")
 
 class TemplateFileOldFormatTest(unittest.TestCase):
     def testTemplateFileString(self):

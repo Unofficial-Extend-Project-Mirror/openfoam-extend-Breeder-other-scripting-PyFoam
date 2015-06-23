@@ -20,7 +20,7 @@ from os import path,getcwd,environ
 from copy import deepcopy
 
 from PyFoam.ThirdParty.six import print_
-from PyFoam.ThirdParty.six import iteritems
+from PyFoam.ThirdParty.six import iteritems,string_types
 
 class PyFoamApplicationException(FatalErrorPyFoamException):
      def __init__(self,app,*text):
@@ -35,7 +35,7 @@ def pyFoamExceptionHook(type,value,tb,debugOnSyntaxError=False):
     if hasattr(sys,'ps1'):
         warning("Interactive mode. No debugger")
         sys.__excepthook__(type,value,tb)
-    elif not (isatty(sys.stderr) and isatty(sys.stdin) and isatty(sys.stdout)):
+    elif not (isatty(sys.stderr) and isatty(sys.stdin) and isatty(sys.stdout)) and not (path.basename(sys.executable) in ["pvpython"]):
         warning("Not on a terminal. No debugger")
         sys.__excepthook__(type,value,tb)
     elif issubclass(type,SyntaxError) and not debugOnSyntaxError:
@@ -47,6 +47,9 @@ def pyFoamExceptionHook(type,value,tb,debugOnSyntaxError=False):
              import ipdb as pdb
         except ImportError:
              import pdb
+        except AttributeError:
+             # ipdb doesn't work in pvpython
+             import pdb
         traceback.print_exception(type,value,tb)
         print_()
         pdb.pm()
@@ -54,6 +57,8 @@ def pyFoamExceptionHook(type,value,tb,debugOnSyntaxError=False):
 def pyFoamSIG1HandlerPrintStack(nr,frame):
      print_("Signal Nr",nr,"sent")
      raise FatalErrorPyFoamException("Signal nr",nr,"sent")
+
+_LocalConfigurationFile=None
 
 class PyFoamApplication(object):
     """This class is the base for all pyFoam-utilities"""
@@ -77,6 +82,8 @@ class PyFoamApplication(object):
                  exactNr=True,
                  subcommands=None,
                  inputApp=None,
+                 localConfigurationFile=None,
+                 findLocalConfigurationFile=None,
                  **kwArgs):
         """
         @param description: description of the command
@@ -90,7 +97,21 @@ class PyFoamApplication(object):
         @param exactNr: Must not have more than the required number of arguments
         @param subcommands: parse and use subcommands from the command line. Either True or a list with subcommands
         @param inputApp: Application with input data. Used to allow a 'pipe-like' behaviour if the class is used from a Script
+        @param localConfigurationFile: Use this file (or list of files) as a local configuration
+        @param findLocalConfigurationFile: Method to find a configuration file BEFORE the actual parameters are parsed
         """
+
+        global _LocalConfigurationFile
+
+        if _LocalConfigurationFile is not None:
+             configuration().addFile(_LocalConfigurationFile)
+
+        if isinstance(localConfigurationFile,string_types):
+             configuration().addFile(localConfigurationFile)
+        elif localConfigurationFile is not None:
+             for c in localConfigurationFile:
+                  configuration().addFile(c)
+
         if subcommands:
              self.subs=True
              if interspersed:
@@ -119,6 +140,17 @@ class PyFoamApplication(object):
         if self.calledAsClass:
             self.calledName=self.__class__.__name__+" used by "+sys.argv[0]
             self.parser.prog=self.calledName
+        elif not _LocalConfigurationFile and findLocalConfigurationFile:
+            if args:
+                usedArgs=args
+            else:
+                usedArgs=sys.argv[1:]
+            _LocalConfigurationFile=findLocalConfigurationFile(usedArgs)
+            if _LocalConfigurationFile and not path.exists(_LocalConfigurationFile):
+                # Fix functions that do not check for the existence
+                _LocalConfigurationFile=None
+            if _LocalConfigurationFile:
+                 configuration().addFile(_LocalConfigurationFile)
 
         self.generalOpts=None
 
@@ -203,12 +235,22 @@ class PyFoamApplication(object):
                        dest="profileHotshot",
                        default=False,
                        action="store_true",
-                       help="Profile the python-script using the hotshot-library (not the OpenFOAM-program) - mostly of use for developers - EXPERIMENTAL")
+                       help="Profile the python-script using the hotshot-library (not the OpenFOAM-program) - mostly of use for developers - DEPRECATED as this library will by removed from standard python and is no longer supported")
+        grp.add_option("--profile-line-profiler",
+                       dest="profileLineProfiler",
+                       default=False,
+                       action="store_true",
+                       help="Profile the python-script using the line_profiler-library (not the OpenFOAM-program) - mostly of use for developers - EXPERIMENTAL")
 
         dbg=OptionGroup(self.parser,
                         "Debugging",
                         "Options mainly used for debugging PyFoam-Utilities")
 
+        dbg.add_option("--location-of-local-config",
+                       dest="locationOfLocalConfig",
+                       default=False,
+                       action="store_true",
+                       help="Prints the location of the found LocalConfigPyFoam-file that is used (if any)")
         dbg.add_option("--traceback-on-error",
                        dest="traceback",
                        default=False,
@@ -278,6 +320,13 @@ with these option for commands that generate a lot of output""")
         if self.subs:
             self.cmdname=self.parser.cmdname
 
+        if self.opts.locationOfLocalConfig:
+            if _LocalConfigurationFile:
+                print_("Local configuration found at",
+                      _LocalConfigurationFile)
+            else:
+                print_("No LocalConfigPyFoam-file found")
+
         if "WM_PROJECT_VERSION" not in environ:
              warning("$WM_PROJECT_VERSION unset. PyFoam will not be able to determine the OpenFOAM-version and behave strangely")
         if self.opts.developerMode:
@@ -312,23 +361,41 @@ with these option for commands that generate a lot of output""")
                 psyco.full()
             except ImportError:
                 warning("No psyco installed. Continuing without acceleration")
-
-        if self.opts.profilePython or self.opts.profileCPython or self.opts.profileHotshot:
-            if sum([self.opts.profilePython,self.opts.profileCPython,self.opts.profileHotshot])>1:
-                self.error("Profiling with hotshot and regular profiling are mutual exclusive")
+        profOptions=sum([self.opts.profilePython,
+                         self.opts.profileCPython,
+                         self.opts.profileHotshot,
+                         self.opts.profileLineProfiler])
+        if profOptions>0:
+            if profOptions>1:
+                self.error("Only one profiling option can be specified at a time")
             print_("Running profiled")
+            fnAdd=""
             if self.opts.profilePython:
                 import profile
             elif self.opts.profileCPython:
                 import cProfile as profile
+            elif self.opts.profileLineProfiler:
+                import line_profiler
+                profile=line_profiler.LineProfiler(self.run)
+                import PyFoam.RunDictionary.SolutionDirectory
+                profile.add_module(PyFoam.RunDictionary.SolutionDirectory)
+                fnAdd=".lineProfiler"
             else:
                 import hotshot
-            profileData=path.basename(sys.argv[0])+".profile"
+            profileData=path.basename(sys.argv[0])+fnAdd+".profile"
             if self.opts.profilePython or self.opts.profileCPython:
                 profile.runctx('self.run()',None,{'self':self},profileData)
                 print_("Reading python profile")
                 import pstats
                 stats=pstats.Stats(profileData)
+            elif self.opts.profileLineProfiler:
+                import inspect
+                nr=profile.add_module(inspect.getmodule(self))
+                self.warning("Adding",nr,"functions for line-profiling")
+                profile.runctx('self.run()',None,{'self':self})
+                profile.dump_stats(profileData)
+                profile.print_stats(open(profileData+".printed","w"))
+                stats=None
             else:
                 profileData+=".hotshot"
                 prof=hotshot.Profile(profileData)
@@ -337,9 +404,10 @@ with these option for commands that generate a lot of output""")
                 prof.close()
                 import hotshot.stats
                 stats=hotshot.stats.load(profileData)
-            stats.strip_dirs()
-            stats.sort_stats('time','calls')
-            stats.print_stats(20)
+            if stats:
+                stats.strip_dirs()
+                stats.sort_stats('time','calls')
+                stats.print_stats(20)
 
             self.parser.restoreEnvironment()
         else:
@@ -508,6 +576,12 @@ with these option for commands that generate a lot of output""")
         else:
             print_()
 
+    def depreciationWarning(self,reason):
+         self.warning("\n",
+                      "This utility is now deprecated because",reason,
+                      "\n",
+                      "It will be removed in future versions of PyFoam\n")
+
     def silent(self,*args):
         """
         Don't print a warning message
@@ -565,5 +639,48 @@ with these option for commands that generate a lot of output""")
         """
         if directory!=None:
             configuration().addFile(path.join(directory,"LocalConfigPyFoam"),silent=True)
+
+    def localConfigFromCasename(self,args):
+        """Look for the local configuration assuming that the first argument
+        after '-case' is the case directory"""
+        for i in range(len(args)):
+            if args[i]=="-case":
+               return path.join(args[i+1],"LocalConfigPyFoam")
+        return self.localConfigInCWD(args)
+
+    def localConfigInArgs(self,args):
+        """Assume that the first argument that is no option and a directory
+        can have a local configuration"""
+        for a in args:
+            if len(a)>0 and a[0]!="-":
+               if path.isdir(a):
+                   confPath=path.join(a,"LocalConfigPyFoam")
+                   if path.exists(confPath):
+                       return confPath
+                   else:
+                       return None
+        return None
+
+    def localConfigInArgsFile(self,args):
+        """Assume that the first argument that is no option and a file
+        can has a local configuration in the same directory"""
+        for a in args:
+            if len(a)>0 and a[0]!="-":
+               if path.exists(a):
+                   confPath=path.join(path.dirname(path.realpath(a)),"LocalConfigPyFoam")
+                   if path.exists(confPath):
+                       return confPath
+                   else:
+                       return None
+        return None
+
+    def localConfigInCWD(self,args):
+        """find the local configuration in the current directory"""
+        import os
+        confPath=path.join(os.getcwd(),"LocalConfigPyFoam")
+        if path.exists(confPath):
+             return confPath
+        else:
+             return None
 
 # Should work with Python3 and Python2

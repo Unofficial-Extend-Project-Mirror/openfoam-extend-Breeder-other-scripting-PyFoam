@@ -34,14 +34,11 @@ class SolutionDirectory(Utilities):
     """Represents a solution directory
 
     In the solution directory subdirectories whose names are numbers
-    are assumed to be solutions for a specific time-step
-
-    A sub-directory (called the Archive) is created to which solution
-    data is copied"""
+    are assumed to be solutions for a specific time-step"""
 
     def __init__(self,
                  name,
-                 archive="ArchiveDir",
+                 archive=None,
                  paraviewLink=True,
                  parallel=False,
                  addLocalConfig=False,
@@ -49,7 +46,7 @@ class SolutionDirectory(Utilities):
                  region=None):
         """@param name: Name of the solution directory
         @param archive: name of the directory where the lastToArchive-method
-        should copy files, if None no archive is created
+        should copy files, if None no archive is created. Deprecated as it was never used
         @param paraviewLink: Create a symbolic link controlDict.foam for paraview
         @param tolerant: do not fail for minor inconsistencies
         @param parallel: use the first processor-subdirectory for the authorative information
@@ -104,11 +101,31 @@ class SolutionDirectory(Utilities):
         self.addToClone("*.org")
         self.addToClone("*.template")
         self.addToClone("*.sh")
+        self.addToClone("*.parameters")
+        self.addToClone("derivedParameters.py")
+        self.addToClone("*.postTemplate")
+        self.addToClone("*.finalTemplate")
 
         self.__postprocDirs=[]
         self.__postprocInfo={}
         self.addPostprocDir(".")
         self.addPostprocDir("postProcessing",fail=False)
+
+    def regions(self):
+        """Detect sub-region cases by looking through constant and finding
+        directories with polyMesh-directories"""
+        regions=[]
+        for f in listdir(self.constantDir()):
+            fName=path.join(self.constantDir(),f)
+            if path.isdir(fName):
+                pF=path.join(fName,"polyMesh")
+                if path.exists(pF) and path.isdir(pF):
+                    if self.region is None:
+                        regions.append(f)
+                    else:
+                        # sub-regions. Do they even exist?
+                        regions.append(path.join(self.region,f))
+        return regions
 
     def setToParallel(self):
         """Use the parallel times instead of the serial.

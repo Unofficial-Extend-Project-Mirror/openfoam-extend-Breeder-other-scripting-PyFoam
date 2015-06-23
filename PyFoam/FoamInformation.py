@@ -190,9 +190,9 @@ def foamInstalledVersions():
 
         if not path.exists(basedir) or not path.isdir(basedir):
             warning("Basedir",basedir,"for fork",fork,"does not exist or is not a directory")
-            continue
+            # continue
 
-        for bdir in [basedir]+config().getList("OpenFOAM","AdditionalInstallation"):
+        for bdir in [basedir]+config().getList("OpenFOAM","AdditionalInstallation-"+fork):
             for val in [re.compile(s) for s in config().getList("OpenFOAM","DirPatterns-"+fork)]:
                 __foamInstallations.update(findInstalledVersions(bdir,val,fork))
 

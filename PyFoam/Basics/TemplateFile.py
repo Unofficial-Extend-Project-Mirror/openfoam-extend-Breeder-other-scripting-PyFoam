@@ -9,7 +9,7 @@ from PyFoam.ThirdParty.pyratemp import Template as PyratempTemplate
 from PyFoam.ThirdParty.pyratemp import EvalPseudoSandbox,TemplateRenderError
 from PyFoam.ThirdParty.pyratemp import Renderer as PyratempRenderer
 
-from PyFoam.ThirdParty.six import iteritems,exec_,print_
+from PyFoam.ThirdParty.six import iteritems,exec_,print_,PY3
 
 class RendererWithFilename(PyratempRenderer):
      """Usual renderer but report a filename"""
@@ -109,10 +109,14 @@ class PyratempPreprocessor(object):
 
         result=""
 
+        def isVarname(name):
+            return re.match("[_A-Za-z][_A-Za-z0-9]*$",name.strip())!=None
+
         for l in lines:
+            skipLine=False
             if l[:len(self.assignmentLineStart)]==self.assignmentLineStart and self.dovarline:
                 tmp=l[len(self.assignmentLineStart):].split("=")
-                if len(tmp)!=2:
+                if len(tmp)!=2 or not isVarname(tmp[0]):
                     if self.allowExec:
                         execString=l[len(self.assignmentLineStart):].replace("\\","\\\\").replace("\"","\\\"")
                         result+='$!setvar("%s", "%s")!$#!' % (
@@ -120,9 +124,10 @@ class PyratempPreprocessor(object):
                             execIdString+execString.strip()
                         )
                         result+="\n"
+                        skipLine=True
                     else:
                         error("Each definition must be of the form: <name>=<value>",
-                              "The string",l,"is not")
+                              "The string",l,"is not. Try running the utility with the option --allow-exec-instead-of-assignment")
                 else:
                     #                if tmp[1].find('"')>=0:
                     #                   error("There is a \" in",tmp[1],"\npyratemp can't cope with that'")
@@ -133,7 +138,7 @@ class PyratempPreprocessor(object):
                          l=self.assignmentDebug+" "+tmp[0].strip()+" "+self.expressionDelimiterRaw+tmp[0].strip()+self.expressionDelimiterEndRaw
                     else:
                          continue
-            if self.doexpr:
+            elif self.doexpr:
                 nl=""
                 iStart=0
                 for m in self.expr.finditer(l):
@@ -157,7 +162,8 @@ class PyratempPreprocessor(object):
                     iStart=m.end()
                 result+=nl+l[iStart:]+"\n"
             else:
-                result+=l+"\n"
+                if not skipLine:
+                    result+=l+"\n"
 
         # remove trailing newline if the original had none
         if original[-1]!='\n' and result[-1]=='\n':
@@ -313,12 +319,14 @@ class EvalPseudoSandboxWithMath(EvalPseudoSandbox):
 
         if doEval:
             globals= {"__builtins__":self.eval_allowed_globals}
+            if PY3:
+                 globals.update(locals)
             x = eval(self.compile(expr),globals, locals)
         else:
             #            globals= {"__builtins__":self.eval_allowed_globals}
             globals= {"__builtins__":__builtins__}
             expr=expr[len(execIdString):]
-            exec_(self.compile(expr,mode="exec"),globs=globals,locs=locals)
+            exec_(self.compile(expr,mode="exec"),globals,locals)
             x = None
         self.locals_ptr = sav
         return x

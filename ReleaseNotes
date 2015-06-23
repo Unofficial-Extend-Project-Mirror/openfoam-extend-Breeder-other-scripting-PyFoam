@@ -1,4 +1,339 @@
 # -*- mode: org -*-
+* Version 0.6.5 - 2015-06-01
+** Major changes
+*** PyFoam now on /Python Package Index/
+    PyFoam is now found at https://pypi.python.org/pypi/PyFoam
+
+    Recommended way of installing is using https://pip.pypa.io/en/latest/ :
+: pip install PyFoam
+    This will also make sure that the required =numpy=-package is
+    installed
+** Incompatibilities
+*** =ArchiveDir= in =SolutionDirectory= discouraged
+    As this was never really used it is discouraged (the option is
+    still there).
+
+    If you don't understand what this means it probably doesn't
+    concern you
+*** Pickled data files now written as binary
+    All pickled files are now written and read in binary mode (as this
+    was the only way that works consistently in Python 3). This *may*
+    cause problems with old cases (but no effort has been made to
+    check whether this problem actually exists)
+*** The =PlotRunner= and =PlotWatcher= now don't strip spaces
+    These two utilities now don't strip leading spaces from the read
+    lines. This preserves formatting in the output but might break
+    scripts that rely on these spaces.
+
+    The old behaviour may be reset by overriding =stripSpaces= in
+    section =SolverOutput= with a value =True=
+*** Different column names in =pyFoamConvertToCSV.py=
+    The enhanced naming of the columns might break scripts that rely
+    on the old naming
+*** =pyFoamChangeBoundaryName.py= and =pyFoamChangeBoundaryType.py= automatically modify =processorX=
+    In previous versions these boundary files were not modified. Now
+    they are. Scripts that rely on unchanged =boundary=-files in the
+    =processorX=-directories might fail. Old behavior can be set with
+    the =--no-processor=-option
+** Bugfixes
+*** Arbitrary commands in =TemplateFile= passed to file
+    Lines with =$$= are passed to the file and make it syntactically incorrect.
+    Fixed
+*** Pickled files not opened in binary mode
+    This caused problems in Python 3 were binary strings were not
+    correctly written (actually: attempts to write them to a
+    pickle-file made the application fail)
+*** Additional fixes for Python 3
+    In a number of classes/applications semantic differences between
+    Python 2 and 3 makes these fail on Python 3. Changes are
+    - Replace =map= with list comprehension where possible
+    - Modify wrappings in =CTestRun= to work with Python3
+    - Replace =print= with =print_=
+    - Semantic difference in division of two integers: Python3 gives a
+      floating point number as a result
+*** =ParsedParameterFile= fails if "complete" dictionary is =#include= ed
+    If an included dictionary has a header parsing failed. This is
+    fixed by retrying the parsing with the header
+*** =ParsedParameterFile= fails if there is more info after =#include=
+    If there is for instance a =;= after an =#include= statement the
+    regular OpenFOAM-parser ignores it. The PyFoam-parser failed. This
+    has been fixed and the parser behaves like regular OpenFOAM
+*** =pyFoamDisplayBlockMesh.py= not working with VTK 6
+    Due to changes in the API the program did not work. This is now
+    fixed and the program works with VTK 6 as well as VTK 5
+*** =pyFoamCreateModuleFile.py= failed with environment variables containing ~=~
+    In that case an overeager =split= created lists.
+
+    Fix provided by Martin Beaudoin
+*** Fix import in =GeneralVCSInterface=
+    Change in the syntax of imports in Python 3 broke this
+    one. Fixed. But doesn't matter as Mercurial doesn't support
+    Python3
+*** Support of old format in =ParsedBlockMeshDict= broken
+    Wrong usage of indexes. Fixed
+*** =TemplateFile= not correctly working in Python 3
+    Reason was a different calling convention to the =exec=-function
+    of Python. Fixed
+*** Certain things not done by =pyFoamPrepareCase= in =--quiet= was set
+    This was due to actions being on the same level as the
+    debug-output. Fixed
+*** Annoying warning at the start of the run
+    For certain solvers the plot utilities issued a warning during a
+    phase when no information about the current time is
+    available. This is now fixed
+*** Redirected values
+not used when iterating over dictionaries
+    When iterating over dictionaries with redirects the values in the
+    redirected dictionaries were not used. This is now fixed
+*** Behavior of Template-engine not consistent in Python3 and Python2
+    Due to a difference in the behavior of the =eval=-function in
+    Python 3 certain expressions (especially with list comprehension)
+    failed. Fixed
+*** Braces, brackets, parentheses in column name broke =RunDatabase=
+    These characters were stripped out by /SQLite/. They are thus
+    normalized to special character combinations (which will be
+    denormalized after reading)
+*** Finding of installations in alternate locations broken
+    The algorithm to find (Open)FOAM-installations in alternate
+    locations was broken. Now working again
+*** Failing on 3.x if socket for server thread already occupied
+    Due to a a change in the socket API if the socket for the network
+    thread (usually port 18000) was already notified the program
+    failed. Fixed. Tested on 2.7 as well
+** New features/Utilities
+** Enhancements to Utilities
+*** =pyFoamPrepareCase= recognizes multi-region cases
+    If there are multiple regions and no =prepareMesh.sh= then it will
+    try to execute =blockMesh= for the regions
+*** =pyFoamPrepareCase= adds specialized templates
+    With the option =--extension-addition= additional templates that
+    override the regular templates can be specified.
+
+    Application may be for instance special templates for
+    =potentialFoam=
+*** =pyFoamPrepareCase= keeps data generated by meshing script
+    If the meshing stage generates a =0=-directory then data in that
+    directory will be kept. This can be switched off if this is not
+    the desired behaviour
+*** =pyFoamPrepareCase= adds possibility for a file with default values
+    If a file =default.parameters= is found in this directory then
+    this file is automatically read. This file is read like a regular
+    parameter-file but it can also have added information about the
+    values:
+    - if an entry is a dictionary and has the entries =description=
+      and =values= then it is assumed that this is a /group of
+      values/. These groups are only used for grouping in reports. The
+      =values= are set in the global scope.
+
+      Groups can be nested
+    - if an entry is a dictionary and has the entries =description=
+      and =default= then it is assumed that the dictionary holds
+      meta-information about the value. The entry =default= is the
+      value that is actually used.
+    - an additional enty =options= in that dictionary specifies a list
+      of valid values for that parameter. The utility fails if the set
+      value is not in that list. This is useful for setting boundary
+      condition types or similar entries where only a limited number
+      of words is valid
+    It is recommended that *all* used values are specified in this
+    file as this will be used for reporting
+*** =pyFoamPrepareCase= writes report about the variables
+    The utility now writes a /Restructured Text/ file with a report
+    about the variables. Information from =default.parameters= like
+    groupings and =description= are used in this report. Also the
+    default value and the actual value are reported.
+
+    The file can be converted with a utility like =rst2pdf=
+*** Gnuplot can be styled with default commands
+    For all utilities that use Gnuplot as the backend for plotting
+    there is now a configuration option =gnuplotCommands= in the
+    =Plotting=-section with the usual =set= commands of Gnuplot. This
+    is preset to display a grid and the y-axis.
+
+    The settings can be reset with the =gnuplotCommands=-list in the
+    =customRegexp=-entries
+*** =pyFoamPVSnapshot.py= now supports Paraview 4.2 and later
+    The API for screenshots changed with Paraview 4.2 and later. This
+    API now supports layouts if multiple views were specified. The
+    default behaviour is now to make only one screenshot per
+    layout. The old behaviour (one screenshot per view) can now be
+    switched on with the =-no-layouts=-option.
+
+    This allows screenshots exactly the way they look on screen
+*** =pyFoamPVSnapshot.py= allows switching between decomposed and reconstructed data
+    The utility now rewrites the state file so that either decomposed
+    or reconstructed data is read. The default is that the data set
+    for which more timesteps exist is selected
+*** =pyFoamPVSnapshot.py= allows changing the field for sources
+    It is now possible to specify a dictionary with source names and
+    the fields that should be set for them. This allows quickly
+    coloring the same layout with different fields.
+
+    This works for
+    - 3D (rendered) filters
+    - bar charts
+*** =pyFoamPVSnapshot.py= allows rescaling the color-legend
+    There are now two ways to rescale the color-transfer functions
+    - by specifying a dictionary with the ranges
+    - by specifying a source. The range of the data on that source
+      will be used to scale the data
+      - when specifying a source percentiles can be specified for the
+        highest and lowest percent of the cells to be ignored
+    The first method will override the second
+*** =pyFoamPVsnapshot= reads parameters written by =pyFoamPrepareCase.py=
+    An option allows specifying that these parameters should be
+    read. They are then available for substitution in the /Text/
+    source
+*** =pyFoamListCases.py= allows filtering
+    The utility now has options to select the cases that should be
+    considered by name of the case. Either substrings or globs can be
+    used. Ignore patterns can be specified as well
+*** =pyFoamRunParametervariation.py= now allows dictionaries
+    The format of the parameter-file has been extended so that instead
+    of values variations can be dictionaries. The contents of the
+    dictionary are then used instead of a single value. An example
+    would look like this
+#+begin_src
+defaults {
+         a 1;
+         b 2;
+         c 3;
+}
+
+values {
+       solver (
+              interFoam
+       );
+       inVel ( 1 2 );
+       outP ( 0 1 );
+       sets (
+            { name foo; a 3; }
+            { name bar; b 4; c 5; }
+       );
+}
+#+end_src
+    where sets has two variations. Values unset in =sets= will be used
+    from =defaults=
+*** =pyFoamConvertToCSV.py= now has all functionality of =pyFoamJoinCSV.py=
+    Now all functionality of the =Join=-utility is present in the =Convert=
+    utility (including interpolating times)
+
+    =pyFoamJoinCSV.py= will be removed in future versions of =PyFoam=
+*** =dynamic= in =customRegexp= now allows composition from multiple match-groups
+    If =idNr= is a list then now the actual id is composed from all
+    the match groups specified in that list. If =idNr= is an integer
+    then it behaves like it used to.
+
+    Application for the new behavior would be for instance to have the
+    flow of different species on different patches in one plot
+*** New type =dynamicslave= in =customRegexp=
+    This combines the properties of the types =dynamic= and =slave=:
+    dynamically generated data sets that are added to another plot
+*** Additional profiling option =--profile-line-profiler=
+    Uses the library =line_profiler= for profiling. Only of interest
+    for developers. Experimental
+*** Utilities that use templates can be customized with the configuration
+    The section =Template= in the configuration now allows modifying
+    the behavior of the templating engine (how templates are processed
+    and syntax details)
+*** =LocalConfigPyFoam= now can be read *before* argument parsing
+    This allows overruling options before they are set be command line
+    options. This has to be enabled by the application (it doesn't
+    make sense for all).
+
+    An example is the =pyFoamPrepareCase.py=-utility where the local
+    configuration file can overrule the default behavior of the
+    template engine
+*** =pyFoamConvertToCSV.py= automatically selects the output format with =--automatic-format=
+    Now if that option is selected and the extension of the output is
+    =xls= the option =-write-excel-file= doesn't have to be set
+    anymore
+*** =pyFoamConvertToCSV.py= allows adding original data as separate sheets
+    The input data files now can be added to an excel-file as separate
+    sheets with the =--add-sheets=-option
+*** =pyFoamConvertToCSV.py= has improved naming of columns
+    Now if there is more than one source file then the columns from
+    the first source also get a unique prefix.
+
+    It is also possible to clean the column names before writing them
+    to file. The time name can be changed with
+    =-write-time-name=. Substrings can be replaced with
+    =--column-name-replace= and simple functions can be applied with
+    =--column-name-transformation=
+*** =pyFoamConvertToCSV.py= now supports sets-files
+    The utility now can read these files and determine the field names
+    from the filename. =--automatic= assumes that files with the
+    extension =.xy= are of this format
+*** =pyFoamPrepareCase.py= can calculate derived values with a script
+    If a script =derivedParameters.py= is present then it is executed
+    and values set in that script can be used in the templates as well
+*** =pyFoamPrepareCase.py= adds a variable =numberOfProcessors=
+    If unspecified by the user this variable is automatically $1$. It
+    can be used by the templates to distinguish between different cases
+
+    The =PrepareCaseJob=-class in =ClusterJob= automatically sets the
+    values according to the number of processors in the cluster job
+*** =pyFoamChangeBoundaryName.py= and =pyFoamChangeBoundaryType.py= now support decomposed cases
+    Both utilities now also modify the boundary files in the
+    =processorX=-direcories. This behaviour can be switched off from the command line
+*** =pyFoamPrepareCase.py= has possibility for templates after the final stage
+    Templates with the extension =.finalTemplate= are executed after
+    the =caseSetup.sh=-script.
+*** =pyFoamRunParameterVariation= allows adding postfix to cloned cases
+    The option =--cloned-case-postfix= adds a postfix to the cloned
+    directory names. This can be used if the results from multiple
+    variations with the same parameter file should be kept (for
+    instance when comparing OpenFOAM-versions)
+*** =pyFoamConvertToCSV= now allows setting of default input file format
+    The option =--default-read-format= now allows setting a different
+    format than =csv= as the default format for input files
+*** =pyFoamListCases.py= adds the hostname to the printed information
+    The utility tries to determine from the pickled data the host the
+    simulation was run on and prints it (can be switched off with an
+    option)
+*** =pyFoamPrepareCase.py= allows cloning
+    The utility now has an option =--clone-case= to clone a new case
+    before starting instead of working in the specified directory (in
+    this case the case will be cloned to this directory). The name of
+    the created directory *can* be constructed from the specified
+    parameters with the =--automatic-casename=-option
+** Enhancements to the Library
+*** =SolutionDirectory= detects multiple regions
+    Valid regions are sub-directories of =constant= that have a
+    =polyMesh=-directory
+*** =BoolProxy= now compares like builtin =bool=
+    Comparison used to fail for types where it was not explicitly
+    implemented like =None=
+*** =PyFoamApplication=-class now supports =pvpython= for debugging
+    Now =--interactive-after-exception= also works in the utilities
+    that use =pvpython=
+*** =TemplateFile= now allows more flexible assignments
+    In the mode where executions are allowed now more flexible
+    assignments to variables are possible. To be specific:
+    - array assignments like
+: $$ a["t"] = 2
+    - multiple assignments like
+: $$ a,b = 2,3
+*** =ThirdParty=-library =six= upgraded to 1.9.0
+    This library has been upgraded to the latest released version
+*** Additional markup in =RestructuredTextHelper=
+    There are additional methods =emphasis=, =strong= and =literal=
+    that wrap their arguments in the appropriate markup
+
+    The methods =bulletList=, =enumerateList= and =definitionList=
+    take lists or dictionaries and mark them as lists
+*** =SpreadsheetData= can now read files produced by the =sets=-functionObject
+    If the option =isSampleFile= is set then it is assumed that the
+    field names are in the filename and there is no header with field
+    names in the file
+** Infrastructure
+*** Adaption of Debian packaging to new conventions
+    By Oliver Borm. The building of Debian packages for Python
+    libraries has changes. Necessary adaptions were done by Oliver Borm
+** Development changes
+*** Now uses =pytest= for unittesting
+    The =nose=-library had problems and all the unit-tests run
+    out-of-the-box with =pytest=
 * Version 0.6.4 - 2014-11-24
 ** Requirements
    The only requirement is a python-installation. The main testing and

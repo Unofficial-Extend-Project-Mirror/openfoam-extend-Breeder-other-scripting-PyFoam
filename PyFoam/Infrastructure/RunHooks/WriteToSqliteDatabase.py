@@ -8,6 +8,8 @@ from PyFoam.Basics.RunDatabase import RunDatabase
 
 from os import path
 
+from PyFoam.ThirdParty.six import print_
+
 class WriteToSqliteDatabase(RunHook):
     """Write the run information to a sqlite database"""
     def __init__(self,runner,name):
@@ -20,6 +22,6 @@ class WriteToSqliteDatabase(RunHook):
             error("The database",self.database,"does not exists")
 
     def __call__(self):
-        print "Adding run information to database",self.database
+        print_("Adding run information to database",self.database)
         db=RunDatabase(self.database,create=self.create)
         db.add(self.runner.getData())

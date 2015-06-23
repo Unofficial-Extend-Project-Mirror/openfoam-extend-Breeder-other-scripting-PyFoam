@@ -530,6 +530,7 @@ class SolverJob(ClusterJob):
                 error("The basename",basename,"and the template",template,"are the same directory")
             if isDecomposed:
                 cloneParameters+=["--parallel"]
+            self.message("Cloning from template",template)
             clone=CloneCase(
                 args=cloneParameters+[template,self.casedir(),"--follow-symlinks"])
         self.solverProgress=solverProgress
@@ -557,8 +558,10 @@ class PrepareCaseJob(SolverJob):
                  parameterfile,
                  arguments,
                  parameters={},
+                 noMeshCreate=False,
                  **kwargs):
         self.__parameterfile=parameterfile
+        self.__noMeshCreate=noMeshCreate
 
         para={}
         if type(arguments)==list:
@@ -604,7 +607,9 @@ class PrepareCaseJob(SolverJob):
         PrepareCase(args=[self.casedir(),
                           "--allow-exec",
                           "--parameter="+path.join(self.casedir(),self.__parameterfile),
-                          "--values={"+parameterString+"}"])
+                          "--number-of-processors=%d" % self.nproc,
+                          "--values={"+parameterString+"}"]+
+                          (["--no-mesh-create"] if self.__noMeshCreate else []))
 
 class VariationCaseJob(SolverJob):
     """Assumes that the case is prepared to be set up with

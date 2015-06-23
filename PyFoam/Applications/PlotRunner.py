@@ -56,6 +56,7 @@ read and the regular expressions in it are displayed
                                    exactNr=False,
                                    args=args,
                                    description=description,
+                                   findLocalConfigurationFile=self.localConfigFromCasename,
                                    **kwargs)
 
     def addOptions(self):
@@ -86,7 +87,7 @@ read and the regular expressions in it are displayed
 
         cName=self.parser.casePath()
         self.checkCase(cName)
-        self.addLocalConfig(cName)
+#        self.addLocalConfig(cName)
 
         self.processPlotLineOptions(autoPath=cName)
 

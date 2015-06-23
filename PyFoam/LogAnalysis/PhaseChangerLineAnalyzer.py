@@ -29,7 +29,7 @@ class PhaseChangerLineAnalyzer(GeneralLineAnalyzer):
     def doAnalysis(self,line):
         """Look for the pattern. If it matches set the phase name"""
 
-        m=self.exp.match(line)
+        m=self.exp.match(line.strip())
         if m!=None:
             self.setPhase(m.group(self.idNr))
 

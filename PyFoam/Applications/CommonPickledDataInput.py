@@ -55,7 +55,7 @@ automatically chosen""")
             if self.opts.pickledFileRead=="stdin":
                 pick=pickle.Unpickler(sys.stdin)
             else:
-                pick=pickle.Unpickler(open(self.opts.pickledFileRead))
+                pick=pickle.Unpickler(open(self.opts.pickledFileRead,"rb"))
             data=pick.load()
             del pick
 

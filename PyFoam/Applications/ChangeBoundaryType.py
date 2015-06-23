@@ -9,16 +9,19 @@ from os import path
 from optparse import OptionGroup
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+from .CommonChangeBoundary import CommonChangeBoundary
 
 from PyFoam.ThirdParty.six import print_,string_types
 
-class ChangeBoundaryType(PyFoamApplication):
+class ChangeBoundaryType(PyFoamApplication,
+                         CommonChangeBoundary):
     def __init__(self,
                  args=None,
                  **kwargs):
         description="""\
 Changes the type of a boundary in the boundary-file
         """
+        CommonChangeBoundary.__init__(self)
         PyFoamApplication.__init__(self,args=args,
                                    description=description,
                                    usage="%prog <caseDirectory> <boundaryName> <new type>",
@@ -28,28 +31,12 @@ Changes the type of a boundary in the boundary-file
                                    **kwargs)
 
     def addOptions(self):
+        CommonChangeBoundary.addOptions(self)
+
         change=OptionGroup(self.parser,
                            "Change",
                            "Change specific options")
         self.parser.add_option_group(change)
-
-        change.add_option("--test",
-                          action="store_true",
-                          default=False,
-                          dest="test",
-                          help="Only print the new boundary file")
-
-        change.add_option("--region",
-                          action="store",
-                          default="",
-                          dest="region",
-                          help="Region to use. If unset the default mesh is used")
-
-        change.add_option("--time-directory",
-                          action="store",
-                          default="constant",
-                          dest="time",
-                          help="Time to use. If unset the mesh in 'constant'' is used")
 
         change.add_option("--additional-values",
                           action="store",
@@ -62,40 +49,29 @@ Changes the type of a boundary in the boundary-file
         bName=self.parser.getArgs()[1]
         tName=self.parser.getArgs()[2]
 
-        boundaryPath=path.join(".",fName,self.opts.time,self.opts.region,"polyMesh","boundary")
-        try:
-            boundary=ParsedParameterFile(boundaryPath,debug=False,boundaryDict=True)
-        except IOError:
-            self.error("Problem opening boundary file",boundaryPath)
+        def changeType(bnd,target):
+            found=False
 
-        bnd=boundary.content
+            for val in bnd:
+                if val==bName:
+                    found=True
+                elif found:
+                    val["type"]=tName
+                    if self.opts.additionalValues:
+                        vals=self.opts.additionalValues
+                        if isinstance(vals,string_types):
+                            # we're called from the command line. Convert string to usable format
+                            vals=eval(vals)
+                        for k in vals:
+                            val[k]=vals[k]
+                    break
 
-        if type(bnd)!=list:
-            self.error("Problem with boundary file (not a list)")
+            if not found:
+                self.warning("Boundary",bName,"not found in",bnd[::2])
+                return None
+            else:
+                return bnd
 
-        found=False
-
-        for val in bnd:
-            if val==bName:
-                found=True
-            elif found:
-                val["type"]=tName
-                if self.opts.additionalValues:
-                    vals=self.opts.additionalValues
-                    if isinstance(vals,string_types):
-                        # we're called from the command line. Convert string to usable format
-                        vals=eval(vals)
-                    for k in vals:
-                        val[k]=vals[k]
-                break
-
-        if not found:
-            self.error("Boundary",bName,"not found in",bnd[::2])
-
-        if self.opts.test:
-            print_(boundary)
-        else:
-            boundary.writeFile()
-            self.addToCaseLog(fName)
+        self.processBoundaryFiles(changeType,fName)
 
 # Should work with Python3 and Python2

@@ -250,7 +250,7 @@ class AnalyzedCommon(object):
                                      PhaseChangerLineAnalyzer(custom.expr,
                                                               idNr=custom.idNr))
                     createPlot=False
-                elif custom.type=="dynamic":
+                elif custom.type in ["dynamic","dynamicslave"]:
                     self.addAnalyzer(custom.name,
                                      RegExpLineAnalyzer(custom.name.lower(),
                                                         custom.expr,
@@ -264,7 +264,7 @@ class AnalyzedCommon(object):
                                                         startTime=custom.start,
                                                         endTime=custom.end))
 
-                elif custom.type=="regular" or custom.type=="slave":
+                elif custom.type in ["regular","slave"]:
                     self.addAnalyzer(custom.name,
                                      RegExpLineAnalyzer(custom.name.lower(),
                                                         custom.expr,
@@ -281,7 +281,7 @@ class AnalyzedCommon(object):
 
                 if createPlot:
                     if custom.master==None:
-                        if custom.type=="slave":
+                        if custom.type in ["slave","dynamicslave"]:
                             error("Custom expression",custom.name,"is supposed to be a 'slave' but no master is defined")
                         masters[custom.id]=custom
                         plotCustom=createPlotTimelines(self.getAnalyzer(custom.name).lines,
@@ -292,8 +292,8 @@ class AnalyzedCommon(object):
                         plotCustom.setTitle(custom.theTitle)
                         plots["custom%04d" % i]=plotCustom
                     else:
-                        if custom.type!="slave":
-                            error("'master' only makes sense if type is 'slave' for",custom.name)
+                        if custom.type not in ["slave","dynamicslave"]:
+                            error("'master' only makes sense if type is 'slave' or 'dynamicslave' for",custom.name)
                         if getattr(custom,"alternateAxis",None):
                             error("Specify alternate values in 'alternateAxis' of master",
                                   custom.master,"for",custom.name)

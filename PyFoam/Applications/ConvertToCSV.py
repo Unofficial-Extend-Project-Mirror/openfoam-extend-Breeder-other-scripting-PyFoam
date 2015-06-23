@@ -8,7 +8,9 @@ from .CommonReadWriteCSV import CommonReadWriteCSV
 
 from PyFoam.Basics.SpreadsheetData import SpreadsheetData
 
-from os import path
+from os import path,listdir
+from copy import deepcopy
+from glob import glob
 
 class ConvertToCSV(PyFoamApplication,
                    CommonReadWriteCSV):
@@ -56,12 +58,58 @@ Note: the first file determines the resolution of the time-axis
                        dest="namesFromFilename",
                        default=False,
                        help="Read the value names from the file-name (assuming that names are split by _ and the names are in the tail - front is the general filename)")
+        how.add_option("--add-times",
+                       action="store_true",
+                       dest="addTimes",
+                       default=False,
+                       help="Actually add the times from the second file instead of interpolating")
+        how.add_option("--interpolate-new-times",
+                       action="store_true",
+                       dest="interpolateNewTime",
+                       default=False,
+                       help="Interpolate data if new times are added")
+        how.add_option("--new-data-no-interpolate",
+                       action="store_false",
+                       dest="newDataInterpolate",
+                       default=True,
+                       help="Don't interpolate new data fields to the existing times")
+
+        excel=OptionGroup(self.parser,
+                          "Excel",
+                          "Stuff for excel file output")
+        self.parser.add_option_group(excel)
+
+        excel.add_option("--add-sheets",
+                         action="store_true",
+                         dest="addSheets",
+                         default=False,
+                         help="Add the input data in unmodified form as additional sheets to the excel file")
 
     def run(self):
         dest=self.parser.getArgs()[-1]
         if path.exists(dest) and not self.opts.force:
             self.error("CSV-file",dest,"exists already. Use --force to overwrite")
-        sources=self.parser.getArgs()[0:-1]
+        sources=[]
+        for s in self.parser.getArgs()[0:-1]:
+            if s.find("/*lastTime*/")>=0:
+                front,back=s.split("/*lastTime*/",1)
+                for d in glob(front):
+                    lastTime=None
+                    for f in listdir(d):
+                        if path.exists(path.join(d,f,back)):
+                            try:
+                                t=float(f)
+                                if lastTime:
+                                    if t>float(lastTime):
+                                        lastTime=f
+                                else:
+                                    lastTime=f
+                            except ValueError:
+                                pass
+                    if lastTime:
+                        sources.append(path.join(d,lastTime,back))
+            else:
+                sources.append(s)
 
         diffs=[None]
         if len(sources)>1:
@@ -103,12 +151,16 @@ Note: the first file determines the resolution of the time-axis
                              validMatchRegexp=self.opts.columnsRegexp,
                              title=title,
                              **self.dataFormatOptions(sources[0]))
+        rawData=[deepcopy(data)]
         self.printColumns(sources[0],data)
         self.recalcColumns(data)
         self.rawAddColumns(data)
 
         if self.opts.time==None:
-            self.opts.time=data.names()[0]
+            self.opts.time=data.timeName()
+
+        if not diffs[0] is None:
+            data.rename(lambda c:diffs[0]+" "+c)
 
         for i,s in enumerate(sources[1:]):
             names=None
@@ -122,25 +174,43 @@ Note: the first file determines the resolution of the time-axis
                                   validMatchRegexp=self.opts.columnsRegexp,
                                   title=title,
                                   **self.dataFormatOptions(s))
+            rawData.append(sData)
             self.printColumns(s,sData)
             self.recalcColumns(sData)
             self.rawAddColumns(sData)
 
+            if self.opts.addTimes:
+                data.addTimes(time=self.opts.time,
+                               times=sData.data[self.opts.time],
+                               interpolate=self.opts.interpolateNewTime)
             for n in sData.names():
                 if n!=self.opts.time and (self.opts.columns==[] or data.validName(n,self.opts.columns,True)):
                     d=data.resample(sData,
                                     n,
                                     time=self.opts.time,
-                                    extendData=self.opts.extendData)
+                                    extendData=self.opts.extendData,
+                                    noInterpolation=not self.opts.newDataInterpolate)
                     data.append(diffs[i+1]+" "+n,d)
 
         self.joinedAddColumns(data)
+        data.rename(self.processName,renameTime=True)
+        data.rename(lambda c:c.strip())
 
         if len(sources)>1:
             self.printColumns("written data",data)
 
+        if self.opts.automaticFormat:
+            if self.getDataFormat(dest)=="excel":
+                self.opts.writeExcel=True
+
         if self.opts.writeExcel:
-            data.getData().to_excel(dest)
+            from pandas import ExcelWriter
+            with ExcelWriter(dest) as writer:
+                data.getData().to_excel(writer)
+                if self.opts.addSheets:
+                    for n,d in enumerate(rawData):
+                        d.getData().to_excel(writer,
+                                             sheet_name="Original file %d" % n)
         else:
             data.writeCSV(dest,
                           delimiter=self.opts.delimiter)

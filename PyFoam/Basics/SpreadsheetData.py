@@ -36,6 +36,7 @@ class SpreadsheetData(object):
                  excelName=None,
                  data=None,
                  names=None,
+                 isSampleFile=False,
                  title=None):
         """Either this is constructed from a file or from the data and the column headers
 
@@ -47,6 +48,7 @@ class SpreadsheetData(object):
         @param excelName: name of a Excel-file the data should be constructed from (uses the first sheet in the file),
         @param data: the actual data to use
         @param names: the names for the column header
+        @param isSampleFile: file produced by sample/set. Field names are determined from the filename
         @param title: a name that is used to make unique heades names"""
 
         self.title=title
@@ -66,30 +68,57 @@ class SpreadsheetData(object):
                 names=list(rec.dtype.names)
             except AttributeError:
                 # for old numpy-versions
-                data=list(map(tuple,numpy.loadtxt(csvName,
-                                                  delimiter=',',
-                                                  skiprows=1)))
+                data=[tuple(d) for d in numpy.loadtxt(csvName,
+                                                      delimiter=',',
+                                                      skiprows=1)]
                 names=open(csvName).readline().strip().split(',')
 
             # redo this to make sure that everything is float
             self.data=numpy.array(data,dtype=list(zip(names,['f8']*len(names))))
         elif txtName:
             try:
-                rec=numpy.recfromtxt(txtName,names=True)
-                data=[tuple(float(x) for x in i) for i in rec]
-                if names is None:
-                    names=list(rec.dtype.names)
-                else:
-                    nr=len(list(rec.dtype.names))
-                    if title is None:
-                        off=len(names)-nr+1
-                        self.title="_".join(names[:off])
-                        names=names[:off]+["index"]+names[off:]
-                    names=names[-nr:]
+                if isSampleFile:
+                    from os import path
 
+                    raw=numpy.recfromtxt(txtName)
+                    rawName=path.splitext(path.basename(txtName))[0].split("_")[1:]
+                    pData=[list(raw[:,0])]
+                    names=["coord"]
+                    if raw.shape[1]==len(rawName)+1:
+                        # scalars
+                        for i,n in enumerate(rawName):
+                            pData.append(list(raw[:,1+i]))
+                            names.append(n)
+                    elif raw.shape[1]==3*len(rawName)+1:
+                        for i,n in enumerate(rawName):
+                            for j,c in enumerate(["x","y","z"]):
+                                pData.append(list(raw[:,1+i*3+j]))
+                                names.append(n+"_"+c)
+                            vals=[raw[:,1+i*3+j] for j in range(3)]
+                            pData.append(list(numpy.sqrt(vals[0]*vals[0]+
+                                                         vals[1]*vals[1]+
+                                                         vals[2]*vals[2])))
+                            names.append(n+"_mag")
+                    else:
+                        error("List of names",rawName,"does not fit number of colums",
+                              raw.shape[1],"should be",len(rawName)+1,
+                              "for scalars or",len(rawName)*3+1,"for vector")
+                    data=[tuple(v) for v in numpy.asarray(pData).T]
+                else:
+                    rec=numpy.recfromtxt(txtName,names=True)
+                    data=[tuple(float(x) for x in i) for i in rec]
+                    if names is None:
+                        names=list(rec.dtype.names)
+                    else:
+                        nr=len(list(rec.dtype.names))
+                        if title is None:
+                            off=len(names)-nr+1
+                            self.title="_".join(names[:off])
+                            names=names[:off]+["index"]+names[off:]
+                        names=names[-nr:]
             except AttributeError:
                 # for old numpy-versions
-                data=list(map(tuple,numpy.loadtxt(txtName)))
+                data=[tuple(v) for v in numpy.loadtxt(txtName)]
                 names=open(txtName).readline().strip().split()[1:]
 
             # redo this to make sure that everything is float
@@ -105,7 +134,7 @@ class SpreadsheetData(object):
             if data is not None and names is None:
                 error("No names given for the data")
 
-            self.data=numpy.array(list(map(tuple,data)),
+            self.data=numpy.array([tuple(v) for v in data],
                                   dtype=list(zip(names,['f8']*len(names))))
 
         if timeName:
@@ -127,7 +156,7 @@ class SpreadsheetData(object):
                     usedNames.append(n)
 
             usedData=numpy.array(usedData).transpose()
-            self.data=numpy.array(list(map(tuple,usedData)),
+            self.data=numpy.array([tuple(v) for v in usedData],
                                   dtype=list(zip(usedNames,['f8']*len(usedNames))))
             index=list(self.data.dtype.names).index(self.time)
 
@@ -151,6 +180,21 @@ class SpreadsheetData(object):
 
     def names(self):
         return copy.copy(self.data.dtype.names)
+
+    def timeName(self):
+        return self.time
+
+    def rename(self,f,renameTime=False):
+        """Rename all the columns according to a function. Time only if specified"""
+        newNames=[]
+        for c in self.data.dtype.names:
+            if not renameTime and c==self.time:
+                newNames.append(c)
+            else:
+                newNames.append(f(c))
+                if c==self.time:
+                    self.time=newNames[-1]
+        self.data.dtype.names=newNames
 
     def size(self):
         return self.data.size
@@ -382,7 +426,7 @@ class SpreadsheetData(object):
             newData.append(self.data[originalI])
             originalI+=1
 
-        self.data=numpy.array(list(map(tuple,newData)),dtype=self.data.dtype)
+        self.data=numpy.array([tuple(v) for v in newData],dtype=self.data.dtype)
 
     def resample(self,
                  other,
@@ -420,7 +464,7 @@ class SpreadsheetData(object):
                 if i>=len(other.data[time]):
                     break
             if len(pre)>0:
-                self.data=numpy.concatenate((numpy.array(list(map(tuple,pre)),
+                self.data=numpy.concatenate((numpy.array([tuple(v) for v in pre],
                                                          dtype=self.data.dtype),
                                              self.data))
 
@@ -440,7 +484,7 @@ class SpreadsheetData(object):
 
             post.reverse()
             if len(post)>0:
-                self.data=numpy.concatenate((self.data,numpy.array(list(map(tuple,post)),
+                self.data=numpy.concatenate((self.data,numpy.array([tuple(p) for p in post],
                                                                    dtype=self.data.dtype)))
 
         result=[]

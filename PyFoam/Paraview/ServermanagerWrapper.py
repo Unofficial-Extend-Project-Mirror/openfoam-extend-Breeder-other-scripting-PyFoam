@@ -127,6 +127,9 @@ class ServermanagerWrapper(object):
         """Return the actual module (for developing)"""
         return servermanager
 
+    def __call__(self):
+        return self.module()
+
     def __del__(self):
         """Make sure that everything gets thrown out. Doesn't work"""
         #        print dir(servermanager)

@@ -3,6 +3,8 @@ Class that implements the common functionality for the format of templates
 """
 from optparse import OptionGroup
 
+from PyFoam import configuration as config
+
 class CommonTemplateFormat(object):
     """ The class that defines options for template formats
     """
@@ -14,11 +16,11 @@ class CommonTemplateFormat(object):
         self.parser.add_option_group(tformat)
         tformat.add_option("--expression-delimiter",
                            action="store",
-                           default="|-",
+                           default=config().get("Template","expressionDelimiter"),
                            dest="expressionDelimiter",
                            help="String that delimits an expression. At the end of the expression the reverse string is being used. Default: %default")
         tformat.add_option("--assignment-line-start",
                            action="store",
-                           default="$$",
+                           default=config().get("Template","assignmentLineStart"),
                            dest="assignmentLineStart",
                            help="String at the start of a line that signifies that this is an assignment. Default: %default")

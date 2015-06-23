@@ -8,6 +8,7 @@ from os import path
 
 from .PrepareCase import PrepareCase
 
+from PyFoam.Basics.DataStructures import DictProxy
 from PyFoam.Execution.AnalyzedRunner import AnalyzedRunner
 from PyFoam.LogAnalysis.BoundingLogAnalyzer import BoundingLogAnalyzer
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
@@ -50,7 +51,17 @@ class RunParameterVariation(PrepareCase,
 Takes a template case and a file that specifies the parameters to be varied.
 Using the machinery from pyFoamPrepareCase.py it sets up the case with each
 parameters and runs the solver on it. Collects the results in a database
-        """
+
+The format of the parameter file is a regular OpenFOAM-dictionary file
+without a header. There is one required entry: a dictionary with the name
+values. Each entry is one parameter to varied. The possible values are in a list.
+The entries in the list are either single values or dictionaries. If the entries
+are dictionaries then the dictionary values are used. A required entry for 'values'
+is 'solver' that specifies at least one solver to be used.
+
+An optional entry for the dictionary is a dictionary called 'defaults'. The values
+here are added to the parameters unless being overwritten by the variation values.
+This is useful with variation values that are dictionaries"""
 
         examples="""\
 Do all the variations in the template case:
@@ -113,6 +124,11 @@ One case for every variation and start with the 4th variant
                              dest="clonedCasePrefix",
                              default=None,
                              help="Prefix of the cloned cases. If unspecified the name of parameter file is used")
+        variation.add_option("--cloned-case-postfix",
+                             action="store",
+                             dest="clonedCasePostfix",
+                             default=None,
+                             help="Postfix of the cloned cases. If unspecified an empty string. Helps to distinguish different sets of variations")
         variation.add_option("--clone-to-directory",
                              action="store",
                              dest="cloneToDirectory",
@@ -191,6 +207,10 @@ One case for every variation and start with the 4th variant
 
         if not self.opts.clonedCasePrefix:
             self.opts.clonedCasePrefix=path.basename(parameterFile)
+        if not self.opts.clonedCasePostfix:
+            self.opts.clonedCasePostfix=""
+        else:
+            self.opts.clonedCasePostfix="."+self.opts.clonedCasePostfix
         if not self.opts.cloneToDirectory:
             self.opts.cloneToDirectory=path.dirname(path.abspath(origPath))
         if not self.opts.database:
@@ -198,13 +218,14 @@ One case for every variation and start with the 4th variant
 
         variationData=ParsedParameterFile(parameterFile,
                                           noHeader=True,
-                                          noVectorOrTensor=True)
+                                          noVectorOrTensor=True).getValueDict()
         if not "values" in variationData:
             self.error("Entry 'values' (dictionary) needed in",parameterFile)
         if not "solver" in variationData["values"]:
             self.error("Entry 'solver' (list or string) needed in 'values' in",parameterFile)
 
         fixed={}
+        defaults={}
         varied=[]
         nrVariations=1
 
@@ -220,6 +241,9 @@ One case for every variation and start with the 4th variant
             else:
                 self.warning("Entry",k,"is empty")
 
+        if "defaults" in variationData:
+            defaults=variationData["defaults"]
+
         if len(varied)==0:
             self.error("No parameters to vary")
 
@@ -233,13 +257,16 @@ One case for every variation and start with the 4th variant
                 for orig in var:
                     for v in vals:
                         d=orig.copy()
-                        d[name]=v
+                        if isinstance(v,(dict,DictProxy)):
+                            d.update(v)
+                        else:
+                            d[name]=v
                         variation.append(d)
                 return variation
             else:
-                return [{name:v} for v in vals]
+                return [v if isinstance(v,(dict,DictProxy)) else {name:v} for v in vals]
 
-        variations=makeVariations(varied)
+        variations=[dict(defaults,**d) for d in makeVariations(varied)]
         self["variations"]=variations
         self["fixed"]=fixed
 
@@ -294,7 +321,7 @@ One case for every variation and start with the 4th variant
         if self.opts.oneClonedCase:
             self.printPhase("Cloning work case")
             workCase=origCase.cloneCase(path.join(self.opts.cloneToDirectory,
-                                              self.opts.clonedCasePrefix+"_"+path.basename(origPath)))
+                                                  self.opts.clonedCasePrefix+"_"+path.basename(origPath))+self.opts.clonedCasePostfix)
 
         self.printPhase("Starting actual variations")
 
@@ -315,7 +342,7 @@ One case for every variation and start with the 4th variant
                 self.printPhase("Cloning work case")
                 workCase=origCase.cloneCase(path.join(self.opts.cloneToDirectory,
                                                   self.opts.clonedCasePrefix+"_"+
-                                                  ("%05d" % i)+"_"+path.basename(origPath)))
+                                                      ("%05d" % i)+"_"+path.basename(origPath))+self.opts.clonedCasePostfix)
 
             self.processPlotLineOptions(autoPath=workCase.name)
 

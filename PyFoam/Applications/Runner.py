@@ -60,6 +60,7 @@ variables
                                    exactNr=False,
                                    args=args,
                                    description=description,
+                                   findLocalConfigurationFile=self.localConfigFromCasename,
                                    **kwargs)
 
     def addOptions(self):
@@ -90,7 +91,7 @@ variables
 
         casePath=self.parser.casePath()
         self.checkCase(casePath)
-        self.addLocalConfig(casePath)
+        #        self.addLocalConfig(casePath)
 
         self.addToCaseLog(casePath,"Starting")
         self.prepareHooks()

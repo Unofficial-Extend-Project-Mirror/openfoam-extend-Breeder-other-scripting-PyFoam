@@ -49,6 +49,7 @@ Copies the current fields for U and p to backup-files.
                                    usage="%prog [options] <caseDirectory>",
                                    interspersed=True,
                                    nr=1,
+                                   findLocalConfigurationFile=self.localConfigFromCasename,
                                    **kwargs)
 
     def addOptions(self):
@@ -97,7 +98,7 @@ Copies the current fields for U and p to backup-files.
     def run(self):
         cName=self.parser.getArgs()[0]
         sol=SolutionDirectory(cName,archive=None)
-        self.addLocalConfig(cName)
+        # self.addLocalConfig(cName)
         initial=sol[0]
         if "U" not in initial or "p" not in initial:
             error("Either 'p' or 'U' missing from the initial directory",initial.baseName())

@@ -8,6 +8,7 @@ import gzip
 from time import sleep
 
 from PyFoam.Basics.LineReader import LineReader
+from PyFoam import configuration as config
 
 from PyFoam.ThirdParty.six import print_
 
@@ -39,7 +40,7 @@ class BasicWatcher(object):
         if not path.exists(self.filename):
             print_("Error: Logfile ",self.filename,"does not exist")
 
-        self.reader=LineReader()
+        self.reader=LineReader(config().getboolean("SolverOutput","stripSpaces"))
 
     def getSize(self):
         """@return: the current size (in bytes) of the file"""

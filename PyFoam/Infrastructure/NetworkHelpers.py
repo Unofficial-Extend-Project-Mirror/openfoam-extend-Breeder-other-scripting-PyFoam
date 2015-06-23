@@ -31,7 +31,7 @@ def freeServerPort(start,length=1):
             sock.bind(('',p))
         except socket.error:
             e = sys.exc_info()[1] # compatible with 2.x and 3.x
-            if e[0]!=errno.EADDRINUSE:
+            if e.errno!=errno.EADDRINUSE:
                 #                sock.shutdown(2)
                 sock.close()
                 raise
@@ -71,7 +71,7 @@ def checkFoamServers(host,start,length=1):
             sock.close()
         except socket.error:
             reason = sys.exc_info()[1] # compatible with 2.x and 3.x
-            code=reason[0]
+            code=reason.errno
             if code in [errno.EHOSTUNREACH,errno.ENETUNREACH,errno.ETIMEDOUT] or code=="timed out" or code<0:
                 # Host unreachable: no more scanning
                 return None

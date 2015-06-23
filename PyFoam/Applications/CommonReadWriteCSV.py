@@ -12,10 +12,12 @@ class CommonReadWriteCSV(object):
     """ The class implement common functionality
     """
 
+    validFormats=["csv","xls","txt","smpl"]
+
     def addOptions(self):
         calc=OptionGroup(self.parser,
                          "Calculations",
-                         "Calculations to be performed on the data. Format is '<name>:::<expr>' (three colons should not appear in variable names). In the expressions there are variables that correspond to the column names. Also a variable 'data' that can be subscripted (for columns that are not valid variable names)")
+                         "Calculations to be performed on the data. Format is '<name>:::<expr>' (three colons should not appear in variable names. This can be modified with --specification-separator). In the expressions there are variables that correspond to the column names. Also a variable 'data' that can be subscripted (for columns that are not valid variable names)")
         calc.add_option("--recalc-columns",
                          action="append",
                          dest="recalcColumns",
@@ -36,6 +38,11 @@ class CommonReadWriteCSV(object):
                          dest="joinedAddColumns",
                          default=[],
                          help="Columns that should be added to the data before writing")
+        calc.add_option("--specification-separator",
+                         action="store",
+                         dest="specSeparator",
+                         default=":::",
+                         help="Separator used for specifications instead of %default")
         self.parser.add_option_group(calc)
 
         info=OptionGroup(self.parser,
@@ -92,11 +99,36 @@ class CommonReadWriteCSV(object):
                          dest="delimiter",
                          default=',',
                          help="Delimiter to be used between the values. Default: %default")
+        formt.add_option("--default-read-format",
+                         choices=CommonReadWriteCSV.validFormats,
+                         default="csv",
+                         dest="defaultReadFormat",
+                         help="If --automatic is not used then it is assumed that all input files are of this format. Default is %default. Valid options are "+", ".join(CommonReadWriteCSV.validFormats))
 
+        colNames=OptionGroup(self.parser,
+                             "Column names",
+                             "Transformations on the column names before they are written")
+        self.parser.add_option_group(colNames)
+        colNames.add_option("--write-time-name",
+                            action="store",
+                            dest="writeTimeName",
+                            default=None,
+                            help="Renaming the time name for the written data")
+        colNames.add_option("--column-name-replacements",
+                            action="append",
+                            dest="colNameReplacements",
+                            default=[],
+                            help="Replacements in the column names. Format is 'orig:::replace'. Can be specified more than once. Instead of ::: the value set with --specification-separator can be used")
+        colNames.add_option("--column-name-transformation",
+                            action="append",
+                            dest="colNameTransformation",
+                            default=[],
+                            help="Transform the column names with a Python lambda-function. Can be specified more than once. For instance 'lambda s:s.upper()' transforms the column names to upper case")
 
     def printColumns(self,fName,data):
         if self.opts.printColums:
-            print_("Columns in",fName,":",", ".join(data.names()))
+            delim="\n   "
+            print_("Columns in",fName,":",delim.join([""]+list(data.names())))
 
     def recalcColumns(self,data):
         self.__processColumns(data,self.opts.recalcColumns)
@@ -110,7 +142,7 @@ class CommonReadWriteCSV(object):
     def __processColumns(self,data,specs,create=False):
         for s in specs:
             try:
-                name,expr=s.split(":::")
+                name,expr=s.split(self.opts.specSeparator)
             except ValueError:
                 self.error(s,"can not be split correctly with ':::':",s.split(":::"))
             if not create and self.opts.regularExpressionRecalc:
@@ -122,11 +154,24 @@ class CommonReadWriteCSV(object):
             else:
                 data.recalcData(name,expr,create)
 
-    def dataFormatOptions(self,name):
-        dataFormat="csv"
+    def processName(self,name):
+        if name==self.opts.time and self.opts.writeTimeName:
+            name=self.opts.writeTimeName
+        for r in self.opts.colNameReplacements:
+            try:
+                orig,repl=r.split(self.opts.specSeparator)
+            except ValueError:
+                self.error(r,"can not be split correctly with ':::':",r.split(":::"))
+            name=name.replace(orig,repl)
+        for l in self.opts.colNameTransformation:
+            f=eval(l)
+            name=f(name)
 
-        if self.opts.readExcel:
-            dataFormat="excel"
+        return name
+
+    def getDataFormat(self,name):
+        dataFormat=self.opts.defaultReadFormat
+
         if self.opts.automaticFormat:
             ext=path.splitext(name)[1]
             if ext in [".csv"]:
@@ -135,8 +180,18 @@ class CommonReadWriteCSV(object):
                 dataFormat="excel"
             elif ext in [".txt",""]:
                 dataFormat="txt"
+            elif ext in [".xy"]:
+                dataFormat="smpl"
             else:
                 dataFormat=ext[1:]
+        return dataFormat
+
+    def dataFormatOptions(self,name):
+        if self.opts.readExcel:
+            dataFormat="excel"
+        else:
+            dataFormat=self.getDataFormat(name)
+
         options={"csvName" : None,
                  "txtName" : None,
                  "excelName" : None}
@@ -146,6 +201,9 @@ class CommonReadWriteCSV(object):
             options["excelName"]=name
         elif dataFormat=="txt":
             options["txtName"]=name
+        elif dataFormat=="smpl":
+            options["txtName"]=name
+            options["isSampleFile"]=True
         else:
             self.error("Unsupported format",dataFormat)
 

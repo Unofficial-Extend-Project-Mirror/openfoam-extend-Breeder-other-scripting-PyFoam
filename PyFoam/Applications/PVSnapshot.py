@@ -6,10 +6,13 @@ Class that implements pyFoamPVSnapshot
 from optparse import OptionGroup
 
 from PyFoamApplication import PyFoamApplication
+from PrepareCase import PrepareCase
 
 from CommonSelectTimesteps import CommonSelectTimesteps
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+
 from PyFoam.Paraview.ServermanagerWrapper import ServermanagerWrapper as SM
 from PyFoam.Paraview.StateFile import StateFile
 from PyFoam.Paraview import version as PVVersion
@@ -66,7 +69,7 @@ casename. Additional replacements can be specified
                             dest="state",
                             default=None,
                             help="The pvsm-file that should be used. If none is specified the file 'default.pvsm' in the case-directory is used")
-        paraview.add_option("--maginfication",
+        paraview.add_option("--magnification",
                             dest="magnification",
                             default=1,
                             type="int",
@@ -87,6 +90,13 @@ casename. Additional replacements can be specified
                             action="store_false",
                             default=True,
                             help="Do not do offscreen rendering (use if offscreen rendering produces a segmentation fault)")
+        if PVVersion()>=(4,2):
+            paraview.add_option("--no-layouts",
+                                dest="doLayouts",
+                                action="store_false",
+                                default=True,
+                                help="Do not use the layouts but generate separate pictures of the view (this is the behaviour before Paraview 4.2)")
+
         self.parser.add_option_group(paraview)
 
         geometry=OptionGroup(self.parser,
@@ -132,6 +142,11 @@ casename. Additional replacements can be specified
                           action="store_false",
                           default=True,
                           help="Do not append the string 't=<time>' to the filename")
+        filename.add_option("--no-color-prefix",
+                            dest="colorPrefix",
+                            action="store_false",
+                            default=True,
+                            help="Do not generate an automatic filename prefix if --colors-for-filters is used")
         self.parser.add_option_group(filename)
 
         replace=OptionGroup(self.parser,
@@ -145,7 +160,61 @@ casename. Additional replacements can be specified
                             dest="casenameKey",
                             default="casename",
                             help="Key with which the caename should be replaced. Default: %default")
+        decoChoices=["keep","decomposed","reconstructed","auto"]
+        replace.add_option("--decompose-mode",
+                           dest="decomposeMode",
+                           type="choice",
+                           default="auto",
+                           choices=decoChoices,
+                           help="Whether the decomposed or the reconstructed data should be used. Possible values are"+", ".join(decoChoices)+" with default value %default. 'auto' means that the data set where more time-steps are present is used. 'keep' doesn't change the mode in the state-file")
+        replace.add_option("--list-replacements",
+                           dest="listReplacements",
+                           action="store_true",
+                           default=False,
+                           help="Print a list with all the possible replacement keys and their values for this case")
+        replace.add_option("--add-prepare-case-parameters",
+                           dest="addPrepareCaseParameters",
+                           action="store_true",
+                           default=False,
+                           help="Add parameters from the file "+PrepareCase.parameterOutFile+" to the replacements if such a file is present in the case")
         self.parser.add_option_group(replace)
+
+        manipulate=OptionGroup(self.parser,
+                               "Manipulation",
+                               "How the state should be manipulated before rendering a bitmap")
+        manipulate.add_option("--colors-for-filters",
+                              dest="filterColors",
+                              default="{}",
+                              help="Dictionary which assigns colors to sources. Only working for Paraview 4.2 and higher. Note: the color function saved in the state file is used. If none is saved in the state-file a default is used (which probably is unsuitable). Default: %default. Entries are either of the form 'Clip1':'T' (then the currently used association is used) or of the form 'Clip1':('POINTS','T') or  'Clip1':('CELLS','T') then the associations are switched to point or cell values")
+        manipulate.add_option("--no-color-bar",
+                              dest="noColorbar",
+                              action="append",
+                              default=[],
+                              help="To be used with --color-for-filters: If the source is specified here the script does not attempt to add a colorbar. Can be specified more than once")
+        manipulate.add_option("--views-with-colorbars",
+                              dest="colorbarView",
+                              action="append",
+                              type="int",
+                              default=[],
+                              help="To be used with --color-for-filters: On which views the colorbars should be created. Can be specified more than once. If unspecified all views are used")
+        manipulate.add_option("--default-field-for-colors",
+                              dest="defaultField",
+                              default=None,
+                              help="To be used with --color-for-filters: If the color is unspecified then this color is used")
+        manipulate.add_option("--rescale-color-to-source",
+                              dest="rescaleToSource",
+                              default=[],
+                              action="append",
+                              help="Looks at the specified source and rescale the field that this source is colored with to the range present in the source data. Done after everything else is set up. Can be specified more than once. Only available for Paraview 4.2 and later")
+        manipulate.add_option("--color-ranges",
+                              dest="colorRanges",
+                              default="{}",
+                              help="Dictionary with color ranges for fields. Ranges are tuples. If one of the entries is None the current minimum/maximum of the range is used. Default: %default. Example: {'T':(300,400),'U':(None,1e-3)}. Only available for Paraview 4.2 and later. If set then this value overrules --rescale-color-to-source")
+        manipulate.add_option("--percentile-ranges",
+                              dest="percentileRanges",
+                              default="{}",
+                              help="Dictionary with percentile ranges for fields. Used together wit --rescale-color-to-source. Instead of the minimum or maximum smallest and biggest cells are ignored. This allows eliminating outliers. Ranges are tuples. If one of the entries is None then 0 or 100 is used. Default: %default. Example: {'T':(1,1),'U':(None,0.5)} means that for 'T' the lowest and highest 1% are ignored. For 'U' the highest 0.5% are ignored. Only available for Paraview 4.2 and later")
+        self.parser.add_option_group(manipulate)
 
         behaviour=OptionGroup(self.parser,
                             "Behaviour",
@@ -165,6 +234,88 @@ casename. Additional replacements can be specified
             print s,
         print
 
+    def setColorTransferFunction(self,name,rng):
+        from paraview.simple import GetColorTransferFunction
+        tf=GetColorTransferFunction(name)
+        oldMin=min(tf.RGBPoints[0::4])
+        oldMax=max(tf.RGBPoints[0::4])
+        newMin,newMax=rng
+        if newMin==None:
+            newMin=oldMin
+        if newMax==None:
+            newMax=oldMax
+        oldRange=oldMax-oldMin
+        if oldRange<1e-10:
+            oldRange=1e-10
+        for i in range(0,len(tf.RGBPoints),4):
+            tf.RGBPoints[i]=newMin+(newMax-newMin)*((tf.RGBPoints[i]-oldMin)/oldRange)
+
+    def _getDataRangeGeneral(self,src,nm,getRangeFunc):
+        import vtk.numpy_interface.dataset_adapter as dsa
+        import numpy as np
+
+        def getRange(fld,whichComponent=-1):
+            if isinstance(fld,(dsa.VTKArray,)):
+                data=[fld]
+            elif  isinstance(fld,(dsa.VTKCompositeDataArray,)):
+                data=[f for f in fld.Arrays if isinstance(f,(dsa.VTKArray,))]
+                if len(data)==0:
+                    return None
+            elif  isinstance(fld,(dsa.VTKNoneArray,)):
+                return None
+            else:
+                self.error("Unimplemented GetRange for",type(fld),"when scaling",nm)
+
+            cmpt=0
+            if len(data[0].shape)==1:
+                cmpt=1
+            elif len(data[0].shape)==2:
+                cmpt=data[0].shape[1]
+                if whichComponent<0:
+                    data=[np.sqrt((a**2).sum(axis=1)) for a in data]
+                elif whichComponent<cmpt:
+                    data=[a[:,whichComponent] for a in data]
+                else:
+                    self.error("Asked for component",whichComponent,
+                               "but only 0 to ",cmpt-1,"available")
+            else:
+                self.error("Unsupported shape",data[0].shape,"for",nm)
+
+            return getRangeFunc(data)
+
+        from paraview.simple import servermanager as sv
+        wrapped=dsa.WrapDataObject(sv.Fetch(src))
+
+        try:
+            rng=getRange(wrapped.CellData[nm])
+        except AttributeError:
+            try:
+                rng=getRange(wrapped.PointData[nm])
+            except AttributeError:
+                try:
+                    rng=getRange(wrapped.FieldData[nm])
+                except AttributeError:
+                    rng=None
+        return rng
+
+    def getDataRange(self,src,nm):
+        def getRangeFunc(fld):
+            miVals=[f.min() for f in fld]
+            maVals=[f.max() for f in fld]
+            return (min(miVals),max(maVals))
+
+        return self._getDataRangeGeneral(src,nm,getRangeFunc)
+
+    def getDataRangePercentile(self,src,nm,low=1,high=99):
+        import numpy as np
+        from vtk.numpy_interface.dataset_adapter import WrapDataObject
+
+        def getRangeFunc(fld):
+            full=np.concatenate(fld)
+            return np.percentile(a=full,q=(low,high))
+
+        return self._getDataRangeGeneral(src,nm,getRangeFunc)
+
     def run(self):
         doPic=True
         doGeom=False
@@ -181,15 +332,42 @@ casename. Additional replacements can be specified
              doGeom=False
              doSources=True
 
+        try:
+            filterColors=eval(self.opts.filterColors)
+        except TypeError:
+            filterColors=self.opts.filterColors
+
+        for f in filterColors:
+            c=filterColors[f]
+            if type(c)==tuple:
+                if not c[1]:
+                    filterColors[f]=(c[0],self.opts.defaultField)
+            else:
+                if not c:
+                    filterColors[f]=self.opts.defaultField
+
+        try:
+            colorRanges=eval(self.opts.colorRanges)
+        except TypeError:
+            colorRanges=self.opts.colorRanges
+
+        try:
+            percentileRanges=eval(self.opts.percentileRanges)
+        except TypeError:
+            percentileRanges=self.opts.percentileRanges
+
         self.say("Paraview version",PVVersion(),"FoamVersion",foamVersion())
-        if PVVersion()>=(3,6):
-            self.warning("This is experimental because the API in Paraview>=3.6 has changed. But we'll try")
+#        if PVVersion()>=(3,6):
+#            self.warning("This is experimental because the API in Paraview>=3.6 has changed. But we'll try")
 
         case=path.abspath(self.parser.getArgs()[0])
         short=path.basename(case)
 
+        stateString=""
         if self.opts.state==None:
             self.opts.state=path.join(case,"default.pvsm")
+        else:
+            stateString="_"+path.splitext(path.basename(self.opts.state))[0]
 
         if not path.exists(self.opts.state):
             self.error("The state file",self.opts.state,"does not exist")
@@ -206,6 +384,38 @@ casename. Additional replacements can be specified
                               paraviewLink=False,
                               archive=None)
 
+        self.say("Opening state file",self.opts.state)
+        sf=StateFile(self.opts.state)
+
+        decoResult=None
+        newParallelMode=None
+        if self.opts.decomposeMode=="keep":
+            pass
+        elif self.opts.decomposeMode=="decomposed":
+            decoResult=sf.setDecomposed(True)
+            newParallelMode=True
+        elif self.opts.decomposeMode=="reconstructed":
+            decoResult=sf.setDecomposed(False)
+            newParallelMode=False
+        elif self.opts.decomposeMode=="auto":
+            nrTimes=len(sol.getTimes())
+            nrParTimes=len(sol.getParallelTimes())
+            if nrTimes>nrParTimes:
+                newParallelMode=False
+                decoResult=sf.setDecomposed(False)
+            else:
+                newParallelMode=True
+                decoResult=sf.setDecomposed(True)
+        else:
+            self.error("Setting decompose mode",self.opts.decomposeMode,"is not implemented")
+        if decoResult:
+            self.warning("Setting decomposed type to",self.opts.decomposeMode,":",decoResult)
+
+        if newParallelMode:
+            if self.opts.parallelTimes!=newParallelMode:
+                self.warning("Resetting parallel mode",newParallelMode)
+                self.opts.parallelTimes=newParallelMode
+
         times=self.processTimestepOptions(sol)
         if len(times)<1:
             self.warning("Can't continue without time-steps")
@@ -219,13 +429,33 @@ casename. Additional replacements can be specified
             f=open(dataFile,"w")
             f.close()
 
-        self.say("Opening state file",self.opts.state)
-        sf=StateFile(self.opts.state)
         self.say("Setting data to",dataFile)
         sf.setCase(dataFile)
 
-        values=eval(self.opts.replacements)
+        values={}
+        if self.opts.addPrepareCaseParameters:
+            fName=path.join(case,PrepareCase.parameterOutFile)
+            if path.exists(fName):
+                self.say("Adding vaules from",fName)
+                pf=ParsedParameterFile(fName,noHeader=True)
+                values.update(pf.content)
+            else:
+                self.say("No file",fName)
+
+        values.update(eval(self.opts.replacements))
         values[self.opts.casenameKey]=short
+        if self.opts.listReplacements:
+            rKeys=sorted(values.keys())
+            kLen=max([len(k) for k in rKeys])
+            vLen=max([len(str(values[k])) for k in rKeys])
+            kFormat=" %"+str(kLen)+"s | %"+str(vLen)+"s"
+            print
+            print kFormat % ("Key","Value")
+            print "-"*(kLen+2)+"|"+"-"*(vLen+2)
+            for k in rKeys:
+                print kFormat % (k,str(values[k]))
+            print
+
         sf.rewriteTexts(values)
         newState=sf.writeTemp()
 
@@ -238,8 +468,9 @@ casename. Additional replacements can be specified
              exporterType=getattr(exporters,self.geomTypeTable[self.opts.geomType])
 
         # make sure that the first snapshot is rendered correctly
-        import paraview.simple
-        paraview.simple._DisableFirstRenderCameraReset()
+        import paraview.simple as pvs
+
+        pvs._DisableFirstRenderCameraReset()
 
         if not self.opts.progress:
             self.say("Toggling progress")
@@ -248,16 +479,18 @@ casename. Additional replacements can be specified
         self.say("Loading state")
         sm.LoadState(newState)
         self.say("Getting Views")
-        views=sm.GetRenderViews()
-
+        rViews=sm.GetRenderViews()
+        views=pvs.GetViews()
         if len(views)>1:
             self.warning("More than 1 view in state-file. Generating multiple series")
             timeString="_View%(view)02d"+timeString
-        timeString=self.opts.prefix+timeString
+        timeString=self.opts.prefix+timeString+stateString
 
         self.say("Setting Offscreen rendering")
         offWarn=True
-        for view in views:
+
+        for iView,view in enumerate(views):
+            self.say("Processing view",iView,"of",len(views))
             if self.opts.offscreenRender:
                 view.UseOffscreenRenderingForScreenshots=True
                 if offWarn:
@@ -275,6 +508,127 @@ casename. Additional replacements can be specified
             print "Snapshot ",i," for t=",t,
             sys.stdout.flush()
             self.say()
+            layouts=[]
+
+            colorPrefix=""
+
+            # from paraview.simple import UpdatePipeline
+            # UpdatePipeline(time=float(t))
+
+            if len(colorRanges)>0:
+                for c in colorRanges:
+                    rng=colorRanges[c]
+                    self.say("Setting color",c,"to range",rng)
+                    self.setColorTransferFunction(c,rng)
+
+            if PVVersion()>=(4,2) and len(filterColors)>0:
+                self.say("Switch colors")
+                from paraview.simple import GetSources,GetDisplayProperties,GetColorTransferFunction,GetScalarBar,HideUnusedScalarBars,UpdatePipeline,ColorBy,SetActiveView,GetRepresentations
+                sources=GetSources()
+                changedSources=set()
+                for j,view in enumerate(views):
+                    for n in sources:
+                        if n[0] in filterColors:
+                            if view in rViews:
+                                self.say("Found",n[0],"to be switched")
+                                # This does not work as expected.
+    #                            dp=GetDisplayProperties(sources[n],view)
+                                display=sm.GetRepresentation(sources[n],view)
+                                if display==None:
+                                    self.say("No representation for",n[0],"in this view")
+                                    continue
+                                if display.Visibility==0:
+                                    self.say("Not switching",n[0],"because it is not visible in this view")
+                                    # Invisible Sources don't need a color-change
+                                    # Currently Visibily does not work as I expect it (is always 1)
+                                    continue
+
+                                if type(filterColors[n[0]])==tuple:
+                                    assoc,col=filterColors[n[0]]
+                                else:
+                                    assoc,col=display.ColorArrayName[0],filterColors[n[0]]
+                                if display.ColorArrayName==[assoc,col]:
+                                    self.say("Color already set to",assoc,col,".Skipping")
+                                    continue
+                                ColorBy(display,[assoc,col])
+
+                                # display.ColorArrayName=[assoc,col]
+                                changedSources.add(n[0])
+                                color=GetColorTransferFunction(col)
+                                # display.ColorArrayName=filterColors[n[0]]
+                                # display.LookupTable=color
+    #                            UpdatePipeline(proxy=sources[n])
+
+                                if n[0] not in self.opts.noColorbar and (len(self.opts.colorbarView)==0 or j in self.opts.colorbarView):
+                                    self.say("Adding a colorbar")
+                                    scalar=GetScalarBar(color,view)
+                                    scalar.Visibility=1
+                            elif sources[n].__class__.__name__=="Histogram" \
+                                   and view.__class__.__name__=="BarChartView":
+                                self.say(n,"is a Histogram")
+                                # dp=GetDisplayProperties(sources[n],view)
+                                assoc,oldCol=sources[n].SelectInputArray
+                                col=filterColors[n[0]]
+                                self.say("Setting color from",oldCol,"to",col)
+                                sources[n].SelectInputArray=[assoc,col]
+                            else:
+                                # self.say(n,"is unsuppored Source:",sources[n],
+                                #         "View:",view)
+                                pass
+                    HideUnusedScalarBars(view)
+
+                if self.opts.colorPrefix:
+                    for s in changedSources:
+                        if type(filterColors[s])==tuple:
+                            colorPrefix+=s+"="+filterColors[s][1]+"_"
+                        else:
+                            colorPrefix+=s+"="+filterColors[s]+"_"
+
+            for c in self.opts.rescaleToSource:
+                found=False
+                from paraview.simple import GetSources
+                sources=GetSources()
+                for n in sources:
+                    if n[0]==c:
+                        src=sources[n]
+                        found=True
+                        for view in views:
+                            display=sm.GetRepresentation(sources[n],view)
+                            if display==None:
+                                continue
+                            if display.Visibility==0:
+                                continue
+                            col=display.ColorArrayName[1]
+                            src.UpdatePipeline(time=float(t))
+                            if col in percentileRanges:
+                                low,hig=percentileRanges[col]
+                                if low is None:
+                                    low=0
+                                if hig is None:
+                                    hig=100
+                                else:
+                                    hig=100-hig
+                                rng=self.getDataRangePercentile(src,col,low=low,high=hig)
+                            else:
+                                rng=self.getDataRange(src,col)
+
+                            if not rng is None:
+                                self.say("Resetting color function",col,"to range",rng,"because of data set",c)
+                                if col in colorRanges:
+                                    low,hig=colorRanges[col]
+                                    if low is not None:
+                                        rng=low,rng[1]
+                                    if hig is not None:
+                                        rng=rng[0],hig
+                                    self.say("Extremes overruled to",rng,"for resetting")
+                                self.setColorTransferFunction(col,rng)
+                            else:
+                                self.warning("No field",col,"found on",c)
+                        break
+
+                if not found:
+                    self.warning("Source",c,"not found")
+
             for j,view in enumerate(views):
                 if len(views)>0:
                     print "View %d" % j,
@@ -287,12 +641,12 @@ casename. Additional replacements can be specified
 
                      fn = (timeString % {'nr':i,'t':t,'view':j})+"."+self.opts.picType
                      if PVVersion()<(3,6):
-                         self.say("Old Paraview writing")
+                         self.say("Very old Paraview writing")
                          view.WriteImage(fn,
                                          self.picTypeTable[self.opts.picType],
                                          self.opts.magnification)
-                     else:
-                         self.say("New Paraview writing")
+                     elif PVVersion()<(4,2):
+                         self.say("Old Paraview writing")
                          from paraview.simple import SetActiveView,Render,WriteImage
                          self.say("Setting view")
                          SetActiveView(view)
@@ -304,6 +658,31 @@ casename. Additional replacements can be specified
                                     view,
      #                               Writer=self.picTypeTable[self.opts.picType],
                                     Magnification=self.opts.magnification)
+                         self.say("Finished writing")
+                     else:
+                         doRender=True
+                         usedView=view
+                         self.say("New Paraview writing")
+                         from paraview.simple import SetActiveView,SaveScreenshot,GetLayout,GetSources
+
+                         layout=GetLayout(view)
+                         if self.opts.doLayouts:
+                             usedView=None
+                             if layout in layouts:
+                                 doRender=False
+                             else:
+                                 layouts.append(layout)
+                         else:
+                             layout=None
+                         if doRender:
+                             self.say("Writing image",colorPrefix+fn,"type",self.picTypeTable[self.opts.picType])
+                             # This may produce a segmentation fault with offscreen rendering
+                             SaveScreenshot(colorPrefix+fn,
+                                            view=usedView,
+                                            layout=layout,
+                                            magnification=self.opts.magnification)
+                         else:
+                             self.say("Skipping image",colorPrefix+fn)
                          self.say("Finished writing")
                 if doGeom:
                      from paraview.simple import Show,Hide,GetSources
@@ -332,7 +711,7 @@ casename. Additional replacements can be specified
                     srcNames=[]
                     sources=GetSources()
                     for n in sources:
-                         srcNames.append(n[0])
+                        srcNames.append(n[0])
                     if allSources==None:
                          allSources=set(srcNames)
                          alwaysSources=set(srcNames)

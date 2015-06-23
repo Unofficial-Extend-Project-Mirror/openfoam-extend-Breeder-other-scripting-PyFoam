@@ -13,10 +13,12 @@ from optparse import OptionGroup
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
+from .CommonChangeBoundary import CommonChangeBoundary
 
 from PyFoam.ThirdParty.six import print_
 
-class ChangeBoundaryName(PyFoamApplication):
+class ChangeBoundaryName(PyFoamApplication,
+                         CommonChangeBoundary):
     def __init__(self,
                  args=None,
                  **kwargs):
@@ -24,6 +26,7 @@ class ChangeBoundaryName(PyFoamApplication):
 Changes the name of a boundary in the boundary-file. Also if a
 time-step is specified
         """
+        CommonChangeBoundary.__init__(self)
         PyFoamApplication.__init__(self,args=args,
                                    description=description,
                                    usage="%prog <caseDirectory> <boundaryName> <new name>",
@@ -33,15 +36,12 @@ time-step is specified
                                    **kwargs)
 
     def addOptions(self):
+        CommonChangeBoundary.addOptions(self)
+
         change=OptionGroup(self.parser,
                            "Change",
                            "Change specific options")
         self.parser.add_option_group(change)
-        change.add_option("--test",
-                          action="store_true",
-                          default=False,
-                          dest="test",
-                          help="Only print the new boundary file")
         change.add_option("--time-step",
                           action="store",
                           default=None,
@@ -53,40 +53,35 @@ time-step is specified
         bName=self.parser.getArgs()[1]
         nName=self.parser.getArgs()[2]
 
-        boundary=ParsedParameterFile(path.join(".",fName,"constant","polyMesh","boundary"),debug=False,boundaryDict=True)
+        def changeName(bnd,target):
+            found=False
 
-        bnd=boundary.content
+            for val in bnd:
+                if val==bName:
+                    found=True
+                elif found:
+                    bnd[bnd.index(bName)]=nName
+                    break
 
-        if type(bnd)!=list:
-            self.error("Problem with boundary file (not a list)")
+            if not found:
+                self.warning("Boundary",bName,"not found in",bnd[::2])
+                return None
+            else:
+                if self.opts.timestep:
+                    print_("Updating the files of timestep",self.opts.timestep)
+                    td=TimeDirectory(path.join(target,".."),self.opts.timestep,
+                                     yieldParsedFiles=True)
 
-        found=False
+                    for f in td:
+                        try:
+                            print_("Updating",f.name)
+                            f["boundaryField"][nName]=f["boundaryField"][bName]
+                            del f["boundaryField"][bName]
+                            f.writeFile()
+                        except KeyError:
+                            print_("No boundary",bName,"Skipping")
+                return bnd
 
-        for val in bnd:
-            if val==bName:
-                found=True
-            elif found:
-                bnd[bnd.index(bName)]=nName
-                break
-
-        if not found:
-            self.error("Boundary",bName,"not found in",bnd[::2])
-
-        if self.opts.test:
-            print_(boundary)
-        else:
-            boundary.writeFile()
-            self.addToCaseLog(fName)
-
-            if self.opts.timestep:
-                print_("Updating the files of timestep",self.opts.timestep)
-                td=TimeDirectory(fName,self.opts.timestep,
-                                 yieldParsedFiles=True)
-
-                for f in td:
-                    print_("Updating",f.name)
-                    f["boundaryField"][nName]=f["boundaryField"][bName]
-                    del f["boundaryField"][bName]
-                    f.writeFile()
+        self.processBoundaryFiles(changeName,fName)
 
 # Should work with Python3 and Python2

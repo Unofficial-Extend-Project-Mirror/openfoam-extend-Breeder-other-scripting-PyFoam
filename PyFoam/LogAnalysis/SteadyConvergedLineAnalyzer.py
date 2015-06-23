@@ -37,7 +37,7 @@ class SteadyConvergedLineAnalyzer(LogLineAnalyzer):
                 self.counter=0
             self.lastTime=time
 
-        m=self.exp.match(line)
+        m=self.exp.match(line.strip())
         if m!=None:
             if int(m.group(5))>0:
                 self.counter+=1

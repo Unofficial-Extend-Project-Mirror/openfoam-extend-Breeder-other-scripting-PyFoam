@@ -68,7 +68,7 @@ Adds the content of a number of pickledData-files to a sqlite database
             if self.opts.verbose:
                 print_("\nProcessing file",s)
             try:
-                data=pickle.Unpickler(open(s)).load()
+                data=pickle.Unpickler(open(s,"rb")).load()
             except (IOError,pickle.UnpicklingError):
                 e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
                 if self.opts.skipMissing:

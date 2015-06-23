@@ -71,7 +71,7 @@ class CTestRun(object):
         if "init" in dir(theClass):
             # make sure this is only called once
             if PY3:
-                toCall=theClass.init.__func__
+                toCall=theClass.init.__call__
             else:
                 toCall=theClass.init.im_func
             if not toCall in called:
@@ -253,19 +253,22 @@ class CTestRun(object):
 
     def readRunInfo(self):
         """read the runInfo from a file"""
-        pick=pickle.Unpickler(open(path.join(self.caseDir,"runInfo.pickle")))
+        pick=pickle.Unpickler(open(path.join(self.caseDir,"runInfo.pickle"),"rb"))
         self.__runInfo=pick.load()
 
     def writeRunInfo(self):
         """read the runInfo from a file"""
-        pick=pickle.Pickler(open(path.join(self.caseDir,"runInfo.pickle"),"w"))
+        pick=pickle.Pickler(open(path.join(self.caseDir,"runInfo.pickle"),"wb"))
         pick.dump(self.__runInfo)
 
     def wrapACallback(self,name):
         """Has to be a separate method because the loop in
         wrapCallbacks didn't work"""
         original=getattr(self,name)
-        original_callable=getattr(original,'im_func')
+        if PY3:
+            original_callable=getattr(original,'__func__')
+        else:
+            original_callable=getattr(original,'im_func')
         def wrapped(*args,**kwargs):
             #            print_("Wrapping",name,args,kwargs,original_callable)
             return self.runAndCatchExceptions(original_callable,self,*args,**kwargs)
@@ -553,7 +556,7 @@ class CTestRun(object):
 
         if self.doSimulation:
             self.status("Run solver")
-            self.__runInfo=self.execute(self.solver)
+            self.__runInfo=dict(self.execute(self.solver).getData())
             self.writeRunInfo()
             print_()
             if not self.runInfo()["OK"]:
@@ -572,7 +575,7 @@ class CTestRun(object):
             import pprint
 
             printer=pprint.PrettyPrinter()
-            printer.pprint(self.__runInfo.getData())
+            printer.pprint(self.__runInfo)
 
         if self.doPostprocessing:
             self.status("Running postprocessing tools")
@@ -697,7 +700,7 @@ class CTestRun(object):
 
     def runCommand(self,*args):
         """Run a command and let it directly write to the output"""
-        p=subprocess.Popen(" ".join(map(str,args)),
+        p=subprocess.Popen(" ".join([str(a) for a in args]),
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT)
@@ -717,7 +720,7 @@ class CTestRun(object):
         workingDirectory=None
         if not workingDirectory:
             workingDirectory=self.caseDir
-        cmd=" ".join(map(str,args))
+        cmd=" ".join([str(a) for a in args])
         self.status("Executing",cmd,"in",workingDirectory)
         oldDir=os.getcwd()
         os.chdir(workingDirectory)
@@ -823,7 +826,7 @@ class CTestRun(object):
         return self._controlDict
 
     def line(self):
-        self.status("/\\"*((78-len("TEST "+self.shortTestName()+" :"))/2))
+        self.status("/\\"*int((78-len("TEST "+self.shortTestName()+" :"))/2))
 
     def status(self,*args):
         """print a status message about the test"""

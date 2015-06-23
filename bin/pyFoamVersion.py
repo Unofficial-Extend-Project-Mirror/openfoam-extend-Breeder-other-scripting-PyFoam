@@ -66,7 +66,12 @@ print_("Version", PyFoam.FoamInformation.foamVersion(),
 installedKeys=list(installed.keys())
 installedKeys.sort()
 
-formatString="%%%ds : %%s" % max([1+len(a[0])+len(a[1]) for a in installedKeys])
+try:
+    formatString="%%%ds : %%s" % max([1+len(a[0])+len(a[1]) for a in installedKeys])
+except ValueError:
+    # max failing because list is empty
+    formatString="%s : %s"
+
 for k in installedKeys:
     print_(formatString % (k[0]+"-"+k[1],installed[k]))
 
@@ -74,8 +79,8 @@ if PyFoam.FoamInformation.oldAppConvention():
     print_("  This version of OpenFOAM uses the old calling convention")
 print_()
 print_("pyFoam-Version:",PyFoam.versionString())
-# hardcodedVersion=(0,6,4,"development")
-hardcodedVersion=(0,6,4)
+# hardcodedVersion=(0,6,6,"development")
+hardcodedVersion=(0,6,5)
 if PyFoam.version()!=hardcodedVersion:
     print_("ALERT: Reported version",PyFoam.version(),
            "is different from hardcoded version",
@@ -148,6 +153,12 @@ def testLibrary(name,
             print_("\t",textMissing, end=' ')
         print_()
         return False
+    except AttributeError:
+        print_("Attribute Error", end=' ')
+        if textMissing:
+            print_("\t",textMissing, end=' ')
+        print_()
+        return False
 
 print_("\nInstalled libraries:")
 testLibrary("cython","Not used. Maybe will by used later to spped up parts of PyFoam")
@@ -155,6 +166,7 @@ testLibrary("cProfile","Not a problem. Can't profile using this library")
 testLibrary("docutils","Not necessary. Needed for RestructuredText to HTML conversion")
 testLibrary("Gnuplot","Not a problem. Version from ThirdParty is used")
 testLibrary("hotshot","Not a problem. Can't profile using this library")
+testLibrary("line_profiler","Not a problem. Can't profile using this library")
 testLibrary("ipdb","Not necessary. Only makes debugging more comfortable")
 testLibrary("IPython",
             "Not necessary. But the interactive shell may be more comfortable",
@@ -163,7 +175,8 @@ testLibrary("matplotlib","Only Gnuplot-plotting possible")
 # testLibrary("matplotlib.pyplot","Only Gnuplot-plotting possible")
 testLibrary("mercurial","Not a problem. Used for experimental case handling",
             subModule="config",versionAttribute="util.version()")
-testLibrary("nose","Only needed for running the unit-tests (developers only)")
+# testLibrary("nose","Only needed for running the unit-tests (developers only)")
+testLibrary("pytest","Only needed for running the unit-tests (developers only)")
 numpyPresent=testLibrary("numpy","Plotting and data comparison won't work")
 if not numpyPresent:
     numpypyPresent=testLibrary("numpypy","This workaround for PyPy does not work","This seems to by PyPy")

@@ -1,8 +1,10 @@
-
 import unittest
 import math
 
-from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,TupleProxy,DictProxy,Tensor,SymmTensor,Codestream,BoolProxy
+from PyFoam.Basics.FoamFileGenerator import (Vector,Dimension,Field,
+                                             TupleProxy,DictProxy,Tensor,
+                                             DictRedirection,
+                                             SymmTensor,Codestream,BoolProxy)
 
 from PyFoam.ThirdParty.six import iteritems
 
@@ -48,6 +50,30 @@ class DictProxyTest(unittest.TestCase):
         self.assertEqual("foo" in d,True)
         self.assertEqual("bar" in d,False)
         self.assertEqual("foobar" in d,True)
+
+    def testRedirect(self):
+        dr=DictProxy()
+        dr["a"]=1
+        dr["b"]=2
+        dr["c"]=5
+        r=DictRedirection(dr,dr,"orig")
+        d=DictProxy()
+        d["a"]=3
+        d.addRedirection(r)
+        d["b"]=4
+        self.assertEqual(d["a"],3)
+        self.assertEqual(d["b"],4)
+        self.assertEqual(d["c"],5)
+        self.assertEqual(len(d.keys()),3)
+        s1=set(d.keys())
+        s2=set()
+        for k in d:
+            s2.add(k)
+        self.assertEqual(s1,s2)
+        s2=set()
+        for k,v in iteritems(d):
+            s2.add(k)
+        self.assertEqual(s1,s2)
 
 theSuite.addTest(unittest.makeSuite(DictProxyTest,"test"))
 
@@ -129,6 +155,15 @@ class BoolProxyTest(unittest.TestCase):
         self.assertEqual(v2,"on")
         self.assertEqual("on",v2)
         self.assertNotEqual(v,"foo")
+
+    def testEqualNormalBool(self):
+        t=BoolProxy(True)
+        f=BoolProxy(False)
+        self.assertEqual(t==None,True==None)
+        self.assertEqual(f==None,False==None)
+        self.assertEqual(None==t,True==None)
+        self.assertEqual(None==f,False==None)
+        self.assertEqual(t=="",True=="")
 
 theSuite.addTest(unittest.makeSuite(BoolProxyTest,"test"))
 

@@ -423,6 +423,7 @@ class FoamFileParser(PlyParser):
         'CODESTART',
         'CODEEND',
         'BINARYBLOB',
+        'RESTOFLINE',
     )
 
     reserved = {
@@ -446,6 +447,7 @@ class FoamFileParser(PlyParser):
         ('codestream', 'exclusive'),
         ('mlcomment', 'exclusive'),
         ('binaryblob', 'exclusive'),
+        ('ignorerestofline', 'exclusive'),
         )
 
     def t_unparsed_left(self,t):
@@ -579,6 +581,27 @@ class FoamFileParser(PlyParser):
                 return t
         #        self.addNewlinesToDecorations(t.value)
 
+    t_ignorerestofline_ignore = ""
+
+    t_ignorerestofline_SCONST = t_SCONST
+
+    def t_ignorerestofline_restofline(self,t):
+        r'[^\n]+'
+        t.lexer.begin("INITIAL")
+        t.type = "RESTOFLINE"
+        return t
+
+    def t_ignorerestofline_newline(self,t):
+        r'[\n]'
+        t.lexer.lineno += t.value.count('\n')
+        t.lexer.begin("INITIAL")
+        t.type = "RESTOFLINE"
+        return t
+
+    def t_ignorerestofline_error(self,t):
+        print_("Error",t.lexer.lexdata[t.lexer.lexpos])
+        t.lexer.skip(1)
+
     # C++ comment (ignore)
     def t_ccode_comment(self,t):
         r'//.*'
@@ -682,55 +705,69 @@ class FoamFileParser(PlyParser):
         self.collectDecorations=True
 
     def p_macro(self,p):
-        '''macro : KANALGITTER include
-                 | KANALGITTER inputMode
-                 | KANALGITTER remove'''
+        '''macro : KANALGITTER include RESTOFLINE
+                 | KANALGITTER inputMode RESTOFLINE
+                 | KANALGITTER remove RESTOFLINE'''
         p[0] = p[1]+p[2]+"\n"
         if self.doMacros:
             p[0]="// "+p[0]
 
+    def p_ignore_rest_of_line(self,p):
+        '''ignore_rest_of_line : '''
+        p.lexer.begin("ignorerestofline")
+
     def p_include(self,p):
-        '''include : INCLUDE SCONST
-                   | INCLUDEIFPRESENT SCONST'''
+        '''include : INCLUDE ignore_rest_of_line SCONST
+                   | INCLUDEIFPRESENT ignore_rest_of_line SCONST'''
         if self.doMacros:
-            fName=path.join(self.directory(),p[2][1:-1])
+            fName=path.join(self.directory(),p[3][1:-1])
             read=True
             if p[1]=="includeIfPresent" and not path.exists(fName):
                 read=False
             if read and not path.exists(fName):
                 raise PyFoamParserError("The included file "+fName+" does not exist")
             if read:
-                data=ParsedParameterFile(fName,
-                                         noHeader=True,
-                                         dictStack=self.dictStack,
-                                         doMacroExpansion=self.doMacros)
+                try:
+                    data=ParsedParameterFile(fName,
+                                             noHeader=True,
+                                             dictStack=self.dictStack,
+                                             doMacroExpansion=self.doMacros)
+                except PyFoamParserError:
+                    # retry but discard header
+                    data=ParsedParameterFile(fName,
+                                             noHeader=False,
+                                             dictStack=self.dictStack,
+                                             doMacroExpansion=self.doMacros)
                 into=self.dictStack[-1]
                 for k in data:
                     into[k]=data[k]
 
-        p[0] = p[1] + " " + p[2]
+        p[0] = p[1] + " " + p[3]
 
     def p_inputMode(self,p):
-        '''inputMode : INPUTMODE ERROR
-                     | INPUTMODE WARN
-                     | INPUTMODE PROTECT
-                     | INPUTMODE DEFAULT
-                     | INPUTMODE MERGE
-                     | INPUTMODE OVERWRITE'''
-        p[0] = p[1] + " " + p[2]
-        self.inputMode=getattr(inputModes,p[2])
+        '''inputMode : INPUTMODE ignore_rest_of_line ERROR
+                     | INPUTMODE ignore_rest_of_line WARN
+                     | INPUTMODE ignore_rest_of_line PROTECT
+                     | INPUTMODE ignore_rest_of_line DEFAULT
+                     | INPUTMODE ignore_rest_of_line MERGE
+                     | INPUTMODE ignore_rest_of_line OVERWRITE'''
+        p[0] = p[1] + " " + p[3]
+        self.inputMode=getattr(inputModes,p[3])
 
     def p_remove(self,p):
-        '''remove : REMOVE word
+        '''remove : REMOVE ignore_rest_of_line word
                   | REMOVE wlist'''
         p[0] = p[1] + " "
-        if type(p[2])==str:
-            p[0]+=p[2]
+        if len(p)==4:
+            p[0]+=p[3]
         else:
             p[0]+="( "
-            for w in p[2]:
-                p[0]+=w+" "
-            p[0]+=")"
+            p[0]+=" ".join(p[2])
+            p[0]+=" )"
+
+    def p_wlist(self,p):
+        '''wlist : '(' wordlist ignore_rest_of_line ')' '''
+        p[0] = p[2]
 
     def p_integer(self,p):
         '''integer : ICONST'''
@@ -808,10 +845,6 @@ class FoamFileParser(PlyParser):
                     p[0]=Tensor(*p[2])
                 else:
                     p[0]=SymmTensor(*p[2])
-
-    def p_wlist(self,p):
-        '''wlist : '(' wordlist ')' '''
-        p[0] = p[2]
 
     def p_unparsed(self,p):
         '''unparsed : UNPARSEDCHUNK'''

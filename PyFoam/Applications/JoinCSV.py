@@ -17,7 +17,11 @@ class JoinCSV(PyFoamApplication,
                  **kwargs):
         description="""\
 Join together two or more CSV-files. Data is resampled to fit the
-timescale of the the first CSV-file
+timescale of the the first CSV-file.
+
+Deprecated: all the functionality of this utility is now present in
+pyFoamConvertToCSV.py. This utility will therefore be removed in later
+version of PyFoam
 """
         CommonReadWriteCSV.__init__(self)
         PyFoamApplication.__init__(self,
@@ -31,6 +35,8 @@ timescale of the the first CSV-file
                                    **kwargs)
 
     def addOptions(self):
+        self.depreciationWarning("all functionality of this utility now also implemented in pyFoamConvertToCSV.py")
+
         CommonReadWriteCSV.addOptions(self)
 
         how=OptionGroup(self.parser,

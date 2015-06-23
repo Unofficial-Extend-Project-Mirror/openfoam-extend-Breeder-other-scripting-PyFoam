@@ -49,6 +49,7 @@ class RunDatabase(object):
             cursor=db.cursor()
             cursor.execute("CREATE TABLE theRuns(runId INTEGER PRIMARY KEY, "+
                            self.__normalize("insertionTime")+" TIMESTAMP)")
+            cursor.close()
 
     def add(self,data):
         """Add a dictionary with data to the database"""
@@ -66,6 +67,18 @@ class RunDatabase(object):
 
         self.db.commit()
 
+    specialChars={
+        '[':'bro',
+        ']':'brc',
+        '{':'cro',
+        '}':'crc',
+        '(':'pro',
+        ')':'prc',
+        '|':'pip',
+    }
+
+    specialString="_specialChar"
+
     def __normalize(self,s):
         """Normalize a column-name so that the case-insensitve column-names of SQlite
         are no problem"""
@@ -76,12 +89,24 @@ class RunDatabase(object):
         for c in s:
             if c.isupper() or c=="_":
                 result+="_"+c.lower()
+            elif c in RunDatabase.specialChars:
+                result+=RunDatabase.specialString+RunDatabase.specialChars[c]
             else:
                 result+=c
         return result
 
     def __denormalize(self,s):
         """Denormalize the column name that was normalized by _normalize"""
+
+        while s.find(RunDatabase.specialString)>=0:
+            pre,post=s.split(RunDatabase.specialString,maxsplit=1)
+            spec=post[0:3]
+            for k,v in iteritems(RunDatabase.specialChars):
+                if spec==v:
+                    s=pre+k+post[3:]
+                    break
+            else:
+                error("No special character for encoding",spec,"found")
 
         result=""
         underFound=False
@@ -131,7 +156,10 @@ class RunDatabase(object):
             print_("AddData:",addData)
             raise e
 
-        return cursor.lastrowid
+        lastrow=cursor.lastrowid
+        cursor.close()
+
+        return lastrow
 
     def __adaptDatabase(self,data):
         """Make sure that all the required columns and tables are there"""
@@ -178,7 +206,8 @@ class RunDatabase(object):
         for k,v in iteritems(data):
             if k not in columns:
                 if self.verbose:
-                    print_("Adding:",k,"to",table)
+                    print_("Adding:",k,"to",table,"(normalized:",
+                           self.__normalize(k),")")
                 if isinstance(v,integer_types+(float,)):
                     self.db.execute('ALTER TABLE "%s" ADD COLUMN "%s" REAL' %
                                     (table,self.__normalize(k)))

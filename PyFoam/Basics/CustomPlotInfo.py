@@ -66,6 +66,7 @@ class CustomPlotInfo(object):
         self.enabled=enabled
         self.xlabel="Time [s]"
         self.ylabel=None
+        self.gnuplotCommands=[]
 
         # Legacy format
         if raw==None:
@@ -98,7 +99,7 @@ class CustomPlotInfo(object):
                 if type(data)==str:
                     data=cleanString(data)
                 elif type(data)==list:
-                    data=list(map(cleanString,data))
+                    data=[cleanString(d) for d in data]
                 if k=="with":
                     k="with_"
                 self.set(k,data)
@@ -131,7 +132,7 @@ class CustomPlotInfo(object):
                         if type(val)==str:
                             val=encloseString(val)
                         elif type(val)==list:
-                            val=list(map(encloseString,val))
+                            val=[encloseString(v) for v in val]
 
                 result[key]=val
         return result

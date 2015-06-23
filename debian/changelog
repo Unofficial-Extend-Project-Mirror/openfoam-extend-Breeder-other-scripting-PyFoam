@@ -1,3 +1,33 @@
+pyfoam (0.6.5-ppa1~trusty3) trusty; urgency=low
+
+  * Add list of packages as recommended (for complete functionality)
+
+ -- Bernhard F.W.Gschaider <bgschaid@ice-sf.at>  Mon, 01 Jun 2015 15:02:42 +0200
+
+pyfoam (0.6.5-development2-ppa1~trusty3) trusty; urgency=low
+
+  * Add list of packages as recommended (for complete functionality)
+
+ -- Bernhard F.W.Gschaider <bgschaid@ice-sf.at>  Mon, 25 May 2015 18:02:42 +0200
+
+pyfoam (0.6.5-development1-ppa1~trusty3) trusty; urgency=low
+
+  * Bumping up the version number for next release
+
+ -- Bernhard F.W.Gschaider <bgschaid@ice-sf.at>  Thu, 21 May 2015 02:11:42 +0200
+
+pyfoam (0.6.4.2062-ppa1~trusty3) trusty; urgency=low
+
+  * Fixing hopefully build dependencies
+
+ -- Oliver Borm <oli.borm@web.de>  Mon, 13 Apr 2015 20:23:47 +0200
+
+pyfoam (0.6.4.2062-ppa1~trusty2) trusty; urgency=low
+
+  * Build for trusty
+
+ -- Oliver Borm <oli.borm@web.de>  Thu, 12 Mar 2015 19:23:47 +0200
+
 pyfoam (0.6.1-release~ppa1~precise1) precise; urgency=low
 
   * Release for the Stick of the 8th Workshop

@@ -184,7 +184,7 @@ and either displays the plot or writes the plots to file
                 warning("Only the first parameter is used")
 
             fName=self.parser.getArgs()[0]
-            unpick=pickle.Unpickler(open(fName))
+            unpick=pickle.Unpickler(open(fName,"rb"))
 
             lineInfo=unpick.load()
             plotInfo=unpick.load()

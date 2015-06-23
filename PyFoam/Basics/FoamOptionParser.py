@@ -69,7 +69,7 @@ class FoamOptionParser(OptionParser):
         elif type(args)==str:
             self.argLine=args.split()
         else:
-            self.argLine=map(str,args)
+            self.argLine=[str(a) for a in args]
 
         if examples:
             if epilog is None:

@@ -6,6 +6,7 @@ import sys
 from threading import Thread,Lock,Timer
 from PyFoam.ThirdParty.six import print_
 from PyFoam.Error import warning,error
+from PyFoam import configuration as config
 
 if sys.version_info<(2,4):
     from popen2 import Popen4
@@ -108,7 +109,7 @@ class FoamThread(Thread):
         self.cmdline=cmdline
         self.runner=runner
         self.output=None
-        self.reader=LineReader()
+        self.reader=LineReader(config().getboolean("SolverOutput","stripSpaces"))
 
         self.isLinux=False
         self.isDarwin=False

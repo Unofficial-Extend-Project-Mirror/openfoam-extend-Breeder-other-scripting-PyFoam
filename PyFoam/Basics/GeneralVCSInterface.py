@@ -5,7 +5,7 @@ from PyFoam.Error import notImplemented,error
 from os import path,getcwd,chdir
 import subprocess,os
 
-from PyFoam.ThirdParty.six import exec_
+from PyFoam.ThirdParty.six import exec_,PY3
 
 class GeneralVCSInterface(object):
     """This is an abstract class that implements an interface to general VCS operations"""
@@ -141,7 +141,12 @@ def getVCS(vcs,
 
     modName=table[vcs]
 
-    exec_("from "+modName+" import "+modName)
+    if PY3:
+        # fix the import.
+        dot="."
+    else:
+        dot=""
+    exec_("from "+dot+modName+" import "+modName)
 
     return eval(modName+"(path,init)")
 

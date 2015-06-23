@@ -9,6 +9,8 @@ from .GeneralPlotTimelines import GeneralPlotTimelines
 
 from platform import uname
 
+from PyFoam import configuration as config
+
 class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
     """This class opens a gnuplot window and plots a timelines-collection in it"""
 
@@ -88,6 +90,8 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
             self.set_string("terminal dumb")
 
         self.with_=self.spec.with_
+
+        self(config().get("Plotting","gnuplotCommands"))
 
         try:
             for l in custom.gnuplotCommands:

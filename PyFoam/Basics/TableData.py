@@ -66,11 +66,11 @@ class TableData(object):
 
     def min(self):
         """Return the minimum of the data in the table"""
-        return min(list(map(min,self.__data)))
+        return min([min(d) for d in self.__data])
 
     def max(self):
         """Return the maximum of the data in the table"""
-        return max(list(map(max,self.__data)))
+        return max([max(d) for d in self.__data])
 
     def columns(self):
         """Iterate over the column names"""

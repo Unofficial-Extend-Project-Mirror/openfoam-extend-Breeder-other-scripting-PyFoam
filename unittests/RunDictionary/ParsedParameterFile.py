@@ -362,25 +362,31 @@ nix "a=3+x;b=4;";
         self.assertEqual(p1["nix"],[2,"$da"])
 
     def testInclude(self):
-        p1=FoamStringParser('#include "nixda"')
+        p1=FoamStringParser('#include "nixda"\n')
+        p1=FoamStringParser('#include "nixda" ; \n')
 
     def testRemove(self):
-        p1=FoamStringParser('#remove da')
+        p1=FoamStringParser('#remove da\n')
+        p1=FoamStringParser('#remove da;\n')
+        p1=FoamStringParser('#remove da; ;\n')
 
     def testRemoveList(self):
-        p1=FoamStringParser('#remove (nix da)')
+        p1=FoamStringParser('#remove (nix da) ;\n')
+        p1=FoamStringParser('#remove (nix da)\n')
 
     def testInputMode(self):
-        p1=FoamStringParser('#inputMode merge')
+        p1=FoamStringParser('#inputMode merge\n')
+        p1=FoamStringParser('#inputMode merge foobar\n')
 
     def testInputMode2(self):
-        p1=FoamStringParser('#inputMode overwrite')
+        p1=FoamStringParser('#inputMode overwrite\n')
+        p1=FoamStringParser('#inputMode overwrite;\n')
 
     def testInputMode3(self):
-        p1=FoamStringParser('#inputMode error')
+        p1=FoamStringParser('#inputMode error\n')
 
     def testInputMode4(self):
-        p1=FoamStringParser('#inputMode default')
+        p1=FoamStringParser('#inputMode default\n')
 
 theSuite.addTest(unittest.makeSuite(FoamStringParserTest,"test"))
 

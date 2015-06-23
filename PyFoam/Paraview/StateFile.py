@@ -19,14 +19,14 @@ class StateFile(object):
     Stores the actual file as an xml-file"""
     def __init__(self,fName):
         """@param fName: the XML-file that represents the Paraview-state"""
-        
+
         dom=parse(fName)
         self.doc=dom.documentElement
 
     def readerType(self):
         """Returns the type of the used OF-Reader as a string"""
         return self.getReader().data.getAttribute("type")
-    
+
     def setCase(self,case):
         """Rewrite the state-file so that it uses another case than the one
         predefined in the state-file
@@ -44,11 +44,31 @@ class StateFile(object):
             reader.setProperty("FileName",newFile)
         else:
             error("Reader type",typ,"not implemented for state-file rewritting")
-            
+
+    def setDecomposed(self,isDecomposed):
+        """Sets whether the decomposed or the reconstructed data should be used
+        in the state-file. If this can not be set a string with the error message
+        is returned"""
+        reader=self.getReader()
+        typ=reader.data.getAttribute("type")
+        if typ=="PV3FoamReader":
+            return "File type "+typ+" does not support parallel reading"
+        elif typ=="OpenFOAMReader":
+            oldDeco=int(reader.getProperty("CaseType"))
+            if isDecomposed:
+                newDeco=0
+            else:
+                newDeco=1
+            if newDeco==oldDeco:
+                return "Decomposed/Reconstruced correctly set. Nothing changed"
+            reader.setProperty("CaseType",str(newDeco))
+        else:
+            error("Reader type",typ,"not implemented for state-file rewritting")
+
     def __str__(self):
         """Write the file as a string"""
         return self.doc.toxml()
-    
+
     def writeTemp(self):
         """Write the state to a temporary file and return the name of that file"""
         fd,fn=mkstemp(suffix=".pvsm",text=True)
@@ -58,7 +78,7 @@ class StateFile(object):
         fh.close()
 
         return fn
-    
+
     def serverState(self):
         tmp=self.doc.getElementsByTagName("ServerManagerState")
         if len(tmp)!=1:
@@ -74,7 +94,7 @@ class StateFile(object):
             tp=p.getAttribute("type")
             if type_==tp:
                 result.append(Proxy(p))
-                
+
         return result
 
     def getReader(self):
@@ -84,26 +104,26 @@ class StateFile(object):
             error("Wrong number of Readers in State-File. Need 1 but got",len(tmp))
 
         return tmp[0]
-    
+
     def rewriteTexts(self,values):
         """Rewrite all Text-Objects so that strings of the form %%(key)s get replaced
         @param values: dictionary with the values"""
         tmp=self.getProxy("TextSource")
         for t in tmp:
             t.rewriteProperty("Text",values)
-            
+
 class Proxy(object):
     """Convenience class for handling proxies"""
     def __init__(self,xml):
         self.data=xml
-        
+
     def setProperty(self,name,value,index=None):
         """Set a property in a proxy
 
         @param name: name of the property
         @param value: the new value
         @param index: Index. If not specified all elements are changed"""
-        
+
         for p in self.data.getElementsByTagName("Property"):
             if p.getAttribute("name")==name:
                 for e in p.getElementsByTagName("Element"):
@@ -115,14 +135,14 @@ class Proxy(object):
 
         @param name: name of the property
         @param index: Index. If not specified all elements are changed"""
-        
+
         for p in self.data.getElementsByTagName("Property"):
             if p.getAttribute("name")==name:
                 for e in p.getElementsByTagName("Element"):
                     if index==None or index==int(e.getAttribute("index")):
                         return e.getAttribute("value")
         return None
-    
+
     def rewriteProperty(self,name,values,index=None):
         """Rewrites a property by replacing all strings of the form %%(key)s
         (Python-notation for dictionary-replacement) with a corresponding value
@@ -140,5 +160,3 @@ class Proxy(object):
                         if new!=old:
                             # print "Replacing",old,"with",new
                             e.setAttribute("value",new)
-                        
-    

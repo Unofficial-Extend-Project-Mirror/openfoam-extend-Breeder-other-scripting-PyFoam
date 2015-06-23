@@ -162,7 +162,7 @@ FoamFile
 
         result=[]
 
-        excludes=list(map(re.compile,self.excludeNames))
+        excludes=[re.compile(e) for e in self.excludeNames]
 
         for n in listdir(d):
             ok=True

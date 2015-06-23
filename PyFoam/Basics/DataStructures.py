@@ -308,6 +308,9 @@ class BoolProxy(object):
         else:
             return self.textual
 
+    def __repr__(self):
+        return self.__str__()
+
     def __eq__(self,o):
         if type(o) in [bool,BoolProxy]:
             return self.val==o
@@ -320,7 +323,8 @@ class BoolProxy(object):
                 except TypeError:
                     return False
         else:
-            raise TypeError("Can't compare BoolProxy with "+str(type(o)))
+            # raise TypeError("Can't compare BoolProxy with "+str(type(o)))
+            return self.val==o
 
 class DictRedirection(object):
     """This class is in charge of handling redirections to other directories"""
@@ -346,6 +350,12 @@ class DictRedirection(object):
     def __float__(self):
         return float(self._reference)
 
+    def keys(self):
+        if self._fullCopy:
+            return self._fullCopy.keys()
+        else:
+            return self._reference.keys()
+
 class DictProxy(dict):
     """A class that acts like a dictionary, but preserves the order
     of the entries. Used to beautify the output"""
@@ -357,17 +367,19 @@ class DictProxy(dict):
         self._regex=[]
         self._redirects=[]
 
-    def __setitem__(self,key,value):
-        isRegex=False
+    def isRegexp(self,key):
         if type(key)==str:
             if key[0]=='"' and key[-1]=='"':
-                isRegex=True
-        if isRegex:
+                return True
+        return False
+
+    def __setitem__(self,key,value):
+        if self.isRegexp(key):
             exp=re.compile(key[1:-1])
             self._regex=[(key,exp,value)]+self._regex
         else:
             dict.__setitem__(self,key,value)
-        if key not in self._order or isRegex:
+        if key not in self._order or self.isRegexp(key):
             self._order.append(key)
 
     def __getitem__(self,key):
@@ -439,7 +451,25 @@ class DictProxy(dict):
             self[k]=self.__enforceString(kwargs[k],toString)
 
     def keys(self):
-        return [x for x in self._order if type(x)!=DictRedirection]
+        result=[x for x in self._order if x not in self._redirects and not self.isRegexp(x)]
+        for r in self._redirects:
+            for k in r.keys():
+                if not k in result:
+                    result.append(k)
+
+        return result
+
+    def __iter__(self):
+        s=set()
+        for k in self._order:
+            if k not in self._redirects and not self.isRegexp(k):
+                s.add(k)
+                yield k
+        for r in self._redirects:
+            for k in r.keys():
+                if not k in s:
+                    s.add(k)
+                    yield k
 
     def __str__(self):
         first=True
@@ -453,6 +483,16 @@ class DictProxy(dict):
             result+="%s: %s" % (repr(k),repr(v))
         result+="}"
         return result
+
+    def iteritems(self):
+        lst=[]
+        for k in self:
+            lst.append((k,self[k]))
+        return lst
+
+    # needed for python 3. Should be a generator, but ...
+    def items(self):
+        return self.iteritems()
 
     def addDecoration(self,key,text):
         if key in self:

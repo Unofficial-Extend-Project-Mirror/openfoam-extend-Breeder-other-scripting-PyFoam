@@ -45,7 +45,7 @@ class CSVCollection(object):
             if self.renew:
                 if self.file!=None:
                     self.file.close()
-                self.file=file(self.name,"w")
+                self.file=open(self.name,"w")
                 self.writer=csv.DictWriter(self.file,self.headers)
                 self.writer.writerows(self.data)
                 self.renew=False

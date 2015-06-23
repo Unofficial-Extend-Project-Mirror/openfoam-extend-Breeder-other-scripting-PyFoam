@@ -37,7 +37,7 @@ class TimeLineAnalyzer(LogLineAnalyzer):
             pass
 
     def doAnalysis(self,line):
-        m=self.exp.match(line)
+        m=self.exp.match(line.strip())
         if m!=None:
             self.tryFallback=False
             self.notifyNewTime(m)

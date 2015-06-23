@@ -34,7 +34,7 @@ class ParsedBlockMeshDict(ParsedParameterFile):
         result=[]
         i=1
         while i<len(self["blocks"]):
-            result.append(list(map(int,self["blocks"][i])))
+            result.append([int(b) for b in self["blocks"][i]])
             if type(self["blocks"][i+1])==str:
                 i+=6
             else:
@@ -48,10 +48,10 @@ class ParsedBlockMeshDict(ParsedParameterFile):
         if "boundary" in self:
             # New format in 2.0
             for k,d in zip(self["boundary"][0::2],self["boundary"][1::2]):
-                result[k]=[list(map(int,x)) for x in d["faces"]]
+                result[k]=[[int(i) for i in x] for x in d["faces"]]
         else:
             for i in range(1,len(self["patches"]),3):
-                result[self["patches"][i]]=[list(map(int,x)) for x in self["patches"][i+1]]
+                result[self["patches"][i]]=[[int(j) for j in x] for x in self["patches"][i+1]]
 
         return result
 

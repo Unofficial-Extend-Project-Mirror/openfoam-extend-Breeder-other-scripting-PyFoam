@@ -15,11 +15,13 @@ from .CommonTemplateFormat import CommonTemplateFormat
 from os import path
 from optparse import OptionGroup
 
-from PyFoam.ThirdParty.six import print_
+from PyFoam.ThirdParty.six import print_,PY3
 
 import sys
 
 def doImports():
+    if PY3:
+        error("The VTK-library currently only supports Python 2.x. You're using Python3")
     try:
         global QtGui,QtCore
         from PyQt4 import QtGui,QtCore
@@ -33,6 +35,18 @@ def doImports():
         except ImportError:
             usedVTK="Trying VTK implementation from Paraview"
             from paraview import vtk
+
+        global vtkVersion
+        vtkVersion=vtk.VTK_MAJOR_VERSION
+        print_("VTK version",vtkVersion)
+        if vtkVersion==5:
+            # currently the only supported VTK
+            pass
+        elif vtkVersion<5:
+            error("Need at least VTK 5")
+        else:
+            warning("VTK version",vtkVersion,"currently unsupported")
+
         global QVTKRenderWindowInteractor
         from vtk.qt4 import QVTKRenderWindowInteractor
     except ImportError:
@@ -399,12 +413,12 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
 
         self.setUnifiedTitleAndToolBarOnMac(True)
 
+        self.setupBlockingGui()
+
         self.restoreGeometry(QtCore.QSettings().value("geometry").toByteArray())
         self.restoreState(QtCore.QSettings().value("state").toByteArray())
 
         self.setStatus()
-
-        self.setupBlockingGui()
 
         self.reread()
 
@@ -659,11 +673,11 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
     def pickVertice(self):
         """pick a vertice, returns Null if invalid"""
         picker = self.renInteractor.GetPicker()
-        source = picker.GetActor().GetMapper().GetInput().GetProducerPort().GetProducer()
-        if(source.__class__.__name__=="vtkSphereSource"):
-                for i in range(len(self.vActors)):
-                    if(self.vActors[i]==picker.GetActor()):
-                        return i
+
+        for i,v in enumerate(self.vActors):
+            if v==picker.GetActor():
+                return i
+
         return None
 
     def getEndHexString(self):
@@ -821,17 +835,24 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         self.ren.AddActor(actor)
         return actor
 
+    def addInputToPolyData(self,appendPoly,data):
+        """Helper version needed because of changed API in VTK6"""
+        if vtkVersion>=6:
+            appendPoly.AddInputData(data)
+        else:
+            appendPoly.AddInput(data)
+
     def showTmpBlock(self):
         """Add a colored block"""
         append=vtk.vtkAppendPolyData()
-        append2=vtk.vtkAppendPolyData()
+
         b=self.tmpBlock
-        append.AddInput(self.makeFace([b[0],b[1],b[2],b[3]]))
-        append.AddInput(self.makeFace([b[4],b[5],b[6],b[7]]))
-        append.AddInput(self.makeFace([b[0],b[1],b[5],b[4]]))
-        append.AddInput(self.makeFace([b[3],b[2],b[6],b[7]]))
-        append.AddInput(self.makeFace([b[0],b[3],b[7],b[4]]))
-        append.AddInput(self.makeFace([b[1],b[2],b[6],b[5]]))
+        self.addInputToPolyData(append,self.makeFace([b[0],b[1],b[2],b[3]]))
+        self.addInputToPolyData(append,self.makeFace([b[4],b[5],b[6],b[7]]))
+        self.addInputToPolyData(append,self.makeFace([b[0],b[1],b[5],b[4]]))
+        self.addInputToPolyData(append,self.makeFace([b[3],b[2],b[6],b[7]]))
+        self.addInputToPolyData(append,self.makeFace([b[0],b[3],b[7],b[4]]))
+        self.addInputToPolyData(append,self.makeFace([b[1],b[2],b[6],b[5]]))
         mapper=vtk.vtkPolyDataMapper()
         mapper.SetInputConnection(append.GetOutputPort())
         self.tmpBlockActor = vtk.vtkActor()
@@ -846,7 +867,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         """Add a colored patch"""
         append=vtk.vtkAppendPolyData()
         b=self.tmpPatch
-        append.AddInput(self.makeFace([b[0],b[1],b[2],b[3]]))
+        self.addInputToPolyData(append,self.makeFace([b[0],b[1],b[2],b[3]]))
         mapper=vtk.vtkPolyDataMapper()
         mapper.SetInputConnection(append.GetOutputPort())
         self.tmpBlockActor = vtk.vtkActor()
@@ -1091,7 +1112,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         text=vtk.vtkVectorText()
         text.SetText(str(index))
         tMapper=vtk.vtkPolyDataMapper()
-        tMapper.SetInput(text.GetOutput())
+        tMapper.SetInputConnection(text.GetOutputPort())
         tActor = vtk.vtkFollower()
         tActor.SetMapper(tMapper)
         tActor.SetScale(self.numberScale*self.vRadius,self.numberScale*self.vRadius,self.numberScale*self.vRadius)
@@ -1133,11 +1154,11 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         tube=vtk.vtkTubeFilter()
         tube.SetRadius(self.vRadius*self.axisTubeScale)
         tube.SetNumberOfSides(10)
-        tube.SetInput(line.GetOutput())
+        tube.SetInputConnection(line.GetOutputPort())
         text=vtk.vtkVectorText()
         text.SetText(label)
         tMapper=vtk.vtkPolyDataMapper()
-        tMapper.SetInput(text.GetOutput())
+        tMapper.SetInputConnection(text.GetOutputPort())
         tActor = vtk.vtkFollower()
         tActor.SetMapper(tMapper)
         tActor.SetScale(self.axisLabelScale*self.vRadius,
@@ -1215,8 +1236,11 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
         append=vtk.vtkAppendPolyData()
         for a in self.vActors:
             if a!=None:
-                append.AddInput(a.GetMapper().GetInput())
-        self.axes.SetInput(append.GetOutput())
+                append.AddInputConnection(a.GetMapper().GetOutputPort())
+        if vtkVersion>=6:
+            self.axes.SetInputConnection(append.GetOutputPort())
+        else:
+            self.axes.SetInput(append.GetOutput())
 
     def reread(self,resetText=True):
         self.ren.RemoveAllViewProps()
@@ -1260,22 +1284,23 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
             self.blockAxisActor=None
         if newBlock>=0:
             append=vtk.vtkAppendPolyData()
-            append2=vtk.vtkAppendPolyData()
+
             b=self.blocks[newBlock]
-            append.AddInput(self.makeFace([b[0],b[1],b[2],b[3]]))
-            append.AddInput(self.makeFace([b[4],b[5],b[6],b[7]]))
-            append.AddInput(self.makeFace([b[0],b[1],b[5],b[4]]))
-            append.AddInput(self.makeFace([b[3],b[2],b[6],b[7]]))
-            append.AddInput(self.makeFace([b[0],b[3],b[7],b[4]]))
-            append.AddInput(self.makeFace([b[1],b[2],b[6],b[5]]))
+
+            self.addInputToPolyData(append,self.makeFace([b[0],b[1],b[2],b[3]]))
+            self.addInputToPolyData(append,self.makeFace([b[4],b[5],b[6],b[7]]))
+            self.addInputToPolyData(append,self.makeFace([b[0],b[1],b[5],b[4]]))
+            self.addInputToPolyData(append,self.makeFace([b[3],b[2],b[6],b[7]]))
+            self.addInputToPolyData(append,self.makeFace([b[0],b[3],b[7],b[4]]))
+            self.addInputToPolyData(append,self.makeFace([b[1],b[2],b[6],b[5]]))
             d1,t1=self.makeDirection(b[0],b[1],"x1")
-            append.AddInput(d1.GetOutput())
+            self.addInputToPolyData(append,d1.GetOutput())
             self.ren.AddActor(t1)
             d2,t2=self.makeDirection(b[0],b[3],"x2")
-            append.AddInput(d2.GetOutput())
+            self.addInputToPolyData(append,d2.GetOutput())
             self.ren.AddActor(t2)
             d3,t3=self.makeDirection(b[0],b[4],"x3")
-            append.AddInput(d3.GetOutput())
+            self.addInputToPolyData(append,d3.GetOutput())
             self.ren.AddActor(t3)
             self.blockTextActor=(t1,t2,t3)
             self.blockAxisActor=(d1,d2,d3)
@@ -1301,7 +1326,7 @@ class DisplayBlockMeshDialog(QtGui.QMainWindow):
             subs=self.patches[name]
             append=vtk.vtkAppendPolyData()
             for s in subs:
-                append.AddInput(self.makeFace(s))
+                self.addInputToPolyData(append,self.makeFace(s))
             mapper=vtk.vtkPolyDataMapper()
             mapper.SetInputConnection(append.GetOutputPort())
             self.patchActor = vtk.vtkActor()

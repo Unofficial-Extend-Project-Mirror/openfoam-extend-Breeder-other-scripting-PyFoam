@@ -41,6 +41,7 @@ file until interrupted.
                                    changeVersion=False,
                                    interspersed=True,
                                    nr=1,
+                                   findLocalConfigurationFile=self.localConfigInArgsFile,
                                    **kwargs)
 
     def addOptions(self):
@@ -109,7 +110,7 @@ file until interrupted.
         self.processPlotOptions()
         hereDir=path.dirname(self.parser.getArgs()[0])
         self.processPlotLineOptions(autoPath=hereDir)
-        self.addLocalConfig(hereDir)
+        # self.addLocalConfig(hereDir)
 
         run=GnuplotWatcher(self.parser.getArgs()[0],
                            smallestFreq=self.opts.frequency,

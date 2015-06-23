@@ -185,7 +185,7 @@ class Case(object):
             pandasData=True)["plotData"]
 
     def pickledData(self,pickleFile):
-        return pickle.Unpickler(open(path.join(self.path,pickleFile))).load()
+        return pickle.Unpickler(open(path.join(self.path,pickleFile),"rb")).load()
 
     def __getObjectName(self,obj):
         for ns in get_ipython().all_ns_refs:

@@ -6,6 +6,7 @@ from PyFoam.Basics.LineReader import LineReader
 from PyFoam.Error import error
 
 from PyFoam.Basics.ProgressOutput import ProgressOutput
+from PyFoam import configuration as config
 
 from sys import stdout
 
@@ -26,7 +27,7 @@ class FoamLogAnalyzer(object):
         self.analyzers={}
         self.time=""
         self.oDir=""
-        self.line=LineReader()
+        self.line=LineReader(config().getboolean("SolverOutput","stripSpaces"))
         self.timeListeners=[]
         self.timeTriggers=[]
 

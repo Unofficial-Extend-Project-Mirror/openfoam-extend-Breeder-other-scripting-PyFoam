@@ -4,6 +4,7 @@
 import os
 
 from PyFoam.Error import error
+from PyFoam.ThirdParty.six import iteritems
 
 class RestructuredTextHelper(object):
     """Helper class that formats stuff for restructured text"""
@@ -71,9 +72,40 @@ class RestructuredTextHelper(object):
 
         return self.buildHeading(*text,**keys)
 
-    def table(self):
+    def table(self,labeled=False):
         """Creates a new ReSTTable-object"""
-        return ReSTTable()
+        if labeled:
+            return LabledReSTTable()
+        else:
+            return ReSTTable()
+
+    def __markup(self,limiter,*txt):
+        return limiter+" ".join(str(t) for t in txt)+limiter
+
+    def emphasis(self,*txt):
+        return self.__markup("*",*txt)
+
+    def strong(self,*txt):
+        return self.__markup("**",*txt)
+
+    def literal(self,*txt):
+        return self.__markup("``",*txt)
+
+    def bulletList(self,data,bullet="-"):
+        """Generate a bullet list from the data"""
+        return "\n".join(bullet+" "+str(d) for d in data)+"\n"
+
+    def enumerateList(self,data,first=1):
+        """Generate an enumerated list from the data. First number can be chosen
+        and determines the format"""
+        if len(data)==0:
+            return "\n"
+        else:
+            return str(first)+". "+str(data[0])+"\n"+"\n".join("#. "+str(d) for d in data[1:])+"\n"
+
+    def definitionList(self,data):
+        """Generate a definiton list from the data."""
+        return "\n\n".join(str(k)+"\n  "+str(v) for k,v in iteritems(data))+"\n"
 
 class ReSTTable(object):
     """Class that administrates a two-dimensional table and prints it as
