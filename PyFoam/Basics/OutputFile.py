@@ -9,9 +9,9 @@ class OutputFile(BasicFile):
 
     def __init__(self,name,titles=[],parent=None):
         """
-        @param name: name of the file
-        @param titles: Titles of the columns
-        @param parent: A parent collection that knows about opened and
+        :param name: name of the file
+        :param titles: Titles of the columns
+        :param parent: A parent collection that knows about opened and
         closed files
         """
         BasicFile.__init__(self,name)
@@ -26,7 +26,7 @@ class OutputFile(BasicFile):
         """
         Sets the titles anew. Only has an effect if the file hasn't been opened yet
 
-        @param titles: The new titles
+        :param titles: The new titles
         """
         self.titles=titles
 
@@ -44,8 +44,8 @@ class OutputFile(BasicFile):
     def write(self,time,data):
         """write data set
 
-        @param time: the current time
-        @param data: tuple with data"""
+        :param time: the current time
+        :param data: tuple with data"""
         self.writeLine( (time,)+data)
 
     def callAtOpen(self):

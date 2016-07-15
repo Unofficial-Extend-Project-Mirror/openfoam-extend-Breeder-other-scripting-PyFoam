@@ -1,3 +1,431 @@
+Version 0.6.6 - 2016-07-15
+==========================
+
+Incompatibilities
+-----------------
+
+### Changes in `IPython`-notebooks 3.0
+
+With IPython 3.0 the names of the Widget classes lost the `Widget` in
+the name (for instance `DropdownWidget` becomes `Dropdown`). `PyFoam`
+has been changed to conform with this but as a consequence won't work
+with old version of the `IPython` notebooks
+
+Enhancements to Utilities
+-------------------------
+
+### =pyFoamPrepareCase.py= executes `setFields` if appropriate
+
+If no setup-script is specified and if there is a `setFieldsDict`
+present then `setFields` is automatically executed
+
+### Plotting utilities now automatically add custom plots depending on the solver name
+
+The configuration system now has a section `Autoplots`. The entries
+there are all dictionaries with two entries:
+
+solvers
+:   a list of regular expressions. If the name of the currently used
+    solver matches any of these expressions then this entry is used
+plotinfo
+:   a dictionary with the plot information known from regular
+    `customRegexp`: `expr`, `titles` etc
+
+If the solver matches `solvers` then a custom plot based on `plotinfo`
+is automatically added.
+
+If the solver does not fit the plot is **not** added (this helps avoid
+processing of unused `expr`. This is important because processing the
+`expr` is one of the things `PyFoam` uses the most computation time for)
+
+Some common plots (phase fractions for instance or most of the output of
+`chtMultiRegionFoam`) are hardcoded into `PyFoam`
+
+Also there is a new section `[SolverBase]` in the configuration. It is
+checked whether the current solver name **begins** with any of the keys
+there. If it does then the list of solvers is assumed to be the solvers
+this solver was based on and `Autoplots` for those solvers are added as
+well. For instance
+
+``` {.example}
+[SolverBase]
+myReactingCht: ["chtMultiRegionFoam","reactingFoam"]
+```
+
+assumes that a solver `myReactingChtFoam` is based on these two solvers
+and automatically adds their `Autoplots`
+
+In addition if a setting like
+
+``` {.example}
+[Plotting]
+autoplots: cloudNumberMass
+```
+
+is set (for instance through `LocalConfigPyFoam` in the case) then the
+autoplot `cloudnumbermass` is used regardless of the solver name
+
+### =alternateAxis=-entries now can be regular expressions
+
+This allows specifying plots generated with `type dynamic` on the
+alternate axis
+
+### Plotting utilities now allow choice of Gnuplot terminal
+
+These utilities now allow with the option `--gnuplot-terminal` to choose
+the terminal. Otherwise the terminal specified in the configuration
+(usually `x11`) is used
+
+### Plotting utilities now sort legend by name
+
+Names in the legend are now sorted. This improves readability for large
+numbers of lines in the plot
+
+### =pyFoamExecute.py= allows calling with debugger
+
+The option `--run-with-debugger` runs the command in the debugger. The
+arguments are appropriately handled
+
+### =pyFoamPrepareCase.py= fails if execution of a script fails
+
+If the execution of a script fails (the status code returned by the
+script is not $0$) then execution of the utility fails (before the
+utility just continued). This behavior can be overridden with the option
+`--continue-on-script-failure`.
+
+It is up to the script to ensure that the failure of a utility called in
+the script is forwarded to `pyFoamPrepareCase.py`. For instance with
+
+``` {.example}
+set -e
+```
+
+in a `bash`-script
+
+### =--hardcopy= in plotting library now allows modification of `gnuplot`-terminals
+
+This option allows setting the options for the terminal selected with
+`--format-of-hardcopy`. This overrides any default set in configuration
+section `[Plotting]` under the name `hardcopyOptions_<term>` with
+`<term>` being the name of the terminal (for instance for `png` the
+option is `hardcopyOptions_png`.
+
+### =pyFoamPrepareCase.py= writes state information about what it is currently doing
+
+It writes to the usual state file. This way `pyFoamListCases.py` will
+list this information. If the scripts call `pyFoamRunner.py` then this
+information will be overwritten
+
+### =pyFoamBinarySize.py= can handle new location of binaries in OpenFOAM 3.0
+
+Since that foam version all binaries (and object files are located in
+the directory `platforms`. The utility now finds them there
+
+### =Runner=-utilites now can signal on `blink(1)`-devices
+
+With the option `--use-blink1` these utilities now flash on a plugged in
+`blink(1)` USB-device for every time-step
+
+### =pyFoamExecute.py= can flash a `blink(1)`
+
+To indicate that the utility is still running it is able to play a
+pattern on a `blink(1)`-device. This is switched on with `-use-blink`
+
+### =pyFoamDecompose.py= allows using a template file
+
+With the option `--template-dict` it is possible to initialize the
+output with an existing file. With this file it is possible to add
+'complicated' settings.
+
+### =pyFoamTimelinePlot.py= now handles new format of probe files
+
+Probe files now have one comment line per probe to specify the position.
+This format is now correctly detected and plotted. Old probe files are
+also handled
+
+### =ReST=-report of `pyFoamPrepareCase.py` now reports derived parameters
+
+The `.rst`-file written by the utility now adds a section on derived
+parameters if such parameters were specified in a script
+
+### =pyFoamPrepareCase= can now ignore directories
+
+It is now possible to specify directories that should be ignored when
+looking for templates. Some sensible defaults like `postProcessing`,
+`processor*` and `VTK` are already set
+
+### =pyFoamConvertToCSV.py= allows adding formulas to XLSX-files
+
+The option `--add-formula-to-sheet` allows adding formulas to the
+Excel-sheet. Something like
+
+``` {.example}
+--add-formula="massflow:::'inlet'-'outlet'"
+```
+
+adds a column `massflow` that subtracts the columns `inlet` and `outlet`
+
+### =pyFoamListCases.py= now displays mercurial info
+
+For those who use mercurial to keep track of their cases the utility now
+has the option `-hg-info` that displays the mercurial hash-ID, the local
+id and the branch name
+
+### Progress bar added to utilities with long run-time
+
+Using the library `lqdm` progress bars have been added to utilities that
+have a long run-time and where the progress bars are not disturbing the
+regular output. These utilities are
+
+-   `pyFoamListCases.py`
+-   `pyFoamBinarySize.py`
+
+Bars can be switched off with `--no-progress-bar`
+
+### Utilities that clear data can now report what is cleared
+
+`pyFoamCleasCase.py` and all utilities that have a `--clear` option now
+also have a `--verbose-clear` option that reports **what** is being
+cleared
+
+### =pyFoamConvertToCSV.py= now allows manipulating the input
+
+The utility now has two new options:
+
+-
+:   This allows removing characters before the file is actually read
+-
+:   Replaces the first line (for instance if the header does not match
+    the data
+
+Enhancements to the Library
+---------------------------
+
+### Detection of `OpenFOAM-dev`
+
+A development installation is now also detected and it is assumed that
+this uses the new calling convention. Also: PyFoam reports this as
+version `9.9.9` (as this is larger than any version in the foreseeable
+future
+
+### Add `OpenFOAM+` as a fork
+
+An additional fork type `openfoamplus` has been added (in addition to
+`openfoam` and `extend`). Installations of the form `OpenFOAM-vX.X+`
+(with `X.X` being the version number) are added to this fork. Also
+`OpenFOAM-plus` is added as the development version of this fork
+
+### Accept new convention for location of `blockMeshDict`
+
+In newer OpenFOAM-versions `blockMeshDict` may be located in `system`.
+PyFoam detects it either there or in the old
+`constant/polyMesh`-location
+
+### Handling of complex data by `Configuration`
+
+Lists and dictionaries now can also be specified. Have to be correctly
+formatted if they are longer than one line (indented by at least one
+space - convention for configuration files)
+
+### =Configuration= has method `getArch` for architecture dependent settings
+
+If an option `opt` is requested with this option then it is checked
+whether an architecture-dependent setting exists. Architecture `arch` is
+the output of the `uname`-command. The architecture-dependent name is
+`opt_arch`.
+
+### =execute=-method from `PyFoam.Basics.Utilities` returns status-code
+
+This function now has an option that makes it return the status of the
+execution as well as the output of the execution.
+
+### =BasicRunner= now supports more ways of stopping runs
+
+In the past this class (and the utilities based on it) looked for a file
+`stop` and stopped the run (with writing) if it was found. Now two
+additional files are looked for
+
+stopWrite
+:   this waits for the next scheduled write and then stops the run
+kill
+:   gracefully stops the run without any writing
+
+### Added `Blink1` class to support `blink(1)` devices
+
+This class assumes that a `blink(1)` USB-device is present and the
+API-server (from the `Blink1Control`-program for this is running. It
+wraps these calls so that utilities can use them conveniently
+
+### =ParsedParameterFiles= now supports `includeEtc`
+
+`#includeEtc` is now supported
+
+### Parses uniform fields correctly
+
+Uniform fields of the form `1002{42.5}` (Field with 1002 values $42.5$)
+are now correctly parsed
+
+### =toNumpy=-method added to `Unparsed` and `Field`
+
+These two classes have a method `toNumpy` added that transformed the
+data into a structured `NumPy`-array. There are no applications for this
+in `PyFoam` yet but an application will be the parsing of lagrangian
+data
+
+### Added module `PyFoam.RunDictionary.LagrangianPatchData` to read data from patch function object
+
+This module reads data written by the cloud function-object that writes
+particle data as particles hit the patches and transforms it into
+`numpy`-array. Which can also be returned as `pandas` `DataFrames`
+
+It adds some properties to the data
+
+-   the patch name
+-   the time at which this data was written
+-   a `globalId` constructed from `origId` and `origProcId`
+
+### Added module `PyFoam.RunDictionary.LagrangianCloudData` to read cloud data
+
+This gets
+
+-   a case
+-   a cloud name
+-   a time name and reads the lagrangian data from the specified time
+    and converts it to a pandas `DataFrame`
+
+A `globalId` that is consistent with the one in `LagrangianPatchData` is
+set
+
+### Method `code` added to =RestructuredTextHelper
+
+This method formats a string assuming that it is a program code. Default
+value is `python`
+
+### =ParsedParameterFile= now parses new dimension format correctly
+
+Newer OpenFOAM-versions allow dimensions in symbolic format (for example
+`[ m s^-1 ]`). These are now correctly parsed
+
+### =ParsedParameterFiel= now parses uniform fields correctly
+
+Fields of the form `23 { 4.2 }` (meaning "23 times 4.2") are now
+correctly parsed
+
+Infrastructure
+--------------
+
+### Change of documentation from `epydoc` to `sphinx`
+
+As `expydoc` is discontinued the API-documentation is now generated with
+`sphinx`. Just run
+
+``` {.example}
+make docu
+```
+
+to do so.
+
+Advantage is that now with
+
+``` {.example}
+make docset
+```
+
+a document set for offline searching with `Dash` (for Mac OS X) or
+clones (on other OSes) can be generated
+
+### Adaptions to the unittests
+
+Untitests only used to run correctly if the OpenFOAM-version was 1.7.
+Are changed to run with OF 3.0. No effort has been made to support
+intermediate versions as the changes are mainly about changed tutorials
+
+Bug fixes
+---------
+
+### Wrong format of `ExecutionTime` breaks plotting utilities
+
+If the `ExecutionTime` is not as expected `pyFoamPlotWatcher.py` and
+`pyFoamPlotRunner.py` finish with an error. This is now more robust
+
+### =phases= not working with dynamic plots
+
+For dynamic plots the addition of the phase name did not work. Fixed
+
+### Phase name added to function object output
+
+If `phase` was set the output of the function objects got it added to
+the names even though the function objects do not belong to the phase.
+This is fixed
+
+### One region mesh too many in utilities that change the boundary
+
+When working with regions one region too many was added in
+`pyFoamChangeBoundaryType.py` and `pyFoamChangeBoundaryName.py`. Fixed
+
+### =pyFoamClearCase.py= fails on write-protected case
+
+If a case is write protected then the utility failed. Now it only issues
+a warning and continues cleaning
+
+### Copying of directories in `pyFoamPrepareCase.py` confused by zipped files
+
+When copying one file to another and one of them is zipped then copying
+doesn't replace the destination correctly but adds the zipped/unzipped
+variant
+
+### Wrong times for multi-view layouts in `pyFoamPVSnapshots.py`
+
+If snapshots were taken from state files with multiple layouts then some
+of the views had the wrong time (either that from the state-file or from
+the timestep before). Fixed
+
+### First timestep not plotted (and not stored)
+
+The data from the first timestep was not plotted under certain
+circumstances. This has been fixed
+
+### =DYLD~LIBRARYPATH~= not passed on *Mac OS X 10.11*
+
+Starting with this OS-version as a security feature the system does not
+pass `LD_LIBRARY_PATH` and `DYLD_LIBRARY_PATH` to a shell. `PyFoam`
+detects this and creates these variables and makes sure they are passed
+to the processes
+
+### Newer versions of `pandas` broke the writing of excel files with `pyFoamConvertToCSV.py`
+
+The reason is that the old way of making axis data unique did not work
+anymore. This has been fixed
+
+### Capital `E` in exponential notation for floats breaks parser
+
+This problem has been reported at
+<https://sourceforge.net/p/openfoam-extend/ticketspyfoam/220/> (the
+number `1E-2` is not correctly parsed to `0.01`) and has been fixed
+
+### =Runner=-utilities clear processor directories if first time in parallel data differs
+
+In cases where the parallel data has a different start directory than
+$0$ the `pyFoamRunner.py` and similar utilities cleared that data and
+made a restart impossible. This has been fixed
+
+### Utilities `pvpython` not working when installed through `distutils`
+
+As the `distutils` (and all mechanisms built on these like `pip`)
+replace the used python in scripts the necessary `pvpython` was removed.
+This has been fixed by generating a temporary script file that is
+actually executed with =pvpython)
+
+ThirdParty
+----------
+
+### Added `tqdm` for progress bars
+
+Add the library `tqdm` (<https://github.com/tqdm/tqdm>) for adding
+progress bars to utilities.
+
+Library is under `MIT` License
+
 Version 0.6.5 - 2015-06-01
 ==========================
 
@@ -96,7 +524,7 @@ fixed and the parser behaves like regular OpenFOAM
 Due to changes in the API the program did not work. This is now fixed
 and the program works with VTK 6 as well as VTK 5
 
-### =pyFoamCreateModuleFile.py= failed with environment variables containing
+### =pyFoamCreateModuleFile.py= failed with environment variables containing 
 
 In that case an overeager `split` created lists.
 
@@ -154,9 +582,6 @@ was broken. Now working again
 Due to a a change in the socket API if the socket for the network thread
 (usually port 18000) was already notified the program failed. Fixed.
 Tested on 2.7 as well
-
-New features/Utilities
-----------------------
 
 Enhancements to Utilities
 -------------------------
@@ -280,23 +705,23 @@ The format of the parameter-file has been extended so that instead of
 values variations can be dictionaries. The contents of the dictionary
 are then used instead of a single value. An example would look like this
 
-      defaults {
-               a 1;
-               b 2;
-               c 3;
-      }
+    defaults {
+             a 1;
+             b 2;
+             c 3;
+    }
 
-      values {
-             solver (
-                    interFoam
-             );
-             inVel ( 1 2 );
-             outP ( 0 1 );
-             sets (
-                  { name foo; a 3; }
-                  { name bar; b 4; c 5; }
-             );
-      }
+    values {
+           solver (
+                  interFoam
+           );
+           inVel ( 1 2 );
+           outP ( 0 1 );
+           sets (
+                { name foo; a 3; }
+                { name bar; b 4; c 5; }
+           );
+    }
 
 where sets has two variations. Values unset in `sets` will be used from
 `defaults`
@@ -306,7 +731,7 @@ where sets has two variations. Values unset in `sets` will be used from
 Now all functionality of the `Join`-utility is present in the `Convert`
 utility (including interpolating times)
 
-=pyFoamJoinCSV.py= will be removed in future versions of `PyFoam`
+`pyFoamJoinCSV.py` will be removed in future versions of `PyFoam`
 
 ### =dynamic= in `customRegexp` now allows composition from multiple match-groups
 
@@ -541,11 +966,11 @@ Excel-files too
 Both variables are not necessary but `PYFOAM_SITE_DIR` allows consistent
 insertion of site-specific libraries and utilities.
 
-=PYFOAM~DIR~= is set by some Foam-distributions and tested for by
+`PYFOAM_DIR` is set by some Foam-distributions and tested for by
 `pyFoamVersion.py`. It is supposed to point to the currents
 PyFoam-installation.
 
-=PYFOAM~SITEDIR~= points to a directory with site-specific scripts and
+`PYFOAM_SITE_DIR` points to a directory with site-specific scripts and
 configurations. The sub-directories supported (and thested py
 `pyFoamVersion.py`) are
 
@@ -990,22 +1415,23 @@ create
     The utility looks at the case specified and creates a notebook that
     has the capabilities to quickly build a report about the case:
 
-    -   reporting general properties of the case. This basically is the
-        capability of the `pyFoamCaseReport.py`-utility
-    -   It searches for data that can be visualized by
-        `pyFoamTimelinePlot.py` or `pyFoamSamplePlot.py` and generates
-        selectors that allow the user to select which data to import.
-        The selectors import the data as Pandas-=DataFrames= and create
-        the commands necessary to do this. It is recommended to erase
-        the selector afterwards
-    -   Selectors for pickled case data and pickled plot generated by
-        PyFoam
-    -   Capability to store read data **in** the notebook file. This
-        feature is experimental and has performance issues for medium to
-        large datasets
+    -   reporting general properties of the case. This
 
-    The created notebook can be executed but needs to be edited to be
-    useful
+basically is the capability of the `pyFoamCaseReport.py`-utility
+
+-   It searches for data that can be visualized by
+    `pyFoamTimelinePlot.py` or `pyFoamSamplePlot.py` and generates
+    selectors that allow the user to select which data to import. The
+    selectors import the data as Pandas-=DataFrames= and create the
+    commands necessary to do this. It is recommended to erase the
+    selector afterwards
+-   Selectors for pickled case data and pickled plot generated by PyFoam
+-   Capability to store read data **in** the notebook file. This feature
+    is experimental and has performance issues for medium to large
+    datasets
+
+The created notebook can be executed but needs to be edited to be useful
+
 clear
 :   removes selected cells (but only cells created with `create`) or
     output from the notebook.
@@ -1178,7 +1604,7 @@ screen
 
 `rmtree` now also works if the "tree" is a file.
 
-=copytree= now has a parameter `force` that allows removing the
+`copytree` now has a parameter `force` that allows removing the
 destination directory if it exists
 
 ### Enhanced support for booleans in the parser
@@ -1666,7 +2092,7 @@ blueCAPE (bruno.santos@bluecape.com.pt)
 Patch was originally posted at
 <http://sourceforge.net/apps/mantisbt/openfoam-extend/view.php?id=166>
 
-\*Note\*: many of PyFoam's features are not yet fully functional on
+**Note**: many of PyFoam's features are not yet fully functional on
 Windows.
 
 ### Experimental port to `pypy`
@@ -2151,7 +2577,6 @@ Other
 -   Paraview3-example probeDisplay.py now renamed to
     probeAndSetDisplay.py and reads sampledSets from controlDict and
     sampleDict
--   Older Versions
+-   Older Versions The changes for older versions can be found on [the
+    Wiki-page](http://openfoamwiki.net/index.php/Contrib_PyFoam#History)
 
-The changes for older versions can be found on [the
-Wiki-page](http://openfoamwiki.net/index.php/Contrib_PyFoam#History)

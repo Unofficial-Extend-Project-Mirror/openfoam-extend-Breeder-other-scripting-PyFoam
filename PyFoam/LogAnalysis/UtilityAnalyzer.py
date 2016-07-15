@@ -13,26 +13,26 @@ class UtilityAnalyzer(FoamLogAnalyzer):
     """
     def __init__(self,progress=False):
         """
-        @param progress: Print time progress on console?
+        :param progress: Print time progress on console?
         """
         FoamLogAnalyzer.__init__(self,progress=progress)
 
     def addExpression(self,name,expr,idNr=None):
         """Add a RegExp
 
-        @param name: name of the RegExp
-        @param expr: the RegExp
-        @param idNr: number of the pattern group that identifies data-sets
+        :param name: name of the RegExp
+        :param expr: the RegExp
+        :param idNr: number of the pattern group that identifies data-sets
         """
         self.addAnalyzer(name,RegExpLineAnalyzer(name,expr,idNr))
 
     def getData(self,name,time=None,ID=None):
         """Get data
 
-        @param name: name of the RegExp
-        @param time: time from which the data set it to be read
-        @param ID: identification of the data set
-        @return: tuple with the data
+        :param name: name of the RegExp
+        :param time: time from which the data set it to be read
+        :param ID: identification of the data set
+        :return: tuple with the data
         """
         a=self.getAnalyzer(name)
         if a==None:

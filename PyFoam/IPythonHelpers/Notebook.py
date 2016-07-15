@@ -17,10 +17,10 @@ class Notebook(object):
                  nbformat=3,
                  nbformat_minor=0,
                  name=None):
-        """@param input: If this is a string then it is interpreted as
+        """:param input: If this is a string then it is interpreted as
         a filename. Otherwise as a filehandle. If unset then an empty
         notebook is contructed
-        @param name: name of the notebook. Only used if a new notebook is created
+        :param name: name of the notebook. Only used if a new notebook is created
         """
         self.__content={}
         if input==None:

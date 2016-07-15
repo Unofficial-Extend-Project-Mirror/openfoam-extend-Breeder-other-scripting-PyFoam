@@ -9,8 +9,8 @@ class GnuplotCompare(object):
     
     def __init__(self,files,col=2):
         """
-        @param files: a list of tuples: (filename,name [,col])
-        @param col: the default column to use
+        :param files: a list of tuples: (filename,name [,col])
+        :param col: the default column to use
         """
 
         self.files=[]
@@ -22,7 +22,7 @@ class GnuplotCompare(object):
 
     def writePlotFile(self,name):
         """
-        @param name: Name of the file
+        :param name: Name of the file
         """
         
         fh=open(name,'w')
@@ -48,9 +48,9 @@ class GlobGnuplotCompare(GnuplotCompare):
     
     def __init__(self,pattern,col=2,common=None):
         """
-        @param pattern: The pattern for which to look
-        @param col: The colum that is to be compared
-        @param common: String that is to be removed from the filename before using it as a name
+        :param pattern: The pattern for which to look
+        :param col: The colum that is to be compared
+        :param common: String that is to be removed from the filename before using it as a name
         """
 
         files=[]

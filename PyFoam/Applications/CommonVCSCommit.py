@@ -32,8 +32,8 @@ class CommonVCSCommit(object):
 
     def checkAndCommit(self,sol,msg=None):
         """
-        @param sol: SolutionDirectory that should be commited
-        @param msg: The commit message that should be used if none is specified by the user
+        :param sol: SolutionDirectory that should be commited
+        :param msg: The commit message that should be used if none is specified by the user
         """
 
         if self.opts.commitToVCS or self.opts.commitMessage:

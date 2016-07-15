@@ -22,6 +22,7 @@ from .CommonWriteAllTrigger import CommonWriteAllTrigger
 from .CommonLibFunctionTrigger import CommonLibFunctionTrigger
 from .CommonServer import CommonServer
 from .CommonVCSCommit import CommonVCSCommit
+from .CommonBlink1 import CommonBlink1
 
 class PlotRunner(PyFoamApplication,
                  CommonPlotOptions,
@@ -36,7 +37,8 @@ class PlotRunner(PyFoamApplication,
                  CommonParallel,
                  CommonRestart,
                  CommonStandardOutput,
-                 CommonVCSCommit):
+                 CommonVCSCommit,
+                 CommonBlink1):
     def __init__(self,
                  args=None,
                  **kwargs):
@@ -81,6 +83,7 @@ read and the regular expressions in it are displayed
         CommonLibFunctionTrigger.addOptions(self)
         CommonServer.addOptions(self)
         CommonVCSCommit.addOptions(self)
+        CommonBlink1.addOptions(self)
 
     def run(self):
         self.processPlotOptions()
@@ -93,13 +96,17 @@ read and the regular expressions in it are displayed
 
         sol=SolutionDirectory(cName,archive=None)
 
-        self.clearCase(sol)
-
         lam=self.getParallel(sol)
+
+        self.clearCase(SolutionDirectory(cName,
+                                         archive=None,
+                                         parallel=lam is not None))
 
         self.setLogname()
 
         self.checkAndCommit(sol)
+
+        self.initBlink()
 
         run=GnuplotRunner(argv=self.parser.getArgs(),
                           smallestFreq=self.opts.frequency,
@@ -116,6 +123,7 @@ read and the regular expressions in it are displayed
                           hardcopy=self.opts.hardcopy,
                           hardcopyPrefix=self.opts.hardcopyPrefix,
                           hardcopyFormat=self.opts.hardcopyformat,
+                          hardcopyTerminalOptions=self.opts.hardcopyTerminalOptions,
                           server=self.opts.server,
                           lam=lam,
                           raiseit=self.opts.raiseit,
@@ -127,6 +135,7 @@ read and the regular expressions in it are displayed
                           noLog=self.opts.noLog,
                           logTail=self.opts.logTail,
                           plottingImplementation=self.opts.implementation,
+                          gnuplotTerminal=self.opts.gnuplotTerminal,
                           writePickled=self.opts.writePickled,
                           singleFile=self.opts.singleDataFilesOnly,
                           remark=self.opts.remark,
@@ -138,9 +147,14 @@ read and the regular expressions in it are displayed
         self.addWriteAllTrigger(run,sol)
         self.addLibFunctionTrigger(run,sol)
 
+        if self.blink1:
+            run.addTicker(lambda: self.blink1.ticToc())
+
         self.addToCaseLog(cName,"Starting")
 
         run.start()
+
+        self.stopBlink()
 
         self.setData(run.data)
 

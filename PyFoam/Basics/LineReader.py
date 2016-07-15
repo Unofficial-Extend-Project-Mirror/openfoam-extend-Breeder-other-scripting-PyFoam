@@ -15,7 +15,7 @@ class LineReader(object):
     the line and stored in a variable self.line"""
 
     def __init__(self,stripAllSpaces=True):
-        """@param stripAllSpaces: remove all spaces from the line (instead of
+        """:param stripAllSpaces: remove all spaces from the line (instead of
         only those on the left side)"""
         self.stripAll=stripAllSpaces
         self.line=""
@@ -24,11 +24,11 @@ class LineReader(object):
         self.bytes=0
 
     def bytesRead(self):
-        """@return: number of bytes that were already read"""
+        """:return: number of bytes that were already read"""
         return self.bytes
 
     def userSaidStop(self):
-        """@return: whether the reader caught a Keyboard-interrupt"""
+        """:return: whether the reader caught a Keyboard-interrupt"""
         return self.wasInterupted
 
     def read(self,fh):

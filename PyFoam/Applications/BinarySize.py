@@ -6,6 +6,7 @@ from optparse import OptionGroup
 from .PyFoamApplication import PyFoamApplication
 
 from PyFoam.ThirdParty.six import print_
+from PyFoam.ThirdParty.tqdm import tqdm
 
 from PyFoam.Basics.Utilities import diskUsage,humanReadableSize
 
@@ -73,14 +74,39 @@ switching.
                         default=False,
                         help="Also count the installation if it is a symlink (otherwise only report the original installation and skip it)")
 
-    def scanDir(self,dPath,usages):
+        display=OptionGroup(self.parser,
+                            "Display",
+                            "Output on the screen")
+        self.parser.add_option_group(display)
+        display.add_option("--progress-maximum-depth",
+                           action="store",
+                           type=int,
+                           dest="maximumProgressDepth",
+                           default=2,
+                           help="Maximum level of recursion depth for which the progress should be reported. Default: %default")
+        display.add_option("--no-progress-bar",
+                           action="store_const",
+                           const=0,
+                           dest="maximumProgressDepth",
+                           help="Switch off the progress bars")
+
+    def output(self,*args):
+        if self.opts.maximumProgressDepth>0:
+            self.out+=" ".join(str(a) for a in args)+"\n"
+        else:
+            print_(*args)
+
+    def scanDir(self,dPath,usages,depth=1):
         dName=path.basename(dPath)
         if dName[0]==".":
             return
         elif dName in ["lnInclude","Doxygen"]:
             return
-        elif dName in ["Make","platform","bin"]:
-            for f in listdir(dPath):
+        elif dName in ["Make","platform","bin","platforms"]:
+            for f in tqdm(listdir(dPath),
+                          desc=path.basename(dPath),
+                          disable=depth>self.opts.maximumProgressDepth,
+                          unit="files"):
                 if f[0]==".":
                     continue
                 nPath=path.join(dPath,f)
@@ -95,24 +121,27 @@ switching.
                             usages[f]+=sz
                         except KeyError:
                             usages[f]=sz
-                           # print_("Found architecture",f,"in",dPath)
+                           # self.output("Found architecture",f,"in",dPath)
         else:
             try:
-                for f in listdir(dPath):
+                for f in tqdm(listdir(dPath),
+                              unit="files",
+                              disable=depth>self.opts.maximumProgressDepth,
+                              desc=path.basename(dPath)):
                     nPath=path.join(dPath,f)
                     if path.isdir(nPath) and not path.islink(nPath):
-                        self.scanDir(nPath,usages)
+                        self.scanDir(nPath,usages,depth=depth+1)
             except OSError:
                 self.warning("Can't process",dPath)
 
     def reportInstallation(self,fName):
         """Report the usages of a OpenFOAM-installation"""
 
-        print_("\nScanning",fName)
+        self.output("\nScanning",fName)
         if path.islink(fName):
-            print_("Symlinked to",path.realpath(fName))
+            self.output("Symlinked to",path.realpath(fName))
             if not self.opts.symlinkInstallations:
-                print_("Skipping symlinked installation")
+                self.output("Skipping symlinked installation")
                 return 0
         usages={}
         self.scanDir(fName,usages)
@@ -124,20 +153,29 @@ switching.
             for k in sorted(usages.keys()):
                 v=usages[k]
                 total+=v
-                print_(formatString % (k,v,humanReadableSize(v)))
-            print_("Sum of binaries",humanReadableSize(total))
+                self.output(formatString % (k,v,humanReadableSize(v)))
+            self.output("Sum of binaries",humanReadableSize(total))
             return total
         else:
-            print_("    No binaries found")
+            self.output("    No binaries found")
             return 0
 
     def run(self):
+        self.out=""
         if self.opts.allInstallations:
              installed=FI.foamInstalledVersions()
              total=0
-             for k in sorted(installed.keys()):
+             for k in tqdm(sorted(installed.keys()),
+                           desc="Distro",
+                           unit="distro"):
                  instPath=installed[k]
                  total+=self.reportInstallation(instPath)
-             print_("\nTotal disk space used by binaries:"+humanReadableSize(total))
+             self.output("\nTotal disk space used by binaries:"+humanReadableSize(total))
         else:
-             self.reportInstallation(FI.installationPath())
+            try:
+                self.reportInstallation(FI.installationPath())
+            except KeyError:
+                self.error("No Foam-installation active. Specify one")
+        if len(self.out)>0:
+            print_("\n")
+            print_(self.out)

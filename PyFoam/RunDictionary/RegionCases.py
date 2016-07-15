@@ -12,8 +12,8 @@ class RegionCases:
     """Builds pseudocases for the regions"""
 
     def __init__(self,sol,clean=False,processorDirs=True):
-        """@param sol: solution directory
-        @param clean: Remove old pseudo-cases"""
+        """:param sol: solution directory
+        :param clean: Remove old pseudo-cases"""
 
         self.master=sol
         regions=self.master.getRegions()
@@ -59,7 +59,7 @@ class RegionCases:
 
     def resync(self,region):
         """Update the master case from a region case
-        @param region: Name of the region"""
+        :param region: Name of the region"""
         rCase=SolutionDirectory(self.master.name+"."+region)
         rTimes=rCase.getTimes()
         for t in rTimes+["constant"]:
@@ -87,11 +87,11 @@ class RegionCases:
 
     def _mklink(self,master,region,name,prefix="",postfix=""):
         """Makes a link from the master case to the pseudo-case
-        @param master: Name of the master directory
-        @param region: Name of one region
-        @param name: Name of the directory to link
-        @param prefix:  A prefix to the path
-        @param postfix:  An actual file to the path"""
+        :param master: Name of the master directory
+        :param region: Name of one region
+        :param name: Name of the directory to link
+        :param prefix:  A prefix to the path
+        :param postfix:  An actual file to the path"""
 
         destname=path.join(master+"."+region,name)
         srcname=path.join(prefix,path.pardir,master,name,region,postfix)
@@ -106,10 +106,10 @@ class RegionCases:
 
     def _rename(self,master,region,name,prefix="",processor=""):
         """Moves a directory from
-        @param master: Name of the master directory
-        @param region: Name of one region
-        @param name: Name of the directory to link
-        @param prefix:  A prefix to the path"""
+        :param master: Name of the master directory
+        :param region: Name of one region
+        :param name: Name of the directory to link
+        :param prefix:  A prefix to the path"""
 
         rName=master+"."+region
 

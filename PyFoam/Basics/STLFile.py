@@ -13,7 +13,7 @@ class STLFile(object):
 
     def __init__(self,fName=None):
         """
-	@param fName: filename of the STL-file. If None then an empty file is created
+	:param fName: filename of the STL-file. If None then an empty file is created
 	"""
         self._fp=None
         if hasattr(fName, 'read'):

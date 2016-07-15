@@ -46,13 +46,13 @@ class FoamOptionParser(OptionParser):
                  examples=None,
                  interspersed=False):
         """
-        @param usage: usage string. If missing a default is used
-        @param version: if missing the PyFoam-version is used
-        @param description: description of the utility
-        @param epilog: Text to be displayed in the help after the options
-        @param examples: Usage examples to be displayed after the epilog
-        @param interspersed: needs to be false if options should be passed to an OpenFOAM-utility
-        @param args: Command line arguments. If unset sys.argv[1:] is used.
+        :param usage: usage string. If missing a default is used
+        :param version: if missing the PyFoam-version is used
+        :param description: description of the utility
+        :param epilog: Text to be displayed in the help after the options
+        :param examples: Usage examples to be displayed after the epilog
+        :param interspersed: needs to be false if options should be passed to an OpenFOAM-utility
+        :param args: Command line arguments. If unset sys.argv[1:] is used.
         Can be a string: it will be splitted then unsing the spaces (very primitive), or a list of strings (prefered)
         """
         if usage==None:
@@ -111,7 +111,7 @@ class FoamOptionParser(OptionParser):
     def parse(self,nr=None,exactNr=True):
         """
         parse the options
-        @param nr: minimum number of arguments that are to be passed to the application
+        :param nr: minimum number of arguments that are to be passed to the application
         3 is default for pre-1.5 versions of OpenFOAM
         """
         (self.options,self.args)=self.parse_args(args=self.argLine)
@@ -314,11 +314,11 @@ class SubcommandFoamOptionParser(FoamOptionParser):
                   description=None,
                   subcommands=[]):
           """
-          @param usage: usage string. If missing a default is used
-          @param version: if missing the PyFoam-version is used
-          @param description: description of the utility
-          @param subcommands: list with subcommands to prepopulate the parser
-          @param args: Command line arguments. If unset sys.argv[1:] is used.
+          :param usage: usage string. If missing a default is used
+          :param version: if missing the PyFoam-version is used
+          :param description: description of the utility
+          :param subcommands: list with subcommands to prepopulate the parser
+          :param args: Command line arguments. If unset sys.argv[1:] is used.
           Can be a string: it will be splitted then unsing the spaces (very primitive), or a list of strings (prefered)
           """
           if usage==None:

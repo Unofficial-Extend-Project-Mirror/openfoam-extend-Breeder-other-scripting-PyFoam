@@ -7,6 +7,7 @@ from optparse import OptionGroup
 from PyFoam.Basics.FoamOptionParser import FoamOptionParser,SubcommandFoamOptionParser
 from PyFoam.Error import error,warning,FatalErrorPyFoamException,PyFoamException,isatty
 from PyFoam.RunDictionary.SolutionDirectory import NoTouchSolutionDirectory
+from PyFoam.FoamInformation import ensureDynamicLibraries
 
 from PyFoam.Basics.TerminalFormatter import TerminalFormatter
 from PyFoam import configuration
@@ -86,19 +87,19 @@ class PyFoamApplication(object):
                  findLocalConfigurationFile=None,
                  **kwArgs):
         """
-        @param description: description of the command
-        @param epilog: text to be printed after the options-help
-        @param examples: usage examples to be printed after the epilog
-        @param usage: Usage
-        @param interspersed: Is the command line allowed to be interspersed (options after the arguments)
-        @param args: Command line arguments when using the Application as a 'class' from a script
-        @param nr: Number of required arguments
-        @param changeVersion: May this application change the version of OF used?
-        @param exactNr: Must not have more than the required number of arguments
-        @param subcommands: parse and use subcommands from the command line. Either True or a list with subcommands
-        @param inputApp: Application with input data. Used to allow a 'pipe-like' behaviour if the class is used from a Script
-        @param localConfigurationFile: Use this file (or list of files) as a local configuration
-        @param findLocalConfigurationFile: Method to find a configuration file BEFORE the actual parameters are parsed
+        :param description: description of the command
+        :param epilog: text to be printed after the options-help
+        :param examples: usage examples to be printed after the epilog
+        :param usage: Usage
+        :param interspersed: Is the command line allowed to be interspersed (options after the arguments)
+        :param args: Command line arguments when using the Application as a 'class' from a script
+        :param nr: Number of required arguments
+        :param changeVersion: May this application change the version of OF used?
+        :param exactNr: Must not have more than the required number of arguments
+        :param subcommands: parse and use subcommands from the command line. Either True or a list with subcommands
+        :param inputApp: Application with input data. Used to allow a 'pipe-like' behaviour if the class is used from a Script
+        :param localConfigurationFile: Use this file (or list of files) as a local configuration
+        :param findLocalConfigurationFile: Method to find a configuration file BEFORE the actual parameters are parsed
         """
 
         global _LocalConfigurationFile
@@ -314,6 +315,7 @@ with these option for commands that generate a lot of output""")
 
         self.addOptions()
         self.parser.parse(nr=nr,exactNr=exactNr)
+        ensureDynamicLibraries()
         if len(kwArgs)>0:
             self.parser.processKeywordArguments(kwArgs)
         self.opts=self.parser.getOptions()
@@ -514,7 +516,7 @@ with these option for commands that generate a lot of output""")
     def setData(self,data):
         """Set the application data
 
-        @param data: dictionary whose entries will be added to the
+        :param data: dictionary whose entries will be added to the
         application data (possibly overwriting old entries of the same name)"""
         for k,v in iteritems(data):
             self.__appData[k]=deepcopy(v)
@@ -541,14 +543,14 @@ with these option for commands that generate a lot of output""")
 
     def error(self,*args):
          """Raise a error exception. How it will be handled is a different story
-        @param args: Arguments to the exception
+        :param args: Arguments to the exception
          """
          raise PyFoamApplicationException(self,*args)
 
     def errorPrint(self,*args):
         """
         Prints an error message and exits
-        @param args: Arguments that are to be printed
+        :param args: Arguments that are to be printed
         """
         if isatty(sys.stdout):
             print_(format.error, end=' ')
@@ -564,7 +566,7 @@ with these option for commands that generate a lot of output""")
     def warning(self,*args):
         """
         Prints a warning message
-        @param args: Arguments that are to be printed
+        :param args: Arguments that are to be printed
         """
         if isatty(sys.stdout):
             print_(format.warn, end=' ')
@@ -585,16 +587,16 @@ with these option for commands that generate a lot of output""")
     def silent(self,*args):
         """
         Don't print a warning message
-        @param args: Arguments that are to be printed
+        :param args: Arguments that are to be printed
         """
         pass
 
     def checkCase(self,name,fatal=True,verbose=True):
         """
         Check whether this is a valid OpenFOAM-case
-        @param name: the directory-bame that is supposed to be the case
-        @param fatal: If this is not a case then the application ends
-        @param verbose: If this is not a case no warning is issued
+        :param name: the directory-bame that is supposed to be the case
+        :param fatal: If this is not a case then the application ends
+        :param verbose: If this is not a case no warning is issued
         """
         if fatal:
             func=self.error

@@ -8,7 +8,7 @@ def executionRegexp():
     depending on the OpenFOAM-Version"""
 
     if foamVersionNumber(useConfigurationIfNoInstallation=True)>=(1,3):
-        return "^ExecutionTime = (.+) s  ClockTime = (.+) s$"
+        return "^ExecutionTime = (.+) s .ClockTime = (.+) s$"
     else:
         return "^ExecutionTime = (.+) s$"
 
@@ -18,6 +18,7 @@ def executionRegexp():
 from .GeneralLineAnalyzer import GeneralLineAnalyzer
 
 from PyFoam.FoamInformation import foamVersionNumber
+from PyFoam.Error import warning
 
 class GeneralExecutionLineAnalyzer(GeneralLineAnalyzer):
     """Parses lines for the execution time"""
@@ -43,8 +44,6 @@ class GeneralExecutionLineAnalyzer(GeneralLineAnalyzer):
 
         self.exp=re.compile(executionRegexp())
 
-        self.exp=re.compile(executionRegexp())
-
         self.lastTime=0.
         self.time=0.
         if self.hasClock:
@@ -57,9 +56,21 @@ class GeneralExecutionLineAnalyzer(GeneralLineAnalyzer):
             self.firstClock=0.
 
     def startAnalysis(self,match):
-        self.time=float(match.group(1))
+        try:
+            self.time=float(match.group(1))
+
+            # clear phase (if set) so that function objects don't append a phase name
+            self.setPhase()
+
+        except ValueError:
+            warning(match.group(1),"is not a valid number")
+            self.time=float("NaN")
         if self.hasClock:
-            self.clock=float(match.group(2))
+            try:
+                self.clock=float(match.group(2))
+            except ValueError:
+                warning(match.group(2),"is not a valid number")
+                self.clock=float("NaN")
 
     def endAnalysis(self,match):
         self.lastTime = self.time

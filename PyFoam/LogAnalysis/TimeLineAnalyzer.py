@@ -17,7 +17,7 @@ class TimeLineAnalyzer(LogLineAnalyzer):
         """
         Constructs the analyzer
 
-        @param progress: whether to print the time on the console
+        :param progress: whether to print the time on the console
         """
         LogLineAnalyzer.__init__(self)
         self.exp=re.compile(conf().get("SolverOutput","timeRegExp"))

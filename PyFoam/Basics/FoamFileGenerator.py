@@ -17,10 +17,10 @@ class FoamFileGenerator(object):
                  header=None,
                  longListThreshold=20,
                  useFixedType=True):
-        """@param data: data structure that will be turned into a
+        """:param data: data structure that will be turned into a
         Foam-compatible file
-        @param header: header information that is to be prepended
-        @param longListThreshold: Threshold for lists before they are considered
+        :param header: header information that is to be prepended
+        :param longListThreshold: Threshold for lists before they are considered
         long. This means that they are prefixed with the number of elements. If the
         threshold is 0 or None then no list is considered long
         """

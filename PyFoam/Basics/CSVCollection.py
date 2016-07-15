@@ -15,7 +15,7 @@ class CSVCollection(object):
     If the dictionary is extended the whole file is rewritten
     """
     def __init__(self,name=None):
-        """@param name: name of the file. If unset no file will be written (only data collected)"""
+        """:param name: name of the file. If unset no file will be written (only data collected)"""
         self.name=name
         self.headers=[]
         self.headerDict={}
@@ -27,8 +27,8 @@ class CSVCollection(object):
 
     def __setitem__(self,key,value):
         """Sets a value in the current dataset
-        @param key: the key
-        @param value: and it's value"""
+        :param key: the key
+        :param value: and it's value"""
 
         if not key in self.headers:
             self.headers.append(key)
@@ -60,7 +60,7 @@ class CSVCollection(object):
 
     def __call__(self,usePandas=True):
         """Return the data as a pandas-Dataframe
-        @param usePandas: whether data should be returned in pandas-format.
+        :param usePandas: whether data should be returned in pandas-format.
         Otherwise numpy"""
         if usePandas:
             try:

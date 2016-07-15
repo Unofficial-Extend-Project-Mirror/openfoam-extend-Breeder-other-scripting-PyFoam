@@ -1,4 +1,3 @@
-
 import unittest
 
 from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator,makeString,FoamFileGeneratorError
@@ -34,13 +33,19 @@ def bubbleColumnTutorial():
     prefix=foamTutorials()
     if not oldTutorialStructure():
         prefix=path.join(prefix,"multiphase")
-    return path.join(prefix,"twoPhaseEulerFoam","bubbleColumn")
+    if foamVersionNumber()>=(3,):
+        return path.join(prefix,"twoPhaseEulerFoam","laminar","bubbleColumn")
+    else:
+        return path.join(prefix,"twoPhaseEulerFoam","bubbleColumn")
 
 def buoyHotRoomTutorial():
     prefix=foamTutorials()
     if not oldTutorialStructure():
         prefix=path.join(prefix,"heatTransfer")
-    return path.join(prefix,"buoyantSimpleFoam","hotRoom")
+    if foamVersionNumber()>=(3,):
+        return path.join(prefix,"buoyantSimpleFoam","hotRadiationRoom")
+    else:
+        return path.join(prefix,"buoyantSimpleFoam","hotRoom")
 
 def turbCavityTutorial():
     prefix=foamTutorials()
@@ -283,7 +288,10 @@ theSuite.addTest(unittest.makeSuite(FoamFileGeneratorRoundtripZipped,"test"))
 class FoamFileGeneratorRoundtrip2(unittest.TestCase):
     def setUp(self):
         self.theFile=mktemp()
-        copyfile(path.join(buoyHotRoomTutorial(),"0","T.org"),self.theFile)
+        try:
+            copyfile(path.join(buoyHotRoomTutorial(),"0","T.org"),self.theFile)
+        except IOError:
+            copyfile(path.join(buoyHotRoomTutorial(),"0","T"),self.theFile)
 
     def tearDown(self):
         remove(self.theFile)
@@ -368,7 +376,9 @@ class FoamFileGeneratorRoundtripLongList(unittest.TestCase):
     def setUp(self):
         self.theFile=mktemp()
         alphaName="alpha"
-        if foamVersionNumber()>=(2,):
+        if foamVersionNumber()>=(3,):
+            alphaName="alpha.air"
+        elif foamVersionNumber()>=(2,):
             alphaName="alpha1"
         copyfile(path.join(bubbleColumnTutorial(),"0",alphaName),self.theFile)
 
@@ -389,8 +399,11 @@ class FoamFileGeneratorRoundtripLongList2(unittest.TestCase):
     def setUp(self):
         self.theFile=mktemp()
         UName="Ua"
-        if foamVersionNumber()>=(2,):
+        if foamVersionNumber()>=(3,):
+            UName="U.air"
+        elif foamVersionNumber()>=(2,):
             UName="U1"
+
         copyfile(path.join(bubbleColumnTutorial(),"0",UName),self.theFile)
 
     def tearDown(self):

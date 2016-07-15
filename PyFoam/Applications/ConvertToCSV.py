@@ -7,10 +7,18 @@ from .PyFoamApplication import PyFoamApplication
 from .CommonReadWriteCSV import CommonReadWriteCSV
 
 from PyFoam.Basics.SpreadsheetData import SpreadsheetData
+from PyFoam.ThirdParty.six import print_
 
 from os import path,listdir
 from copy import deepcopy
 from glob import glob
+
+hasXlsxWriter=False
+try:
+    import xlsxwriter
+    hasXlsxWriter=True
+except ImportError:
+    pass
 
 class ConvertToCSV(PyFoamApplication,
                    CommonReadWriteCSV):
@@ -24,6 +32,12 @@ according to the first column.
 
 Note: the first file determines the resolution of the time-axis
 """
+        if not hasXlsxWriter:
+            description+="""
+
+Warning: The module 'xlsxwriter' is not installed. Therefor no addition of formulas
+to excel files is possible"""
+
         CommonReadWriteCSV.__init__(self)
         PyFoamApplication.__init__(self,
                                    args=args,
@@ -37,6 +51,21 @@ Note: the first file determines the resolution of the time-axis
 
     def addOptions(self):
         CommonReadWriteCSV.addOptions(self)
+
+        inp=OptionGroup(self.parser,
+                        "Input",
+                        "Manipulating the input data")
+        self.parser.add_option_group(inp)
+        inp.add_option("--strip-characters",
+                       action="store",
+                       dest="stripCharacters",
+                       default=None,
+                       help="A string with the characters that should be stripped from the input file before it is processed. For instance '()'")
+        inp.add_option("--replace-first-line",
+                       action="store",
+                       dest="replaceFirstLine",
+                       default=None,
+                       help="Replace the first line of the input with this string")
 
         how=OptionGroup(self.parser,
                          "How",
@@ -84,6 +113,12 @@ Note: the first file determines the resolution of the time-axis
                          dest="addSheets",
                          default=False,
                          help="Add the input data in unmodified form as additional sheets to the excel file")
+        if hasXlsxWriter:
+            excel.add_option("--add-formula-to-sheet",
+                             action="append",
+                             dest="addFormulas",
+                             default=[],
+                             help="Add columns with formulas calculated from other data. This only works when writing XLSX-files. The formula is 'nane:::ExcelFormula'. In the ExcelFormula the written column names can be used. These have to be enclosed in '' (this is necessary to allow names with spaces and digits). Can be used more than once")
 
     def run(self):
         dest=self.parser.getArgs()[-1]
@@ -139,15 +174,20 @@ Note: the first file determines the resolution of the time-axis
                 else:
                     diffs.append(b[commonStart:])
 
-        names=None
+        names=self.names
         title=path.splitext(path.basename(sources[0]))[0]
         if self.opts.namesFromFilename:
+            if not names is None:
+                self.error("Names already specified as",names,". Can't calc from filename")
             names=path.splitext(path.basename(sources[0]))[0].split("_")
             title=None
 
         data=SpreadsheetData(names=names,
                              timeName=self.opts.time,
                              validData=self.opts.columns,
+                             skip_header=self.opts.skipHeaderLines,
+                             stripCharacters=self.opts.stripCharacters,
+                             replaceFirstLine=self.opts.replaceFirstLine,
                              validMatchRegexp=self.opts.columnsRegexp,
                              title=title,
                              **self.dataFormatOptions(sources[0]))
@@ -169,6 +209,9 @@ Note: the first file determines the resolution of the time-axis
                 names=title.split("_")
                 title=None
             sData=SpreadsheetData(names=names,
+                                  skip_header=self.opts.skipHeaderLines,
+                                  stripCharacters=self.opts.stripCharacters,
+                                  replaceFirstLine=self.opts.replaceFirstLine,
                                   timeName=self.opts.time,
                                   validData=self.opts.columns,
                                   validMatchRegexp=self.opts.columnsRegexp,
@@ -196,6 +239,7 @@ Note: the first file determines the resolution of the time-axis
         data.rename(self.processName,renameTime=True)
         data.rename(lambda c:c.strip())
 
+        data.eliminatedNames=None
         if len(sources)>1:
             self.printColumns("written data",data)
 
@@ -206,11 +250,56 @@ Note: the first file determines the resolution of the time-axis
         if self.opts.writeExcel:
             from pandas import ExcelWriter
             with ExcelWriter(dest) as writer:
-                data.getData().to_excel(writer)
+                data.getData().to_excel(writer,sheet_name="Data")
                 if self.opts.addSheets:
                     for n,d in enumerate(rawData):
                         d.getData().to_excel(writer,
                                              sheet_name="Original file %d" % n)
+                if hasXlsxWriter:
+                    if len(self.opts.addFormulas)>0:
+                        from xlsxwriter.utility import xl_rowcol_to_cell as rowCol2Cell
+                        rows=len(data.getData())
+                        sheet=writer.sheets["Data"]
+                        cols={}
+                        for i,n in enumerate(data.names()):
+                            cols[n]=i
+                            newC=i
+
+                        for f in self.opts.addFormulas:
+                            newC+=1
+                            name,formula=f.split(":::")
+                            sheet.write(0,newC,name)
+                            cols[name]=newC
+                            splitted=[]
+                            ind=0
+                            while ind>=0:
+                                if ind>=len(formula):
+                                    break
+                                nInd=formula.find("'",ind)
+                                if nInd<0:
+                                    splitted.append(formula[ind:])
+                                    ind=nInd
+                                elif nInd!=ind:
+                                    splitted.append(formula[ind:nInd])
+                                    ind=nInd
+                                else:
+                                    nInd=formula.find("'",ind+1)
+                                    if nInd<0:
+                                        self.error("No closing ' in formula",formula)
+                                    name=formula[ind+1:nInd]
+                                    if name not in cols:
+                                        self.error("Name",name,"not in column names",cols.keys())
+                                    splitted.append(cols[name])
+                                    ind=nInd+1
+                            for row in range(rows):
+                                cellFormula="="
+                                for s in splitted:
+                                    if type(s)==int:
+                                        cellFormula+=rowCol2Cell(row+1,s)
+                                    else:
+                                        cellFormula+=s
+                                sheet.write(row+1,newC,cellFormula)
+                        print_("Formulas written. In LibreOffice recalculate with Ctrl+Shift+F9")
         else:
             data.writeCSV(dest,
                           delimiter=self.opts.delimiter)

@@ -25,9 +25,9 @@ class TimelineDirectory(object):
     """A directory of sampled times"""
 
     def __init__(self,case,dirName="probes",writeTime=None):
-        """@param case: The case directory
-        @param dirName: Name of the directory with the timelines
-        @param writeTime: The write time-directory where the data in question is to be plotted"""
+        """:param case: The case directory
+        :param dirName: Name of the directory with the timelines
+        :param writeTime: The write time-directory where the data in question is to be plotted"""
 
         self.dir=path.join(case,dirName)
         self.writeTimes=[]
@@ -120,9 +120,9 @@ class TimelineDirectory(object):
 
     def getDataLocation(self,value=None,position=None,vectorMode=None):
         """Get Timeline sets
-        @param value: name of the value. All
+        :param value: name of the value. All
         if unspecified
-        @param position: name of the position of the value. All
+        :param position: name of the position of the value. All
         if unspecified"""
 
         if value==None:
@@ -164,12 +164,12 @@ class TimelineDirectory(object):
 
     def getData(self,times,value=None,position=None,vectorMode=None):
         """Get data that mstches the given times most closely
-        @param times: a list with times
-        @param value: name of the value. All
+        :param times: a list with times
+        :param value: name of the value. All
         if unspecified
-        @param position: name of the position of the value. All
+        :param position: name of the position of the value. All
         if unspecified
-        @param vectorMode: which component of the vector to use"""
+        :param vectorMode: which component of the vector to use"""
 
         if value==None:
             value=self.values
@@ -197,9 +197,9 @@ class TimelineValue(object):
     """A file with one timelined value"""
 
     def __init__(self,sDir,val,time):
-        """@param sDir: The timeline-dir
-        @param val: the value
-        @param time: the timename"""
+        """:param sDir: The timeline-dir
+        :param val: the value
+        :param time: the timename"""
 
         self.isValid=False
         self.val=val
@@ -223,14 +223,27 @@ class TimelineValue(object):
                 firstData=l2
                 self._isProbe=False
             else:
-                # probe-file so we need one more line
-                l3=data.readline()
-                x=l1[1:].split()[1:]
-                y=l2[1:].split()[1:]
-                z=l3[1:].split()[1:]
-                for i in range(len(x)):
-                    poses.append("(%s %s %s)" % (x[i],y[i],z[i]))
-                data.readline()
+                import re
+                newProbe=re.compile(r"# Probe [0-9]+ (\(.+ .+ .+\))")
+                if newProbe.match(l1):
+                    probeStrings=[l1]
+                    while newProbe.match(l2):
+                        probeStrings.append(l2)
+                        l2=data.readline()
+                    probeNrString=l2
+                    probeTimeString=data.readline()
+                    poses=[newProbe.match(l).group(1) for l in probeStrings]
+                    if probeNrString[0]!="#" or probeTimeString[0]!="#":
+                        warning("This does not seem to be the format we were lookin for")
+                else:
+                    # probe-file so we need one more line
+                    l3=data.readline()
+                    x=l1[1:].split()[1:]
+                    y=l2[1:].split()[1:]
+                    z=l3[1:].split()[1:]
+                    for i in range(len(x)):
+                        poses.append("(%s %s %s)" % (x[i],y[i],z[i]))
+                    data.readline()
                 firstData=data.readline()
         except IndexError:
             warning("Could not determine the type of",self.file)

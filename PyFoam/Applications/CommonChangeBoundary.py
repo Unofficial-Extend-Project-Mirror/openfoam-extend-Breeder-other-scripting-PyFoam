@@ -61,7 +61,7 @@ class CommonChangeBoundary(object):
 
     def processBoundaryFiles(self,func,case):
         """
-        @param func: the function that transforms the actual boundary file
+        :param func: the function that transforms the actual boundary file
         """
         changed=False
         if self.opts.doSingle:
@@ -88,9 +88,9 @@ class CommonChangeBoundary(object):
 
     def processABoundaryFile(self,func,targetDir):
         """
-        @param func: the function that transforms the actual boundary file
+        :param func: the function that transforms the actual boundary file
         """
-        boundaryPath=path.join(targetDir,self.opts.region,"polyMesh","boundary")
+        boundaryPath=path.join(targetDir,"polyMesh","boundary")
         try:
             boundary=ParsedParameterFile(boundaryPath,
                                          debug=False,

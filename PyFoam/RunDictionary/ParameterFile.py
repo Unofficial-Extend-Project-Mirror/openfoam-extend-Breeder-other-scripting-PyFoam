@@ -10,8 +10,8 @@ class ParameterFile(FileBasisBackup):
     """Represents a OpenFOAM parameter file"""
     
     def __init__(self,name,backup=False):
-        """@param name: The name of the parameter file
-        @param backup: create a backup-copy of the file"""
+        """:param name: The name of the parameter file
+        :param backup: create a backup-copy of the file"""
 
         FileBasisBackup.__init__(self,name,backup=backup)
         
@@ -45,9 +45,9 @@ class ParameterFile(FileBasisBackup):
     def replaceParameter(self,parameter,newval):
         """writes the value of a parameter
 
-        @param parameter: name of the parameter
-        @param newval: the new value
-        @return: old value of the parameter"""
+        :param parameter: name of the parameter
+        :param newval: the new value
+        :return: old value of the parameter"""
         
         oldVal=self.readParameter(parameter)
         

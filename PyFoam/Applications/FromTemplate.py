@@ -48,7 +48,7 @@ uses these.
 In the new format expressions are delimited by |- at the start and -|
 at the end. These defaults can be changed
 
-@param parameters: Dictionary with parameters (only usable
+:param parameters: Dictionary with parameters (only usable
 when called from a script)
         """
 

@@ -44,13 +44,13 @@ class SolutionDirectory(Utilities):
                  addLocalConfig=False,
                  tolerant=False,
                  region=None):
-        """@param name: Name of the solution directory
-        @param archive: name of the directory where the lastToArchive-method
+        """:param name: Name of the solution directory
+        :param archive: name of the directory where the lastToArchive-method
         should copy files, if None no archive is created. Deprecated as it was never used
-        @param paraviewLink: Create a symbolic link controlDict.foam for paraview
-        @param tolerant: do not fail for minor inconsistencies
-        @param parallel: use the first processor-subdirectory for the authorative information
-        @param region: Mesh region for multi-region cases"""
+        :param paraviewLink: Create a symbolic link controlDict.foam for paraview
+        :param tolerant: do not fail for minor inconsistencies
+        :param parallel: use the first processor-subdirectory for the authorative information
+        :param region: Mesh region for multi-region cases"""
 
         self.name=path.abspath(name)
         self.archive=None
@@ -199,8 +199,8 @@ class SolutionDirectory(Utilities):
 
     def timeName(self,item,minTime=False):
         """Finds the name of a directory that corresponds with the given parameter
-        @param item: the time that should be found
-        @param minTime: search for the time with the minimal difference.
+        :param item: the time that should be found
+        :param minTime: search for the time with the minimal difference.
         Otherwise an exact match will be searched"""
 
         if type(item)==int:
@@ -214,8 +214,8 @@ class SolutionDirectory(Utilities):
 
     def timeIndex(self,item,minTime=False):
         """Finds the index of a directory that corresponds with the given parameter
-        @param item: the time that should be found
-        @param minTime: search for the time with the minimal difference.
+        :param item: the time that should be found
+        :param minTime: search for the time with the minimal difference.
         Otherwise an exact match will be searched"""
         self.reread()
 
@@ -268,7 +268,7 @@ class SolutionDirectory(Utilities):
 
     def addToClone(self,name):
         """add directory to the list that is needed to clone this case
-        @param name: name of the subdirectory (the case directory is prepended)"""
+        :param name: name of the subdirectory (the case directory is prepended)"""
         if path.exists(path.join(self.name,name)):
             self.essential.add(path.join(self.name,name))
         elif self.parallel:
@@ -283,11 +283,11 @@ class SolutionDirectory(Utilities):
     def cloneCase(self,name,svnRemove=True,followSymlinks=False):
         """create a clone of this case directory. Remove the target directory, if it already exists
 
-        @param name: Name of the new case directory
-        @param svnRemove: Look for .svn-directories and remove them
-        @param followSymlinks: Follow symbolic links instead of just copying them
-        @rtype: L{SolutionDirectory} or correct subclass
-        @return: The target directory"""
+        :param name: Name of the new case directory
+        :param svnRemove: Look for .svn-directories and remove them
+        :param followSymlinks: Follow symbolic links instead of just copying them
+        :rtype: :class:`SolutionDirectory` or correct subclass
+        :return: The target directory"""
 
         additional=eval(conf().get("Cloning","addItem"))
         for a in additional:
@@ -335,12 +335,12 @@ class SolutionDirectory(Utilities):
         """create a clone of this case directory by creating a
         directory with symbolic links
 
-        @param name: Name of the new case directory
-        @param maxLevel: Maximum level down to which directories are created instead of symbolically linked
-        @param followSymlinks: Follow symbolic links instead of just copying them
-        @param relPath: the created symbolic links are relative (instead of absolute)
-        @rtype: L{SolutionDirectory} or correct subclass
-        @return: The target directory
+        :param name: Name of the new case directory
+        :param maxLevel: Maximum level down to which directories are created instead of symbolically linked
+        :param followSymlinks: Follow symbolic links instead of just copying them
+        :param relPath: the created symbolic links are relative (instead of absolute)
+        :rtype: :class:`SolutionDirectory` or correct subclass
+        :return: The target directory
         """
         here=path.abspath(self.name)
         polyDirs=[path.relpath(p,here) for p in self.find("polyMesh*",here)]
@@ -418,12 +418,12 @@ class SolutionDirectory(Utilities):
         """Packs all the important files into a compressed tarfile.
         Uses the essential-list and excludes the .svn-directories.
         Also excludes files ending with ~
-        @param tarname: the name of the tar-file
-        @param last: add the last directory to the list of directories to be added
-        @param exclude: List with additional glob filename-patterns to be excluded
-        @param additional: List with additional glob filename-patterns
+        :param tarname: the name of the tar-file
+        :param last: add the last directory to the list of directories to be added
+        :param exclude: List with additional glob filename-patterns to be excluded
+        :param additional: List with additional glob filename-patterns
         that are to be added
-        @param base: Different name that is to be used as the baseName for the case inside the tar"""
+        :param base: Different name that is to be used as the baseName for the case inside the tar"""
 
         ex=["*~",".svn"]+exclude
         members=list(self.essential)
@@ -512,6 +512,7 @@ class SolutionDirectory(Utilities):
 
         self.times=[]
         self.first=None
+        self.firstParallel=None
         self.last=None
         procDirs = self.processorDirs()
         self.procNr=len(procDirs)
@@ -535,6 +536,17 @@ class SolutionDirectory(Utilities):
             self.first = self.times[0]
             self.last = self.times[-1]
 
+        if self.parallel and len(procDirs)>0:
+            parTimes=[]
+            for f in listdir(path.join(self.name, procDirs[0])):
+                try:
+                    val=float(f)
+                    parTimes.append(f)
+                except ValueError:
+                    pass
+            if len(parTimes)>0:
+                self.firstParallel=min(parTimes)
+
     def processorDirs(self):
         """List with the processor directories"""
         try:
@@ -554,7 +566,7 @@ class SolutionDirectory(Utilities):
         return self.procNr
 
     def getTimes(self):
-        """ @return: List of all the available times"""
+        """ :return: List of all the available times"""
         self.reread()
         return self.times
 
@@ -564,14 +576,14 @@ class SolutionDirectory(Utilities):
         self.backups.append(path.join(self.name,pth))
 
     def getFirst(self):
-        """@return: the first time for which a solution exists
-        @rtype: str"""
+        """:return: the first time for which a solution exists
+        :rtype: str"""
         self.reread()
         return self.first
 
     def getLast(self):
-        """@return: the last time for which a solution exists
-        @rtype: str"""
+        """:return: the last time for which a solution exists
+        :rtype: str"""
         self.reread()
         return self.last
 
@@ -579,7 +591,7 @@ class SolutionDirectory(Utilities):
         """copy the last solution (plus the backup-files to the
         archive)
 
-        @param name: name of the sub-directory in the archive"""
+        :param name: name of the sub-directory in the archive"""
         if self.archive==None:
             print_("Warning: nor Archive-directory")
             return
@@ -602,19 +614,20 @@ class SolutionDirectory(Utilities):
                      keepParallel=False,
                      keepInterval=None,
                      functionObjectData=False,
+                     verbose=False,
                      additional=[]):
         """remove all time-directories after a certain time. If not time ist
         set the initial time is used
-        @param after: time after which directories ar to be removed
-        @param removeProcs: if True the processorX-directories are removed.
+        :param after: time after which directories ar to be removed
+        :param removeProcs: if True the processorX-directories are removed.
         Otherwise the timesteps after last are removed from the
         processor-directories
-        @param keepLast: Keep the data from the last timestep
-        @param keepInterval: if set: keep timesteps that are this far apart
-        @param vtk: Remove the VTK-directory if it exists
-        @param keepRegular: keep all the times (only remove processor and other stuff)
-        @param functionObjectData: tries do determine which data was written by function obejects and removes it
-        @param additional: List with glob-patterns that are removed too"""
+        :param keepLast: Keep the data from the last timestep
+        :param keepInterval: if set: keep timesteps that are this far apart
+        :param vtk: Remove the VTK-directory if it exists
+        :param keepRegular: keep all the times (only remove processor and other stuff)
+        :param functionObjectData: tries do determine which data was written by function obejects and removes it
+        :param additional: List with glob-patterns that are removed too"""
 
         self.reread()
 
@@ -645,18 +658,25 @@ class SolutionDirectory(Utilities):
                 if float(f)>time and not (keepLast and f==last) and not keep:
                     #                   print "Removing",path.join(self.name,f)
                     if path.exists(path.join(self.name,f)):
+                        if verbose:
+                            print_("Clearing",path.join(self.name,f))
                         self.rmtree(path.join(self.name,f))
                 elif keepInterval!=None:
                     lastKeptIndex=int((float(f)+1e-10)/keepInterval)
 
         if path.exists(path.join(self.name,"VTK")) and vtk:
+            if verbose:
+                print_("Clearing",path.join(self.name,"VTK"))
             self.rmtree(path.join(self.name,"VTK"))
 
-        if self.nrProcs() and not keepParallel:
+        if self.nrProcs() and not keepParallel and not self.firstParallel is None:
             lastKeptIndex=int(-1e5)
+            time=max(time,float(self.firstParallel))
             for f in listdir(self.name):
                 if re.compile("processor[0-9]+").match(f):
                     if removeProcs:
+                        if verbose:
+                            print_("Clearing",path.join(self.name,f))
                         self.rmtree(path.join(self.name,f))
                     else:
                         pDir=path.join(self.name,f)
@@ -670,6 +690,8 @@ class SolutionDirectory(Utilities):
                                         keep=True
                                 if val>time and not (keepLast and t==last) and not keep:
                                     if path.exists(path.join(pDir,t)):
+                                        if verbose:
+                                            print_("Clearing",path.join(pDir,t))
                                         self.rmtree(path.join(pDir,t))
                                 elif keepInterval!=None:
                                     lastKeptIndex=int((float(f)+1e-10)/keepInterval)
@@ -683,22 +705,29 @@ class SolutionDirectory(Utilities):
                     for f in cd["functions"]:
                         pth=path.join(self.name,f)
                         if path.exists(pth):
+                            if verbose:
+                                print_("Clearing",pth)
                             self.rmtree(pth)
                 else:
                     for f in cd["functions"][0::2]:
                         pth=path.join(self.name,f)
                         if path.exists(pth):
+                            if verbose:
+                                print_("Clearing",pth)
                             self.rmtree(pth)
 
         additional+=eval(conf().get("Clearing","additionalpatterns"))
         for a in additional:
-            self.clearPattern(a)
+            self.clearPattern(a,
+                              verbose=verbose)
 
-    def clearPattern(self,globPat):
+    def clearPattern(self,globPat,verbose=False):
         """Clear all files that fit a certain shell (glob) pattern
-        @param glob: the pattern which the files are going to fit"""
+        :param glob: the pattern which the files are going to fit"""
 
         for f in glob.glob(path.join(self.name,globPat)):
+            if verbose:
+                print_("Clearing",f)
             if path.isdir(f):
                 self.rmtree(f,ignore_errors=False)
             else:
@@ -707,19 +736,24 @@ class SolutionDirectory(Utilities):
     def clearOther(self,
                    pyfoam=True,
                    removeAnalyzed=False,
+                   verbose=False,
                    clearHistory=False,
                    clearParameters=False):
         """Remove additional directories
-        @param pyfoam: rremove all directories typically created by PyFoam"""
+        :param pyfoam: rremove all directories typically created by PyFoam"""
 
         if pyfoam:
-            self.clearPattern("PyFoam.?*")
+            self.clearPattern("PyFoam.?*",
+                              verbose=verbose)
             if removeAnalyzed:
-                self.clearPattern("*?.analyzed")
+                self.clearPattern("*?.analyzed",
+                                  verbose=verbose)
         if clearParameters:
-            self.clearPattern("PyFoamPrepareCaseParameters")
+            self.clearPattern("PyFoamPrepareCaseParameters",
+                              verbose=verbose)
         if clearHistory:
-            self.clearPattern("PyFoamHistory")
+            self.clearPattern("PyFoamHistory",
+                              verbose=verbose)
 
     def clear(self,
               after=None,
@@ -727,6 +761,7 @@ class SolutionDirectory(Utilities):
               pyfoam=True,
               keepLast=False,
               vtk=True,
+              verbose=False,
               keepRegular=False,
               keepParallel=False,
               keepInterval=None,
@@ -736,16 +771,17 @@ class SolutionDirectory(Utilities):
               functionObjectData=False,
               additional=[]):
         """One-stop-shop to remove data
-        @param after: time after which directories ar to be removed
-        @param processor: remove the processorXX directories
-        @param pyfoam: rremove all directories typically created by PyFoam
-        @param keepLast: Keep the last time-step
-        @param additional: list with additional patterns to clear"""
+        :param after: time after which directories ar to be removed
+        :param processor: remove the processorXX directories
+        :param pyfoam: rremove all directories typically created by PyFoam
+        :param keepLast: Keep the last time-step
+        :param additional: list with additional patterns to clear"""
         self.clearResults(after=after,
                           removeProcs=processor,
                           keepLast=keepLast,
                           keepInterval=keepInterval,
                           vtk=vtk,
+                          verbose=verbose,
                           keepRegular=keepRegular,
                           keepParallel=keepParallel,
                           functionObjectData=functionObjectData,
@@ -753,12 +789,13 @@ class SolutionDirectory(Utilities):
         self.clearOther(pyfoam=pyfoam,
                         removeAnalyzed=removeAnalyzed,
                         clearParameters=clearParameters,
-                        clearHistory=clearHistory)
+                        clearHistory=clearHistory,
+                        verbose=verbose)
 
     def initialDir(self):
-        """@return: the name of the first time-directory (==initial
+        """:return: the name of the first time-directory (==initial
         conditions)
-        @rtype: str"""
+        :rtype: str"""
         self.reread()
 
         if self.first:
@@ -770,9 +807,9 @@ class SolutionDirectory(Utilities):
                 return None
 
     def latestDir(self):
-        """@return: the name of the first last-directory (==simulation
+        """:return: the name of the first last-directory (==simulation
         results)
-        @rtype: str"""
+        :rtype: str"""
         self.reread()
 
         last=self.getLast()
@@ -782,10 +819,10 @@ class SolutionDirectory(Utilities):
             return None
 
     def constantDir(self,region=None,processor=None):
-        """@param region: Specify the region for cases with more than 1 mesh
-        @param processor: name of the processor directory
-        @return: the name of the C{constant}-directory
-        @rtype: str"""
+        """:param region: Specify the region for cases with more than 1 mesh
+        :param processor: name of the processor directory
+        :return: the name of the C{constant}-directory
+        :rtype: str"""
         pre=self.name
         if processor!=None:
             if type(processor)==int:
@@ -800,9 +837,9 @@ class SolutionDirectory(Utilities):
             return path.join(pre,"constant")
 
     def systemDir(self,region=None):
-        """@param region: Specify the region for cases with more than 1 mesh
-        @return: the name of the C{system}-directory
-        @rtype: str"""
+        """:param region: Specify the region for cases with more than 1 mesh
+        :return: the name of the C{system}-directory
+        :rtype: str"""
         if region==None and self.region!=None:
             region=self.region
         if region:
@@ -811,16 +848,16 @@ class SolutionDirectory(Utilities):
             return path.join(self.name,"system")
 
     def controlDict(self):
-        """@return: the name of the C{controlDict}
-        @rtype: str"""
+        """:return: the name of the C{controlDict}
+        :rtype: str"""
         return path.join(self.systemDir(),"controlDict")
 
     def polyMeshDir(self,region=None,time=None,processor=None):
-        """@param region: Specify the region for cases with more than 1 mesh
-        @return: the name of the C{polyMesh}
-        @param time: Time for which the  mesh should be looked at
-        @param processor: Name of the processor directory for decomposed cases
-        @rtype: str"""
+        """:param region: Specify the region for cases with more than 1 mesh
+        :return: the name of the C{polyMesh}
+        :param time: Time for which the  mesh should be looked at
+        :param processor: Name of the processor directory for decomposed cases
+        :rtype: str"""
         if region==None and self.region!=None:
             region=self.region
         if time==None:
@@ -838,38 +875,38 @@ class SolutionDirectory(Utilities):
                 "polyMesh")
 
     def boundaryDict(self,region=None,time=None,processor=None):
-        """@param region: Specify the region for cases with more than 1 mesh
-        @return: name of the C{boundary}-file
-        @rtype: str"""
+        """:param region: Specify the region for cases with more than 1 mesh
+        :return: name of the C{boundary}-file
+        :rtype: str"""
         if region==None and self.region!=None:
             region=self.region
         return path.join(self.polyMeshDir(region=region,time=time,processor=processor),"boundary")
 
     def blockMesh(self,region=None):
-        """@param region: Specify the region for cases with more than 1 mesh
-        @return: the name of the C{blockMeshDict} if it exists. Returns
+        """:param region: Specify the region for cases with more than 1 mesh
+        :return: the name of the C{blockMeshDict} if it exists. Returns
         an empty string if it doesn't
-        @rtype: str"""
+        :rtype: str"""
         if region==None and self.region!=None:
             region=self.region
-        p=path.join(self.polyMeshDir(region=region),"blockMeshDict")
-        if path.exists(p):
-            return p
-        else:
-            return ""
+        for d in [self.systemDir(region=region),self.polyMeshDir(region=region)]:
+            p=path.join(d,"blockMeshDict")
+            if path.exists(p):
+                return p
+        return ""
 
     def makeFile(self,name):
         """create a file in the solution directory and return a
         corresponding BasicFile-object
 
-        @param name: Name of the file
-        @rtype: L{BasicFile}"""
+        :param name: Name of the file
+        :rtype: :class:`BasicFile`"""
         return BasicFile(path.join(self.name,name))
 
     def getRegions(self,defaultRegion=False):
         """Gets a list of all the available mesh regions by checking all
         directories in constant and using all those that have a polyMesh-subdirectory
-        @param defaultRegion: should the default region also be added (as None)"""
+        :param defaultRegion: should the default region also be added (as None)"""
         lst=[]
         for d in self.listDirectory(self.constantDir()):
             if path.isdir(path.join(self.constantDir(),d)):
@@ -905,9 +942,9 @@ class SolutionDirectory(Utilities):
     def listFiles(self,directory=None):
         """List all the plain files (not directories) in a subdirectory
         of the case
-        @param directory: the subdirectory. If unspecified the
+        :param directory: the subdirectory. If unspecified the
         case-directory itself is used
-        @return: List with the plain filenames"""
+        :return: List with the plain filenames"""
 
         result=[]
         theDir=self.name
@@ -922,9 +959,9 @@ class SolutionDirectory(Utilities):
         return result
 
     def getDictionaryText(self,directory,name):
-        """@param directory: Sub-directory of the case
-        @param name: name of the dictionary file
-        @return: the contents of the file as a big string"""
+        """:param directory: Sub-directory of the case
+        :param name: name of the dictionary file
+        :return: the contents of the file as a big string"""
 
         result=None
         theDir=self.name
@@ -940,9 +977,9 @@ class SolutionDirectory(Utilities):
 
     def writeDictionaryContents(self,directory,name,contents):
         """Writes the contents of a dictionary
-        @param directory: Sub-directory of the case
-        @param name: name of the dictionary file
-        @param contents: Python-dictionary with the dictionary contents"""
+        :param directory: Sub-directory of the case
+        :param name: name of the dictionary file
+        :param contents: Python-dictionary with the dictionary contents"""
 
         theDir=self.name
         if directory:
@@ -954,9 +991,9 @@ class SolutionDirectory(Utilities):
 
     def writeDictionaryText(self,directory,name,text):
         """Writes the contents of a dictionary
-        @param directory: Sub-directory of the case
-        @param name: name of the dictionary file
-        @param text: String with the dictionary contents"""
+        :param directory: Sub-directory of the case
+        :param name: name of the dictionary file
+        :param text: String with the dictionary contents"""
 
         theDir=self.name
         if directory:
@@ -965,9 +1002,9 @@ class SolutionDirectory(Utilities):
         result=open(path.join(theDir,name),"w").write(text)
 
     def getDictionaryContents(self,directory,name):
-        """@param directory: Sub-directory of the case
-        @param name: name of the dictionary file
-        @return: the contents of the file as a python data-structure"""
+        """:param directory: Sub-directory of the case
+        :param name: name of the dictionary file
+        :return: the contents of the file as a python data-structure"""
 
         result={}
         theDir=self.name
@@ -1162,8 +1199,8 @@ class ChemkinSolutionDirectory(SolutionDirectory):
         self.addToClone(self.chemkinName)
 
     def chemkinDir(self):
-        """@rtype: str
-        @return: The directory with the Chemkin-Files"""
+        """:rtype: str
+        :return: The directory with the Chemkin-Files"""
 
         return path.join(self.name,self.chemkinName)
 

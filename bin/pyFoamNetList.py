@@ -143,8 +143,8 @@ Lists all the processes known to a meta-server
                 
     def forwardCommand(self,info,cmd):
         """Forwards a command
-        @param info: dictionary with the information
-        @param cmd: the command that will be forwarded
+        :param info: dictionary with the information
+        :param cmd: the command that will be forwarded
         """
         result=0
 

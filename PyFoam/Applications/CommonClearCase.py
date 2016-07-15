@@ -45,8 +45,13 @@ class CommonClearCase(object):
                                     dest="keepPostprocessing",
                                     default=False,
                                     help="Keep the directory 'postProcessing' where functionObjects write their stuff")
+        self.generalOpts.add_option("--verbose-clear",
+                                    action="store_true",
+                                    dest="verboseClear",
+                                    default=False,
+                                    help="Print what is being cleared during clearing")
 
-    def clearCase(self,sol):
+    def clearCase(self,sol,runParallel=False):
         if not self.opts.keepPostprocessing:
             self.opts.additionalClear.append("postProcessing")
         if self.opts.clearComplete:
@@ -54,7 +59,8 @@ class CommonClearCase(object):
         if self.opts.clearCase:
             print_("Clearing out old timesteps ....")
             sol.clear(additional=self.parser.getOptions().additionalClear,
-                      processor=self.parser.getOptions().removeProcessorDirs,
+                      verbose=self.parser.getOptions().verboseClear,
+                      processor=self.parser.getOptions().removeProcessorDirs and not runParallel,
                       pyfoam=self.parser.getOptions().pyfoam,
                       clearHistory=self.parser.getOptions().clearHistory,
                       functionObjectData=self.opts.clearComplete)

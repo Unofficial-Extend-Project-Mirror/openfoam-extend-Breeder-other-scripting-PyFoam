@@ -3,6 +3,7 @@ Class that implements common functionality for plotting options
 """
 
 from optparse import OptionGroup
+from PyFoam.Basics.GnuplotTimelines import validTerminals
 
 class CommonPlotOptions(object):
     """ The class that adds plot options
@@ -38,6 +39,12 @@ class CommonPlotOptions(object):
                                default=None,
                                dest="implementation",
                                help="The implementation that should be used for plotting")
+        behaveGroup.add_option("--gnuplot-terminal",
+                               default=None,
+                               type="choice",
+                               dest="gnuplotTerminal",
+                               choices=validTerminals(),
+                               help="Terminal implementation of gnuplot to use. Options: "+", ".join(validTerminals()))
 
         self.parser.add_option_group(behaveGroup)
 
@@ -62,6 +69,11 @@ class CommonPlotOptions(object):
                                default=None,
                                dest="hardcopyPrefix",
                                help="Prefix for the hardcopy-files")
+        writeDGroup.add_option("--terminal-hardcopy-options",
+                               action="store",
+                               default="",
+                               dest="hardcopyTerminalOptions",
+                               help="Options for the gnuplot terminal that does the hardcopy. Overrides the setting in [Plotting] with the name 'hardcopyOptions_<term>' (with <term> being the value of --format-of-hardcopy)")
 
         writeDGroup.add_option("--no-pickled-file",
                                action="store_false",
@@ -135,5 +147,12 @@ class CommonPlotOptions(object):
             self.opts.courant=True
             self.opts.execution=True
             self.opts.deltaT=True
+
+        if self.opts.hardcopy and self.opts.hardcopyTerminalOptions=="":
+            from PyFoam import configuration as conf
+
+            self.opts.hardcopyTerminalOptions=conf().get("Plotting",
+                                                         "hardcopyOptions_"+self.opts.hardcopyformat,
+                                                         default="")
 
 # Should work with Python3 and Python2

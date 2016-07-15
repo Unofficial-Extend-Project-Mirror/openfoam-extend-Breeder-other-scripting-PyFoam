@@ -8,7 +8,7 @@ import re
 
 # import FoamFileGenerator in the end to avoid circular dependencies
 
-from PyFoam.ThirdParty.six import integer_types,PY3,string_types
+from PyFoam.ThirdParty.six import integer_types,PY3,string_types,StringIO
 
 if PY3:
     def cmp(a,b):
@@ -48,9 +48,11 @@ class FoamDataType(object):
         return self.__cmp__(other)<=0
 
 class Field(FoamDataType):
-    def __init__(self,val,name=None):
+    def __init__(self,val,name=None,length=None):
         self.val=val
         self.name=name
+        self.length=length
+
         if type(val) in[list,UnparsedList,BinaryList]:
             self.uniform=False
         elif self.name==None:
@@ -58,40 +60,66 @@ class Field(FoamDataType):
         else:
             raise TypeError("Type",type(val),"of value",val,"can not be used to determine uniformity")
 
+        if self.length:
+            if not self.uniform:
+                raise TypeError("Type",type(val),"can't be used with a uniform field (length ",length," specified)")
+
     def __str__(self):
         result=""
-        if self.uniform:
-            result+="uniform "
+        if self.length:
+            result+=str(self.length)+" {"
+            result+=str(self.val)+"}"
         else:
-            result+="nonuniform "
-            if self.name:
-                result+=self.name+" "
+            if self.uniform:
+                result+="uniform "
+            else:
+                result+="nonuniform "
+                if self.name:
+                    result+=self.name+" "
 
-        result+=str(
-            PyFoam.Basics.FoamFileGenerator.FoamFileGenerator(
-                self.val,
-                longListThreshold=-1,
-                useFixedType=False
-            ))
+            result+=str(
+                PyFoam.Basics.FoamFileGenerator.FoamFileGenerator(
+                    self.val,
+                    longListThreshold=-1,
+                    useFixedType=False
+                ))
         return result
 
     def __cmp__(self,other):
-        if other==None or type(other)!=Field:
+        if other is None or type(other)!=Field:
             return 1
         if self.uniform!=other.uniform:
             return cmp(self.uniform,other.uniform)
         elif self.name!=other.name:
             return cmp(self.name,other.name)
+        elif self.length!=other.length:
+            return cmp(self.length,other.length)
         else:
             return cmp(self.val,other.val)
 
     def __getitem__(self,key):
-        assert(not self.uniform)
-        return self.val[key]
+        if self.length:
+            if key>=0 and key<self.length:
+                return self.val
+            else:
+                raise IndexError('Key',key,'outside of range 0 to',self.length-1)
+
+        if not self.uniform:
+            return self.val[key]
+        else:
+            return self.val
 
     def __setitem__(self,key,value):
         assert(not self.uniform)
         self.val[key]=value
+
+    def __len__(self):
+        if self.length:
+            return self.length
+        elif isinstance(self.val,(list,)):
+            return len(self.val)
+        else:
+            raise TypeError("Operation len() unsupported for data of type",type(self.val))
 
     def isUniform(self):
         return self.uniform
@@ -110,22 +138,53 @@ class Field(FoamDataType):
         self.uniform=True
         self.name=None
 
+    def toNumpy(self,regexp,dtypes):
+        """Convert to numpy-structured array (with one entry)
+        @param regexp: Ignored. Just for compatibility with Unparsed
+        @param dtypes: lsit of data types"""
+        import numpy as np
+        if self.length:
+            try:
+                tup=tuple(self.val)
+            except TypeError:
+                tup=(self.val,)
+            result=np.repeat(np.array([tup],dtype=dtypes),self.length)
+            return result
+        else:
+            raise TypeError("Can not convert",str(self),"to a numpy-array")
+
 class Dimension(FoamDataType):
     def __init__(self,*dims):
-        assert(len(dims)==7)
-        self.dims=list(dims)
+        if len(dims)==1:
+            self.dims=None
+            self.dimString=dims[0]
+        else:
+            assert(len(dims)==7)
+            self.dims=list(dims)
 
     def __str__(self):
         result="[ "
-        for v in self.dims:
-            result+=str(v)+" "
+        if self.dims is None:
+            result+=self.dimString+" "
+        else:
+            for v in self.dims:
+                result+=str(v)+" "
         result+="]"
         return result
 
     def __cmp__(self,other):
         if other==None:
             return 1
-        return cmp(self.dims,other.dims)
+        if self.dims is None:
+            if other.dims is not None:
+                return -1
+            else:
+                return cmp(self.dimString,other.dimString)
+        else:
+            if other.dims is None:
+                return 1
+            else:
+                return cmp(self.dims,other.dims)
 
     def __getitem__(self,key):
         return self.dims[key]
@@ -538,6 +597,21 @@ class Unparsed(object):
     def __lt__(self,other):
         return self.data<other.data
 
+    def toNumpy(self,regexp,dtypes):
+        """Assume that the unparsed data contains line-wise data and transform it to a numpy-array.
+        @param regexp: regular expression where the groups correspond to the dtypes,
+        @param dtypes: list with dtypes"""
+        import numpy as np
+        try:
+            return np.fromregex(StringIO(self.data),
+                                regexp,
+                                dtypes)
+        except TypeError:
+            from PyFoam.ThirdParty.six import BytesIO,b
+            return np.fromregex(BytesIO(b(self.data)),
+                                regexp,
+                                dtypes)
+
 class BinaryBlob(Unparsed):
     """Represents a part of the file with binary data in it"""
     def __init__(self,data):
@@ -568,6 +642,18 @@ class UnparsedList(object):
 
     def __lt__(self,other):
         return self.data<other.data
+
+    def toNumpy(self,regexp,dtypes):
+        import numpy as np
+        try:
+            return np.fromregex(StringIO(self.data),
+                                regexp,
+                                dtypes)
+        except TypeError:
+            from PyFoam.ThirdParty.six import BytesIO,b
+            return np.fromregex(BytesIO(b(self.data)),
+                                regexp,
+                                dtypes)
 
 class BinaryList(UnparsedList):
     """A class that represents a list that is saved as binary data"""

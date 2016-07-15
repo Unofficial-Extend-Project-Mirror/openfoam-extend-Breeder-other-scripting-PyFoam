@@ -23,12 +23,12 @@ class BasicWatcher(object):
                  tailLength=1000,
                  sleep=0.1,
                  follow=True):
-        """@param filename: name of the logfile to watch
-        @param silent: if True no output is sent to stdout
-        @param tailLength: number of bytes at the end of the fail that should be output.
-        @param follow: if the end of the file is reached wait for further input
+        """:param filename: name of the logfile to watch
+        :param silent: if True no output is sent to stdout
+        :param tailLength: number of bytes at the end of the fail that should be output.
+        :param follow: if the end of the file is reached wait for further input
         Because data is output on a per-line-basis
-        @param sleep: interval to sleep if no line is returned"""
+        :param sleep: interval to sleep if no line is returned"""
 
         self.filename=filename
         self.silent=silent
@@ -43,7 +43,7 @@ class BasicWatcher(object):
         self.reader=LineReader(config().getboolean("SolverOutput","stripSpaces"))
 
     def getSize(self):
-        """@return: the current size (in bytes) of the file"""
+        """:return: the current size (in bytes) of the file"""
         return os.stat(self.filename)[stat.ST_SIZE]
 
     def start(self):

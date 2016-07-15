@@ -1,9 +1,11 @@
 import unittest
 import math
+import pytest
 
 from PyFoam.Basics.FoamFileGenerator import (Vector,Dimension,Field,
                                              TupleProxy,DictProxy,Tensor,
                                              DictRedirection,
+                                             Unparsed,
                                              SymmTensor,Codestream,BoolProxy)
 
 from PyFoam.ThirdParty.six import iteritems
@@ -243,6 +245,15 @@ class DimensionTest(unittest.TestCase):
         v[0]=-3
         self.assertEqual(v,Dimension(-3,0,-1,0,0,0,0))
 
+    def testStringSymbolic(self):
+        v=Dimension("m s^-1")
+        self.assertEqual(str(v),'[ m s^-1 ]')
+
+    def testCompareMixed(self):
+        v=Dimension("m s^-1")
+        self.assertEqual(v,Dimension("m s^-1"))
+        self.assertEqual(v==None,False)
+
 theSuite.addTest(unittest.makeSuite(DimensionTest,"test"))
 
 class FieldTest(unittest.TestCase):
@@ -253,6 +264,8 @@ class FieldTest(unittest.TestCase):
         self.assertEqual(str(v),'nonuniform List<scalar> 1\n(\n  400\n)\n')
         v=Field([400])
         self.assertEqual(str(v),'nonuniform 1\n(\n  400\n)\n')
+        v=Field(400,length=23)
+        self.assertEqual(str(v),'23 {400}')
 
     def testCompare(self):
         self.assertNotEqual(Field(400),Field(300))
@@ -261,11 +274,41 @@ class FieldTest(unittest.TestCase):
         self.assertEqual(Field(400)==None,False)
 
     def testAccess(self):
+        v=Field(400)
+        self.assertEqual(v[23],400)
         v=Field(list(range(0,101,10)),name="List<scalar>")
         s=sum(v.val)
         self.assertEqual(v[2],20)
         v[5]+=1
         self.assertEqual(sum(v),s+1)
+        v=Field(400,length=23)
+        self.assertEqual(v[10],400)
+        self.assertEqual(v[0],400)
+        self.assertEqual(v[22],400)
+        with pytest.raises(IndexError):
+            val=v[-1]
+        with pytest.raises(IndexError):
+            val=v[23]
+
+    def testLength(self):
+        v=Field(400)
+        with pytest.raises(TypeError):
+            l=len(v)
+        v=Field([400])
+        self.assertEqual(len(v),1)
+        v=Field(400,length=23)
+        self.assertEqual(len(v),23)
+
+    def testNumpyConversion(self):
+        import numpy as np
+        f=Field(400,length=42)
+        n=f.toNumpy("nx",[("val",np.float64)])
+        self.assertEqual(n["val"][23],400.)
+        f=Field(Vector(400,200,100),length=42)
+        n=f.toNumpy("nx",[(c,np.float64) for c in "xyz"])
+        self.assertEqual(n["x"][23],400.)
+        self.assertEqual(n["y"][13],200.)
+        self.assertEqual(n.size,42)
 
 theSuite.addTest(unittest.makeSuite(FieldTest,"test"))
 
@@ -285,3 +328,40 @@ class CodeStreamTest(unittest.TestCase):
         self.assertEqual(c,s)
 
 theSuite.addTest(unittest.makeSuite(CodeStreamTest,"test"))
+
+class UnparsedTest(unittest.TestCase):
+    def setUp(self):
+        import numpy as np
+        self.np=np
+
+    def testScalarList(self):
+        u=Unparsed("""3.0
+4.0
+1.0""")
+        data=u.toNumpy(r'(.+)',[("val",self.np.float64)])
+        self.assertEqual(data["val"].size,3)
+        self.assertEqual(data["val"][0],3.0)
+
+    def testVectorList(self):
+        u=Unparsed("""(1 2 3)
+        (4.0 5 3)
+        (1.0 0 -1)
+        (2 1e4 1e-5)""")
+        data=u.toNumpy(r'\((.+) (.+) (.+)\)',[(c,self.np.float64) for c in "xyz"])
+        self.assertEqual(data["x"].size,4)
+        self.assertEqual(data["x"][0],1.0)
+        self.assertEqual(data["z"][-1],1e-5)
+
+    def testCombinedList(self):
+        u=Unparsed("""(1 2 3) 1
+        (4.0 5 3) 34
+        (1.0 0 -1) 3
+        (2 1e4 1e-5)  42""")
+        data=u.toNumpy(r'\((\S+)\s+(\S+)\s+(\S+)\)\s+(\S+)',
+                       [(c,self.np.float64) for c in "xyz"]+[("cell",self.np.int64)])
+        self.assertEqual(data["x"].size,4)
+        self.assertEqual(data["x"][0],1.0)
+        self.assertEqual(data["z"][-1],1e-5)
+        self.assertEqual(data["cell"][1],34)
+
+theSuite.addTest(unittest.makeSuite(UnparsedTest,"test"))

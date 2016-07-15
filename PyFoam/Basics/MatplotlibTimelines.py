@@ -21,9 +21,9 @@ class MatplotlibTimelines(GeneralPlotTimelines):
                  custom,
                  showWindow=True,
                  registry=None):
-        """@param timelines: The timelines object
-        @type timelines: TimeLineCollection
-        @param custom: A CustomplotInfo-object. Values in this object usually override the
+        """:param timelines: The timelines object
+        :type timelines: TimeLineCollection
+        :param custom: A CustomplotInfo-object. Values in this object usually override the
         other options
         """
 
@@ -84,9 +84,9 @@ class MatplotlibTimelines(GeneralPlotTimelines):
 
     def buildData(self,times,name,title,lastValid):
         """Build the implementation specific data
-        @param times: The vector of times for which data exists
-        @param name: the name under which the data is stored in the timeline
-        @param title: the title under which this will be displayed"""
+        :param times: The vector of times for which data exists
+        :param name: the name under which the data is stored in the timeline
+        :param title: the title under which this will be displayed"""
 
         a=self.axis1
         if self.testAlternate(name):
@@ -205,10 +205,10 @@ class MatplotlibTimelines(GeneralPlotTimelines):
 
         self.ylabel2=title
 
-    def doHardcopy(self,filename,form):
+    def doHardcopy(self,filename,form,termOpts=None):
         """Write the contents of the plot to disk
-        @param filename: Name of the file without type extension
-        @param form: String describing the format"""
+        :param filename: Name of the file without type extension
+        :param form: String describing the format"""
 
         self.figure.savefig(filename+"."+form,format=form)
 

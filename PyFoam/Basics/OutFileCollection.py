@@ -28,9 +28,9 @@ class OutFileCollection(object):
                  titles=[],
                  singleFile=False):
         """
-        @param basename: name of the base directory
-        @param titles: names of the data columns
-        @param singleFile: don't split into multiple files if more than one
+        :param basename: name of the base directory
+        :param titles: names of the data columns
+        :param singleFile: don't split into multiple files if more than one
         datum is insert per time-step
         """
         self.files={}
@@ -48,7 +48,7 @@ class OutFileCollection(object):
         """
         Sets the titles anew
 
-        @param titles: the new titles
+        :param titles: the new titles
         """
         self.titles=titles
         for f in list(self.files.items()):

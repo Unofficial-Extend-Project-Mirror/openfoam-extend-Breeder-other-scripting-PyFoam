@@ -46,8 +46,8 @@ class PlyParser(object):
         
     def parse(self,content):
         """Do the actual parsing
-        @param content: String that is to be parsed
-        @return: Result of the parsing"""
+        :param content: String that is to be parsed
+        :return: Result of the parsing"""
 
         if self.debug:
             debug=10

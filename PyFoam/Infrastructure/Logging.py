@@ -45,8 +45,8 @@ class DummyLogger:
 
 def foamLogger(name="general"):
     """
-    @param name: name of the logfile
-    @return: a logger that is correctly set up for pyFoam
+    :param name: name of the logfile
+    :return: a logger that is correctly set up for pyFoam
     """
 
     if not hasLogging:

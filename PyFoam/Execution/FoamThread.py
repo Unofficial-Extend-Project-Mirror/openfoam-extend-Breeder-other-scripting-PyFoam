@@ -7,6 +7,7 @@ from threading import Thread,Lock,Timer
 from PyFoam.ThirdParty.six import print_
 from PyFoam.Error import warning,error
 from PyFoam import configuration as config
+from PyFoam.FoamInformation import shellExecutionPrefix
 
 if sys.version_info<(2,4):
     from popen2 import Popen4
@@ -32,7 +33,13 @@ from PyFoam.Infrastructure.Logging import foamLogger
 
 def checkForStopFile(thrd):
     """Checks for the file 'stop' in the directory of the FoamRun. If
-    it exists it is removed and the run is stopped gracefully"""
+    it exists it is removed and the run is stopped gracefully
+
+    If a file 'write' is found then the next timestep is written
+
+    File 'stopWrite' stops the run at the next write
+
+    'kill' stops without writing"""
 
     fName=path.join(thrd.runner.dir,"stop")
 
@@ -47,13 +54,25 @@ def checkForStopFile(thrd):
         unlink(fName)
         thrd.runner.writeResults()
 
+    fName=path.join(thrd.runner.dir,"stopWrite")
+
+    if path.exists(fName):
+        unlink(fName)
+        thrd.runner.stopAtNextWrite()
+
+    fName=path.join(thrd.runner.dir,"kill")
+
+    if path.exists(fName):
+        unlink(fName)
+        thrd.runner.stopWithoutWrite()
+
     thrd.timer2=Timer(thrd.timerTime,checkForStopFile,args=[thrd])
     thrd.timer2.start()
 
 def getLinuxMem(thrd):
     """Reads the Memory usage of a thread on a linux-System
 
-    @param thrd: the thread object in question"""
+    :param thrd: the thread object in question"""
 
     #    print "Timer called"
 
@@ -103,8 +122,8 @@ class FoamThread(Thread):
     Designed to be used by the BasicRunner-class"""
 
     def __init__(self,cmdline,runner):
-        """@param cmdline:cmdline - Command line of the OpenFOAM command
-        @param runner: the Runner-object that started this thread"""
+        """:param cmdline:cmdline - Command line of the OpenFOAM command
+        :param runner: the Runner-object that started this thread"""
         Thread.__init__(self)
         self.cmdline=cmdline
         self.runner=runner
@@ -154,9 +173,13 @@ class FoamThread(Thread):
             run=Popen4(self.cmdline)
             self.output=run.fromchild
         else:
-            run=subprocess.Popen(self.cmdline,shell=True,bufsize=0,
-                      stdin=subprocess.PIPE,stdout=subprocess.PIPE,
-                      stderr=subprocess.STDOUT,close_fds=True)
+            run=subprocess.Popen(shellExecutionPrefix()+self.cmdline,
+                                 shell=True,
+                                 bufsize=0,
+                                 stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 close_fds=True)
             self.output=run.stdout
         self.run=run
         self.threadPid=run.pid
@@ -251,7 +274,7 @@ class FoamThread(Thread):
         self.stateLock.release()
 
     def check(self):
-        """@return: False if there is no more output of the command"""
+        """:return: False if there is no more output of the command"""
         self.stateLock.acquire()
         state=self.hasSomethingToSay
         #        print "Get: ",state
@@ -260,11 +283,11 @@ class FoamThread(Thread):
         return state
 
     def cpuTime(self):
-        """@return: number of seconds CPU-Time used"""
+        """:return: number of seconds CPU-Time used"""
         return self.cpuUserTime()+self.cpuSystemTime()
 
     def cpuUserTime(self):
-        """@return: number of seconds CPU-Time used in user mode"""
+        """:return: number of seconds CPU-Time used in user mode"""
         if self.resEnd==None: # and self.isDarwin:
             # Mac OS X needs this (Ubuntu too?)
             self.resEnd=getrusage(self.who)
@@ -274,7 +297,7 @@ class FoamThread(Thread):
             return self.resEnd.ru_utime-self.resStart.ru_utime
 
     def cpuSystemTime(self):
-        """@return: number of seconds CPU-Time used in system mode"""
+        """:return: number of seconds CPU-Time used in system mode"""
         if self.resEnd==None: #  and self.isDarwin:
             # Mac OS X needs this (Ubuntu too?)
             self.resEnd=getrusage(self.who)
@@ -284,7 +307,7 @@ class FoamThread(Thread):
             return self.resEnd.ru_stime-self.resStart.ru_stime
 
     def usedMemory(self):
-        """@return: maximum resident set size in MegaByte"""
+        """:return: maximum resident set size in MegaByte"""
         scale=1024.*1024.
         if self.isLinux:
             return self.linuxMaxMem/scale
@@ -295,7 +318,7 @@ class FoamThread(Thread):
             return getpagesize()*(self.resEnd.ru_maxrss-self.resStart.ru_maxrss)/scale
 
     def wallTime(self):
-        """@return: the wall-clock-time needed by the process"""
+        """:return: the wall-clock-time needed by the process"""
         if self.timeEnd==None: #  and self.isDarwin:
             # Mac OS X needs this (Ubuntu too?)
             self.timeEnd=time()

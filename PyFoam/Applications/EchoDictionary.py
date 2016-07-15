@@ -47,11 +47,14 @@ reformatting unformated dictionaries and debugging the parser
                                          boundaryDict=self.opts.boundaryDict,
                                          listDict=self.opts.listDict,
                                          listDictWithHeader=self.opts.listDictWithHeader,
+                                         listLengthUnparsed=self.opts.listLengthUnparsed,
                                          treatBinaryAsASCII=self.opts.treatBinaryAsASCII,
                                          doMacroExpansion=self.opts.doMacros)
         except IOError:
             e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
             self.error("Problem with file",fName,":",e)
+
+        self.setData({"dictFile":dictFile})
 
         print_(dictFile)
 

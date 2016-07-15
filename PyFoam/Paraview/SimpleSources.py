@@ -23,8 +23,8 @@ class SimpleSource(SourceBase):
     The member repr is the representation object"""
 
     def __init__(self,name,src):
-        """@param name: The name under which the thing should be displayed
-        @param src: the actual source proxy"""
+        """:param name: The name under which the thing should be displayed
+        :param src: the actual source proxy"""
         SourceBase.__init__(self,src)
         self.name = name
         pm.RegisterProxy("sources",self.name,self.src)
@@ -46,10 +46,10 @@ class Sphere(SimpleSource):
     """Displays a sphere"""
 
     def __init__(self,name,center,relRadius=0.01,absRadius=None):
-        """@param name: name under which the sphere should be displayed
-        @param center: the center of the sphere
-        @param relRadius: radius relative to the characteristic length
-        @param absRadius: absolute radius. Overrides relRadius if set"""
+        """:param name: name under which the sphere should be displayed
+        :param center: the center of the sphere
+        :param relRadius: radius relative to the characteristic length
+        :param absRadius: absolute radius. Overrides relRadius if set"""
 
         try:
             sphr=servermanager.sources.SphereSource()
@@ -68,8 +68,8 @@ class Point(SimpleSource):
     """Displays a point"""
 
     def __init__(self,name,center):
-        """@param name: name under which the point should be displayed
-        @param center: the center of the point"""
+        """:param name: name under which the point should be displayed
+        :param center: the center of the point"""
 
         pt=servermanager.sources.PointSource()
         pt.Center = list(center)
@@ -79,9 +79,9 @@ class Line(SimpleSource):
     """Displays a line"""
 
     def __init__(self,name,pt1,pt2):
-        """@param name: name under which the line should be displayed
-        @param pt1: the start of the line
-        @param pt2: the end of the line"""
+        """:param name: name under which the line should be displayed
+        :param pt1: the start of the line
+        :param pt2: the end of the line"""
 
         try:
             ln=servermanager.sources.LineSource()
@@ -96,10 +96,10 @@ class Plane(SimpleSource):
     """Displays a plane"""
 
     def __init__(self,name,origin,pt1,pt2):
-        """@param name: name under which the plane should be displayed
-        @param origin: the origin of the plane
-        @param pt1: one point the plane spans to
-        @param pt2: the other point the plane spans to"""
+        """:param name: name under which the plane should be displayed
+        :param origin: the origin of the plane
+        :param pt1: one point the plane spans to
+        :param pt2: the other point the plane spans to"""
 
         try:
             pl=servermanager.sources.PlaneSource()
@@ -115,9 +115,9 @@ class Cube(SimpleSource):
     """Displays a cube"""
 
     def __init__(self,name,pt1,pt2):
-        """@param name: name under which the cube should be displayed
-        @param pt1: Point one that describes the box
-        @param pt2: Point two that describes the box"""
+        """:param name: name under which the cube should be displayed
+        :param pt1: Point one that describes the box
+        :param pt2: Point two that describes the box"""
 
         pt1=self.makeVector(pt1)
         pt2=self.makeVector(pt2)
@@ -137,8 +137,8 @@ class STL(SimpleSource):
     """Displays a STL-File"""
 
     def __init__(self,name,stlFile):
-        """@param name: name under which the surface should be displayed
-        @param stlFile: the STL-file"""
+        """:param name: name under which the surface should be displayed
+        :param stlFile: the STL-file"""
 
         try:
             stl=servermanager.sources.stlreader()
@@ -154,10 +154,10 @@ class Text(SimpleSource):
     """Displays a Vector-Text"""
 
     def __init__(self,name,text,scale=1,position=None):
-        """@param name: name under which the sphere should be displayed
-        @param text: the text that will be displayed
-        @param scale: the scaling of the text (in terms ofcharacterist length of the geometry
-        @param position: the actual position at which the object should be centered"""
+        """:param name: name under which the sphere should be displayed
+        :param text: the text that will be displayed
+        :param scale: the scaling of the text (in terms ofcharacterist length of the geometry
+        :param position: the actual position at which the object should be centered"""
 
         try:
             txt=servermanager.sources.VectorText()
@@ -187,10 +187,10 @@ class DirectedSource(SimpleSource):
     Assumes that the original base is located at (0 0 0)"""
 
     def __init__(self,name,src,base,tip):
-        """@param name: name under which the arrow will be displayed
-        @param src: The source objects
-        @param base: the base the arrow points away from
-        @param tip: the point the arrow points to"""
+        """:param name: name under which the arrow will be displayed
+        :param src: The source objects
+        :param base: the base the arrow points away from
+        :param tip: the point the arrow points to"""
         SimpleSource.__init__(self,name,src)
         self.base=base
         self.tip =tip
@@ -228,9 +228,9 @@ class Arrow(DirectedSource):
     """Displays a simple arrow"""
 
     def __init__(self,name,base,tip):
-        """@param name: name under which the arrow will be displayed
-        @param base: the base the arrow points away from
-        @param tip: the point the arrow points to"""
+        """:param name: name under which the arrow will be displayed
+        :param base: the base the arrow points away from
+        :param tip: the point the arrow points to"""
         
         try:
             DirectedSource.__init__(self,
@@ -249,9 +249,9 @@ class Glyph(DirectedSource):
     """Displays a simple glyph"""
 
     def __init__(self,name,base,tip):
-        """@param name: name under which the glyph will be displayed
-        @param base: the base the glyph points away from
-        @param tip: the point the glyph points to"""
+        """:param name: name under which the glyph will be displayed
+        :param base: the base the glyph points away from
+        :param tip: the point the glyph points to"""
 
         try:
             DirectedSource.__init__(self,

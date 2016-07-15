@@ -1,6 +1,5 @@
-#! /usr/bin/env pvpython 
+#! /usr/bin/env python
 
-from PyFoam.Applications.PVLoadState import PVLoadState
+from PyFoam.Applications.ChangePython import changePython
 
-PVLoadState()
-
+changePython("pvpython","PVLoadState")

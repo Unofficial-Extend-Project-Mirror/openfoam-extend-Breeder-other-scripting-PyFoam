@@ -1,7 +1,7 @@
 #  ICE Revision: $Id$
 """Plots a collection of timelines"""
 
-from PyFoam.ThirdParty.Gnuplot import Gnuplot,Data
+from PyFoam.ThirdParty.Gnuplot import Gnuplot,Data,gp
 
 from PyFoam.Error import warning
 
@@ -11,6 +11,13 @@ from platform import uname
 
 from PyFoam import configuration as config
 
+def validTerminals():
+    """Returns a list with the valid Gnuplot terminals"""
+    terms=["x11","wxt","caca","dumb"]
+    if uname()[0]=="Darwin":
+        terms.append("aqua")
+    return terms
+
 class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
     """This class opens a gnuplot window and plots a timelines-collection in it"""
 
@@ -19,14 +26,16 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
     def __init__(self,
                  timelines,
                  custom,
+                 terminal="x11",
                  showWindow=True,
                  registry=None):
-        """@param timelines: The timelines object
-        @type timelines: TimeLineCollection
-        @param custom: A CustomplotInfo-object. Values in this object usually override the
+        """:param timelines: The timelines object
+        :type timelines: TimeLineCollection
+        :param custom: A CustomplotInfo-object. Values in this object usually override the
         other options. If the object has an attribute named gnuplotCommands
         (which is assumed to be a string list) then these strings are executed during
         initialization of the plot (the purpose of this is to set non-standard stuff)
+        :param terminal: terminal implementation to use
         """
 
         GeneralPlotTimelines.__init__(self,timelines,custom,showWindow=showWindow,registry=registry)
@@ -72,20 +81,26 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
             pass
 
         raiseit=False
+        enhanced=False
+        x11addition=[]
+
         if "raiseit" in dir(self.spec):
             raiseit=self.spec.raiseit
         if raiseit:
-            x11addition=" raise"
+            x11addition.append("raise")
         else:
-            x11addition=" noraise"
+            x11addition.append("noraise")
+        if "enhanced" in dir(self.spec):
+            enhanced=self.spec.enhanced
+        if enhanced:
+            x11addition.append("enhanced")
+        else:
+            x11addition.append("noenhanced")
 
         if showWindow:
+            self.set_string("terminal "+terminal+" "+" ".join(x11addition))
             if uname()[0]=="Darwin":
-                self.set_string("terminal x11"+x11addition)
-                # self.set_string("terminal aqua "+str(GnuplotTimelines.terminalNr))
                 GnuplotTimelines.terminalNr+=1
-            else:
-                self.set_string("terminal x11"+x11addition)
         else:
             self.set_string("terminal dumb")
 
@@ -103,9 +118,9 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
 
     def buildData(self,times,name,title,lastValid):
         """Build the implementation specific data
-        @param times: The vector of times for which data exists
-        @param name: the name under which the data is stored in the timeline
-        @param title: the title under which this will be displayed"""
+        :param times: The vector of times for which data exists
+        :param name: the name under which the data is stored in the timeline
+        :param title: the title under which this will be displayed"""
 
         tm=times
         dt=self.data.getValues(name)
@@ -145,21 +160,35 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
 
         self.set_string('y2label "%s"' % title)
 
-    def doHardcopy(self,filename,form):
+    def internalHardcopy(self,terminal,filename):
+        """Emulate the regular hardcopy command"""
+        self.set_string("output",filename)
+        self("set terminal "+terminal)
+        self.refresh()
+        # reset the terminal to its `default' setting:
+        self('set terminal %s' % gp.GnuplotOpts.default_term)
+        self.set_string('output')
+
+    def doHardcopy(self,filename,form,termOpts=""):
         """Write the contents of the plot to disk
-        @param filename: Name of the file without type extension
-        @param form: String describing the format"""
+        :param filename: Name of the file without type extension
+        :param form: String describing the format"""
+
+        # print "Hardcopy",filename,form,termOpts
+
+        if termOpts!="":
+            termOpts=" "+termOpts
 
         if form=="png":
-            self.hardcopy(terminal="png",filename=filename+".png",small=True)
+            self.internalHardcopy(terminal="png"+termOpts,filename=filename+".png")
         elif form=="pdf":
-            self.hardcopy(terminal="pdf",filename=filename+".pdf",color=True)
+            self.internalHardcopy(terminal="pdf"+termOpts,filename=filename+".pdf")
         elif form=="svg":
-            self.hardcopy(terminal="svg",filename=filename+".svg")
+            self.internalHardcopy(terminal="svg"+termOpts,filename=filename+".svg")
         elif form=="postscript":
-            self.hardcopy(terminal="postscript",filename=filename+".ps",color=True)
+            self.internalHardcopy(terminal="postscript"+termOpts,filename=filename+".ps")
         elif form=="eps":
-            self.hardcopy(terminal="postscript",filename=filename+".eps",color=True,eps=True)
+            self.internalHardcopy(terminal="postscript eps"+termOpts,filename=filename+".eps")
         else:
             warning("Hardcopy format",form,"unknown. Falling back to postscript")
             self.hardcopy(filename=filename+".ps",color=True)

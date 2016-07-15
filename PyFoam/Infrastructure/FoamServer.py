@@ -53,9 +53,9 @@ class FoamAnswerer(object):
     """
     def __init__(self,run=None,master=None,lines=100,foamserver=None):
         """
-        @param run: The thread that controls the run
-        @param master: The Runner-Object that controls everything
-	@param lines: the number of lines the server should remember
+        :param run: The thread that controls the run
+        :param master: The Runner-Object that controls everything
+	:param lines: the number of lines the server should remember
         """
         self._run=run
         self._master=master
@@ -159,19 +159,19 @@ class FoamAnswerer(object):
         return sys.argv[0]
 
     def runnerData(self):
-        """@return: the data the runner collected so far"""
+        """:return: the data the runner collected so far"""
         return self._master.data
 
     def lastLogLineSeen(self):
-        """@return: the time at which the last log-line was seen"""
+        """:return: the time at which the last log-line was seen"""
         return self._master.lastLogLineSeen
 
     def lastTimeStepSeen(self):
-        """@return: the time at which the last log-line was seen"""
+        """:return: the time at which the last log-line was seen"""
         return self._master.lastTimeStepSeen
 
     def lastLine(self):
-        """@return: the last line that was output by the running FOAM-process"""
+        """:return: the last line that was output by the running FOAM-process"""
         self._linesLock.acquire()
         result=self._lines.last()
         self._linesLock.release()
@@ -180,7 +180,7 @@ class FoamAnswerer(object):
             return result
 
     def tail(self):
-        """@return: the current last lines as a string"""
+        """:return: the current last lines as a string"""
         self._linesLock.acquire()
         tmp=self._lines.dump()
         self._linesLock.release()
@@ -191,7 +191,7 @@ class FoamAnswerer(object):
         return result
 
     def elapsedTime(self):
-        """@return: time in seconds since the last line was output"""
+        """:return: time in seconds since the last line was output"""
         self._linesLock.acquire()
         result=time()-self._lastTime
         self._linesLock.release()
@@ -199,15 +199,15 @@ class FoamAnswerer(object):
         return result
 
     def getEnviron(self,name):
-        """@param name: name of an environment variable
-        @return: value of the variable, empty string if non-existing"""
+        """:param name: name of an environment variable
+        :return: value of the variable, empty string if non-existing"""
         result=""
         if name in environ:
             result=environ[name]
         return result
 
     def mpi(self):
-        """@return: name of the MPI-implementation"""
+        """:return: name of the MPI-implementation"""
         return foamMPI()
 
     def foamVersion(self):
@@ -215,15 +215,15 @@ class FoamAnswerer(object):
         return self.getEnviron("WM_PROJECT_VERSION")
 
     def pyFoamVersion(self):
-        """@return: Version number of the PyFoam"""
+        """:return: Version number of the PyFoam"""
         return versionString()
 
     def uname(self):
-        """@return: the complete uname-information"""
+        """:return: the complete uname-information"""
         return uname()
 
     def ip(self):
-        """@return: the ip of this machine"""
+        """:return: the ip of this machine"""
         try:
             address = socket.gethostbyname(socket.gethostname())
             # This gives 127.0.0.1 if specified so in the /etc/hosts ...
@@ -241,46 +241,46 @@ class FoamAnswerer(object):
         return address
 
     def hostname(self):
-        """@return: The name of the computer"""
+        """:return: The name of the computer"""
         return uname()[1]
 
     def configuration(self):
-        """@return: all the configured parameters"""
+        """:return: all the configured parameters"""
         return config().dump()
 
     def cwd(self):
-        """@return: the current working directory"""
+        """:return: the current working directory"""
         return path.abspath(path.curdir)
 
     def pid(self):
-        """@return: the PID of the script"""
+        """:return: the PID of the script"""
         return getpid()
 
     def loadAvg(self):
-        """@return: a tuple with the average loads of the last 1, 5 and 15 minutes"""
+        """:return: a tuple with the average loads of the last 1, 5 and 15 minutes"""
         return getloadavg()
 
     def user(self):
-        """@return: the user that runs this script"""
+        """:return: the user that runs this script"""
         return userName()
 
     def id(self):
-        """@return: an ID for this run: IP:port:startTimestamp """
+        """:return: an ID for this run: IP:port:startTimestamp """
         return "%s:%d:%f" % (self.ip(),self._foamserver._port,self.startTimestamp())
 
     def startTimestamp(self):
-        """@return: the unix-timestamp of the process start"""
+        """:return: the unix-timestamp of the process start"""
         return self._master.startTimestamp
 
     def time(self):
-        """@return: the current time in the simulation"""
+        """:return: the current time in the simulation"""
         if self._master.nowTime:
             return self._master.nowTime
         else:
             return 0
 
     def createTime(self):
-        """@return: the time in the simulation for which the mesh was created"""
+        """:return: the time in the simulation for which the mesh was created"""
         if self._master.nowTime:
             return self._master.createTime
         else:
@@ -288,58 +288,58 @@ class FoamAnswerer(object):
 
     def _readParameter(self,name):
         """Reads a parametr from the controlDict
-        @param name: the parameter
-        @return: The value"""
+        :param name: the parameter
+        :return: The value"""
         control=ParameterFile(self._master.getSolutionDirectory().controlDict())
         return control.readParameter(name)
 
     def startTime(self):
-        """@return: parameter startTime from the controlDict"""
+        """:return: parameter startTime from the controlDict"""
         return float(self._readParameter("startTime"))
 
     def endTime(self):
-        """@return: parameter endTime from the controlDict"""
+        """:return: parameter endTime from the controlDict"""
         return float(self._readParameter("endTime"))
 
     def deltaT(self):
-        """@return: parameter startTime from the controlDict"""
+        """:return: parameter startTime from the controlDict"""
         return float(self._readParameter("deltaT"))
 
     def pathToSolution(self):
-        """@return: the path to the solution directory"""
+        """:return: the path to the solution directory"""
         return self._master.getSolutionDirectory().name
 
     def writtenTimesteps(self):
-        """@return: list of the timesteps on disc"""
+        """:return: list of the timesteps on disc"""
         return self._master.getSolutionDirectory().getTimes()
 
     def solutionFiles(self,time):
-        """@param time: name of the timestep
-        @return: list of the solution files at that timestep"""
+        """:param time: name of the timestep
+        :return: list of the solution files at that timestep"""
         return self._master.getSolutionDirectory()[time].getFiles()
 
     def listFiles(self,directory):
-        """@param directory: Sub-directory of the case
-        @return: List of the filenames (not directories) in that case"""
+        """:param directory: Sub-directory of the case
+        :return: List of the filenames (not directories) in that case"""
         return self._master.getSolutionDirectory().listFiles(directory)
 
     def getDictionaryText(self,directory,name):
-        """@param directory: Sub-directory of the case
-        @param name: name of the dictionary file
-        @return: the contents of the file as a big string"""
+        """:param directory: Sub-directory of the case
+        :param name: name of the dictionary file
+        :return: the contents of the file as a big string"""
         return self._master.getSolutionDirectory().getDictionaryText(directory,name)
 
     def getDictionaryContents(self,directory,name):
-        """@param directory: Sub-directory of the case
-        @param name: name of the dictionary file
-        @return: the contents of the file as a python data-structure"""
+        """:param directory: Sub-directory of the case
+        :param name: name of the dictionary file
+        :return: the contents of the file as a python data-structure"""
         return self._master.getSolutionDirectory().getDictionaryContents(directory,name)
 
     def writeDictionaryText(self,directory,name,text):
         """Writes the contents of a dictionary
-        @param directory: Sub-directory of the case
-        @param name: name of the dictionary file
-        @param text: String with the dictionary contents"""
+        :param directory: Sub-directory of the case
+        :param name: name of the dictionary file
+        :param text: String with the dictionary contents"""
 
         self._master.getSolutionDirectory().writeDictionaryText(directory,name,text)
 
@@ -347,9 +347,9 @@ class FoamAnswerer(object):
 
     def writeDictionaryContents(self,directory,name,contents):
         """Writes the contents of a dictionary
-        @param directory: Sub-directory of the case
-        @param name: name of the dictionary file
-        @param contents: Python-dictionary with the dictionary contents"""
+        :param directory: Sub-directory of the case
+        :param name: name of the dictionary file
+        :param contents: Python-dictionary with the dictionary contents"""
 
         self._master.getSolutionDirectory().writeDictionaryContents(directory,name,contents)
         return True
@@ -375,7 +375,7 @@ class FoamAnswerer(object):
 
     def setRemark(self,remark):
         """Overwrite the user-defined remark
-        @return: True if the remark was set previously"""
+        :return: True if the remark was set previously"""
         oldRemark=self._master.remark
         self._master.remark=remark
         return oldRemark!=None
@@ -391,9 +391,9 @@ class FoamServer(Thread):
     """This is the class that serves the requests about the FOAM-Run"""
     def __init__(self,run=None,master=None,lines=100):
         """
-        @param run: The thread that controls the run
-        @param master: The Runner-Object that controls everything
-        @param lines: the number of lines the server should remember
+        :param run: The thread that controls the run
+        :param master: The Runner-Object that controls everything
+        :param lines: the number of lines the server should remember
 	"""
         Thread.__init__(self)
 

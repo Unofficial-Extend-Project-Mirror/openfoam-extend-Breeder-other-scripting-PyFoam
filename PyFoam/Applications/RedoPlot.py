@@ -247,7 +247,7 @@ and either displays the plot or writes the plots to file
             if not self.quiet:
                 print_("Plotting",i,":",theId,end=" ")
             spec=CustomPlotInfo(raw=p["spec"])
-            if len(registry.get(p["data"]).getTimes())>0 and registry.get(p["data"]).getValueNames()>0:
+            if len(registry.get(p["data"]).getTimes())>0 and len(registry.get(p["data"]).getValueNames())>0:
                 if self.opts.csvFiles or self.opts.excelFiles or doPandas or self.opts.numpyData:
                     dataSet=registry.get(p["data"]).getData()
                     if self.opts.csvFiles:

@@ -15,9 +15,9 @@ class PhaseChangerLineAnalyzer(GeneralLineAnalyzer):
                  exp,
                  idNr=None):
         """
-        @param name: name of the expression (needed for output
-        @param exp: that holds the phase name
-        @param idNr: number of the pattern group that is used as the phase name
+        :param name: name of the expression (needed for output
+        :param exp: that holds the phase name
+        :param idNr: number of the pattern group that is used as the phase name
         """
         GeneralLineAnalyzer.__init__(self,
                                      doTimelines=False,

@@ -17,7 +17,7 @@ class StepAnalyzedCommon(AnalyzedCommon):
                  writePickled=True,
                  smallestFreq=0,
                  adaptFrequency=True):
-        """@param smallestFreq: the smallest intervall of real time (in seconds) that the time change is honored"""
+        """:param smallestFreq: the smallest intervall of real time (in seconds) that the time change is honored"""
         AnalyzedCommon.__init__(self,
                                 filename,
                                 analyzer,
@@ -28,6 +28,12 @@ class StepAnalyzedCommon(AnalyzedCommon):
         self.oldtime=0.
         self.lastPickleDuration=0
         self.adaptFrequency=adaptFrequency
+        self.tickers=[]
+
+    def addTicker(self,ticker):
+        """Add a callable that will be called at every timestep"""
+        if ticker is not None:
+            self.tickers.append(ticker)
 
     def timeChanged(self):
         """React to a change of the simulation time in the log"""
@@ -48,6 +54,8 @@ class StepAnalyzedCommon(AnalyzedCommon):
                            "too long. Extending frequency from",self.freq,
                            "to",self.lastPickleDuration*picklingFreqFactor)
             self.oldtime=time()
+        for t in self.tickers:
+            t()
 
     def timeHandle(self):
         """Handler that reacts to the change of time. To be overridden be sub-classes"""

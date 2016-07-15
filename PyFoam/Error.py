@@ -48,30 +48,30 @@ def __common(format,standard,*text):
 
 def warning(*text):
     """Prints a warning message with the occuring line number
-    @param text: The error message"""
+    :param text: The error message"""
     __common(defaultFormat.warn,"Warning",*text)
 
 def oldSchoolError(*text):
     """Prints an error message and aborts
-    @param text: The error message"""
+    :param text: The error message"""
     __common(defaultFormat.error,"Fatal Error",*text)
     sys.exit(-1)
 
 def error(*text):
     """Raises an error that might or might not get caught
-    @param text: The error message"""
+    :param text: The error message"""
     #    __common(defaultFormat.error,"Fatal Error",*text)
     raise FatalErrorPyFoamException(*text)
 
 def debug(*text):
     """Prints a debug message with the occuring line number
-    @param text: The error message"""
+    :param text: The error message"""
     __common(None,"Debug",*text)
 
 def notImplemented(obj,name):
      """Prints a 'not implemented' message for abstract interfaces
-     @param obj: the object for which the method is not defined
-     @param name: name of the method"""
+     :param obj: the object for which the method is not defined
+     :param name: name of the method"""
      error("The method",name,"is not implemented in this object of type",obj.__class__)
 
 class PyFoamException(Exception):

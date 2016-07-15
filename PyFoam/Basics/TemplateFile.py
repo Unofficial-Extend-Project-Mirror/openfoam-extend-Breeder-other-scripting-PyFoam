@@ -65,14 +65,14 @@ class PyratempPreprocessor(object):
                  assignmentDebug=None,
                  specials=[]):
         """Create the regexp once for performance reasons
-        @param dovarline: look for variable lines that start with $$
-        @param doexpr: substitute expressions that are between $
-        @param expressionDelimiter: character/string that is used before and after an
+        :param dovarline: look for variable lines that start with $$
+        :param doexpr: substitute expressions that are between $
+        :param expressionDelimiter: character/string that is used before and after an
         expression. After the expression the reverse of the string is used
-        @param assignmentLineStart: character sequence that signals an assignment line
-        @param assignmentDebug: Add a commented line to debug assignments. Prefix used is this parameter
-        @param allowExec: allows execution of code. This is potentially unsafe
-        @param specials: a list. If any expression starts with one of these values then
+        :param assignmentLineStart: character sequence that signals an assignment line
+        :param assignmentDebug: Add a commented line to debug assignments. Prefix used is this parameter
+        :param allowExec: allows execution of code. This is potentially unsafe
+        :param specials: a list. If any expression starts with one of these values then
         the full expression (including delimiters) is left verbatim in the template"""
 
         self.clip=len(expressionDelimiter)
@@ -177,8 +177,8 @@ class TemplateFileOldFormat(object):
 
     def __init__(self,name=None,content=None):
         """Exactly one of the parameters must be specified
-        @param name: name of the template file.
-        @param content: Content of the template"""
+        :param name: name of the template file.
+        :param content: Content of the template"""
         if name==None and content==None:
             error("Either a file name or the content of the template must be specified")
         if name!=None and content!=None:
@@ -206,8 +206,8 @@ class TemplateFileOldFormat(object):
     def writeToFile(self,outfile,vals):
         """In  the template, replaces all the strings between $$
         with the evaluation of the expressions and writes the results to a file
-        @param outfile: the resulting output file
-        @param vals: dictionary with the values"""
+        :param outfile: the resulting output file
+        :param vals: dictionary with the values"""
 
         output=self.getString(vals)
 
@@ -216,8 +216,8 @@ class TemplateFileOldFormat(object):
     def getString(self,vals):
         """In the template, replaces all the strings between $$
         with the evaluation of the expressions
-        @param vals: dictionary with the values
-        @returns: The string with the replaced expressions"""
+        :param vals: dictionary with the values
+        :returns: The string with the replaced expressions"""
 
         symbols=vals.copy()
 
@@ -321,7 +321,12 @@ class EvalPseudoSandboxWithMath(EvalPseudoSandbox):
             globals= {"__builtins__":self.eval_allowed_globals}
             if PY3:
                  globals.update(locals)
-            x = eval(self.compile(expr),globals, locals)
+            try:
+                 x = eval(self.compile(expr),globals, locals)
+            except:
+                 e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+                 print_("Problem avaluating",expr,":",e)
+                 raise e
         else:
             #            globals= {"__builtins__":self.eval_allowed_globals}
             globals= {"__builtins__":__builtins__}
@@ -353,13 +358,13 @@ class TemplateFile(TemplateFileOldFormat):
                  allowExec=False
              ):
         """Exactly one of the parameters must be specified
-        @param name: name of the template file.
-        @param content: Content of the template
-        @param expressionDelimiter: character/string that delimits expression strings.
-        @param assignmentLineStart: Start of a line that holds an assignment operation
-        @param assignmentDebug: Add a commented line to debug assignments. Prefix used is this parameter
-        @param allowExec: allow execution  (and import). This is potentially unsafe
-        @param special: list with strings that leave expression untreated"""
+        :param name: name of the template file.
+        :param content: Content of the template
+        :param expressionDelimiter: character/string that delimits expression strings.
+        :param assignmentLineStart: Start of a line that holds an assignment operation
+        :param assignmentDebug: Add a commented line to debug assignments. Prefix used is this parameter
+        :param allowExec: allow execution  (and import). This is potentially unsafe
+        :param special: list with strings that leave expression untreated"""
 
         self.expressionDelimiter=expressionDelimiter
         self.assignmentLineStart=assignmentLineStart
@@ -412,8 +417,8 @@ class TemplateFile(TemplateFileOldFormat):
     def getString(self,vals):
         """In the template, replaces all the strings between $$
         with the evaluation of the expressions
-        @param vals: dictionary with the values
-        @returns: The string with the replaced expressions"""
+        :param vals: dictionary with the values
+        :returns: The string with the replaced expressions"""
 
         return self.ptemplate(**vals)
 

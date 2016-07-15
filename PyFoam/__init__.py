@@ -7,12 +7,12 @@ Module for the Execution of OpenFOAM-commands and processing their output
 from PyFoam.Infrastructure.Configuration import Configuration
 
 def version():
-    """@return: Version number as a tuple"""
-    return (0,6,5)
-    # return (0,6,6,"development")  # Change in bin/pyFoamVersion.py as well !!!!
+    """:return: Version number as a tuple"""
+    return (0,6,6)
+    # return (0,6,7,"development")  # Change in bin/pyFoamVersion.py as well !!!!
 
 def versionString():
-    """@return: Version number of PyFoam"""
+    """:return: Version number of PyFoam"""
     v=version()
 
     vStr="%d" % v[0]
@@ -30,7 +30,7 @@ def foamVersionString():
 _configuration = Configuration()
 
 def configuration():
-    """@return: The Configuration information of PyFoam"""
+    """:return: The Configuration information of PyFoam"""
     return _configuration
 
 # Should work with Python3 and Python2

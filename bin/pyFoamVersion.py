@@ -61,6 +61,7 @@ except ImportError:
 installed=PyFoam.FoamInformation.foamInstalledVersions()
 
 print_("Version", PyFoam.FoamInformation.foamVersion(),
+       "(reported as number",PyFoam.FoamInformation.foamVersionNumber(),")"
        "Fork",PyFoam.FoamInformation.foamFork(),
        "of the installed",len(installed),"versions:")
 installedKeys=list(installed.keys())
@@ -79,8 +80,8 @@ if PyFoam.FoamInformation.oldAppConvention():
     print_("  This version of OpenFOAM uses the old calling convention")
 print_()
 print_("pyFoam-Version:",PyFoam.versionString())
-# hardcodedVersion=(0,6,6,"development")
-hardcodedVersion=(0,6,5)
+# hardcodedVersion=(0,6,7,"development") # Change in PyFoam/__init__.py as well
+hardcodedVersion=(0,6,6)
 if PyFoam.version()!=hardcodedVersion:
     print_("ALERT: Reported version",PyFoam.version(),
            "is different from hardcoded version",
@@ -182,7 +183,8 @@ if not numpyPresent:
     numpypyPresent=testLibrary("numpypy","This workaround for PyPy does not work","This seems to by PyPy")
     if numpypyPresent:
         numpyPresent=testLibrary("numpy","Does not work in pypy","Numpy works with workaround")
-testLibrary("openpyxl","Not a problem. Only used for exporting pandas-data to Excel-files (advanced)")
+testLibrary("openpyxl","Not a problem. Only used for exporting pandas-data to Excel-files (advanced). If xlsxwriter is installed it will handle this (xlsxwriter is recommended anyway)")
+testLibrary("xlsxwriter","Not a problem. Only used for exporting pandas-data to XLSX-files (advanced). If openpyxl is installed then this module can handle that")
 testLibrary("pandas","Not a problem. Only used for handling of advanced data-handling")
 testLibrary("ply","Not a problem. Version from ThirdParty is used")
 testLibrary("profile","Not a problem. Can't profile using this library")
@@ -199,6 +201,7 @@ testLibrary("xlwt","Not a problem. Only used for exporting pandas-data to Excel-
             versionAttribute="__VERSION__")
 testLibrary("xlrd","Not a problem. Only used for importing Excel-files to pandas-data",
             versionAttribute="__VERSION__")
+testLibrary("requests","Not a problem. Currently only needed for the blink(1)-support")
 
 print_()
 print_("Library locations")

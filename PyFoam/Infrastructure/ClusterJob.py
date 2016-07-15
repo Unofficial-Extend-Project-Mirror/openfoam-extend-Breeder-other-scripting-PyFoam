@@ -59,20 +59,20 @@ class ClusterJob(object):
                  parameters={},
                  isDecomposed=False):
         """Initializes the Job
-        @param basename: Basis name of the job
-        @param arrayJob: this job is a parameter variation. The tasks
+        :param basename: Basis name of the job
+        :param arrayJob: this job is a parameter variation. The tasks
         are identified by their task-id
-        @param hardRestart: treat the job as restarted
-        @param autoParallel: Parallelization is handled by the base-class
-        @param doAutoReconstruct: Automatically reconstruct the case if
+        :param hardRestart: treat the job as restarted
+        :param autoParallel: Parallelization is handled by the base-class
+        :param doAutoReconstruct: Automatically reconstruct the case if
         autoParalellel is set. If the value is None then it is looked up from
         the configuration
-        @param foamVersion: The foam-Version that is to be used
-        @param compileOption: Forces compile-option (usually 'Opt' or 'Debug')
-        @param useFoamMPI: Use the OpenMPI supplied with OpenFOAM
-        @param multiRegion: This job consists of multiple regions
-        @param parameters: Dictionary with parameters that are being passed to the Runner
-        @param isDecomposed: Assume that the job is already decomposed"""
+        :param foamVersion: The foam-Version that is to be used
+        :param compileOption: Forces compile-option (usually 'Opt' or 'Debug')
+        :param useFoamMPI: Use the OpenMPI supplied with OpenFOAM
+        :param multiRegion: This job consists of multiple regions
+        :param parameters: Dictionary with parameters that are being passed to the Runner
+        :param isDecomposed: Assume that the job is already decomposed"""
 
         #        print_(os.environ)
 
@@ -263,7 +263,7 @@ class ClusterJob(object):
 
     def execute(self,cmd):
         """Execute a shell command in the case directory. No checking done
-        @param cmd: the command as a string"""
+        :param cmd: the command as a string"""
         oldDir=os.getcwd()
         self.message("Changing directory to",self.casedir())
         os.chdir(self.casedir())
@@ -285,7 +285,7 @@ class ClusterJob(object):
     def templateFile(self,fileName):
         """Looks for a template file and evaluates the template using
         the usual parameters
-        @param fileName: the name of the file that will be
+        :param fileName: the name of the file that will be
         constructed. The template file is the same plus the extension '.template'"""
 
         self.message("Building file",fileName,"from template with parameters",
@@ -310,15 +310,15 @@ class ClusterJob(object):
         If it is a parallel job and the grid has
         already been decomposed (and not yet reconstructed) it is run in
         parallel
-        @param application: the Foam-Application that is to be run
-        @param foamArgs: A list if with the additional arguments for the
+        :param application: the Foam-Application that is to be run
+        :param foamArgs: A list if with the additional arguments for the
         Foam-Application
-        @param compress: Compress the log-file
-        @param args: A list with additional arguments for the Runner-object
-        @param steady: Use the steady-runner
-        @param multiRegion: Run this on multiple regions (if None: I don't have an opinion on this)
-        @param progress: Only output the time and nothing else
-        @param noLog: Do not generate a logfile"""
+        :param compress: Compress the log-file
+        :param args: A list with additional arguments for the Runner-object
+        :param steady: Use the steady-runner
+        :param multiRegion: Run this on multiple regions (if None: I don't have an opinion on this)
+        :param progress: Only output the time and nothing else
+        :param noLog: Do not generate a logfile"""
 
         arglist=args[:]
         arglist+=["--job-id=%s" % self.fullJobId()]
@@ -403,7 +403,7 @@ class ClusterJob(object):
 
         Usual tasks include grid conversion/setup, mesh decomposition etc
 
-        @param parameters: a dictionary with parameters"""
+        :param parameters: a dictionary with parameters"""
 
         pass
 
@@ -412,13 +412,13 @@ class ClusterJob(object):
 
         Usually for tasks that can be done on a decomposed grid
 
-        @param parameters: a dictionary with parameters"""
+        :param parameters: a dictionary with parameters"""
 
         pass
 
     def run(self,parameters):
         """Run the actual job. Usually the solver.
-        @param parameters: a dictionary with parameters"""
+        :param parameters: a dictionary with parameters"""
 
         pass
 
@@ -427,27 +427,27 @@ class ClusterJob(object):
 
         Usually for tasks that can be done on a decomposed grid
 
-        @param parameters: a dictionary with parameters"""
+        :param parameters: a dictionary with parameters"""
 
         pass
 
     def cleanup(self,parameters):
         """Clean up after a job
-        @param parameters: a dictionary with parameters"""
+        :param parameters: a dictionary with parameters"""
 
         pass
 
     def additionalReconstruct(self,parameters):
         """Additional reconstruction of parallel runs (Stuff that the
         OpenFOAM-reconstructPar doesn't do
-        @param parameters: a dictionary with parameters"""
+        :param parameters: a dictionary with parameters"""
 
         pass
 
     def taskParameters(self,id):
         """Parameters for a specific task
-        @param id: the id of the task
-        @return: a dictionary with parameters for this task"""
+        :param id: the id of the task
+        :return: a dictionary with parameters for this task"""
 
         error("taskParameter not implemented. Not a parameterized job")
 
@@ -455,7 +455,7 @@ class ClusterJob(object):
 
     def additionalParameters(self):
         """Additional parameters
-        @return: a dictionary with parameters for this task"""
+        :return: a dictionary with parameters for this task"""
 
         warning("Method 'additionalParameters' not implemented. Not a problem. Just saying")
 
@@ -505,11 +505,11 @@ class SolverJob(ClusterJob):
                  solverNoLog=False,
                  solverLogCompress=False,
                  isDecomposed=False):
-        """@param template: Name of the template-case. It is assumed that
+        """:param template: Name of the template-case. It is assumed that
         it resides in the same directory as the actual case
-        @param cloneParameters: a list with additional parameters for the
+        :param cloneParameters: a list with additional parameters for the
         CloneCase-object that copies the template
-        @param solverProgress: Only writes the current time of the solver"""
+        :param solverProgress: Only writes the current time of the solver"""
 
         ClusterJob.__init__(self,basename,
                             arrayJob=arrayJob,

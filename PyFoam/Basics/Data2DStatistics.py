@@ -21,11 +21,11 @@ class Data2DStatistics(object):
                  noStrings=False,
                  failureValue=None):
         """
-	@param metrics: metrics of the data
-        @param compare: metrics of the comparsion with another data-set
-        @param small: the value that is considered to be close to 0
-        @param noStrings: only put numbers into the tables
-        @param failureValue: the value to use if an evaluation fails
+	:param metrics: metrics of the data
+        :param compare: metrics of the comparsion with another data-set
+        :param small: the value that is considered to be close to 0
+        :param noStrings: only put numbers into the tables
+        :param failureValue: the value to use if an evaluation fails
 	"""
         self.__metrics=metrics
         self.__compare=compare
@@ -49,8 +49,8 @@ class Data2DStatistics(object):
 
     def _extractTable(self,name,data=None):
         """Extract data and fill it into a data-table
-        @param name: name of the entry that should be got
-        @param data: the dataset. If unset then self.__metrics is used"""
+        :param name: name of the entry that should be got
+        :param data: the dataset. If unset then self.__metrics is used"""
         if data==None:
             data=self.__metrics
 
@@ -79,8 +79,8 @@ class Data2DStatistics(object):
 
     def func(self,func,val):
         """Evaluate a function on the data
-        @param func: either a callable function or a string that evaluates to a callable
-        @param val: name of the data value to use"""
+        :param func: either a callable function or a string that evaluates to a callable
+        :param val: name of the data value to use"""
         if isinstance(func, collections.Callable):
             f=func
         elif type(func)==str:
@@ -116,7 +116,7 @@ class Data2DStatistics(object):
 
     def __relativeErrorInternal(self,name):
         """Return a table with the relative error
-        @param name: spcifies the name under which the error is found in the data"""
+        :param name: spcifies the name under which the error is found in the data"""
         dataRange=self.range()
         if self.__compare==None:
             error("Need comparison data for relative error")

@@ -76,9 +76,11 @@ stopped and the last simulation state is written to disk
 
         sol=SolutionDirectory(cName,archive=None)
 
-        self.clearCase(sol)
-
         lam=self.getParallel(sol)
+
+        self.clearCase(SolutionDirectory(cName,
+                                         archive=None,
+                                         parallel=lam is not None))
 
         self.setLogname()
 

@@ -13,7 +13,7 @@ from os import path
 from copy import deepcopy
 import sys
 
-from PyFoam.ThirdParty.six import print_,integer_types,iteritems
+from PyFoam.ThirdParty.six import print_,integer_types,iteritems,string_types
 
 class ParsedParameterFile(FileBasisBackup):
     """ Parameterfile whose complete representation is read into
@@ -38,25 +38,25 @@ class ParsedParameterFile(FileBasisBackup):
                  dictStack=None,
                  createZipped=True,
                  longListOutputThreshold=20):
-        """@param name: The name of the parameter file
-        @param backup: create a backup-copy of the file
-        @param boundaryDict: the file to parse is a boundary file
-        @param listDict: the file only contains a list
-        @param listDictWithHeader: the file only contains a list and a header
-        @param listLengthUnparsed: Lists longer than that length are not parsed
-        @param binaryMode: Parse long lists in binary mode (to be overridden by
+        """:param name: The name of the parameter file
+        :param backup: create a backup-copy of the file
+        :param boundaryDict: the file to parse is a boundary file
+        :param listDict: the file only contains a list
+        :param listDictWithHeader: the file only contains a list and a header
+        :param listLengthUnparsed: Lists longer than that length are not parsed
+        :param binaryMode: Parse long lists in binary mode (to be overridden by
         the settings in the header).
-        @param treatBinaryAsASCII: even if the header says that this is a
+        :param treatBinaryAsASCII: even if the header says that this is a
         binary file treat it like an ASCII-file
-        @param noHeader: don't expect a header
-        @param noBody: don't read the body of the file (only the header)
-        @param doMacroExpansion: expand #include and $var
-        @param noVectorOrTensor: short lists of length 3, 6 an 9 are NOT
+        :param noHeader: don't expect a header
+        :param noBody: don't read the body of the file (only the header)
+        :param doMacroExpansion: expand #include and $var
+        :param noVectorOrTensor: short lists of length 3, 6 an 9 are NOT
         interpreted as vectors or tensors
-        @param dontRead: Do not read the file during construction
-        @param longListOutputThreshold: Lists that are longer than this are
+        :param dontRead: Do not read the file during construction
+        :param longListOutputThreshold: Lists that are longer than this are
         prefixed with a length
-        @param dictStack: dictionary stack for lookup (only used for include)
+        :param dictStack: dictionary stack for lookup (only used for include)
         """
 
         self.noHeader=noHeader
@@ -206,6 +206,12 @@ class Enumerate(object):
 
 inputModes=Enumerate(["merge","error","warn","protect","overwrite","default"])
 
+class NotAPrelist:
+    """Class to return if the length of the prelist does not fit the prefix"""
+    def __init__(self,a,b):
+        self.a=a
+        self.b=b
+
 class FoamFileParser(PlyParser):
     """Class that parses a string that contains the contents of an
     OpenFOAM-file and builds a nested structure of directories and
@@ -230,12 +236,12 @@ class FoamFileParser(PlyParser):
                  noVectorOrTensor=False,
                  dictStack=None,
                  duplicateFail=True):
-        """@param content: the string to be parsed
-        @param fName: Name of the actual file (if any)
-        @param debug: output debug information during parsing
-        @param noHeader: switch that turns off the parsing of the header
-        @param duplicateCheck: Check for duplicates in dictionaries
-        @param duplicateFail: Fail if a duplicate is discovered"""
+        """:param content: the string to be parsed
+        :param fName: Name of the actual file (if any)
+        :param debug: output debug information during parsing
+        :param noHeader: switch that turns off the parsing of the header
+        :param duplicateCheck: Check for duplicates in dictionaries
+        :param duplicateFail: Fail if a duplicate is discovered"""
 
         self.binaryMode=binaryMode
         self.treatBinaryAsASCII=treatBinaryAsASCII
@@ -252,6 +258,7 @@ class FoamFileParser(PlyParser):
         self.noVectorOrTensor=noVectorOrTensor
         self.inHeader=True
         self.inBinary=False
+        self.checkPrelistLength=True
 
         # Make sure that the first comment is discarded
         self.collectDecorations=False
@@ -289,6 +296,7 @@ class FoamFileParser(PlyParser):
         if boundaryDict:
             self.start='boundaryDict'
             startCnt+=1
+            self.checkPrelistLength=False
 
         if startCnt>1:
             error("Only one start symbol can be specified.",startCnt,"are specified")
@@ -416,6 +424,7 @@ class FoamFileParser(PlyParser):
         'PROTECT',
         'DEFAULT',
         'INCLUDE',
+        'INCLUDE_ETC',
         'INCLUDEIFPRESENT',
         'REMOVE',
         'INPUTMODE',
@@ -431,6 +440,7 @@ class FoamFileParser(PlyParser):
         'uniform'    : 'UNIFORM',
         'nonuniform' : 'NONUNIFORM',
         'include'    : 'INCLUDE',
+        'includeEtc' : 'INCLUDE_ETC',
         'includeIfPresent': 'INCLUDEIFPRESENT',
         'remove'     : 'REMOVE',
         'inputMode'  : 'INPUTMODE',
@@ -553,11 +563,11 @@ class FoamFileParser(PlyParser):
 
     t_ICONST = r'(-|)\d+([uU]|[lL]|[uU][lL]|[lL][uU])?'
 
-    t_FCONST = r'(-|)((\d+)(\.\d*)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+))([lL]|[fF])?'
+    t_FCONST = r'(-|)((\d+)(\.\d*)([eE](\+|-)?(\d+))? | (\d+)[eE](\+|-)?(\d+))([lL]|[fF])?'
 
     t_SCONST = r'\"([^\\\n]|(\\.))*?\"'
 
-    literals = "(){};[]"
+    literals = "(){};[]^"
 
     t_ignore=" \t\r"
 
@@ -572,7 +582,9 @@ class FoamFileParser(PlyParser):
             pos=line.find("=")
 
             if pos>=0 and not self.binaryMode:
-                if ((line.find("//")>=0 and line.find("//")<pos)) or (line.find("/*")>=0 and line.find("/*")<pos) or (line.find('"')>=0 and line.find('"')<pos):
+                if ((line.find("//")>=0 and line.find("//")<pos)) or \
+                   (line.find("/*")>=0 and line.find("/*")<pos) or \
+                   (line.find('"')>=0 and line.find('"')<pos):
                     return
                 t.value = line
                 t.type = "REACTION"
@@ -670,8 +682,12 @@ class FoamFileParser(PlyParser):
 
     def p_onlyListOrPList(self,p):
         '''onlyListOrPList : list
-                           | prelist '''
-        p[0]=p[1]
+                           | prelist
+                           | uniformfield '''
+        if isinstance(p[1],(NotAPrelist,)):
+            p[0]=(p[1].a,p[1].b)
+        else:
+            p[0]=p[1]
 
     def p_pureListWithHeader(self,p):
         '''pureListWithHeader : header onlyListOrPList'''
@@ -718,9 +734,14 @@ class FoamFileParser(PlyParser):
 
     def p_include(self,p):
         '''include : INCLUDE ignore_rest_of_line SCONST
+                   | INCLUDE_ETC ignore_rest_of_line SCONST
                    | INCLUDEIFPRESENT ignore_rest_of_line SCONST'''
         if self.doMacros:
             fName=path.join(self.directory(),p[3][1:-1])
+            if p[1]=="includeEtc":
+                from PyFoam.FoamInformation import foamEtc
+                fName=path.join(foamEtc(),p[3][1:-1])
+
             read=True
             if p[1]=="includeIfPresent" and not path.exists(fName):
                 read=False
@@ -774,7 +795,7 @@ class FoamFileParser(PlyParser):
         p[0] = int(p[1])
 
     def p_float(self,p):
-        '''integer : FCONST'''
+        '''float : FCONST'''
         p[0] = float(p[1])
 
     def p_enter_dict(self,p):
@@ -877,16 +898,29 @@ class FoamFileParser(PlyParser):
         p.lexer.level=0
         p.lexer.code_start = p.lexer.lexpos
 
+    def p_uniformfield(self,p):
+        ''' uniformfield : integer '{' number '}'
+                         | integer '{' vector '}'
+                         | integer '{' tensor '}'
+                         | integer '{' symmtensor '}' '''
+        p[0] = Field(p[3],length=p[1])
+
     def p_prelist(self,p):
         '''prelist : integer prelist_seen '(' itemlist ')'
                    | integer prelist_seen '(' binaryblob ')'
-                   | integer prelist_seen '(' unparsed ')' '''
+                   | integer prelist_seen '(' unparsed ')'
+                   | integer prelist_seen '{' item '}' '''
         if type(p[4])==Unparsed:
             p[0] = UnparsedList(int(p[1]),p[4].data)
         elif type(p[4])==BinaryBlob:
             p[0] = BinaryList(int(p[1]),p[4].data)
+        elif p[5]=='}':
+            p[0]=[ p[4] ]*int(p[1])
         else:
-            p[0] = self.condenseAllPreFixLists(p[4])
+            if len(p[4])!=p[1] and self.checkPrelistLength:
+                p[0] = NotAPrelist(p[1],p[4])
+            else:
+                p[0] = self.condenseAllPreFixLists(p[4])
 
     def p_itemlist(self,p):
         '''itemlist : itemlist item
@@ -899,8 +933,12 @@ class FoamFileParser(PlyParser):
                 p[0]=[ p[1] ]
         else:
             p[0]=p[1]
-            if p[2]!=';':
-                p[0].append(p[2])
+            if isinstance(p[2],(NotAPrelist,)):
+                p[0].append(p[2].a)
+                p[0].append(p[2].b)
+            else:
+                if p[2]!=';':
+                    p[0].append(p[2])
 
     def p_wordlist(self,p):
         '''wordlist : wordlist word
@@ -985,6 +1023,7 @@ class FoamFileParser(PlyParser):
         '''dictline : dictkey dictitem ';'
                     | dictkey list ';'
                     | dictkey prelist ';'
+                    | dictkey uniformfield ';'
                     | dictkey fieldvalue ';'
                     | macro
                     | substitution ';'
@@ -1017,7 +1056,10 @@ class FoamFileParser(PlyParser):
                             doAgain=True
                             break
         if len(p)==4:
-            p[0] = ( p[1] , p[2] )
+            if isinstance(p[2],(NotAPrelist,)):
+                p[0] = ( p[1] , (p[2].a,p[2].b) )
+            else:
+                p[0] = ( p[1] , p[2] )
         elif len(p)==3:
             if p[2]==';':
                 p[0]= (p[1],'')
@@ -1030,16 +1072,46 @@ class FoamFileParser(PlyParser):
     def p_number(self,p):
         '''number : integer
                   | FCONST'''
-        p[0] = p[1]
+        try:
+            p[0] = int(p[1])
+        except ValueError:
+            p[0] = float(p[1])
+
+    def p_symbolic_dimension_terminal(self,p):
+        ''' symbolic_dimension_terminal : word
+                                        | number
+                                        | '('
+                                        | ')'
+                                        | '*'
+                                        | '/'
+                                        | '^' '''
+        p[0]=p[1]
+
+    # We don't care if the dimension string makes sense. only the right symbols are checked for
+    def p_symbolic_dimension(self,p):
+        '''symbolic_dimension :  symbolic_dimension_terminal symbolic_dimension
+                              |  symbolic_dimension_terminal '''
+        if len(p)==2:
+            p[0]=str(p[1])
+        else:
+            inter=" "
+            if isinstance(p[1],string_types) and p[1] in "(*/^":
+                inter=""
+            elif p[2][0] in ")*/^":
+                inter=""
+            p[0]=str(p[1])+inter+p[2]
 
     def p_dimension(self,p):
         '''dimension : '[' number number number number number number number ']'
-                     | '[' number number number number number ']' '''
-        result=p[2:-1]
-        if len(result)==5:
-            result+=[0,0]
-
-        p[0]=Dimension(*result)
+                     | '[' number number number number number ']'
+                     | '[' symbolic_dimension ']' '''
+        if len(p)==4:
+            p[0]=Dimension(p[2])
+        else:
+            result=p[2:-1]
+            if len(result)==5:
+                result+=[0,0]
+            p[0]=Dimension(*result)
 
     def p_vector(self,p):
         '''vector : '(' number number number ')' '''
@@ -1074,9 +1146,15 @@ class FoamFileParser(PlyParser):
                       | NONUNIFORM prelist
                       | NONUNIFORM NAME prelist'''
         if len(p)==4:
-            p[0] = Field(p[3],name=p[2])
+            if isinstance(p[3],(NotAPrelist,)):
+                p[0] = Field(p[3].b,name=p[2])
+            else:
+                p[0] = Field(p[3],  name=p[2])
         else:
-            p[0] = Field(p[2])
+            if isinstance(p[2],(NotAPrelist,)):
+                p[0] = Field(p[2].b)
+            else:
+                p[0] = Field(p[2]  )
 
     def p_dictitem(self,p):
         '''dictitem : longitem
@@ -1120,7 +1198,9 @@ class FoamFileParser(PlyParser):
     def p_item(self,p):
         '''item : pitem
                 | REACTION
+                | prelist
                 | list
+                | uniformfield
                 | dictionary'''
         p[0] = p[1]
 
@@ -1176,8 +1256,8 @@ class FoamStringParser(FoamFileParser):
                  listDict=False,
                  doMacroExpansion=False,
                  duplicateFail=False):
-        """@param content: the string to be parsed
-        @param debug: output debug information during parsing"""
+        """:param content: the string to be parsed
+        :param debug: output debug information during parsing"""
 
         FoamFileParser.__init__(self,
                                 content,
@@ -1201,8 +1281,8 @@ class ParsedBoundaryDict(ParsedParameterFile):
                  treatBinaryAsASCII=False,
                  backup=False,
                  debug=False):
-        """@param name: The name of the parameter file
-        @param backup: create a backup-copy of the file"""
+        """:param name: The name of the parameter file
+        :param backup: create a backup-copy of the file"""
 
         ParsedParameterFile.__init__(self,
                                      name,

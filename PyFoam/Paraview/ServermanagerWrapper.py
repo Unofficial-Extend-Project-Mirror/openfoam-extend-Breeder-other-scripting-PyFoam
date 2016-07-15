@@ -27,7 +27,7 @@ class ServermanagerWrapper(object):
     def __init__(self,requiredReader="PV3FoamReader"):
         """Sets up the Servermanager in such a way that it is usable
         with OpenFOAM-data.
-        @param requiredReader: Reader that is needed. If not found, try to load plugins"""
+        :param requiredReader: Reader that is needed. If not found, try to load plugins"""
 
         try:
             self.con=self.module().Connect()

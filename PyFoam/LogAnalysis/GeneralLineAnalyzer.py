@@ -23,17 +23,23 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
                  accumulation=None,
                  singleFile=False,
                  progressTemplate=None,
+                 plotIterations=False,
+#                 plotIterations=True,
                  startTime=None,
                  endTime=None):
         """
-        @param titles: The titles of the data elements
-        @param progressTemplate: Progress output to be reported
+        :param titles: The titles of the data elements
+        :param progressTemplate: Progress output to be reported
+        :param plotIterations: plot iterations instead of the real time
         """
         LogLineAnalyzer.__init__(self)
 
         self.doTimelines=doTimelines
         self.doFiles=doFiles
         self.singleFile=singleFile
+        self.plotIterations=plotIterations
+        if self.plotIterations:
+            self.iterCounter=0
 
         self.files=None
         self.titles=titles
@@ -82,7 +88,7 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
     def setTitles(self,titles):
         """
         Sets the titles anew
-        @param titles: the new titles
+        :param titles: the new titles
         """
         if self.doFiles:
             self.titles=titles
@@ -100,7 +106,7 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
 
     def timeChanged(self):
         """Sets the current time in the timelines"""
-        if self.doTimelines:
+        if self.doTimelines and not self.plotIterations:
             try:
                 time=float(self.getTime())
                 if (self.startTime==None or time>=self.startTime) and (self.endTime==None or time<=self.endTime):
@@ -109,13 +115,15 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
                 e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
                 warning("Problem with lines",e)
                 raise e
+        if self.plotIterations:
+            self.lines.setTime(self.iterCounter)
 
         self.didProgress=False
         self.setPhase()
 
     def getTimeline(self,name):
-        """@param name: Name of the timeline to return
-        @return: the timeline as two list: the times and the values"""
+        """:param name: Name of the timeline to return
+        :return: the timeline as two list: the times and the values"""
         if self.doTimelines:
             return self.lines.getTimes(),self.lines.getValues(name)
         else:
@@ -133,10 +141,13 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
             self.startAnalysis(m)
 
             if self.doTimelines:
+                if self.plotIterations:
+                    self.iterCounter+=1
+                    self.lines.setTime(self.iterCounter)
                 try:
                     time=float(self.getTime())
                     try:
-                        if (self.startTime==None or time>=self.startTime) and (self.endTime==None or time<=self.endTime):
+                        if (self.startTime==None or time>=self.startTime) and (self.endTime==None or time<=self.endTime) or self.plotIterations:
                             self.addToTimelines(m)
                     except ValueError:
                         e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
@@ -169,14 +180,14 @@ class GeneralLineAnalyzer(LogLineAnalyzer):
     def addToTimelines(self,match):
         """Method that adds matched data to timelines
 
-        @param match: data matched by a regular expression"""
+        :param match: data matched by a regular expression"""
 
         pass
 
     def addToFiles(self,match):
         """Method that adds matched data to files
 
-        @param match: data matched by a regular expression"""
+        :param match: data matched by a regular expression"""
 
         pass
 

@@ -10,8 +10,8 @@ class ContextLineAnalyzer(LogLineAnalyzer):
 
     def __init__(self,trigger,nr=1):
         """
-        @param trigger: The regular expression that has to match before data is collected
-        @param nr: The number of lines after the match that data is collected
+        :param trigger: The regular expression that has to match before data is collected
+        :param nr: The number of lines after the match that data is collected
         """
         LogLineAnalyzer.__init__(self)
 
@@ -35,7 +35,7 @@ class ContextLineAnalyzer(LogLineAnalyzer):
         """
         Called nr lines after the match
 
-        @param line: The line that should be analyzed
+        :param line: The line that should be analyzed
         """
         pass
 
@@ -43,7 +43,7 @@ class ContextLineAnalyzer(LogLineAnalyzer):
         """
         Called if the line matches
 
-        @param m: The match-object
+        :param m: The match-object
         """
         pass
 

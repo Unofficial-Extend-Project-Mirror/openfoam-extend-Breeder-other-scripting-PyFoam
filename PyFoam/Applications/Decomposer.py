@@ -15,6 +15,7 @@ from PyFoam.RunDictionary.RegionCases import RegionCases
 from PyFoam.RunDictionary.ParsedParameterFile import FoamStringParser
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 from PyFoam.FoamInformation import foamVersion
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 from .CommonMultiRegion import CommonMultiRegion
 from .CommonStandardOutput import CommonStandardOutput
@@ -104,6 +105,14 @@ on that case
                         action="store",
                         default=None,
                         help="File with the allocations. (for manual)")
+
+        spec.add_option("--template-dict",
+                        dest="templateDict",
+                        action="store",
+                        default=None,
+                        help="File with 'template' dictionary. The utility uses this as default values and overwrites everything specified (can be used for 'complex' parameters)")
+
+
         self.parser.add_option_group(spec)
 
         behave=OptionGroup(self.parser,
@@ -171,7 +180,10 @@ on that case
         case=path.abspath(self.parser.getArgs()[0])
         method=self.opts.method
 
-        result={}
+        if self.opts.templateDict:
+            result=ParsedParameterFile(self.opts.templateDict).content
+        else:
+            result={}
         result["numberOfSubdomains"]=nr
         result["method"]=method
 

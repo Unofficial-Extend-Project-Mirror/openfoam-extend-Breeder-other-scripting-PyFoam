@@ -19,8 +19,8 @@ from PyFoam.ThirdParty.six import PY3
 from PyFoam.ThirdParty.six import b as toByte
 
 class WrongDataSize(FatalErrorPyFoamException):
-    def __init__(self):
-        FatalErrorPyFoamException.__init__(self,"Size of the arrays differs")
+    def __init__(self,txt="Size of the arrays differs"):
+        FatalErrorPyFoamException.__init__(self,txt)
 
 class SpreadsheetData(object):
     """
@@ -37,19 +37,35 @@ class SpreadsheetData(object):
                  data=None,
                  names=None,
                  isSampleFile=False,
+                 skip_header=0,
+                 stripCharacters=None,
+                 replaceFirstLine=None,
                  title=None):
         """Either this is constructed from a file or from the data and the column headers
 
-        @param timeName: the data colum that is to be considered the time in this file
-        @param validData: names of the valid data columns (all others should be discarded)
-        @param validMatchRegexp: Should the validData be interpreted as regular expressions
-        @param csvName: name of the CSV-file the data should be constructed from,
-        @param txtName: name of a file the data should be constructed from,
-        @param excelName: name of a Excel-file the data should be constructed from (uses the first sheet in the file),
-        @param data: the actual data to use
-        @param names: the names for the column header
-        @param isSampleFile: file produced by sample/set. Field names are determined from the filename
-        @param title: a name that is used to make unique heades names"""
+        :param timeName: the data colum that is to be considered the time in this file
+        :param validData: names of the valid data columns (all others should be discarded)
+        :param validMatchRegexp: Should the validData be interpreted as regular expressions
+        :param csvName: name of the CSV-file the data should be constructed from,
+        :param txtName: name of a file the data should be constructed from,
+        :param excelName: name of a Excel-file the data should be constructed from (uses the first sheet in the file),
+        :param data: the actual data to use
+        :param names: the names for the column header
+        :param isSampleFile: file produced by sample/set. Field names are determined from the filename
+        :param stripCharacters: String with characters that should be removed before reading
+        :param replaceFirstLine: String with a line that should replace the first line (usually to replace the header)
+        :param title: a name that is used to make unique heades names"""
+
+        def filterChars(fName):
+            with open(fName) as f:
+                first=True
+                for l in f.readlines():
+                    if first and replaceFirstLine:
+                        l=replaceFirstLine+"\n"
+                    elif stripCharacters:
+                        l=l.translate(None,stripCharacters)
+                    first=False
+                    yield toByte(l)
 
         self.title=title
 
@@ -63,7 +79,9 @@ class SpreadsheetData(object):
 
         if csvName:
             try:
-                rec=numpy.recfromcsv(csvName)
+                rec=numpy.recfromcsv(filterChars(csvName),
+                                     names=True if names is None else names,
+                                     skip_header=skip_header)
                 data=[tuple(float(x) for x in i) for i in rec]
                 names=list(rec.dtype.names)
             except AttributeError:
@@ -80,7 +98,7 @@ class SpreadsheetData(object):
                 if isSampleFile:
                     from os import path
 
-                    raw=numpy.recfromtxt(txtName)
+                    raw=numpy.recfromtxt(filterChars(txtName))
                     rawName=path.splitext(path.basename(txtName))[0].split("_")[1:]
                     pData=[list(raw[:,0])]
                     names=["coord"]
@@ -105,7 +123,7 @@ class SpreadsheetData(object):
                               "for scalars or",len(rawName)*3+1,"for vector")
                     data=[tuple(v) for v in numpy.asarray(pData).T]
                 else:
-                    rec=numpy.recfromtxt(txtName,names=True)
+                    rec=numpy.recfromtxt(filterChars(txtName),names=True)
                     data=[tuple(float(x) for x in i) for i in rec]
                     if names is None:
                         names=list(rec.dtype.names)
@@ -146,6 +164,8 @@ class SpreadsheetData(object):
             index=0
         self.time=self.data.dtype.names[index]
 
+        self.eliminatedNames=None
+
         if validData:
             usedData=[]
             usedNames=[]
@@ -154,6 +174,8 @@ class SpreadsheetData(object):
                 if n==self.time or self.validName(n,validData,validMatchRegexp):
                     usedData.append(tuple(self.data[n]))
                     usedNames.append(n)
+
+            self.eliminatedNames=set(self.data.dtype.names)-set(usedNames)
 
             usedData=numpy.array(usedData).transpose()
             self.data=numpy.array([tuple(v) for v in usedData],
@@ -202,8 +224,8 @@ class SpreadsheetData(object):
     def writeCSV(self,fName,
                  delimiter=","):
         """Write data to a CSV-file
-        @param fName: Name of the file
-        @param delimiter: Delimiter to be used in the CSV-file"""
+        :param fName: Name of the file
+        :param delimiter: Delimiter to be used in the CSV-file"""
 
         f=open(fName,"wb")
         if PY3:
@@ -215,7 +237,7 @@ class SpreadsheetData(object):
 
     def tRange(self,time=None):
         """Return the range of times
-        @param time: name of the time. If None the first column is used"""
+        :param time: name of the time. If None the first column is used"""
         if time==None:
             time=self.time
         t=self.data[time]
@@ -226,9 +248,9 @@ class SpreadsheetData(object):
         """Join this object with another. Assume that they have the same
         amount of rows and that they have one column that designates the
         time and is called the same and has the same values
-        @param other: the other array
-        @param time: name of the time. If None the first column is used
-        @param prefix: String that is added to the other names. If none is given then
+        :param other: the other array
+        :param time: name of the time. If None the first column is used
+        :param prefix: String that is added to the other names. If none is given then
         the title is used"""
         if time==None:
             time=self.time
@@ -244,7 +266,7 @@ class SpreadsheetData(object):
         if len(t1)!=len(t2):
             raise WrongDataSize()
         if max(abs(t1-t2))>1e-10:
-            error("Times do not have the same values")
+            raise WrongDataSize("Times do not have the same values")
 
         names=[]
         data=[]
@@ -269,11 +291,11 @@ class SpreadsheetData(object):
 
     def recalcData(self,name,expr,create=False):
         """Recalc or add a column to the data
-        @param name: the colum (must exist if it is not created. Otherwise it must not exist)
-        @param expr: the expression to calculate. All present column names are usable as variables.
+        :param name: the colum (must exist if it is not created. Otherwise it must not exist)
+        :param expr: the expression to calculate. All present column names are usable as variables.
         There is also a variable data for subscripting if the data is not a valid variable name. If
         the column is not create then there is also a variable this that is an alias for the name
-        @param create: whether a new data item should be created"""
+        :param create: whether a new data item should be created"""
         if create and name in self.names():
             error("Item",name,"already exists in names",self.names())
         elif not create and not name in self.names():
@@ -292,9 +314,9 @@ class SpreadsheetData(object):
                data,
                allowDuplicates=False):
         """Add another column to the data. Assumes that the number of rows is right
-        @param name: the name of the column
-        @param data: the actual data
-        @param allowDuplicates: If the name already exists make it unique by appending _1, _2 ..."""
+        :param name: the name of the column
+        :param data: the actual data
+        :param allowDuplicates: If the name already exists make it unique by appending _1, _2 ..."""
 
         arr = numpy.asarray(data)
         newname=name
@@ -319,12 +341,12 @@ class SpreadsheetData(object):
                  invalidExtend=False,
                  noInterpolation=False):
         """'Evaluate' the data at a specific time by linear interpolation
-        @param t: the time at which the data should be evaluated
-        @param name: name of the data column to be evaluated. Assumes that that column
+        :param t: the time at which the data should be evaluated
+        :param name: name of the data column to be evaluated. Assumes that that column
         is ordered in ascending order
-        @param time: name of the time column. If none is given then the first column is assumed
-        @param invalidExtend: if t is out of the valid range then use the smallest or the biggest value. If False use nan
-        @param noInterpolation: if t doesn't exactly fit a data-point return 'nan'"""
+        :param time: name of the time column. If none is given then the first column is assumed
+        :param invalidExtend: if t is out of the valid range then use the smallest or the biggest value. If False use nan
+        :param noInterpolation: if t doesn't exactly fit a data-point return 'nan'"""
 
         if time==None:
             time=self.time
@@ -354,7 +376,7 @@ class SpreadsheetData(object):
         iHigh=len(x)-1
 
         while (iHigh-iLow)>1:
-            iNew = iLow + (iHigh-iLow)/2
+            iNew = iLow + int((iHigh-iLow)/2)
 
             if x[iNew]==t:
                 # we got lucky
@@ -371,11 +393,11 @@ class SpreadsheetData(object):
     def addTimes(self,times,time=None,interpolate=False,invalidExtend=False):
         """Extend the data so that all new times are represented (add rows
         if they are not there)
-        @param time: the name of the column with the time
-        @param times: the times that shoild be there
-        @param interpolate: interpolate the data in new rows. Otherwise
+        :param time: the name of the column with the time
+        :param times: the times that shoild be there
+        :param interpolate: interpolate the data in new rows. Otherwise
         insert 'nan'
-        @param invalidExtend: if t is out of the valid range then use
+        :param invalidExtend: if t is out of the valid range then use
         the smallest or the biggest value. If False use nan"""
 
         if time==None:
@@ -437,13 +459,13 @@ class SpreadsheetData(object):
                  extendData=False,
                  noInterpolation=False):
         """Calculate values from another dataset at the same times as in this data-set
-        @param other: the other data-set
-        @param name: name of the data column to be evaluated. Assumes that that column
+        :param other: the other data-set
+        :param name: name of the data column to be evaluated. Assumes that that column
         is ordered in ascending order
-        @param time: name of the time column. If none is given then the first column is assumed
-        @param invalidExtend: see __call__
-        @param extendData: if the time range of x is bigger than the range then extend the range before resampling
-        @param noInterpolation: if t doesn't exactly fit a data-point return 'nan'"""
+        :param time: name of the time column. If none is given then the first column is assumed
+        :param invalidExtend: see __call__
+        :param extendData: if the time range of x is bigger than the range then extend the range before resampling
+        :param noInterpolation: if t doesn't exactly fit a data-point return 'nan'"""
         if time==None:
             time=self.time
 
@@ -512,13 +534,13 @@ class SpreadsheetData(object):
         a reference. Returns a dictionary with a number of norms: maximum absolute
         difference, average absolute difference
         on all timepoints, average absolute difference weighted by time
-        @param other: the other data-set
-        @param name: name of the data column to be evaluated. Assumes that that column
+        :param other: the other data-set
+        :param name: name of the data column to be evaluated. Assumes that that column
         is ordered in ascending order
-        @param time: name of the time column. If none is given then the first column is assumed
-        @param common: cut off the parts where not both data sets are defined
-        @param minTime: first time which should be compared
-        @param maxTime: last time to compare"""
+        :param time: name of the time column. If none is given then the first column is assumed
+        :param common: cut off the parts where not both data sets are defined
+        :param minTime: first time which should be compared
+        :param maxTime: last time to compare"""
 
         if time==None:
             time=self.time
@@ -602,11 +624,11 @@ class SpreadsheetData(object):
                 maxTime=None):
         """Calculates the metrics for a data set. Returns a dictionary
         with a number of norms: minimum, maximum, average, average weighted by time
-        @param name: name of the data column to be evaluated. Assumes that that column
+        :param name: name of the data column to be evaluated. Assumes that that column
         is ordered in ascending order
-        @param time: name of the time column. If none is given then the first column is assumed
-        @param minTime: first time to take metrics from
-        @param maxTime: latest time to take matrics from"""
+        :param time: name of the time column. If none is given then the first column is assumed
+        :param minTime: first time to take metrics from
+        :param maxTime: latest time to take matrics from"""
 
         if time==None:
             time=self.time
@@ -655,7 +677,7 @@ class SpreadsheetData(object):
 
     def getData(self,reindex=True):
         """Return a dictionary of the data in the DataFrame format of pandas
-        @param: drop duplicate times (setting it to False might break certain Pandas-operations)"""
+        :param: drop duplicate times (setting it to False might break certain Pandas-operations)"""
         try:
             from PyFoam.Wrappers.Pandas import PyFoamDataFrame
         except ImportError:
@@ -666,7 +688,7 @@ class SpreadsheetData(object):
 
     def getSeries(self,reindex=True):
         """Return a dictionary of the data-columns in the Series format of pandas
-        @param: drop duplicate times (setting it to False might break certain Pandas-operations)"""
+        :param: drop duplicate times (setting it to False might break certain Pandas-operations)"""
         try:
             import pandas
         except ImportError:
@@ -684,7 +706,11 @@ class SpreadsheetData(object):
                                       name=n)
                 if reindex:
                     if len(data[n])!=len(realindex):
-                        data[n].axes[0].is_unique=True
+                        try:
+                            data[n].axes[0].is_unique=True
+                        except:
+                            # Newer Pandas versions don't allow setting this. Just drop duplicates
+                            data[n]=data[n].drop_duplicates()
                         data[n]=data[n].reindex_axis(realindex)
 
         return data

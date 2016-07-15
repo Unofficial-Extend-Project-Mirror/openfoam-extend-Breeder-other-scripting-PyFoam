@@ -10,10 +10,10 @@ class NameFinderLineAnalyzer(ContextLineAnalyzer):
 
     def __init__(self,trigger,analyze,idNr=1,nr=1):
         """
-        @param trigger: The regular expression that has to match before data is collected
-        @param nr: The number of lines after the match that data is collected
-        @param analyze: The regular expression that is used for analysis
-        @param idNr: The id of the group that is used for analysis
+        :param trigger: The regular expression that has to match before data is collected
+        :param nr: The number of lines after the match that data is collected
+        :param analyze: The regular expression that is used for analysis
+        :param idNr: The id of the group that is used for analysis
         """
         ContextLineAnalyzer.__init__(self,trigger,nr=nr)
 

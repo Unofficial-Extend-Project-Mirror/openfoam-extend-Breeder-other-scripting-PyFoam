@@ -13,9 +13,9 @@ class XkcdMatplotlibTimelines(MatplotlibTimelines):
                  custom,
                  showWindow=True,
                  registry=None):
-        """@param timelines: The timelines object
-        @type timelines: TimeLineCollection
-        @param custom: A CustomplotInfo-object. Values in this object usually override the
+        """:param timelines: The timelines object
+        :type timelines: TimeLineCollection
+        :param custom: A CustomplotInfo-object. Values in this object usually override the
         other options
         """
 

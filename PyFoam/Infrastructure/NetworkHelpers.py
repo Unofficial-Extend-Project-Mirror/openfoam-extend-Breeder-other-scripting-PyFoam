@@ -18,9 +18,9 @@ import xml,sys
 def freeServerPort(start,length=1):
     """
     Finds a port that is free for serving
-    @param start: the port to start with
-    @param length: the number of ports to scan
-    @return: number of the first free port, -1 if none is found
+    :param start: the port to start with
+    :param length: the number of ports to scan
+    :return: number of the first free port, -1 if none is found
     """
     port=-1
 
@@ -48,10 +48,10 @@ def freeServerPort(start,length=1):
 def checkFoamServers(host,start,length=1):
     """
     Finds the port on a remote host on which Foam-Servers are running
-    @param host: the IP of the host that should be checked
-    @param start: the port to start with
-    @param length: the number of ports to scan
-    @return: a list with the found ports, None if the machine is unreachable
+    :param host: the IP of the host that should be checked
+    :param start: the port to start with
+    :param length: the number of ports to scan
+    :return: a list with the found ports, None if the machine is unreachable
     """
 
     ports=[]

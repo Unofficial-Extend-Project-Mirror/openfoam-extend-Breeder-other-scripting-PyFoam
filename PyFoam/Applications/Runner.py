@@ -25,6 +25,7 @@ from .CommonRestart import CommonRestart
 from .CommonServer import CommonServer
 from .CommonVCSCommit import CommonVCSCommit
 from .CommonPrePostHooks import CommonPrePostHooks
+from .CommonBlink1 import CommonBlink1
 
 from PyFoam.ThirdParty.six import print_
 
@@ -41,7 +42,8 @@ class Runner(PyFoamApplication,
              CommonServer,
              CommonStandardOutput,
              CommonVCSCommit,
-             CommonPrePostHooks):
+             CommonPrePostHooks,
+             CommonBlink1):
     def __init__(self,
                  args=None,
                  **kwargs):
@@ -77,6 +79,7 @@ variables
         CommonServer.addOptions(self)
         CommonVCSCommit.addOptions(self)
         CommonPrePostHooks.addOptions(self)
+        CommonBlink1.addOptions(self)
 
     def run(self):
         if self.opts.keeppseudo and (not self.opts.regions and self.opts.region==None):
@@ -106,11 +109,16 @@ variables
 
         self.processPlotLineOptions(autoPath=casePath)
 
-        self.clearCase(SolutionDirectory(casePath,archive=None))
-
         lam=self.getParallel(SolutionDirectory(casePath,archive=None))
 
+        self.clearCase(SolutionDirectory(casePath,
+                                         archive=None,
+                                         parallel=lam is not None),
+                       runParallel=lam is not None)
+
         self.checkAndCommit(SolutionDirectory(casePath,archive=None))
+
+        self.initBlink()
 
         for theRegion in regionNames:
             args=self.buildRegionArgv(casePath,theRegion)
@@ -140,6 +148,9 @@ variables
             self.addLibFunctionTrigger(run,SolutionDirectory(casePath,archive=None))
             self.runPreHooks()
 
+            if self.blink1:
+                run.addTicker(lambda: self.blink1.ticToc())
+
             run.start()
 
             if len(regionNames)>1:
@@ -155,6 +166,8 @@ variables
             if theRegion!=None:
                 print_("Syncing into master case")
                 regions.resync(theRegion)
+
+        self.stopBlink()
 
         if regions!=None:
             if not self.opts.keeppseudo:

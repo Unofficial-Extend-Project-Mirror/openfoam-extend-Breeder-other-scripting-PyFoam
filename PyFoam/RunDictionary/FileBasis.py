@@ -26,9 +26,9 @@ class FileBasis(Utilities):
     """Comment for lines that were added by PyFoam-routines"""
 
     def __init__(self,name,createZipped=True):
-        """@param name: Name of the file. If the field is zipped the .gz is
+        """:param name: Name of the file. If the field is zipped the .gz is
         appended. Alternatively it can be a filehandle
-        @param createZipped: if the file doesnot exist: should it be created
+        :param createZipped: if the file doesnot exist: should it be created
         as a zipped file?"""
         if hasattr(name,"read"):
             self.name=None
@@ -104,7 +104,7 @@ class FileBasis(Utilities):
 
     def writeFile(self,content=None):
         """ write the whole File from memory
-        @param content: content that should replace the old content"""
+        :param content: content that should replace the old content"""
         if self.name:
             if content!=None:
                 self.content=content
@@ -126,7 +126,7 @@ class FileBasis(Utilities):
     def writeFileAs(self,name):
         """ Writes a copy of the file. Extends with .gz if the original
         is zipped
-        @param name: Name under which the file is written"""
+        :param name: Name under which the file is written"""
         if self.name:
             if path.abspath(self.name)==path.abspath(name):
                 warning(name,"and",self.name,"seem to be the same. Nothing done")
@@ -192,11 +192,11 @@ class FileBasis(Utilities):
     def goTo(self,l,s,out=None,echoLast=False,stop=None):
         """Read lines until a token is found
 
-        @param l: a LineReader object
-        @param s: the string to look for
-        @param out: filehandle to echo the lines to
-        @param stop: pattern that indicates that exp will never be found (only passed through to goMatch)
-        @param echoLast: echo the line with the string"""
+        :param l: a LineReader object
+        :param s: the string to look for
+        :param out: filehandle to echo the lines to
+        :param stop: pattern that indicates that exp will never be found (only passed through to goMatch)
+        :param echoLast: echo the line with the string"""
         exp=re.compile("( |^)"+s+"( |$)")
         self.goMatch(l,exp,out=out,stop=stop)
         if out!=None and echoLast:
@@ -205,11 +205,11 @@ class FileBasis(Utilities):
     def goMatch(self,l,exp,out=None,stop=None):
         """Read lines until a regular expression is matched
 
-        @param l: a LineReader object
-        @param exp: the expression to look for
-        @param out: filehandle to echo the lines to
-        @param stop: pattern that indicates that exp will never be found
-        @return: match-object if exp is found, the line if stop is found and None if the end of the file is reached"""
+        :param l: a LineReader object
+        :param exp: the expression to look for
+        :param out: filehandle to echo the lines to
+        :param stop: pattern that indicates that exp will never be found
+        :return: match-object if exp is found, the line if stop is found and None if the end of the file is reached"""
         while l.read(self.fh):
             m=exp.match(l.line)
             if m!=None:
@@ -225,8 +225,8 @@ class FileBasis(Utilities):
     def copyRest(self,l,out):
         """Copy the rest of the file
 
-        @param l: a LineReader object
-        @param out: filehandle to echo the lines to"""
+        :param l: a LineReader object
+        :param out: filehandle to echo the lines to"""
         while l.read(self.fh):
             self.writeEncoded(out,l.line+"\n")
 
@@ -283,16 +283,29 @@ class FileBasis(Utilities):
 
         return caseDir
 
+class CleanCharactersFile(FileBasis):
+    """Read file and remove characters from the content"""
+    def __init__(self,name,charsToRemove):
+        """@param charsToRemove: string with characters that should be removed"""
+        FileBasis.__init__(self,name)
+        self.chars=charsToRemove
+        self.readFile()
+
+    def parse(self,cnt):
+        for c in self.chars:
+            cnt=cnt.replace(c,"")
+        return cnt
+
 class FileBasisBackup(FileBasis):
     """A file with a backup-copy"""
 
     counter={}
 
     def __init__(self,name,backup=False,createZipped=True):
-        """@param name: The name of the parameter file
-        @type name: str
-        @param backup: create a backup-copy of the file
-        @type backup: boolean"""
+        """:param name: The name of the parameter file
+        :type name: str
+        :param backup: create a backup-copy of the file
+        :type backup: boolean"""
 
         if hasattr(name,"read"):
             if backup:

@@ -25,9 +25,9 @@ class StandardLogAnalyzer(FoamLogAnalyzer):
                  startTime=None,
                  endTime=None):
         """
-        @param progress: Print time progress on console?
-        @param doTimelines: generate timelines?
-        @param doFiles: generate files?
+        :param progress: Print time progress on console?
+        :param doTimelines: generate timelines?
+        :param doFiles: generate files?
         """
         FoamLogAnalyzer.__init__(self,progress=progress)
 

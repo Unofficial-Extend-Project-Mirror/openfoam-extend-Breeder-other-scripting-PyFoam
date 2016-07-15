@@ -18,7 +18,7 @@ class StepAnalyzedRunner(StepAnalyzedCommon,BasicRunner):
                  parameters=None,
                  jobId=None,
                  echoCommandLine=None):
-        """@param smallestFreq: the smallest intervall of real time (in seconds) that the time change is honored"""
+        """:param smallestFreq: the smallest intervall of real time (in seconds) that the time change is honored"""
         BasicRunner.__init__(self,
                              argv,
                              silent,

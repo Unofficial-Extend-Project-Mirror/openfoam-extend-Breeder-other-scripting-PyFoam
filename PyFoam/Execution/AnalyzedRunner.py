@@ -24,7 +24,7 @@ class AnalyzedRunner(StepAnalyzedCommon,BasicRunner):
                  jobId=None,
                  smallestFreq=60.,
                  echoCommandLine=None):
-        """ @param analyzer: the analyzer for the output
+        """ :param analyzer: the analyzer for the output
         argv, silent, logname, server, lam, noLog - see BasicRunner"""
         BasicRunner.__init__(self,argv,silent,logname,
                              server=server,

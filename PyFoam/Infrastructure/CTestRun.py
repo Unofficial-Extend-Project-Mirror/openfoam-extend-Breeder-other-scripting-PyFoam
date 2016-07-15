@@ -21,6 +21,7 @@ from PyFoam.Applications.SamplePlot import SamplePlot
 from PyFoam.Applications.TimelinePlot import TimelinePlot
 from PyFoam.Applications.Decomposer import Decomposer
 from PyFoam.Basics.Data2DStatistics import Data2DStatistics
+from PyFoam.FoamInformation import shellExecutionPrefix
 
 from PyFoam.ThirdParty.six import print_,PY3,iteritems
 
@@ -187,14 +188,14 @@ class CTestRun(object):
         test (purpose of this method is to avoid cascaded of
         constructor-calls
 
-        @param solver: name of the solver to test
-        @param originalCase: location of the original case files (they
+        :param solver: name of the solver to test
+        :param originalCase: location of the original case files (they
         will be copied)
-        @param minimumRuntime: the solver has to run at least to this time
+        :param minimumRuntime: the solver has to run at least to this time
         to be considered "ran successful"
-        @param referenceData: directory with data that is used for testing
-        @param tailLength: output that many lines from the end of the solver output
-        @param headLength: output that many lines from the beginning of the solver output
+        :param referenceData: directory with data that is used for testing
+        :param tailLength: output that many lines from the end of the solver output
+        :param headLength: output that many lines from the beginning of the solver output
         """
         print_("Creating test",self.testName())
 
@@ -654,7 +655,7 @@ class CTestRun(object):
     def addFunctionObjects(self,templateFile):
         """Add entries for libraries and functionObjects to the controlDict
         (if they don't exist
-        @param templateFile: file withe the data that should be added
+        :param templateFile: file withe the data that should be added
         """
         tf=ParsedParameterFile(templateFile)
         cd=self.controlDict()
@@ -682,8 +683,8 @@ class CTestRun(object):
 
     def cloneData(self,src,dst):
         """Copy files recurivly into a case
-        @param src: the source directory the files come fro
-        @param dst: the destination directory the files go to"""
+        :param src: the source directory the files come fro
+        :param dst: the destination directory the files go to"""
 
         for f in os.listdir(src):
             if f[0]=='.':
@@ -700,7 +701,7 @@ class CTestRun(object):
 
     def runCommand(self,*args):
         """Run a command and let it directly write to the output"""
-        p=subprocess.Popen(" ".join([str(a) for a in args]),
+        p=subprocess.Popen(shellExecutionPrefix()+" ".join([str(a) for a in args]),
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT)
@@ -715,7 +716,7 @@ class CTestRun(object):
               *args):
         """Run a command in the case directory and let it directly
         write to the output
-        @param workingDirectory: change to this directory"""
+        :param workingDirectory: change to this directory"""
 
         workingDirectory=None
         if not workingDirectory:
@@ -725,7 +726,7 @@ class CTestRun(object):
         oldDir=os.getcwd()
         os.chdir(workingDirectory)
 
-        p=subprocess.Popen(cmd,
+        p=subprocess.Popen(shellExecutionPrefix()+cmd,
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT)
@@ -747,7 +748,7 @@ class CTestRun(object):
     def execute(self,*args,**kwargs):
         """Execute the passed arguments on the case and check if
         everything went alright
-        @param regexps: a list of regular expressions that the output should be scanned for"""
+        :param regexps: a list of regular expressions that the output should be scanned for"""
 
         try:
             regexps=kwargs["regexps"]
@@ -838,9 +839,9 @@ class CTestRun(object):
     def messageGeneral(self,prefix,say,*args):
         """Everything that passes through this method will be repeated
         in the end
-        @param args: arbitrary number of arguments that build the
+        :param args: arbitrary number of arguments that build the
         fail-message
-        @param prefix: General classification of the message
+        :param prefix: General classification of the message
         """
         msg=prefix.upper()+": "+str(args[0])
         for a in args[1:]:
@@ -853,27 +854,27 @@ class CTestRun(object):
         self.__failMessage+=msg+"\n"
 
     def failGeneral(self,prefix,*args):
-        """@param args: arbitrary number of arguments that build the
+        """:param args: arbitrary number of arguments that build the
         fail-message
-        @param prefix: General classification of the failure
+        :param prefix: General classification of the failure
         """
         self.__failed=True
         self.messageGeneral(prefix,"Test failed:",*args)
 
     def warn(self,*args):
-        """@param args: arbitrary number of arguments that build the
+        """:param args: arbitrary number of arguments that build the
         warning-message"""
         self.messageGeneral("warning","",*args)
 
     def fail(self,*args):
         """To be called if the test failed but other tests should be tried
-        @param args: arbitrary number of arguments that build the
+        :param args: arbitrary number of arguments that build the
         fail-message"""
 
         self.failGeneral("failure",*args)
 
     def fatalFail(self,*args):
-        """@param args: arbitrary number of arguments that build the
+        """:param args: arbitrary number of arguments that build the
         fail-message"""
 
         self.failGeneral("fatal failure",*args)
@@ -918,7 +919,7 @@ class CTestRun(object):
 
     def runAndCatchExceptions(self,func,*args,**kwargs):
         """Run a callable and catch Python-exceptions if they occur
-        @param func: The actual thing to be run"""
+        :param func: The actual thing to be run"""
         try:
             func(*args,**kwargs)
             return True
@@ -976,10 +977,10 @@ class CTestRun(object):
                        offsetX=0,
                        useReferenceForComparison=False):
         """Compare sample data and return the statistics
-        @param data: the name of the data directory
-        @param reference:the name of the directory with the reference data
-        @param fields: list of the fields to compare
-        @param time: the time to compare for. If empty the latest time is used"""
+        :param data: the name of the data directory
+        :param reference:the name of the directory with the reference data
+        :param fields: list of the fields to compare
+        :param time: the time to compare for. If empty the latest time is used"""
         timeOpt=["--latest-time"]
         if time:
             timeOpt=["--time="+str(time)]
@@ -1016,9 +1017,9 @@ class CTestRun(object):
                        reference,
                        fields):
         """Compare timeline data and return the statistics
-        @param data: the name of the data directory
-        @param reference:the name of the directory with the reference data
-        @param fields: list of the fields to compare"""
+        :param data: the name of the data directory
+        :param reference:the name of the directory with the reference data
+        :param fields: list of the fields to compare"""
         sample=TimelinePlot(args=[self.caseDir,
                                 "--silent",
                                 "--dir="+data,

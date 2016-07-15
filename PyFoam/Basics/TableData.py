@@ -10,8 +10,8 @@ class TableData(object):
 
     def __init__(self,rowLabels,columnLabels):
         """
-	@param rowLables: the names of the rows
-        @param columnLabels: the names of the columns
+	:param rowLables: the names of the rows
+        :param columnLabels: the names of the columns
 	"""
         self.__rowLabels=rowLabels
         self.__columnLabels=columnLabels
@@ -34,7 +34,7 @@ class TableData(object):
 
     def apply(self,func):
         """Return the table with a function applied to it
-        @param func: the function to apply to each element"""
+        :param func: the function to apply to each element"""
         tab=TableData(self.__rowLabels,self.__columnLabels)
         for r in self.__rowLabels:
             for c in self.__columnLabels:
@@ -42,13 +42,13 @@ class TableData(object):
         return tab
 
     def __getitem__(self,labels):
-        """@param labels: tuple of the form (row,col)"""
+        """:param labels: tuple of the form (row,col)"""
         row,col=self.getIndex(labels)
 
         return self.__data[row][col]
 
     def __setitem__(self,labels,val):
-        """@param labels: tuple of the form (row,col)"""
+        """:param labels: tuple of the form (row,col)"""
         row,col=self.getIndex(labels)
 
         self.__data[row][col]=val

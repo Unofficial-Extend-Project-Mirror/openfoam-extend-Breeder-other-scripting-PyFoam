@@ -20,18 +20,18 @@ class SampleDirectory(object):
                  linePattern=None,
                  namesFromFirstLine=False,
                  needsExtension=True):
-        """@param case: The case directory
-        @param dirName: Name of the directory with the samples
-        @param postfixes: list of possible extensions to a field name of the form
+        """:param case: The case directory
+        :param dirName: Name of the directory with the samples
+        :param postfixes: list of possible extensions to a field name of the form
         name_postfix to help splitting such field names.
-        @param prefixes: list of possible extensions to a field name of the form
+        :param prefixes: list of possible extensions to a field name of the form
         prefix_name to help splitting such field names
-        @param valueNames: List of value names. If specified then the classes do
+        :param valueNames: List of value names. If specified then the classes do
         not try to determine the names automatically
-        @param linePattern: Regular expression to determine the name of the line
+        :param linePattern: Regular expression to determine the name of the line
         from the filename. The first group in the expression is the name. If unset
         the linename is determined automatically
-        @param needsExtension: whether a file needs an extension"""
+        :param needsExtension: whether a file needs an extension"""
 
         self.dir=path.join(case,dirName)
         self.times=[]
@@ -118,15 +118,15 @@ class SampleDirectory(object):
                 scale=(1,1),
                 offset=(0,0)):
         """Get Sample sets
-        @param line: name of the line. All
+        :param line: name of the line. All
         if unspecified
-        @param value: name of the sampled value. All
+        :param value: name of the sampled value. All
         if unspecified
-        @param time: times for which the samples are to be got. All
+        :param time: times for which the samples are to be got. All
         if unspecified
-        @param note: A short annotation (for plots)
-        @param scale: pair of factors with which the data is scaled when being plotted
-        @param offset: pair of offsets"""
+        :param note: A short annotation (for plots)
+        :param scale: pair of factors with which the data is scaled when being plotted
+        :param offset: pair of offsets"""
 
         if line==None:
             line=self.lines()
@@ -165,11 +165,11 @@ class SampleTime(object):
                  namesFromFirstLine=False,
                  linePattern=None,
                  needsExtension=True):
-        """@param sDir: The sample-dir
-        @param time: the timename
-        @param postfixes: list of possible extensions to a field name of the form
+        """:param sDir: The sample-dir
+        :param time: the timename
+        :param postfixes: list of possible extensions to a field name of the form
         name_postfix to help splitting such field names.
-        @param prefixes: list of possible extensions to a field name of the form
+        :param prefixes: list of possible extensions to a field name of the form
         prefix_name to help splitting such field names"""
 
         self.dir=path.join(sDir,time)
@@ -251,8 +251,8 @@ class SampleTime(object):
 
     def __getitem__(self,key):
         """Get the data for a value on a specific line
-        @param key: A tuple with the line-name and the value-name
-        @returns: A SampleData-object"""
+        :param key: A tuple with the line-name and the value-name
+        :returns: A SampleData-object"""
 
         if key in self.cache:
             return self.cache[key]
@@ -313,10 +313,10 @@ class SampleTime(object):
 
     def determineIndex(self,fName,vName,data):
         """Determines the index of the data from the filename and a dataset
-        @param fName: name of the file
-        @param vName: Name of the quantity
-        @param data: A list with the data
-        @returns: A tuple of a boolean (whether the data is supposed to be
+        :param fName: name of the file
+        :param vName: Name of the quantity
+        :param data: A list with the data
+        :returns: A tuple of a boolean (whether the data is supposed to be
         a vector or a scalar) and an integer (the index of the data set -
         or the first component of the vector"""
 
@@ -350,13 +350,13 @@ class SampleData(object):
                  note="",
                  scale=(1,1),
                  offset=(0,0)):
-        """@param fName: Name of the file
-        @param name: Name of the value
-        @param index: Index of the data in the file
-        @param coord: Values that identify the data (the location)
-        @param data: The actual data
-        @param scale: pair of factors with which the data is scaled when being plotted
-        @param offset: pair of offsets"""
+        """:param fName: Name of the file
+        :param name: Name of the value
+        :param index: Index of the data in the file
+        :param coord: Values that identify the data (the location)
+        :param data: The actual data
+        :param scale: pair of factors with which the data is scaled when being plotted
+        :param offset: pair of offsets"""
 
         self.file=fName
         self.coord=coord
@@ -403,7 +403,7 @@ class SampleData(object):
 
     def component(self,component=None):
         """Return the data as a number of single scalars.
-        @param component: If None for vectors the absolute value is taken.
+        :param component: If None for vectors the absolute value is taken.
         else the number of the component"""
 
         if self.isVector():

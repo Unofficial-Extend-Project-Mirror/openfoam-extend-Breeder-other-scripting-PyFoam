@@ -16,7 +16,7 @@ class CommonSelectTimesteps(object):
 
     def addOptions(self,defaultUnique):
         """Add the necessary options
-        @param defaultUnique: whether timesteps are unique by default"""
+        :param defaultUnique: whether timesteps are unique by default"""
 
         time=OptionGroup(self.parser,
                          "Time Specification",
@@ -80,7 +80,7 @@ class CommonSelectTimesteps(object):
     def processTimestepOptions(self,
                                sol):
         """Process the options
-        @param sol: the solution-directory that is to be worked with"""
+        :param sol: the solution-directory that is to be worked with"""
 
         if self.opts.parallelTimes:
             sol.setToParallel()

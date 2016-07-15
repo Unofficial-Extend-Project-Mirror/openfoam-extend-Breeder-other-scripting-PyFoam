@@ -15,12 +15,12 @@ class LogAnalyzerApplication(object):
     """
     
     def __init__(self,analyze):
-        """ @param analyze: The analyzer"""
+        """ :param analyze: The analyzer"""
         self.analyzer=analyze
 
     def run(self,pfad=None):
         """ runs the analyzer
-        @param pfad: path to the logfile, if no path is given it is
+        :param pfad: path to the logfile, if no path is given it is
         taken from the command line"""
         if pfad==None:
             fn=sys.argv[1]

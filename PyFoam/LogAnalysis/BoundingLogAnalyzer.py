@@ -20,7 +20,7 @@ class BoundingLogAnalyzer(StandardLogAnalyzer):
                  startTime=None,
                  endTime=None):
         """
-        @param progress: Print time progress on console?
+        :param progress: Print time progress on console?
         """
         StandardLogAnalyzer.__init__(self,
                                      progress=progress,

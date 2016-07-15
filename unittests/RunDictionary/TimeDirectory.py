@@ -23,8 +23,10 @@ def damBreakTutorial():
 def gammaName():
     if foamVersionNumber()<(1,6):
         return "gamma"
-    else:
+    elif foamVersionNumber()<(2,3):
         return "alpha1"
+    else:
+        return "alpha.water"
 
 class TimeDirectoryTest(unittest.TestCase):
     def setUp(self):
@@ -32,8 +34,8 @@ class TimeDirectoryTest(unittest.TestCase):
         self.theFile=path.join(self.theDir,"damBreak")
         copytree(damBreakTutorial(),self.theFile)
         if foamVersionNumber()>=(2,):
-            copyfile(path.join(self.theFile,"0","alpha1.org"),
-                     path.join(self.theFile,"0","alpha1"))
+            copyfile(path.join(self.theFile,"0",gammaName()+".org"),
+                     path.join(self.theFile,"0",gammaName()))
 
     def tearDown(self):
         rmtree(self.theDir)
@@ -80,8 +82,8 @@ class TimeDirectoryTestZipped(unittest.TestCase):
         self.theFile=path.join(self.theDir,"damBreak")
         copytree(damBreakTutorial(),self.theFile)
         if foamVersionNumber()>=(2,):
-            copyfile(path.join(self.theFile,"0","alpha1.org"),
-                     path.join(self.theFile,"0","alpha1"))
+            copyfile(path.join(self.theFile,"0",gammaName()+".org"),
+                     path.join(self.theFile,"0",gammaName()))
         system("gzip "+path.join(self.theFile,"0",gammaName()))
 
     def tearDown(self):
@@ -101,8 +103,8 @@ class TimeDirectoryTestCopy(unittest.TestCase):
         self.theFile=path.join(self.theDir,"damBreak")
         copytree(damBreakTutorial(),self.theFile)
         if foamVersionNumber()>=(2,):
-            copyfile(path.join(self.theFile,"0","alpha1.org"),
-                     path.join(self.theFile,"0","alpha1"))
+            copyfile(path.join(self.theFile,"0",gammaName()+".org"),
+                     path.join(self.theFile,"0",gammaName()))
 
     def tearDown(self):
         rmtree(self.theDir)

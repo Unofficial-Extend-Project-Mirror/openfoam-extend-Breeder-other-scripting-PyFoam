@@ -14,7 +14,7 @@ class SourceBase(object):
     The member src is the actual source object"""
 
     def __init__(self,src):
-        """@param src: the actual source proxy"""
+        """:param src: the actual source proxy"""
         self.src = src
         
     def getBounds(self):

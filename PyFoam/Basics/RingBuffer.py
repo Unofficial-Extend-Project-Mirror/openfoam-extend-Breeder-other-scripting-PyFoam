@@ -7,7 +7,7 @@ class RingBuffer(object):
 
     def __init__(self,nr=1000):
         """
-	@param nr: Number of elements to store
+	:param nr: Number of elements to store
 	"""
         self.nr=nr
         self.list=[None]*nr
@@ -25,7 +25,7 @@ class RingBuffer(object):
             self.full=True
         
     def last(self):
-        """@return: the latest element in the buffer, None if
+        """:return: the latest element in the buffer, None if
         nothing was inserted into the buffer"""
         if self.point>0:
             return self.list[self.point-1]
@@ -35,7 +35,7 @@ class RingBuffer(object):
             return None
 
     def dump(self):
-        """@return: A list with all the values in the ring buffer in the correct order
+        """:return: A list with all the values in the ring buffer in the correct order
 	(starting with the oldest)"""
         result=[]
 

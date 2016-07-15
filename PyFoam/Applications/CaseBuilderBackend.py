@@ -73,7 +73,7 @@ and gives information about the case and if asked to builds the actual case
 """
 
     def __init__(self,fName):
-        """@param fName: the XML-file that describes how to build the case"""
+        """:param fName: the XML-file that describes how to build the case"""
 
         dom=parse(fName)
         self.doc=dom.documentElement
@@ -192,7 +192,7 @@ and gives information about the case and if asked to builds the actual case
 
     def groupArguments(self,name=None):
         """Returns a list with the arguments belongin to a specific group
-        @param name: Name of the group. If none is given, then all the arguments
+        :param name: Name of the group. If none is given, then all the arguments
         belonging to no group are returned"""
 
         result=[]
@@ -226,8 +226,8 @@ and gives information about the case and if asked to builds the actual case
 
     def getSingleElement(self,parent,name,optional=False):
         """Get an element and check that it is the only one
-        @param parent: the parent element
-        @param name: The name of the element"""
+        :param parent: the parent element
+        :param name: The name of the element"""
 
         tmp=parent.getElementsByTagName(name)
         if len(tmp)<1:
@@ -329,8 +329,8 @@ and gives information about the case and if asked to builds the actual case
 
     def buildCase(self,cName,args):
         """Builds the case
-        @param cName: The name of the case directory
-        @param args: The arguments (as a dictionary)"""
+        :param cName: The name of the case directory
+        :param args: The arguments (as a dictionary)"""
 
         args=self.calculateVariables(args)
 

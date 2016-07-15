@@ -19,9 +19,9 @@ class SolutionFile(FileBasis):
         much better job)"""
 
     def __init__(self,directory,name):
-        """ @param directory: name of the directory containing the solutions
+        """ :param directory: name of the directory containing the solutions
         for a specific time
-        @param name: name of the field."""
+        :param name: name of the field."""
 
         FileBasis.__init__(self,path.abspath(path.join(directory,name)))
 
@@ -72,8 +72,8 @@ class SolutionFile(FileBasis):
     def replaceBoundary(self,name,newval):
         """write the value at a boundary
 
-        @param name: the name of the boundary patch
-        @param newval: the new value"""
+        :param name: the name of the boundary patch
+        :param newval: the new value"""
         exp=self.valuePattern()
 
         l=LineReader()

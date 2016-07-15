@@ -21,8 +21,8 @@ class RestructuredTextHelper(object):
 
     def buildHeading(self,*text,**keywords):
         """General method to build a heading
-        @param text: list of items that build the heading text
-        @param level: The level of the heading"""
+        :param text: list of items that build the heading text
+        :param level: The level of the heading"""
 
         level=RestructuredTextHelper.LevelSection
         if "level" in keywords:
@@ -107,6 +107,12 @@ class RestructuredTextHelper(object):
         """Generate a definiton list from the data."""
         return "\n\n".join(str(k)+"\n  "+str(v) for k,v in iteritems(data))+"\n"
 
+    def code(self,code,language="python"):
+        """@param code: string to be typeset as a program code
+        @param language: programming language to be used"""
+        return "\n.. code:: "+language+"\n" + \
+               "\n".join("  "+l for l in code.split("\n"))+"\n\n"
+
 class ReSTTable(object):
     """Class that administrates a two-dimensional table and prints it as
     a restructured text-table when asked"""
@@ -118,7 +124,7 @@ class ReSTTable(object):
 
     def addLine(self,val=None,head=False):
         """Add a line after that row
-        @param val: the row after which to add. If None a line will be added after the
+        :param val: the row after which to add. If None a line will be added after the
         current last row"""
         if val==None:
             now=len(self.data)-1
@@ -179,9 +185,9 @@ class ReSTTable(object):
 
     def __setitem__(self,index,value):
         """Sets an item of the table
-        @param index: a tuple with a row and a column. If it is a single integer then the
+        :param index: a tuple with a row and a column. If it is a single integer then the
         row is assumed
-        @param value: the value to set. If only the row was specified it is a list with the column
+        :param value: the value to set. If only the row was specified it is a list with the column
         values"""
 
         try:
@@ -194,9 +200,9 @@ class ReSTTable(object):
 
     def setElement(self,row,col,value):
         """Sets a specific element
-        @param row: the row
-        @param col: column
-        @param value: the used value"""
+        :param row: the row
+        :param col: column
+        :param value: the used value"""
 
         if len(self.data)<=row:
             self.data+=[[None]*len(self.data[0])]*(row-len(self.data)+1)

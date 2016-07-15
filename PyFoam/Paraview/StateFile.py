@@ -18,7 +18,7 @@ class StateFile(object):
 
     Stores the actual file as an xml-file"""
     def __init__(self,fName):
-        """@param fName: the XML-file that represents the Paraview-state"""
+        """:param fName: the XML-file that represents the Paraview-state"""
 
         dom=parse(fName)
         self.doc=dom.documentElement
@@ -30,7 +30,7 @@ class StateFile(object):
     def setCase(self,case):
         """Rewrite the state-file so that it uses another case than the one
         predefined in the state-file
-        @param case: The path to the new case-file"""
+        :param case: The path to the new case-file"""
         reader=self.getReader()
         typ=reader.data.getAttribute("type")
         if typ=="PV3FoamReader":
@@ -107,7 +107,7 @@ class StateFile(object):
 
     def rewriteTexts(self,values):
         """Rewrite all Text-Objects so that strings of the form %%(key)s get replaced
-        @param values: dictionary with the values"""
+        :param values: dictionary with the values"""
         tmp=self.getProxy("TextSource")
         for t in tmp:
             t.rewriteProperty("Text",values)
@@ -120,9 +120,9 @@ class Proxy(object):
     def setProperty(self,name,value,index=None):
         """Set a property in a proxy
 
-        @param name: name of the property
-        @param value: the new value
-        @param index: Index. If not specified all elements are changed"""
+        :param name: name of the property
+        :param value: the new value
+        :param index: Index. If not specified all elements are changed"""
 
         for p in self.data.getElementsByTagName("Property"):
             if p.getAttribute("name")==name:
@@ -133,8 +133,8 @@ class Proxy(object):
     def getProperty(self,name,index=None):
         """Get a property in a proxy
 
-        @param name: name of the property
-        @param index: Index. If not specified all elements are changed"""
+        :param name: name of the property
+        :param index: Index. If not specified all elements are changed"""
 
         for p in self.data.getElementsByTagName("Property"):
             if p.getAttribute("name")==name:
@@ -147,9 +147,9 @@ class Proxy(object):
         """Rewrites a property by replacing all strings of the form %%(key)s
         (Python-notation for dictionary-replacement) with a corresponding value
 
-        @param name: name of the property
-        @param values: Dictionary with the keys and the corresponding values
-        @param index: Index. If not specified all elements are changed"""
+        :param name: name of the property
+        :param values: Dictionary with the keys and the corresponding values
+        :param index: Index. If not specified all elements are changed"""
 
         for p in self.data.getElementsByTagName("Property"):
             if p.getAttribute("name")==name:

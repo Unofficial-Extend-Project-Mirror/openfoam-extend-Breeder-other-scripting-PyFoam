@@ -28,8 +28,8 @@ class RunDatabase(object):
                  name,
                  create=False,
                  verbose=False):
-        """@param name: name of the file
-        @param create: should the database be created if it does not exist"""
+        """:param name: name of the file
+        :param create: should the database be created if it does not exist"""
 
         self.verbose=verbose
         if not path.exists(name):
@@ -222,8 +222,8 @@ class RunDatabase(object):
                   pandasFormat=True,
                   excel=False):
         """Dump the contents of the database to a csv-file
-        @param name: the CSV-file
-        @param selection: list of regular expressions. Only data
+        :param name: the CSV-file
+        :param selection: list of regular expressions. Only data
         entries fitting those will be added to the CSV-file (except
         for the basic run). If unset all data will be written"""
         file=CSVCollection(fname)

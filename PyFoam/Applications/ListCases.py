@@ -11,6 +11,7 @@ import time,datetime
 from stat import ST_MTIME
 import re
 import os
+import subprocess as sub
 
 from .PyFoamApplication import PyFoamApplication
 
@@ -20,6 +21,7 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,PyFoamP
 from PyFoam import configuration
 
 from PyFoam.ThirdParty.six import print_,iteritems,PY3
+from PyFoam.ThirdParty.tqdm import tqdm
 
 from PyFoam.Basics.Utilities import humanReadableSize,diskUsage
 
@@ -113,6 +115,12 @@ etc). Currently doesn't honor the parallel data
                         default=None,
                         help="This is used if '--custom-data' is specified as the data will be searched in 'PyFoamRunner.<solver name>.analyzed'. If unset then the utility will try to automatically determine the name of the solver which might be wrong")
 
+        what.add_option("--hg-info",
+                        action="store_true",
+                        dest="hgInfo",
+                        default=False,
+                        help="Looks for .hg in the directories and reports mercurial version info (for those who keep track of their cases with mercurial)")
+
         how=OptionGroup(self.parser,
                          "How",
                          "How the things should be shown")
@@ -146,6 +154,12 @@ etc). Currently doesn't honor the parallel data
                           dest="progress",
                           default=False,
                           help="Print the directories while they are being processed")
+
+        behave.add_option("--no-progress-bar",
+                          action="store_false",
+                          dest="progressBar",
+                          default=True,
+                          help="Do not show a progress bar as directories are being processed")
 
         select=OptionGroup(self.parser,
                            "Selection",
@@ -232,8 +246,17 @@ etc). Currently doesn't honor the parallel data
         elif  self.opts.hostname:
             useSolverInData=True
 
-        for d in dirs:
-            for n in listdir(d):
+        for d in tqdm(dirs,
+                      unit="dirs",
+                      disable=not self.opts.progressBar or len(dirs)<2):
+            if not path.isdir(d):
+                self.warning("There is no directory",d,"here")
+                continue
+
+            for n in tqdm(listdir(d),
+                          unit="entries",
+                          desc=path.basename(path.abspath(d)),
+                          disable=not self.opts.progressBar):
                 if not self.fnmatch(n):
                     continue
                 cName=path.join(d,n)
@@ -323,6 +346,23 @@ etc). Currently doesn't honor the parallel data
                                         frac=0
                                     if frac>0:
                                         data["endTimeEstimate"]=data["startedAt"]+gone/frac
+
+                            if self.opts.hgInfo:
+                                if path.isdir(path.join(cName,".hg")):
+                                    from stat import ST_ATIME
+                                    prevStat=stat(cName)
+                                    try:
+                                        data["hgInfo"]=sub.Popen(["hg", "id",
+                                                                  "-R",cName,
+                                                                  "-b","-n","-i"], stdout=sub.PIPE).communicate()[0].strip()
+                                    except OSError:
+                                        data["hgInfo"]="<hg not working>"
+                                    postStat=stat(cName)
+                                    if prevStat[ST_MTIME]!=postStat[ST_MTIME]:
+                                        # hg seems to modify the modification time of the directory. So reset it
+                                        os.utime(cName,(postStat[ST_ATIME],prevStat[ST_MTIME]))
+                                else:
+                                    data["hgInfo"]="<no .hg directory>"
 
                             if len(customData)>0 or self.opts.hostname:
                                 fn=None
@@ -448,6 +488,8 @@ etc). Currently doesn't honor the parallel data
             spec+=["solver"," | "]
         for n,s in customData:
             spec+=[n," | "]
+        if self.opts.hgInfo:
+            spec+=["hgInfo"," | "]
 
         spec+=["name"]
 

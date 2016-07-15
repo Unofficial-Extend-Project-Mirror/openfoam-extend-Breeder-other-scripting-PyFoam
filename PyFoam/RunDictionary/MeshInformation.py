@@ -17,9 +17,9 @@ class MeshInformation:
                  time="constant",
                  processor=None,
                  region=None):
-        """@param case: Path to the case-directory
-        @param time: Time for which the  mesh should be looked at
-        @param processor: Name of the processor directory for decomposed cases"""
+        """:param case: Path to the case-directory
+        :param time: Time for which the  mesh should be looked at
+        :param processor: Name of the processor directory for decomposed cases"""
         self.sol=SolutionDirectory(case,paraviewLink=False,archive=None,region=region)
         self.time=time
         self.processor=processor

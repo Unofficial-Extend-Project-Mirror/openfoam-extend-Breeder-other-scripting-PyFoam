@@ -7,6 +7,8 @@ from PyFoam.Error import notImplemented
 
 from PyFoam.ThirdParty.six import iteritems
 
+import re
+
 class PlotLinesRegistry(object):
     """Collects references to GeneralPlotLines objects"""
 
@@ -52,11 +54,11 @@ class GeneralPlotTimelines(object):
                  custom,
                  showWindow=True,
                  registry=None):
-        """@param timelines: The timelines object
-        @type timelines: TimeLineCollection
-        @param custom: A CustomplotInfo-object. Values in this object usually override the
+        """:param timelines: The timelines object
+        :type timelines: TimeLineCollection
+        :param custom: A CustomplotInfo-object. Values in this object usually override the
         other options
-        @param showWindow: whether or not to show a window. Doesn't affect all implementations
+        :param showWindow: whether or not to show a window. Doesn't affect all implementations
         """
 
         self.data=timelines
@@ -74,10 +76,23 @@ class GeneralPlotTimelines(object):
     def testAlternate(self,name):
         if name in self.alternate:
             return True
-        if name.find("_slave")>0:
-            for a in self.alternate:
-                if name[:name.find("_slave")]==a:
-                    return True
+
+        if name.find("_slave")>0 and re.compile(r".+_slave[0-9]*").match(name):
+            return self.testAlternate(name[:name.find("_slave")])
+
+        for a in self.alternate:
+            try:
+                try:
+                    if re.compile(a).fullmatch(name):
+                        return True
+                except AttributeError:
+                    # python 2 has no fullmatch
+                    if re.compile("(?:" + a + r")\Z").match(name):
+                        return True
+
+            except re.error:
+                pass
+
         return False
 
     def getNames(self):
@@ -93,7 +108,7 @@ class GeneralPlotTimelines(object):
                     break
             if addIt:
                 names.append(n)
-        return names
+        return sorted(names)
 
     def hasTimes(self):
         """Check whether this timeline contains any timesteps"""
@@ -128,10 +143,10 @@ class GeneralPlotTimelines(object):
 
     def buildData(self,times,name,title,lastValid):
         """Build the implementation specific data
-        @param times: The vector of times for which data exists
-        @param name: the name under which the data is stored in the timeline
-        @param title: the title under which this will be displayed
-        @param lastValid: wether the last data entry is valid"""
+        :param times: The vector of times for which data exists
+        :param name: the name under which the data is stored in the timeline
+        :param title: the title under which this will be displayed
+        :param lastValid: wether the last data entry is valid"""
 
         notImplemented(self,"buildData")
 
@@ -166,10 +181,10 @@ class GeneralPlotTimelines(object):
 
         notImplemented(self,"setYLabel2")
 
-    def doHardcopy(self,filename,form):
+    def doHardcopy(self,filename,form,termOpts=None):
         """Write the contents of the plot to disk
-        @param filename: Name of the file without type extension
-        @param form: String describing the format"""
+        :param filename: Name of the file without type extension
+        :param form: String describing the format"""
 
         notImplemented(self,"doHardcopy")
 

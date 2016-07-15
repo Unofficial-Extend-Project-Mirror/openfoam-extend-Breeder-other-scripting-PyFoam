@@ -1,4 +1,4 @@
-#  ICE Revision: $Id: /local/openfoam/Python/PyFoam/PyFoam/Applications/SamplePlot.py 8488 2013-11-03T14:38:32.775063Z bgschaid  $
+#  ICE Revision: $Id$
 """
 Application class that implements pyFoamSamplePlot.py
 """
@@ -365,7 +365,7 @@ gnuplot-commands. As an option the data can be written to a CSV-file.
         if self.opts.valueNames==None:
             usedValueNames=None
         else:
-            usedValueNames=self.opts.valueNames.split(","),
+            usedValueNames=self.opts.valueNames.split(",")
 
         samples=SampleDirectory(self.parser.getArgs()[0],
                                 dirName=self.opts.dirName,

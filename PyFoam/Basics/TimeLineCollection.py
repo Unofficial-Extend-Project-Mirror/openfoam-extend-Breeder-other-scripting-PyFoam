@@ -108,17 +108,18 @@ class TimeLineCollection(object):
                  preloadData=None,
                  accumulation="first",
                  registry=None):
-        """@param deflt: default value for timelines if none has been defined before
-        @param extendCopy: Extends the timeline by cpying the last element
-        @param splitThres: Threshold after which the number of points is halved
-        @param splitFun: Function that is used for halving. If none is specified the mean function is used
-        @param noEmptyTime: if there is no valid entry no data is stored for this time
-        @param advancedSplit: Use another split algorithm than one that condenses two values into one
-        @param preloadData: a dictionary with a dictionary to initialize the values
-        @param accumulation: if more than one value is given at any time-step, how to accumulate them (possible values: "first", "last", "min", "max", "average", "sum","count")
+        """:param deflt: default value for timelines if none has been defined before
+        :param extendCopy: Extends the timeline by cpying the last element
+        :param splitThres: Threshold after which the number of points is halved
+        :param splitFun: Function that is used for halving. If none is specified the mean function is used
+        :param noEmptyTime: if there is no valid entry no data is stored for this time
+        :param advancedSplit: Use another split algorithm than one that condenses two values into one
+        :param preloadData: a dictionary with a dictionary to initialize the values
+        :param accumulation: if more than one value is given at any time-step, how to accumulate them (possible values: "first", "last", "min", "max", "average", "sum","count")
         """
 
         self.cTime=None
+        self.addTimeOnDemand=False
         self.times=[]
         self.values={}
         self.lastValid={}
@@ -180,8 +181,8 @@ class TimeLineCollection(object):
 
     def setAccumulator(self,name,accu):
         """Sets a special accumulator fopr a timeline
-        @param name: Name of the timeline
-        @param accu: Name of the accumulator"""
+        :param name: Name of the timeline
+        :param accu: Name of the accumulator"""
         if not (accu in TimeLineCollection.possibleAccumulations):
             error("Value",accu,"not in list of possible values:",TimeLineCollection.possibleAccumulations,"When setting for",name)
         self.accumulations[name]=accu
@@ -208,11 +209,11 @@ class TimeLineCollection(object):
         self.noEmptyTime=noEmptyTime
 
     def setDefault(self,deflt):
-        """@param deflt: default value to be used"""
+        """:param deflt: default value to be used"""
         self.defaultValue=float(deflt)
 
     def setExtend(self,mode):
-        """@param mode: whether or not to extend the timeline by copying or setting the default value"""
+        """:param mode: whether or not to extend the timeline by copying or setting the default value"""
         self.extendCopy=mode
 
     def nr(self):
@@ -221,20 +222,25 @@ class TimeLineCollection(object):
 
     def setTime(self,time,noLock=False,forceAppend=False):
         """Sets the time. If time is new all the timelines are extended
-        @param time: the new current time
-        @param noLock: do not acquire the lock that ensures consistent data transmission"""
+        :param time: the new current time
+        :param noLock: do not acquire the lock that ensures consistent data transmission"""
 
         if not noLock:
             transmissionLock.acquire()
 
         dTime=float(time)
 
+        append=False
+        self.addTimeOnDemand=False
+
         if dTime!=self.cTime:
             self.cTime=dTime
             append=True
             if self.noEmptyTime and not forceAppend:
                 if self.nrValid()==0:
+                    # no valid data yet. Extend the timeline when the first data set is added
                     append=False
+                    self.addTimeOnDemand=True
             if append:
                 self.times.append(self.cTime)
                 for v in list(self.values.values()):
@@ -332,8 +338,8 @@ class TimeLineCollection(object):
 
     def split(self,array,func):
         """Makes the array smaller by joining every two points
-        @param array: the field to split
-        @param func: The function to use for joining two points"""
+        :param array: the field to split
+        :param func: The function to use for joining two points"""
 
         newLen=len(array)/2
         newArray=[0.]*newLen
@@ -344,7 +350,7 @@ class TimeLineCollection(object):
         return newArray
 
     def getTimes(self,name=None):
-        """@return: A list of the time values"""
+        """:return: A list of the time values"""
         tm=None
         if name in self.values or name==None:
             tm=self.times
@@ -356,7 +362,7 @@ class TimeLineCollection(object):
         return tm
 
     def getValueNames(self):
-        """@return: A list with the names of the safed values"""
+        """:return: A list with the names of the safed values"""
         names=list(self.values.keys())
         for i,s in enumerate(self.slaves):
             for n in s.getValueNames():
@@ -365,8 +371,8 @@ class TimeLineCollection(object):
 
     def getValues(self,name):
         """Gets a timeline
-        @param name: Name of the timeline
-        @return: List with the values"""
+        :param name: Name of the timeline
+        :return: List with the values"""
 
         if name not in self.values:
             if len(self.slaves)>0:
@@ -379,12 +385,21 @@ class TimeLineCollection(object):
 
     def setValue(self,name,value):
         """Sets the value of the last element in a timeline
-        @param name: name of the timeline
-        @param value: the last element"""
+        :param name: name of the timeline
+        :param value: the last element"""
 
         val=float(value)
 
         transmissionLock.acquire()
+        if self.addTimeOnDemand:
+            self.times.append(self.cTime)
+            for v in list(self.values.values()):
+                if len(v)>0 and self.extendCopy:
+                    val=v[-1]
+                else:
+                    val=self.defaultValue
+                v.append(val)
+            self.addTimeOnDemand=False
 
         data=self.getValues(name)
         if len(data)>0:
@@ -450,10 +465,11 @@ class TimeLineCollection(object):
         result={}
 
         for n,d in iteritems(self.values):
-            if self.lastValid[n] or len(d)<2:
-                result[n]=d[-1]
-            else:
-                result[n]=d[-2]
+            if len(d)>0:
+                if self.lastValid[n] or len(d)<2:
+                    result[n]=d[-1]
+                else:
+                    result[n]=d[-2]
 
         return result
 

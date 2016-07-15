@@ -44,7 +44,7 @@ class SteadyConvergedLineAnalyzer(LogLineAnalyzer):
 
     def goOn(self):
         """Converged
-        @return: False if converged"""
+        :return: False if converged"""
         return not self.isConverged
 
 # Should work with Python3 and Python2

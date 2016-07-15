@@ -22,7 +22,7 @@ class FoamLogAnalyzer(object):
 
     def __init__(self,progress=False):
         """
-        @param progress: Print time progress on console?
+        :param progress: Print time progress on console?
         """
         self.analyzers={}
         self.time=""
@@ -52,7 +52,7 @@ class FoamLogAnalyzer(object):
     def collectData(self):
         """Collect dictionaries of collected data (current state)
         from the analyzers
-        @return: the dictionary"""
+        :return: the dictionary"""
 
         result={}
 
@@ -74,7 +74,7 @@ class FoamLogAnalyzer(object):
 
     def setTime(self,time):
         """Sets the time and alert all the LineAnalyzers that the time has changed
-        @param time: the new value of the time
+        :param time: the new value of the time
         """
         if time!=self.time:
             if self.progressOut:
@@ -102,7 +102,7 @@ class FoamLogAnalyzer(object):
             self.progressOut(msg)
 
     def addTimeListener(self,listener):
-        """@param listener: An object that is notified when the time changes. Has to
+        """:param listener: An object that is notified when the time changes. Has to
         implement a timeChanged method"""
         if not 'timeChanged' in dir(listener):
             error("Error. Object has no timeChanged-method:"+str(listener))
@@ -110,7 +110,7 @@ class FoamLogAnalyzer(object):
             self.timeListeners.append(listener)
 
     def listAnalyzers(self):
-        """@returns: A list with the names of the Analyzers"""
+        """:returns: A list with the names of the Analyzers"""
         return list(self.analyzers.keys())
 
     def hasAnalyzer(self,name):
@@ -174,10 +174,10 @@ class FoamLogAnalyzer(object):
     def addTrigger(self,time,func,once=True,until=None):
         """Adds a trigger function that is to be called as soon as
         the simulation time exceeds a certain value
-        @param time: the time at which the function should be triggered
-        @param func: the trigger function
-        @param once: Should this function be called once or at every time-step
-        @param until: The time until which the trigger should be called"""
+        :param time: the time at which the function should be triggered
+        :param func: the trigger function
+        :param once: Should this function be called once or at every time-step
+        :param until: The time until which the trigger should be called"""
 
         data={}
         data["time"]=float(time)

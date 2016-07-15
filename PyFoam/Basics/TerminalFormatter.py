@@ -42,7 +42,7 @@ class TerminalFormatter(object):
 
     def buildSequence(self,specification):
         """Build an escape sequence from a specification string
-        @param specification: the specification string that is a number
+        :param specification: the specification string that is a number
         of komma-separated words. The words specify the color and the
         formatting"""
 
@@ -54,17 +54,17 @@ class TerminalFormatter(object):
 
     def addFormat(self,name,specification):
         """Add a new format to the object
-        @param name: Name under which the format is added to the formatter
-        @param specification: The specification string for the format"""
+        :param name: Name under which the format is added to the formatter
+        :param specification: The specification string for the format"""
 
         exec("self."+name+"=self.buildSequence('"+specification+"')")
         
     def getConfigFormat(self,name,shortName=None):
         """Gets a format sequence from the global configuration and adds it
         to the formatter object
-        @param name: Name under which this is found in the 'Formats'-section
+        :param name: Name under which this is found in the 'Formats'-section
         of the configuration
-        @param shortName: Short name under which this is stored in the
+        :param shortName: Short name under which this is stored in the
         foratter. If none is given the regular name is used"""
 
         spec=config().get("Formats",name,default="reset")

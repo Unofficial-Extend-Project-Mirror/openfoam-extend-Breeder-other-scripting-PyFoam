@@ -74,7 +74,7 @@ class BasicFile(object):
 
     def close(self,temporary=False):
         """close the file
-        @param temporary: only close the file temporary (to be appended on later)"""
+        :param temporary: only close the file temporary (to be appended on later)"""
         #        print "Closing file\n"
         if self.handle!=None:
             self.callAtClose()

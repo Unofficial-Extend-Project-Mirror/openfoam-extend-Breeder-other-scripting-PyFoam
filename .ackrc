@@ -1,0 +1,7 @@
+--ignore-dir=doc
+--ignore-dir=.pybuild
+--ignore-dir=build
+--ignore-dir=htmlcov
+--ignore-dir=debian
+--ignore-dir=PyFoam.docset
+--ignore-dir=doc.old

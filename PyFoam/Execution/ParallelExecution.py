@@ -13,8 +13,8 @@ import subprocess
 class LAMMachine(Utilities):
     """Wrapper class for starting an stopping a LAM-Machine"""
     def __init__(self,machines=None,nr=None):
-        """@param machines: Name of the file with the machine information
-        @param nr: Number of processes"""
+        """:param machines: Name of the file with the machine information
+        :param nr: Number of processes"""
 
         Utilities.__init__(self)
 
@@ -101,9 +101,9 @@ class LAMMachine(Utilities):
 
     def buildMPIrun(self,argv,expandApplication=True):
         """Builds a list with a working mpirun command (for that MPI-Implementation)
-        @param argv: the original arguments that are to be wrapped
-        @param expandApplication: Expand the
-        @return: list with the correct mpirun-command"""
+        :param argv: the original arguments that are to be wrapped
+        :param expandApplication: Expand the
+        :return: list with the correct mpirun-command"""
 
         nr=str(self.cpuNr())
         mpirun=[config().get("MPI","run_"+foamMPI(),default="mpirun")]
@@ -162,8 +162,8 @@ class LAMMachine(Utilities):
 
     def writeMetis(self,sDir):
         """Write the parameter-File for a metis decomposition
-        @param sDir: Solution directory
-        @type sDir: PyFoam.RunDictionary.SolutionDirectory"""
+        :param sDir: Solution directory
+        :type sDir: PyFoam.RunDictionary.SolutionDirectory"""
 
         params="method metis;\n"
 
@@ -171,9 +171,9 @@ class LAMMachine(Utilities):
 
     def writeSimple(self,sDir,direction):
         """Write the parameter-File for a metis decomposition
-        @param sDir: Solution directory
-        @type sDir: PyFoam.RunDictionary.SolutionDirectory
-        @param direction: direction in which to decompose (0=x, 1=y, 2=z)"""
+        :param sDir: Solution directory
+        :type sDir: PyFoam.RunDictionary.SolutionDirectory
+        :param direction: direction in which to decompose (0=x, 1=y, 2=z)"""
 
         params ="method simple;\n"
         params+="\nsimpleCoeffs\n{\n\t n \t ("
@@ -195,10 +195,10 @@ class LAMMachine(Utilities):
 
     def writeDecomposition(self,sDir,par):
         """Write parameter file for a decomposition
-        @param par:Parameters specific for that kind of decomposition
-        @type par:str
-        @param sDir: Solution directory
-        @type sDir: PyFoam.RunDictionary.SolutionDirectory"""
+        :param par:Parameters specific for that kind of decomposition
+        :type par:str
+        :param sDir: Solution directory
+        :type sDir: PyFoam.RunDictionary.SolutionDirectory"""
 
         f=open(path.join(sDir.systemDir(),"decomposeParDict"),"w")
         self.writeDictionaryHeader(f)

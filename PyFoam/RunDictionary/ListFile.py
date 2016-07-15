@@ -13,13 +13,13 @@ class ListFile(SolutionFile):
     """Represents a OpenFOAM file with only a list"""
 
     def __init__(self,place,name):
-        """@param place: directory of the file
-        @param name: The name of the list file"""
+        """:param place: directory of the file
+        :param name: The name of the list file"""
 
         SolutionFile.__init__(self,place,name)
 
     def getSize(self):
-        """@return: the size of the list"""
+        """:return: the size of the list"""
 
         size=-1 # should be long
 

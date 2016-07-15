@@ -65,22 +65,22 @@ class BasicRunner(object):
                  parameters=None,
                  writeState=True,
                  echoCommandLine=None):
-        """@param argv: list with the tokens that are the command line
+        """:param argv: list with the tokens that are the command line
         if not set the standard command line is used
-        @param silent: if True no output is sent to stdout
-        @param logname: name of the logfile
-        @param compressLog: Compress the logfile into a gzip
-        @param lam: Information about a parallel run
-        @param server: Whether or not to start the network-server
-        @type lam: PyFoam.Execution.ParallelExecution.LAMMachine
-        @param noLog: Don't output a log file
-        @param logTail: only the last lines of the log should be written
-        @param remark: User defined remark about the job
-        @param parameters: User defined dictionary with parameters for
+        :param silent: if True no output is sent to stdout
+        :param logname: name of the logfile
+        :param compressLog: Compress the logfile into a gzip
+        :param lam: Information about a parallel run
+        :param server: Whether or not to start the network-server
+        :type lam: PyFoam.Execution.ParallelExecution.LAMMachine
+        :param noLog: Don't output a log file
+        :param logTail: only the last lines of the log should be written
+        :param remark: User defined remark about the job
+        :param parameters: User defined dictionary with parameters for
                  documentation purposes
-        @param jobId: Job ID of the controlling system (Queueing system)
-        @param writeState: Write the state to some files in the case
-        @param echoCommandLine: Prefix that is printed with the command line. If unset nothing is printed
+        :param jobId: Job ID of the controlling system (Queueing system)
+        :param writeState: Write the state to some files in the case
+        :param echoCommandLine: Prefix that is printed with the command line. If unset nothing is printed
         """
 
         if sys.version_info < (2,3):
@@ -446,16 +446,28 @@ class BasicRunner(object):
         """to be called before the program is started"""
         pass
 
-    def stopGracefully(self):
-        """Tells the runner to stop at the next convenient time"""
+    def _writeStopAt(self,value,message):
+        """Write stopAt to stop the run gracefully"""
         if not self.stopMe:
             self.stopMe=True
             if not self.isRestarted:
                 if self.controlDict:
                     warning("The controlDict has already been modified. Restoring will be problementic")
                 self.controlDict=ParameterFile(path.join(self.dir,"system","controlDict"),backup=True)
-            self.controlDict.replaceParameter("stopAt","writeNow")
-            warning("Stopping run at next write")
+            self.controlDict.replaceParameter("stopAt",value)
+            warning(message)
+
+    def stopGracefully(self):
+        """Tells the runner to stop at the next convenient time"""
+        self._writeStopAt("writeNow","Stopping run and writting")
+
+    def stopAtNextWrite(self):
+        """Tells the runner to stop at the next write"""
+        self._writeStopAt("nextWrite","Stopping run at next write")
+
+    def stopWithoutWrite(self):
+        """Tells the runner to stop without writing"""
+        self._writeStopAt("noWriteNow","Stopping run without writing")
 
     def writeResults(self):
         """Writes the next possible time-step"""
@@ -483,14 +495,14 @@ class BasicRunner(object):
         return self.logFile
 
     def getSolutionDirectory(self,archive=None):
-        """@return: The directory of the case
-        @rtype: PyFoam.RunDictionary.SolutionDirectory
-        @param archive: Name of the directory for archiving results"""
+        """:return: The directory of the case
+        :rtype: PyFoam.RunDictionary.SolutionDirectory
+        :param archive: Name of the directory for archiving results"""
 
         return SolutionDirectory(self.dir,archive=archive,parallel=True)
 
     def addEndTrigger(self,f):
-        """@param f: A function that is to be executed at the end of the simulation"""
+        """:param f: A function that is to be executed at the end of the simulation"""
         self.endTriggers.append(f)
 
 import re

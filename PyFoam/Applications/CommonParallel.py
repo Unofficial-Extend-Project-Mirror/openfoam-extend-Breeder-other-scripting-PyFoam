@@ -35,7 +35,7 @@ class CommonParallel(object):
 
     def getParallel(self,sol=None):
         """
-        @param sol: SolutionDirectory for which the LAMMachine will be
+        :param sol: SolutionDirectory for which the LAMMachine will be
         constructed (with autosense)
         """
         lam=None

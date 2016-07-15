@@ -299,7 +299,7 @@ class ComparatorData(object):
 
     def __init__(self,doc):
         """
-        @param doc: the parsed XML-data from which the object is constructed
+        :param doc: the parsed XML-data from which the object is constructed
         """
         self.name=doc.getAttribute("name")
         if self.name=="":
@@ -315,7 +315,7 @@ class ComparatorData(object):
             self.vList.append(Variation(v))
 
     def __parseBase(self,e):
-        """@param e: The 'base'-element"""
+        """:param e: The 'base'-element"""
 
         self.template=path.expandvars(e.getAttribute("template"))
         if self.template=="":
@@ -341,7 +341,7 @@ class ComparatorData(object):
         self.post=EvaluationChain(post[0])
 
     def __len__(self):
-        """@return: The total number of variations"""
+        """:return: The total number of variations"""
         if len(self.vList)==0:
             return 0
         else:
@@ -351,8 +351,8 @@ class ComparatorData(object):
             return nr
 
     def __getitem__(self,nr):
-        """@param nr: Number of the variation
-        @return:  dictionary with the variation"""
+        """:param nr: Number of the variation
+        :return:  dictionary with the variation"""
         if nr>=len(self):
             error("Index",nr,"of variation out of bounds: [0,",len(self)-1,"]")
         result={}
@@ -378,7 +378,7 @@ class ComparatorData(object):
 class CommandChain(object):
     """Abstract base class for a number of commands"""
     def __init__(self,c):
-        """@param c: XML-Subtree that represents the chain"""
+        """:param c: XML-Subtree that represents the chain"""
         self.commands=[]
         for e in c.childNodes:
             if e.nodeType!=xml.dom.Node.ELEMENT_NODE:
@@ -389,8 +389,8 @@ class CommandChain(object):
 
     def execute(self,para,log):
         """Executes the chain
-        @param para:A dictionary with the parameters
-        @param log: Logfile to write to"""
+        :param para:A dictionary with the parameters
+        :param log: Logfile to write to"""
 
         result=[]
         status=True
@@ -462,8 +462,8 @@ def getNonEmpty(e,name,default=None):
 
 def replaceValues(orig,para):
     """Replaces all strings enclosed by $$ with the parameters
-    @param orig: the original string
-    @param para: dictionary with the parameters"""
+    :param orig: the original string
+    :param para: dictionary with the parameters"""
 
     exp=re.compile("\$[^$]*\$")
     tmp=orig
@@ -498,8 +498,8 @@ class Command(object):
         return eval(cond)
 
     def execute(self,vals,log):
-        """@param vals: Dictionary with the keywords
-        @return: A boolean whether it completed successfully and a list with results (None if no results are generated)"""
+        """:param vals: Dictionary with the keywords
+        :return: A boolean whether it completed successfully and a list with results (None if no results are generated)"""
         error("Execute not implemented for",type(self))
 
 class GenericCommand(Command):
@@ -809,7 +809,7 @@ class Variation(object):
     """Represents one variation"""
 
     def __init__(self,e):
-        """@param e: the XML-data from which it is created"""
+        """:param e: the XML-data from which it is created"""
 
         self.name=e.getAttribute("name")
         if self.name=="":
@@ -828,7 +828,7 @@ class Variation(object):
         return "Variation "+self.name+" varies "+self.key+" over "+str(self.values)
 
     def __len__(self):
-        """@return: number of values"""
+        """:return: number of values"""
         return len(self.values)
 
     def __getitem__(self,key):

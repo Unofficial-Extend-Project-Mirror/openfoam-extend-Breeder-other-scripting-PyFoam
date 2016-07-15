@@ -12,7 +12,7 @@ class CommonReadWriteCSV(object):
     """ The class implement common functionality
     """
 
-    validFormats=["csv","xls","txt","smpl"]
+    validFormats=["csv","xls","xlsx","txt","smpl"]
 
     def addOptions(self):
         calc=OptionGroup(self.parser,
@@ -64,6 +64,11 @@ class CommonReadWriteCSV(object):
                         dest="time",
                         default=None,
                         help="Name of the time column")
+        data.add_option("--set-names",
+                        action="store",
+                        dest="setNames",
+                        default=None,
+                        help="Comma-separated list of names to be used (instead of reading the names from the files)")
         data.add_option("--column-names",
                         action="append",
                         default=[],
@@ -74,6 +79,12 @@ class CommonReadWriteCSV(object):
                         default=False,
                         dest="columnsRegexp",
                         help="The column names should be matched as regular expressions")
+        data.add_option("--skip-header-lines",
+                        action="store",
+                        type="int",
+                        default=0,
+                        dest="skipHeaderLines",
+                        help="Number of lines to skip for the header")
 
         formt=OptionGroup(self.parser,
                            "Format",
@@ -125,10 +136,19 @@ class CommonReadWriteCSV(object):
                             default=[],
                             help="Transform the column names with a Python lambda-function. Can be specified more than once. For instance 'lambda s:s.upper()' transforms the column names to upper case")
 
+    @property
+    def names(self):
+        if self.opts.setNames is None:
+            return None
+        else:
+            return tuple(self.opts.setNames.split(","))
+
     def printColumns(self,fName,data):
         if self.opts.printColums:
             delim="\n   "
             print_("Columns in",fName,":",delim.join([""]+list(data.names())))
+            if data.eliminatedNames:
+                print_("Eliminated from",fName,":",", ".join(data.eliminatedNames))
 
     def recalcColumns(self,data):
         self.__processColumns(data,self.opts.recalcColumns)
@@ -176,7 +196,7 @@ class CommonReadWriteCSV(object):
             ext=path.splitext(name)[1]
             if ext in [".csv"]:
                 dataFormat="csv"
-            elif ext in [".xls"]:
+            elif ext in [".xls",".xlsx"]:
                 dataFormat="excel"
             elif ext in [".txt",""]:
                 dataFormat="txt"

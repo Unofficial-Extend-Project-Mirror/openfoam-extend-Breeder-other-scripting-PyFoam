@@ -17,8 +17,8 @@ class SimpleFilter(SimpleSource):
     """Base class for the simple filters"""
 
     def __init__(self,name,src):
-        """@param name: The name under which the thing should be displayed
-        @param src: the actual source proxy"""
+        """:param name: The name under which the thing should be displayed
+        :param src: the actual source proxy"""
         SimpleSource.__init__(self,name,src)
         
 class Group(SimpleFilter):

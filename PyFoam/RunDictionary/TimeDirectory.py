@@ -22,12 +22,12 @@ class TimeDirectory(object):
                  processor=None,
                  tolerant=False,
                  yieldParsedFiles=False):
-        """@param name: name of the case directory
-        @param time: time in the directory
-        @param create: Create the directory if it does not exist
-        @param tolerant: Do not fail if there are inconsistencies
-        @param region: The mesh region for multi-region cases
-        @param yieldParsedFiles: let the iterator return PasedParameterFile objects instead of SolutionFile"""
+        """:param name: name of the case directory
+        :param time: time in the directory
+        :param create: Create the directory if it does not exist
+        :param tolerant: Do not fail if there are inconsistencies
+        :param region: The mesh region for multi-region cases
+        :param yieldParsedFiles: let the iterator return PasedParameterFile objects instead of SolutionFile"""
 
         self.name=name
         self.yieldParsedFiles=yieldParsedFiles
@@ -171,13 +171,13 @@ class TimeDirectory(object):
     def copy(self,orig,purge=False,overwrite=True,mustExist=False,exclude=[],include=['*']):
         """Copy SolutionFiles from another TimeDirectory to the
         current TimeDirectory. Returns a list with the copied values
-        @param orig: the TimeDirectory with the original files
-        @param purge: remove all current files in this directory
-        @param overwrite: if the file already exists it is overwritten
-        @param mustExist: only if the file already exists it is overwritten
-        @param exclude: List of fnmatch-patterns that should be excluded
+        :param orig: the TimeDirectory with the original files
+        :param purge: remove all current files in this directory
+        :param overwrite: if the file already exists it is overwritten
+        :param mustExist: only if the file already exists it is overwritten
+        :param exclude: List of fnmatch-patterns that should be excluded
         (Default: none)
-        @param include: List of fnmatch-patterns that should be included
+        :param include: List of fnmatch-patterns that should be included
         (Default: all)"""
 
         if not overwrite and mustExist:

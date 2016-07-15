@@ -15,8 +15,8 @@ import socket
 class ServerBase(SimpleXMLRPCServer):
     """The Base class for the servers"""
     def __init__(self,addr,logRequests=False):
-        """@param addr: the (server address,port)-tuple)
-        @param logRequests: patched thru to the base class"""
+        """:param addr: the (server address,port)-tuple)
+        :param logRequests: patched thru to the base class"""
         SimpleXMLRPCServer.__init__(self,addr,logRequests=logRequests)
 
     def server_bind(self):

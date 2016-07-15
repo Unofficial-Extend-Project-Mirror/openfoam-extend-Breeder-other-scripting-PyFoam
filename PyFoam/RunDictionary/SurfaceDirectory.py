@@ -12,8 +12,8 @@ class SurfaceDirectory(object):
     """A directory of sampled times"""
 
     def __init__(self,case,dirName="surfaces"):
-        """@param case: The case directory
-        @param dirName: Name of the directory with the surfaces"""
+        """:param case: The case directory
+        :param dirName: Name of the directory with the surfaces"""
 
         self.dir=path.join(case,dirName)
         self.times=[]
@@ -69,11 +69,11 @@ class SurfaceDirectory(object):
 
     def getData(self,surface=None,value=None,time=None):
         """Get Surface sets
-        @param line: name of the line. All
+        :param line: name of the line. All
         if unspecified
-        @param value: name of the surfaced value. All
+        :param value: name of the surfaced value. All
         if unspecified
-        @param time: times for which the surfaces are to be got. All
+        :param time: times for which the surfaces are to be got. All
         if unspecified"""
 
         if surface==None:
@@ -109,8 +109,8 @@ class SurfaceTime(object):
     """A directory with one surfaced time"""
 
     def __init__(self,sDir,time):
-        """@param sDir: The surface-dir
-        @param time: the timename"""
+        """:param sDir: The surface-dir
+        :param time: the timename"""
 
         self.dir=path.join(sDir,time)
         self.surfaces=[]
@@ -133,8 +133,8 @@ class SurfaceTime(object):
 
     def __getitem__(self,key):
         """Get the data for a value on a specific line
-        @param key: A tuple with the surface-name and the value-name
-        @returns: a path to the VTK-file"""
+        :param key: A tuple with the surface-name and the value-name
+        :returns: a path to the VTK-file"""
 
         if key in self.cache:
             return self.cache[key]

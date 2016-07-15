@@ -38,9 +38,9 @@ class PyFoamDataFrame(DataFrame):
                 allowExtrapolate=False,
                 interpolationMethod="values"):
         """Add data from another DataFrame or Series
-        @param other: data as Pandas-DataFrame or Series
-        @param sameIndex: assum both have the same indices. If False the other data will be interpolated to the current indices
-        @param mergeIndex: make the result indices a mixture of the indices"""
+        :param other: data as Pandas-DataFrame or Series
+        :param sameIndex: assum both have the same indices. If False the other data will be interpolated to the current indices
+        :param mergeIndex: make the result indices a mixture of the indices"""
         if not sameIndex and mergeIndex:
             raise PandasWrapperPyFoamException("Can't specify sameIndex=False and mergeIndex=True at the same time")
         if not isinstance(other,self.validOtherTypes):
@@ -103,17 +103,17 @@ class PyFoamDataFrame(DataFrame):
 
     def integrate(self,columns=None):
         """Integrate by using the trapezoid rule. Return a dictionary with values.
-        @param values: list of column names. If unset all are integrated"""
+        :param values: list of column names. If unset all are integrated"""
         return self.__integrateInternal(columns)[0]
 
     def validLength(self,columns=None):
         """Length were the values are valid (not NaN) Return a dictionary with values.
-        @param values: list of column names. If unset all are integrated"""
+        :param values: list of column names. If unset all are integrated"""
         return self.__integrateInternal(columns)[1]
 
     def weightedAverage(self,columns=None):
         """Weighted average. Return a dictionary with values.
-        @param values: list of column names. If unset all are integrated"""
+        :param values: list of column names. If unset all are integrated"""
         integral,length=self.__integrateInternal(columns)
         result={}
         for k in integral:

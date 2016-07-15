@@ -17,9 +17,9 @@ from PyFoam import configuration as config
 
 def getPathFromEnviron(name):
     """Gets a path from an environment variable
-    @return: the path
-    @rtype: string
-    @param name: the name of the environment variable"""
+    :return: the path
+    :rtype: string
+    :param name: the name of the environment variable"""
 
     tmp=""
     if name in environ:
@@ -28,12 +28,17 @@ def getPathFromEnviron(name):
     return tmp
 
 def foamTutorials():
-    """@return: directory in which the tutorials reside"""
+    """:return: directory in which the tutorials reside"""
 
     return getPathFromEnviron("FOAM_TUTORIALS")
 
+def foamEtc():
+    """:return: the etc-directory of the distro"""
+
+    return path.join(getPathFromEnviron("WM_PROJECT_DIR"),"etc")
+
 def foamMPI():
-    """@return: the used MPI-Implementation"""
+    """:return: the used MPI-Implementation"""
     if "WM_MPLIB" not in environ:
         return ()
     else:
@@ -41,7 +46,7 @@ def foamMPI():
         return vStr
 
 def foamVersionString(useConfigurationIfNoInstallation=False):
-    """@return: string for the  Foam-version as found
+    """:return: string for the  Foam-version as found
     in $WM_PROJECT_VERSION"""
 
     if "WM_PROJECT_VERSION" not in environ and not useConfigurationIfNoInstallation:
@@ -71,10 +76,13 @@ class VersionTuple(tuple):
         return ".".join([str(e) for e in self])
 
 def foamVersion(useConfigurationIfNoInstallation=False):
-    """@return: tuple that represents the Foam-version as found
+    """:return: tuple that represents the Foam-version as found
     in $WM_PROJECT_VERSION"""
 
     vStr=foamVersionString(useConfigurationIfNoInstallation=useConfigurationIfNoInstallation)
+
+    if len(vStr)>0 and vStr[0]=="v" and vStr[-1]=="+":
+        vStr=vStr[1:-1]
 
     if vStr=="":
         return ()
@@ -91,11 +99,13 @@ def foamVersion(useConfigurationIfNoInstallation=False):
         return VersionTuple(res)
 
 def foamVersionNumber(useConfigurationIfNoInstallation=False):
-    """@return: tuple that represents the Foam-Version-Number (without
+    """:return: tuple that represents the Foam-Version-Number (without
     strings"""
 
     ver=foamVersion(useConfigurationIfNoInstallation=useConfigurationIfNoInstallation)
 
+    if ver==("dev",) or ver==("plus",):
+        return VersionTuple((9,9,9))
     nr=[]
 
     for e in ver:
@@ -110,7 +120,7 @@ def oldAppConvention():
     """Returns true if the version of OpenFOAM is older than 1.5 and
     it therefor uses the 'old' convention to call utilities ("dot, case")
     """
-    return foamVersionNumber()<(1,5)
+    return foamVersionNumber()>() and foamVersionNumber()<(1,5)
 
 def oldTutorialStructure():
     """Returns true if the version of OpenFOAM is older than 1.6 and
@@ -169,7 +179,7 @@ def findInstallationDir(newVersion):
               ", ".join([ a[0]+"-"+a[1] for a in found ]))
 
 def foamInstalledVersions():
-    """@return: A list with the installed versions of OpenFOAM"""
+    """:return: A list with the installed versions of OpenFOAM"""
     global __foamInstallations
 
     if __foamInstallations:
@@ -177,7 +187,6 @@ def foamInstalledVersions():
 
     __foamInstallations={}
 
-    "^OpenFOAM-([0-9]\.[0-9].*)$","^openfoam([0-9]+)$"
     forks=config().getList("OpenFOAM","Forks")
 
     for fork in forks:
@@ -203,7 +212,51 @@ def foamFork():
     try:
         return environ["WM_FORK"]
     except KeyError:
-        return "openfoam"
+        vStr=foamVersionString()
+        if len(vStr)>0 and vStr[0]=="v" and vStr[-1]=="+":
+            return "openfoamplus"
+        else:
+            return "openfoam"
+
+def ensureDynamicLibraries():
+    """Ensure that the dynamic library path is set for systems where it
+    was erased for security rasons (for instance Mac OS X 10.11)"""
+
+    def makeLdPath():
+        pth=[environ[p] for p in ["FOAM_LIBBIN",
+                                  "FOAM_USER_LIBBIN",
+                                  "FOAM_SITE_LIBBIN"] if p in environ]
+
+        if "FOAM_MPI" in environ and "FOAM_LIBBIN" in environ:
+            pth=[path.join(environ["FOAM_LIBBIN"],environ["FOAM_MPI"])]+pth
+
+        return pth
+
+    if sys.platform in ["darwin"]:
+        if "DYLD_LIBRARY_PATH" not in environ:
+            environ["DYLD_LIBRARY_PATH"]=":".join(makeLdPath())
+
+    if "LD_LIBRARY_PATH" not in environ:
+        environ["LD_LIBRARY_PATH"]=":".join(makeLdPath())
+
+
+def shellExecutionPrefix(ensureDynamic=True,asList=False):
+    """Stuff to prefix to a call that is passed to the shell. Main
+    application is currently to work around a security feature of Mac OS X
+    10.11 that doesn't pass the load paths for the dynamic libraries to a
+    shell"""
+    if ensureDynamic:
+        ensureDynamicLibraries()
+    prefix=[]
+    if sys.platform in ["darwin"]:
+        for v in ["LD_LIBRARY_PATH","DYLD_LIBRARY_PATH"]:
+            if v in environ:
+                prefix.append("export "+v+"="+environ[v]+"; ")
+
+    if asList:
+        return prefix
+    else:
+        return "".join(prefix)
 
 def changeFoamVersion(new,
                       force64=False,
@@ -213,12 +266,12 @@ def changeFoamVersion(new,
                       wmCompiler=None):
     """Changes the used FoamVersion. Only valid during the runtime of
     the interpreter (the script or the Python session)
-    @param new: The new Version
-    @param force64: Forces the 64-bit-version to be chosen
-    @param force32: Forces the 32-bit-version to be chosen
-    @param compileOption: Forces Debug or Opt
-    @param wmCompiler: Force new value for WM_COMPILER
-    @param foamCompiler: Force system or OpenFOAM-Compiler"""
+    :param new: The new Version
+    :param force64: Forces the 64-bit-version to be chosen
+    :param force32: Forces the 32-bit-version to be chosen
+    :param compileOption: Forces Debug or Opt
+    :param wmCompiler: Force new value for WM_COMPILER
+    :param foamCompiler: Force system or OpenFOAM-Compiler"""
 
     newFork,newVersion,basedir=findInstallationDir(new)
 
@@ -261,11 +314,11 @@ def injectVariables(script,
                     wmCompiler=None):
     """Executes a script in a subshell and changes the current
     environment with the enivironment after the execution
-    @param script: the script that is executed
-    @param forceArchOption: To which architecture Option should be forced
-    @param compileOption: to which value the WM_COMPILE_OPTION should be forced
-    @param wmCompiler: Force new value for WM_COMPILER
-    @param foamCompiler: Force system or OpenFOAM-Compiler"""
+    :param script: the script that is executed
+    :param forceArchOption: To which architecture Option should be forced
+    :param compileOption: to which value the WM_COMPILE_OPTION should be forced
+    :param wmCompiler: Force new value for WM_COMPILER
+    :param foamCompiler: Force system or OpenFOAM-Compiler"""
 
     # Certan bashrc-s fail if these are set
     for v in ["FOAM_INST_DIR",

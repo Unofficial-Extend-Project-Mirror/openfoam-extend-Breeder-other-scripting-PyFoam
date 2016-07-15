@@ -10,7 +10,7 @@ class FileLineAnalyzer(GeneralLineAnalyzer):
 
     def __init__(self,titles=[]):
         """
-        @param titles: The titles of the data elements
+        :param titles: The titles of the data elements
         """
         GeneralLineAnalyzer.__init__(self,doFiles=True,titles=titles)
 

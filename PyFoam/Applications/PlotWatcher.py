@@ -120,6 +120,7 @@ file until interrupted.
                            hardcopy=self.opts.hardcopy,
                            hardcopyPrefix=self.opts.hardcopyPrefix,
                            hardcopyFormat=self.opts.hardcopyformat,
+                           hardcopyTerminalOptions=self.opts.hardcopyTerminalOptions,
                            plotLinear=self.opts.linear,
                            plotCont=self.opts.cont,
                            plotBound=self.opts.bound,
@@ -137,6 +138,7 @@ file until interrupted.
                            replotFrequency=self.opts.replotFrequency,
                            writePickled=self.opts.writePickled,
                            plottingImplementation=self.opts.implementation,
+                           gnuplotTerminal=self.opts.gnuplotTerminal,
                            solverNotRunning=self.opts.solverNotRunning)
 
         run.start()

@@ -20,13 +20,13 @@ class PyFoamApplicationQt4(PyFoamApplication):
                  changeVersion=True,
                  exactNr=True):
         """
-        @param description: description of the command
-        @param usage: Usage
-        @param interspersed: Is the command line allowed to be interspersed (options after the arguments)
-        @param args: Command line arguments when using the Application as a 'class' from a script
-        @param nr: Number of required arguments
-        @param changeVersion: May this application change the version of OF used?
-        @param exactNr: Must not have more than the required number of arguments
+        :param description: description of the command
+        :param usage: Usage
+        :param interspersed: Is the command line allowed to be interspersed (options after the arguments)
+        :param args: Command line arguments when using the Application as a 'class' from a script
+        :param nr: Number of required arguments
+        :param changeVersion: May this application change the version of OF used?
+        :param exactNr: Must not have more than the required number of arguments
         """
         super(PyFoamApplicationQt4,self).__init__(args=args,
                                                   description=description,

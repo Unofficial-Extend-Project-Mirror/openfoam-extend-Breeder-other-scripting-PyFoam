@@ -37,10 +37,12 @@ _defaults={
         "server" : "INFO",
     },
     "OpenFOAM": {
-        "Forks" : 'openfoam,extend',
-        "DirPatterns-openfoam" : '"^OpenFOAM-([0-9]\.[0-9].*)$","^openfoam([0-9]+)$"',
+        "Forks" : 'openfoam,extend,openfoamplus',
+        "DirPatterns-openfoam" : '"^OpenFOAM-(([0-9]\.[0-9]|dev).*)$","^openfoam([0-9]+)$"',
         "DirPatterns-extend" : '"^foam-extend-([0-9]\.[0-9].*)$"',
+        "DirPatterns-openfoamplus" : '"^OpenFOAM-((v[0-9]\.[0-9]\+|plus).*)$"',
         "Installation-openfoam" : "~/OpenFOAM",
+        "Installation-openfoamplus" : "~/OpenFOAM",
         "Installation-extend" : "~/foam",
         "AdditionalInstallation-openfoam" : '"~/OpenFOAM"',
         "Version" : "1.5",
@@ -69,6 +71,8 @@ _defaults={
     },
     "Execution":{
         "controlDictRestoreWait":"60.",
+        "DebuggerCall":"gdb -ex run --args {exe} {args}",
+        "DebuggerCall_Darwin":"lldb -o run -k bt -- {exe} {args}"
     },
     "CaseBuilder":{
         "descriptionPath": eval('["'+path.curdir+'","'+path.join(userDirectory(),"caseBuilderDescriptions")+'","'+path.join(globalDirectory(),"caseBuilderDescriptions")+'"]'),
@@ -87,7 +91,13 @@ _defaults={
     },
     "Plotting":{
         "preferredImplementation":"gnuplot",
-        "gnuplotCommands":"set xzeroaxis linewidth 4;set grid xtics ytics back lw 0.5"
+        "gnuplot_terminal" : "x11" ,
+        "gnuplotCommands":"set xzeroaxis linewidth 4;set grid xtics ytics back lw 0.5",
+        "hardcopyOptions_png" : "large size 1024,800",
+        "hardcopyOptions_pdf" : "color",
+        "hardcopyOptions_postscript" : "color",
+        "hardcopyOptions_eps" : "color",
+        "autoplots" : [],
     },
     "OutfileCollection": {
         "maximumOpenFiles":"100",
@@ -146,6 +156,7 @@ Full command: |-commandLine-|""",
         "CaseSetupScript":"caseSetup.sh",
         "DefaultParameterFile":"default.parameters",
         "AllowDerivedChanges":False,
+        "ignoreDirectories": '"processor[0-9]+","postProcessing",".*.analyzed","VTK"'
     },
     "Template" : {
         "allowExecution"                : False,
@@ -153,6 +164,149 @@ Full command: |-commandLine-|""",
         "tolerantRender"                : False,
         "expressionDelimiter"           : "|-",
         "assignmentLineStart"           : "$$",
+    },
+    "SolverBase" : {
+        # entries of form solvername: list of base-solvers
+    },
+    "Blink1" : {
+        "baseurl" : "http://localhost:8934/blink1",
+        "allowedTimeout" : 1,
+        "tictoccolor": "#00FF00",
+        "timestepcolor": "#000080",
+        "executepattern": "RGB",
+        "executeinterleave": 1,
+    },
+    "Autoplots" : {
+        "phaseFraction" : {
+            "solvers" : [".+[pP]haseEulerFoam",".*[iI]nterFoam"],
+            "plotinfo" : {
+                "theTitle" : "Phase fractions",
+                "expr" : r"alpha.(.+) volume fraction = (.+)  Min\(alpha1\) = (.+)  Max\(alpha1\) = (.+)",
+                "type" : "dynamic",
+                "idNr" : 1,
+                "titles" : ["average","min","max"]
+            }
+        },
+        "phaseFractionNew" : {
+            "solvers" : [".+[pP]haseEulerFoam",".*[iI]nterFoam"],
+            "plotinfo" : {
+                "theTitle" : "Phase fractions",
+                "expr" : r"Phase.+ volume fraction = (.+)  Min\(alpha\.(.+)\) = (.+)  Max\(alpha\.\2\) = (.+)",
+                "type" : "dynamic",
+                "idNr" : 2,
+                "titles" : ["average","min","max"]
+            }
+        },
+        "interfaceTemperature" : {
+            "solvers" : ["reacting.+EulerFoam"],
+            "plotinfo" : {
+                "theTitle" : "Interface temperature",
+                "expr" : r"Tf.(.+): min = (.+), mean = (.+), max = (.+)",
+                "type" : "dynamic",
+                "idNr" : 1,
+                "titles" : ["min","mean","max"]
+            }
+        },
+        "cloudNumberMass" : {
+            "solvers" : [ "coal.+Foam" , ".+Parcel.*Foam" , "sprayFoam" ],
+            "plotinfo" : {
+                "theTitle" : "Particle number and mass",
+                "expr" : r"Cloud: (.+)\n +Current number of parcels += (.+)\n +Current mass in system += (.+)",
+                "type" : "dynamic",
+                "idNr" : 1,
+                "titles" : [ "nr" , "mass" ],
+                "alternateAxis" : [ ".+_mass" ],
+                "ylabel" : "Particle number",
+                "y2label" : "Mass in system"
+            }
+        },
+        "chtPhase" : {
+            "solvers" : [ "chtMultiRegion.*Foam" ],
+            "plotinfo" : {
+                "type" : "phase" ,
+                "expr" : r"Solving for .+ region (.+)",
+                "idNr" : 1
+            }
+        },
+        "chtPhaseOff" : {
+            "solvers" : [ "chtMultiRegion.*Foam" ],
+            "plotinfo" : {
+                "type" : "phase" ,
+                "expr" : r"ExecutionTime(x*) = .+",
+                "idNr" : 1
+            }
+        },
+        "chtFluidTemperature" : {
+            "solvers" : [ "chtMultiRegion.*Foam" ],
+            "plotinfo" : {
+                "expr" : r"Min/max T:(\S+) (\S+)$",
+                "titles" : [ "min" , "max"],
+                "theTitle" : "Temperatures"
+            }
+        },
+        "chtSolidTemperature" : {
+            "solvers" : [ "chtMultiRegion.*Foam" ],
+            "plotinfo" : {
+                "type" : "slave" ,
+                "master" : "chtfluidtemperature",
+                "expr" : r"Min/max T:min\(T\) \[0 0 0 1 0 0 0\] (.+) max\(T\) \[0 0 0 1 0 0 0\] (.+)",
+                "titles" : [ "solid min" , "solid max"]
+            }
+        },
+        "chtFluidCourant" : {
+            "solvers" : [ "chtMultiRegion.*Foam" ],
+            "plotinfo" : {
+                "theTitle" : "Courant and diffusion number",
+                "ylabel" : "Courant" ,
+                "y2label" : "Diffusion",
+                "type" : "dynamic",
+                "expr" : r"Region: (.+) Number mean: (.+) max: (.+)",
+                "titles" : [ "mean" , "max"],
+                "alternateAxis" : [ ".+Diffusion.+" ],
+                "idNr" : 1
+            }
+        },
+        "cellVolumesDynamicMesh" : {
+            "solvers" : [ "move.*Mesh" , ".*DyM.*" ],
+            "plotinfo" : {
+                "theTitle" : "Cell volumes",
+                "ylabel" : "[m^3]",
+                "logscale" : True,
+                "expr" : r"Min volume = (\S+)\. Max volume = (\S+)\.  Total volume = (\S+)\.",
+                "titles" : ["Minimum","Maximum","Total"],
+                "alternateAxis" : ["Total"]
+            }
+        },
+        "faceAreaDynamicMesh" : {
+            "solvers" : [ "move.*Mesh" , ".*DyM.*" ],
+            "plotinfo" : {
+                "theTitle" : "Face areas",
+                "ylabel" : "[m^2]",
+                "logscale" : True,
+                "expr" : r"Minimum face area = (\S+). Maximum face area = (\S+).",
+                "titles" : ["Minimum","Maximum"],
+            }
+        },
+        "nonorhogonalityDynamicMesh" : {
+            "solvers" : [ "move.*Mesh" , ".*DyM.*" ],
+            "plotinfo" : {
+                "theTitle" : "Non-orthodonality and aspect ratio",
+                "ylabel" : "Non-orthogonality",
+                "y2label" : "Aspect ratio",
+                "expr" : r"Mesh non-orthogonality Max: (\S+) average: (\S+)",
+                "titles" : ["Max non-orth","Average non-orth"],
+                "alternateAxis" : ["max aspect"]
+            }
+        },
+        "aspectRatioDynamicMesh" : {
+            "solvers" : [ "move.*Mesh" , ".*DyM.*" ],
+            "plotinfo" : {
+                "type" : "slave",
+                "master" : "nonorhogonalitydynamicmesh",
+                "expr" : r"Max aspect ratio = (\S+)",
+                "titles" : ["max aspect"]
+            }
+        }
     }
 }
 
@@ -181,7 +335,11 @@ class Configuration(configparser.ConfigParser):
         for section,content in iteritems(_defaults):
             self.add_section(section)
             for key,value in iteritems(content):
-                self.set(section,key,str(value))
+                if isinstance(value,(dict,list)):
+                    import pprint
+                    self.set(section,key,pprint.pformat(value,indent=2))
+                else:
+                    self.set(section,key,str(value))
 
         self.read(self.configFiles())
 
@@ -265,7 +423,7 @@ class Configuration(configparser.ConfigParser):
 
     def dump(self):
         """Dumps the contents in INI-Form
-        @return: a string with the contents"""
+        :return: a string with the contents"""
         result=""
         for section in sorted(self.sections(),key=lambda x:x.lower()):
             result+="[%s]\n" % (section)
@@ -277,11 +435,11 @@ class Configuration(configparser.ConfigParser):
 
     def getList(self,section,option,default="",splitchar=",",stripQuotes=True):
         """Get a list of strings (in the original they are separated by commas)
-        @param section: the section
-        @param option: the option
-        @param default: if set and the option is not found, then this value is used
-        @param splitchar: the character by which the values are separated
-        @param stripQuotes: remove quotes if present"""
+        :param section: the section
+        :param option: the option
+        :param default: if set and the option is not found, then this value is used
+        :param splitchar: the character by which the values are separated
+        :param stripQuotes: remove quotes if present"""
 
         val=self.get(section,option,default=default)
         if val=="":
@@ -297,9 +455,9 @@ class Configuration(configparser.ConfigParser):
 
     def getboolean(self,section,option,default=None):
         """Overrides the original implementation from ConfigParser
-        @param section: the section
-        @param option: the option
-        @param default: if set and the option is not found, then this value is used"""
+        :param section: the section
+        :param option: the option
+        :param default: if set and the option is not found, then this value is used"""
 
         try:
             return configparser.ConfigParser.getboolean(self,
@@ -313,9 +471,9 @@ class Configuration(configparser.ConfigParser):
 
     def getint(self,section,option,default=None):
         """Overrides the original implementation from ConfigParser
-        @param section: the section
-        @param option: the option
-        @param default: if set and the option is not found, then this value is used"""
+        :param section: the section
+        :param option: the option
+        :param default: if set and the option is not found, then this value is used"""
 
         try:
             return int(configparser.ConfigParser.get(self,
@@ -329,9 +487,9 @@ class Configuration(configparser.ConfigParser):
 
     def getfloat(self,section,option,default=None):
         """Overrides the original implementation from ConfigParser
-        @param section: the section
-        @param option: the option
-        @param default: if set and the option is not found, then this value is used"""
+        :param section: the section
+        :param option: the option
+        :param default: if set and the option is not found, then this value is used"""
 
         try:
             return float(configparser.ConfigParser.get(self,
@@ -346,18 +504,32 @@ class Configuration(configparser.ConfigParser):
     def getRegexp(self,section,option):
         """Get an entry and interpret it as a regular expression. Subsitute
         the usual regular expression value for floating point numbers
-        @param section: the section
-        @param option: the option
-        @param default: if set and the option is not found, then this value is used"""
+        :param section: the section
+        :param option: the option
+        :param default: if set and the option is not found, then this value is used"""
         floatRegExp="[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?"
 
         return re.compile(self.get(section,option).replace("%f%",floatRegExp))
 
+    def getArch(self,section,option):
+        """Get an entry. If an entry with <option>_<archname> exists then this is
+        used instead of the plain <option>-entry
+        :param section: the section
+        :param option: the option"""
+
+        import os
+        archName=os.uname()[0]
+
+        try:
+            return self.get(section,option+"_"+archName)
+        except configparser.NoOptionError:
+            return self.get(section,option)
+
     def get(self,section,option,default=None,**kwargs):
         """Overrides the original implementation from ConfigParser
-        @param section: the section
-        @param option: the option
-        @param default: if set and the option is not found, then this value is used"""
+        :param section: the section
+        :param option: the option
+        :param default: if set and the option is not found, then this value is used"""
 
         try:
             return configparser.ConfigParser.get(self,

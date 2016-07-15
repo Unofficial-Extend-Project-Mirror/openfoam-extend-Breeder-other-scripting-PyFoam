@@ -29,6 +29,7 @@ class GnuplotCommon(StepAnalyzedCommon):
                  hardcopy=False,
                  hardcopyFormat="png",
                  hardcopyPrefix=None,
+                 hardcopyTerminalOptions=None,
                  customRegexp=None,
                  writeFiles=False,
                  raiseit=False,
@@ -38,6 +39,7 @@ class GnuplotCommon(StepAnalyzedCommon):
                  singleFile=False,
                  writePickled=True,
                  plottingImplementation=None,
+                 gnuplotTerminal=None,
                  adaptFrequency=True):
         """
         TODO: Docu
@@ -57,25 +59,39 @@ class GnuplotCommon(StepAnalyzedCommon):
         self.startTime=start
         self.endTime=end
 
-        self.plots=self.createPlots(persist=persist,
-                                    raiseit=raiseit,
-                                    start=start,
-                                    end=end,
-                                    writeFiles=writeFiles,
-                                    splitThres=splitThres,
-                                    plotLinear=plotLinear,
-                                    plotCont=plotCont,
-                                    plotBound=plotBound,
-                                    plotIterations=plotIterations,
-                                    plotCourant=plotCourant,
-                                    plotExecution=plotExecution,
-                                    plotDeltaT=plotDeltaT,
-                                    customRegexp=customRegexp,
-                                    plottingImplementation=plottingImplementation)
+        self.plots={}
+        self.createPlots(persist=persist,
+                         raiseit=raiseit,
+                         start=start,
+                         end=end,
+                         writeFiles=writeFiles,
+                         splitThres=splitThres,
+                         plotLinear=plotLinear,
+                         plotCont=plotCont,
+                         plotBound=plotBound,
+                         plotIterations=plotIterations,
+                         plotCourant=plotCourant,
+                         plotExecution=plotExecution,
+                         plotDeltaT=plotDeltaT,
+                         customRegexp=customRegexp,
+                         gnuplotTerminal=gnuplotTerminal,
+                         plottingImplementation=plottingImplementation)
 
         self.hardcopy=hardcopy
         self.hardcopyFormat=hardcopyFormat
         self.hardcopyPrefix=hardcopyPrefix
+        self.hardcopyTerminalOptions=hardcopyTerminalOptions
+
+    def addPlots(self,plots):
+        for k in plots:
+            if k not in self.plots:
+                self.plots[k]=plots[k]
+            else:
+                # key already there. Try to build an unique key
+                newK=k
+                while newK in self.plots:
+                    newK+="_"
+                self.plots[newK]=plots[k]
 
     def timeHandle(self):
         StepAnalyzedCommon.timeHandle(self)
@@ -95,7 +111,9 @@ class GnuplotCommon(StepAnalyzedCommon):
             for p in self.plots:
                 if not self.plots[p].hasData():
                     continue
-                self.plots[p].doHardcopy(prefix+p,self.hardcopyFormat)
+                self.plots[p].doHardcopy(prefix+p,
+                                         self.hardcopyFormat,
+                                         self.hardcopyTerminalOptions)
 
 class GnuplotRunner(GnuplotCommon,BasicRunner):
     def __init__(self,
@@ -113,6 +131,7 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                  hardcopy=False,
                  hardcopyFormat="png",
                  hardcopyPrefix=None,
+                 hardcopyTerminalOptions=None,
                  writeFiles=False,
                  server=False,
                  lam=None,
@@ -127,13 +146,14 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                  singleFile=False,
                  writePickled=True,
                  plottingImplementation=None,
+                 gnuplotTerminal=None,
                  remark=None,
                  parameters=None,
                  jobId=None,
                  echoCommandLine=None):
-        """@param smallestFreq: smallest Frequency of output
-        @param persist: Gnuplot window persistst after run
-        @param steady: Is it a steady run? Then stop it after convergence"""
+        """:param smallestFreq: smallest Frequency of output
+        :param persist: Gnuplot window persistst after run
+        :param steady: Is it a steady run? Then stop it after convergence"""
         BasicRunner.__init__(self,
                              argv=argv,
                              silent=progress,
@@ -163,11 +183,13 @@ class GnuplotRunner(GnuplotCommon,BasicRunner):
                                hardcopy=hardcopy,
                                hardcopyFormat=hardcopyFormat,
                                hardcopyPrefix=hardcopyPrefix,
+                               hardcopyTerminalOptions=hardcopyTerminalOptions,
                                writeFiles=writeFiles,
                                raiseit=raiseit,
                                progress=progress,
                                singleFile=singleFile,
                                writePickled=writePickled,
+                               gnuplotTerminal=gnuplotTerminal,
                                plottingImplementation=plottingImplementation)
         self.steady=steady
         if self.steady:
@@ -208,16 +230,18 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
                  hardcopy=False,
                  hardcopyFormat="png",
                  hardcopyPrefix=None,
+                 hardcopyTerminalOptions=None,
                  raiseit=False,
                  progress=False,
                  start=None,
                  end=None,
                  singleFile=False,
                  writePickled=True,
+                 gnuplotTerminal=None,
                  plottingImplementation=None,
                  solverNotRunning=False):
-        """@param smallestFreq: smallest Frequency of output
-        @param persist: Gnuplot window persistst after run"""
+        """:param smallestFreq: smallest Frequency of output
+        :param persist: Gnuplot window persistst after run"""
         BasicWatcher.__init__(self,
                               logfile,
                               silent=(silent or progress),
@@ -239,6 +263,7 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
                                hardcopy=hardcopy,
                                hardcopyFormat=hardcopyFormat,
                                hardcopyPrefix=hardcopyPrefix,
+                               hardcopyTerminalOptions=hardcopyTerminalOptions,
                                writeFiles=writeFiles,
                                raiseit=raiseit,
                                progress=progress,
@@ -246,6 +271,7 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
                                end=end,
                                singleFile=singleFile,
                                writePickled=writePickled,
+                               gnuplotTerminal=gnuplotTerminal,
                                plottingImplementation=plottingImplementation,
                                adaptFrequency=False)
 

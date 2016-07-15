@@ -481,7 +481,7 @@ casename. Additional replacements can be specified
         self.say("Getting Views")
         rViews=sm.GetRenderViews()
         views=pvs.GetViews()
-        if len(views)>1:
+        if (len(views)>1 and PVVersion()<(4,2)) or not self.opts.doLayouts:
             self.warning("More than 1 view in state-file. Generating multiple series")
             timeString="_View%(view)02d"+timeString
         timeString=self.opts.prefix+timeString+stateString
@@ -630,11 +630,15 @@ casename. Additional replacements can be specified
                     self.warning("Source",c,"not found")
 
             for j,view in enumerate(views):
+                self.say("Preparing views")
+                view.ViewTime=float(t)
+
+            for j,view in enumerate(views):
                 if len(views)>0:
                     print "View %d" % j,
                     sys.stdout.flush()
                     self.say()
-                view.ViewTime=float(t)
+
                 if doPic:
                      print self.opts.picType,
                      sys.stdout.flush()

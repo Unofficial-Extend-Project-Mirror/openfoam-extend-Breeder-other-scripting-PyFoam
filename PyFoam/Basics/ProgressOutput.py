@@ -4,7 +4,7 @@ class ProgressOutput(object):
     """This class generates output for recording the progress"""
 
     def __init__(self,oFile):
-        """@param oFile: file-type object that gets the progress output"""
+        """:param oFile: file-type object that gets the progress output"""
         self.oFile=oFile
         self.oLen=0
         self.storedLen=0
@@ -23,7 +23,7 @@ class ProgressOutput(object):
         
     def __call__(self,msg):
         """Add to the progress message
-        @param msg: the text to add"""
+        :param msg: the text to add"""
         self.oFile.write(" "+msg)
         self.oFile.flush()
         self.oLen+=len(msg)+1

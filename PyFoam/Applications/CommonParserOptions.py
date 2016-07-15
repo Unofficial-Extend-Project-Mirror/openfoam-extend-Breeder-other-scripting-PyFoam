@@ -48,6 +48,13 @@ class CommonParserOptions(object):
                           dest="listDictWithHeader",
                           help="Expect that this file only contains a list with a header")
 
+        parser.add_option("--unparsed-list-length",
+                          action="store",
+                          type="int",
+                          default=None,
+                          dest="listLengthUnparsed",
+                          help="Lists longer than this are not parsed")
+
         parser.add_option("--do-macro-expansion",
                           action="store_true",
                           default=False,
@@ -66,4 +73,3 @@ class CommonParserOptions(object):
                           default=False,
                           dest="treatBinaryAsASCII",
                           help="Treat binary files as if they were ascii files")
-

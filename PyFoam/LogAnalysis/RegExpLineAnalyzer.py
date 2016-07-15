@@ -33,12 +33,12 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
                  startTime=None,
                  endTime=None):
         """
-        @param name: name of the expression (needed for output
-        @param exp: the regular expression, %f% will be replaced with the
+        :param name: name of the expression (needed for output
+        :param exp: the regular expression, %f% will be replaced with the
         regular expression for a float
-        @param idNr: number of the pattern group that is used as an identifier
-        @param titles: titles of the columns
-        @param accumulation: How multiple values should be accumulated
+        :param idNr: number of the pattern group that is used as an identifier
+        :param titles: titles of the columns
+        :param accumulation: How multiple values should be accumulated
         """
         GeneralLineAnalyzer.__init__(self,
                                      titles=titles,
@@ -133,7 +133,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
                 else:
                     name=prefix+str(self.titles[i])
 
-            self.lines.setValue(name,val)
+            self.lines.setValue(self.fName(name),val)
 
     def sub(self,ID):
         """ get the data set for the identifier ID"""
@@ -189,10 +189,10 @@ class RegExpTimeLineLineAnalyzer(RegExpLineAnalyzer):
                  startTime=None,
                  endTime=None):
         """
-        @param name: name of the expression (needed for output
-        @param exp: the regular expression, %f% will be replaced with the
+        :param name: name of the expression (needed for output
+        :param exp: the regular expression, %f% will be replaced with the
         regular expression for a float
-        @param titles: titles of the columns
+        :param titles: titles of the columns
         """
         RegExpLineAnalyzer.__init__(self,
                                     name,

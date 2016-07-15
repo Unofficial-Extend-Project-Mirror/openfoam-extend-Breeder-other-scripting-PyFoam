@@ -1,4 +1,3 @@
-
 import unittest
 
 from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
@@ -35,7 +34,10 @@ def buoyHotRoomTutorial():
     prefix=foamTutorials()
     if not oldTutorialStructure():
         prefix=path.join(prefix,"heatTransfer")
-    return path.join(prefix,"buoyantSimpleFoam","hotRoom")
+    if foamVersionNumber()>=(3,):
+        return path.join(prefix,"buoyantSimpleFoam","hotRadiationRoom")
+    else:
+        return path.join(prefix,"buoyantSimpleFoam","hotRoom")
 
 def XoodlesPitzTutorial():
     prefix=foamTutorials()
@@ -44,6 +46,10 @@ def XoodlesPitzTutorial():
     else:
         prefix=path.join(prefix,"combustion","XiFoam","les")
     return path.join(prefix,"pitzDaily3D")
+
+def XiFoamMoriyoshiTutorial():
+    prefix=foamTutorials()
+    return path.join(prefix,"combustion","XiFoam","ras","moriyoshiHomogeneous")
 
 def dieselAachenTutorial():
     prefix=foamTutorials()
@@ -106,6 +112,11 @@ class FoamStringParserTest(unittest.TestCase):
         self.assertEqual(type(p1["test"]),float)
         self.assertAlmostEqual(p1["test"],1.e-4,6)
 
+    def testParseFloat3(self):
+        p1=FoamStringParser("test 1.E-4;")
+        self.assertEqual(type(p1["test"]),float)
+        self.assertAlmostEqual(p1["test"],1.e-4,6)
+
     def testParseString(self):
         p1=FoamStringParser('test "der name";')
         self.assertEqual(p1["test"][1:-1],"der name")
@@ -144,6 +155,22 @@ der name
         p1=FoamStringParser('test  nonuniform 0();')
         self.assertEqual(type(p1["test"]),Field)
         self.assert_(not p1["test"].isUniform())
+
+    def testListPrefixUniform(self):
+        p=FoamStringParser("test 10{42.5};")
+        self.assertEqual(len(p["test"]),10)
+        self.assertEqual(type(p["test"]),Field)
+        self.assert_(p["test"].isUniform())
+
+    def testListPrefixUniformVector(self):
+        p=FoamStringParser("test 10{(1 2 3)};")
+        self.assertEqual(len(p["test"]),10)
+        self.assertEqual(type(p["test"]),Field)
+        self.assert_(p["test"].isUniform())
+
+    def testListPrefixNested(self):
+        p=FoamStringParser("test 3 ( 3{0.} 3 (1 1 1) 3 (2 2 2));")
+        self.assertEqual(len(p["test"]),3)
 
     def testParseWordMinus(self):
         p1=FoamStringParser('test  name-0;')
@@ -255,6 +282,10 @@ der name
         p1=FoamStringParser("test [1 2 -3 0 1.4];")
         self.assertEqual(p1["test"].__class__,Dimension)
 
+    def testDataDimensionSymbolic(self):
+        p1=FoamStringParser("test [m s^-1];")
+        self.assertEqual(p1["test"].__class__,Dimension)
+
     def testStringConversion(self):
         p1=FoamStringParser("test dings 2;")
         self.assertEqual(str(p1),"test dings     2 ;\n")
@@ -307,7 +338,7 @@ nix // Hepp
     def testListAllPreList(self):
         p=FoamStringParser("test (3(1.1 -1 1) 3(2.2 -2 2) 3(3.3 -3 3));")
         self.assertEqual(len(p["test"]),3)
-        self.assertEqual(type(p["test"][1]),Vector)
+        self.assertEqual(type(p["test"][1]),list)
         self.assertEqual(p["test"][1][0],2.2)
 
     def testListAllPreListNoVector(self):
@@ -316,6 +347,19 @@ nix // Hepp
         self.assertEqual(len(p["test"]),3)
         self.assertEqual(type(p["test"][1]),list)
         self.assertEqual(p["test"][1][0],2.2)
+
+    def testPreListUniform(self):
+        p=FoamStringParser("test 5 {42.1} ;")
+        self.assertEqual(len(p["test"]),5)
+        self.assertEqual(p["test"][2],42.1)
+
+    def testPreListUniformNested(self):
+        p=FoamStringParser("test 2 (5 {42.1} 5 (1 2 3 4 5)) ;")
+        #        p=FoamStringParser("test 2 (5 (42.1 42.1 42.1 42.1 42.1) 5 (1 2 3 4 5)) ;")
+        self.assertEqual(len(p["test"]),2)
+        self.assertEqual(len(p["test"][0]),5)
+        self.assertEqual(p["test"][0][2],42.1)
+        self.assertEqual(p["test"][1][2],3)
 
     def testReactionList(self):
         p=FoamStringParser("""test (
@@ -476,14 +520,14 @@ theSuite.addTest(unittest.makeSuite(ParsedParameterDictionaryMacroExpansion,"tes
 class ParsedBoundaryDictTest(unittest.TestCase):
     def setUp(self):
         self.theFile=mktemp()
-        copyfile(path.join(simplePitzTutorial(),"constant","polyMesh","boundary"),self.theFile)
+        copyfile(path.join(foamTutorials(),"incompressible","simpleFoam","airFoil2D","constant","polyMesh","boundary"),self.theFile)
 
     def tearDown(self):
         remove(self.theFile)
 
     def testReadTutorial(self):
         test=ParsedBoundaryDict(self.theFile)
-        self.assertEqual(len(test.content),5)
+        self.assertEqual(len(test.content),4)
         self.assert_("inlet" in test)
 
 theSuite.addTest(unittest.makeSuite(ParsedBoundaryDict,"test"))
@@ -493,6 +537,8 @@ class ParsedParameterFileTest(unittest.TestCase):
         self.theFile=mktemp()
         turb=path.join(simplePitzTutorial(),"constant")
         if oldApp():
+            turb=path.join(turb,"turbulenceProperties")
+        elif foamVersionNumber()>=(3,):
             turb=path.join(turb,"turbulenceProperties")
         else:
             turb=path.join(turb,"RASProperties")
@@ -507,6 +553,10 @@ class ParsedParameterFileTest(unittest.TestCase):
         if foamVersionNumber()<(1,5):
             nrTurbModels=17
             model="turbulenceModel"
+        elif foamVersionNumber()>=(3,):
+            test=test["RAS"]
+            nrTurbModels=3
+            model="RASModel"
         else:
             if foamVersionNumber()<(1,6):
                 nrTurbModels=19
@@ -515,7 +565,8 @@ class ParsedParameterFileTest(unittest.TestCase):
 
             model="RASModel"
 
-        self.assertEqual(len(test.content),nrTurbModels)
+        # self.assertEqual(len(test.content),nrTurbModels)
+        self.assertEqual(len(test),nrTurbModels)
         self.assertEqual(test[model],"kEpsilon")
 
 theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest,"test"))
@@ -541,14 +592,20 @@ theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest2,"test"))
 class ParsedParameterFileTest3(unittest.TestCase):
     def setUp(self):
         self.theFile=mktemp()
-        copyfile(path.join(buoyHotRoomTutorial(),"0","T.org"),self.theFile)
+        try:
+            copyfile(path.join(buoyHotRoomTutorial(),"0","T.org"),self.theFile)
+        except IOError:
+            copyfile(path.join(buoyHotRoomTutorial(),"0","T"),self.theFile)
 
     def tearDown(self):
         remove(self.theFile)
 
     def testReadTutorial(self):
         test=ParsedParameterFile(self.theFile)
-        self.assertEqual(len(test["boundaryField"]),3)
+        if foamVersionNumber()>=(3,):
+            self.assertEqual(len(test["boundaryField"]),4)
+        else:
+            self.assertEqual(len(test["boundaryField"]),3)
         if foamVersionNumber()<(2,):
             self.assertEqual(len(test["boundaryField"]["floor"]["value"].val),400)
 
@@ -557,7 +614,10 @@ theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest3,"test"))
 class ParsedParameterFileTest4(unittest.TestCase):
     def setUp(self):
         self.theFile=mktemp()
-        copyfile(path.join(XoodlesPitzTutorial(),"system","fvSchemes"),self.theFile)
+        try:
+            copyfile(path.join(XoodlesPitzTutorial(),"system","fvSchemes"),self.theFile)
+        except IOError:
+            copyfile(path.join(XiFoamMoriyoshiTutorial(),"system","fvSchemes"),self.theFile)
 
     def tearDown(self):
         remove(self.theFile)
@@ -570,7 +630,10 @@ class ParsedParameterFileTest4(unittest.TestCase):
             gradSchemes=2
             divSchemes=5
         self.assertEqual(len(test["gradSchemes"]),gradSchemes)
-        self.assertEqual(len(test["divSchemes"]["div(phi,ft_b_h_hu)"][2]),divSchemes)
+        if foamVersionNumber()>=(3,):
+            self.assertEqual(len(test["divSchemes"]["div(phi,ft_b_ha_hau)"][2]),5)
+        else:
+            self.assertEqual(len(test["divSchemes"]["div(phi,ft_b_h_hu)"][2]),divSchemes)
 
 theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest4,"test"))
 
@@ -862,14 +925,14 @@ class ReadIncludeAndMacroExpansionTest(unittest.TestCase):
         kFile=ParsedParameterFile(path.join(self.dest,"k"))
         self.assertEqual(str(kFile["internalField"]),"uniform $turbulentKE")
         self.assertEqual(kFile["boundaryField"]["lowerWall"]["value"],"$internalField")
-        self.assertEqual(kFile["boundaryField"]["motorBike_nowhere"]["value"],"$internalField")
+        self.assertEqual(kFile["boundaryField"]["motorBikeGroup"]["value"],"$internalField")
 
     def testReadMacroExpansion(self):
         kFile=ParsedParameterFile(path.join(self.dest,"k"),
                                   doMacroExpansion=True)
         self.assertEqual(str(kFile["internalField"]),"uniform 0.24")
         self.assertEqual(str(kFile["boundaryField"]["lowerWall"]["value"]),"uniform 0.24")
-        self.assertEqual(str(kFile["boundaryField"]["motorBike_nowhere"]["value"]),"uniform 0.24")
+        self.assertEqual(str(kFile["boundaryField"]["motorBikeGroup"]["value"]),"uniform 0.24")
 
 
 theSuite.addTest(unittest.makeSuite(WriteParameterFileTest,"test"))

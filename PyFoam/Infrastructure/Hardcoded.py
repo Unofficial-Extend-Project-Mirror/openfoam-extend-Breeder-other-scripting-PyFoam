@@ -11,52 +11,52 @@ _pyFoamConfigName="pyfoamrc"
 pyFoamSiteVar="PYFOAM_SITE_DIR"
 
 def globalDirectory():
-    """@return: the global directory"""
+    """:return: the global directory"""
     return path.join("/etc",_pyFoamDirName)
 
 def globalConfigFile():
-    """@return: The name of the global configuration File"""
+    """:return: The name of the global configuration File"""
     return path.join(globalDirectory(),_pyFoamConfigName)
 
 def globalConfigDir():
-    """@return: The name of the global configuration directory where .cfg-files can be placed"""
+    """:return: The name of the global configuration directory where .cfg-files can be placed"""
     return globalConfigFile()+".d"
 
 def siteDirectory():
-    """@return: the site directory"""
+    """:return: the site directory"""
     if pyFoamSiteVar in environ:
         return path.join(environ[pyFoamSiteVar],"etc")
     else:
         return None
 
 def siteConfigFile():
-    """@return: The name of the site configuration File"""
+    """:return: The name of the site configuration File"""
     if pyFoamSiteVar in environ:
         return path.join(siteDirectory(),_pyFoamConfigName)
     else:
         return None
 
 def siteConfigDir():
-    """@return: The name of the site configuration directory where .cfg-files can be placed"""
+    """:return: The name of the site configuration directory where .cfg-files can be placed"""
     if pyFoamSiteVar in environ:
         return siteConfigFile()+".d"
     else:
         return None
 
 def userDirectory():
-    """@return: the user directory"""
+    """:return: the user directory"""
     return path.expanduser(path.join("~","."+_pyFoamDirName))
 
 def userConfigFile():
-    """@return: The name of the user configuration File"""
+    """:return: The name of the user configuration File"""
     return path.join(userDirectory(),_pyFoamConfigName)
 
 def userConfigDir():
-    """@return: The name of the user configuration directory where .cfg-files can be placed"""
+    """:return: The name of the user configuration directory where .cfg-files can be placed"""
     return userConfigFile()+".d"
 
 def userName():
-    """@return: name of the current user"""
+    """:return: name of the current user"""
     user=""
     if "USER" in environ:
         user=environ["USER"]
@@ -65,7 +65,7 @@ def userName():
 def logDirectory():
     """Path to the log directory that this user may write to.
     /var/log/pyFoam for root, ~/.pyFoam/log for all others
-    @return: path to the log directory."""
+    :return: path to the log directory."""
     if userName()=="root":
         return path.join("/var/log","pyFoam")
     else:
@@ -73,7 +73,7 @@ def logDirectory():
 
 def assertDirectory(name):
     """Makes sure that the directory exists
-    @param name: the directory"""
+    :param name: the directory"""
     if path.exists(name):
         return
     else:

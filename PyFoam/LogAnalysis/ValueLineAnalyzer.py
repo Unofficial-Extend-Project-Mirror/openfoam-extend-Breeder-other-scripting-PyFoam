@@ -11,8 +11,8 @@ class ValueLineAnalyzer(FileLineAnalyzer):
 
     def __init__(self,name,pre,titles=[]):
         """
-        @param name: name of the expression (needed for output)
-        @param pre: the string that starts the line
+        :param name: name of the expression (needed for output)
+        :param pre: the string that starts the line
         """
         FileLineAnalyzer.__init__(self,titles)
 
@@ -43,11 +43,11 @@ class ValueNameFinderLineAnalyzer(NameFinderLineAnalyzer):
 
     def __init__(self,trigger,analyze,val,idNr=1,nr=1):
         """
-        @param trigger: The regular expression that has to match before data is collected
-        @param nr: The number of lines after the match that data is collected
-        @param analyze: The regular expression that is used for analysis
-        @param idNr: The id of the group that is used for analysis
-        @param val: The ValueLineAnalyzer that needs the names
+        :param trigger: The regular expression that has to match before data is collected
+        :param nr: The number of lines after the match that data is collected
+        :param analyze: The regular expression that is used for analysis
+        :param idNr: The id of the group that is used for analysis
+        :param val: The ValueLineAnalyzer that needs the names
         """
 
         NameFinderLineAnalyzer.__init__(self,trigger,analyze,idNr=idNr,nr=nr)

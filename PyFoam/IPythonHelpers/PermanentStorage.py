@@ -146,10 +146,10 @@ ensurePyFoamStorage();
 
         def __call__(self,name,f,call=True):
             """Get value or evaluate it.
-            @param name: name of the item to get/set
-            @param f: function to evaluate if the item is not present. If
+            :param name: name of the item to get/set
+            :param f: function to evaluate if the item is not present. If
             item is not callable (strings for instance) it is set 'as-is'
-            @param call: Use f() if possible (otherwise f)"""
+            :param call: Use f() if possible (otherwise f)"""
             val=None
             if self.__autoread:
                 try:

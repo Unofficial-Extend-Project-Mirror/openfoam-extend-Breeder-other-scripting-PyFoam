@@ -1,6 +1,5 @@
-#! /usr/bin/env pvpython 
+#! /usr/bin/env python
 
-from PyFoam.Applications.PVSnapshot import PVSnapshot
+from PyFoam.Applications.ChangePython import changePython
 
-PVSnapshot()
-
+changePython("pvpython","PVSnapshot")

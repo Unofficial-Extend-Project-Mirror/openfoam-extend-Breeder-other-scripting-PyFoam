@@ -25,11 +25,11 @@ class GeneralSimpleLineAnalyzer(GeneralLineAnalyzer):
                  startTime=None,
                  endTime=None):
         """
-        @param name: name of the expression (needed for output)
-        @param exp: the regular expression
-        @param idNr: number of the pattern group that is used as an identifier
-        @param idList: numbers of the pattern group that are used from the expression
-        @param titles: titles for the data items"""
+        :param name: name of the expression (needed for output)
+        :param exp: the regular expression
+        :param idNr: number of the pattern group that is used as an identifier
+        :param idList: numbers of the pattern group that are used from the expression
+        :param titles: titles for the data items"""
         GeneralLineAnalyzer.__init__(self,
                                      titles=titles,
                                      doTimelines=doTimelines,
@@ -84,20 +84,20 @@ class SimpleLineAnalyzer(GeneralSimpleLineAnalyzer):
 
     def __init__(self,name,exp,idNr=None,titles=[]):
         """
-        @param name: name of the expression (needed for output)
-        @param exp: the regular expression
-        @param idNr: number of the pattern group that is used as an identifier
-        @param titles: titles for the data items"""
+        :param name: name of the expression (needed for output)
+        :param exp: the regular expression
+        :param idNr: number of the pattern group that is used as an identifier
+        :param titles: titles for the data items"""
         GeneralSimpleLineAnalyzer.__init__(self,name,exp,idNr=idNr,titles=titles,doTimelines=False)
 
 class TimeLineSimpleLineAnalyzer(GeneralSimpleLineAnalyzer):
     """Parses lines for an arbitrary regular expression"""
 
     def __init__(self,name,exp,idList=None,titles=[]):
-        """@param  name: name of the expression (needed for output)
-        @param exp: the regular expression
-        @param idList: numbers of the pattern group that are used from the expression
-        @param titles: titles for the data items"""
+        """:param  name: name of the expression (needed for output)
+        :param exp: the regular expression
+        :param idList: numbers of the pattern group that are used from the expression
+        :param titles: titles for the data items"""
 
         GeneralSimpleLineAnalyzer.__init__(self,name,exp,idNr=idList,titles=titles,doFiles=False)
 

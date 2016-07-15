@@ -16,7 +16,7 @@ class BoundaryDict(ParsedBoundaryDict):
                  region=None,
                  processor=None,
                  time=None):
-        """@param case: Path to the case-directory"""
+        """:param case: Path to the case-directory"""
         try:
             ParsedBoundaryDict.__init__(self,
                                         SolutionDirectory(case,
@@ -53,7 +53,7 @@ class BoundaryDict(ParsedBoundaryDict):
 
     def patches(self,patchType=None):
         """Returns a list with the names of the patches
-        @param patchType: If specified only patches of the specific type are returned"""
+        :param patchType: If specified only patches of the specific type are returned"""
 
         if patchType==None:
             return list(self.content.keys())

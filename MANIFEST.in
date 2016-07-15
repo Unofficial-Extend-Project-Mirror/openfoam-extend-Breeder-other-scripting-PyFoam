@@ -9,5 +9,7 @@ global-exclude *~
 prune */.svn
 prune */*/.svn
 include ReleaseNotes
+include ReleaseNotes.md
+include ReleaseNotes.html
 include README
 include COPYING

@@ -20,7 +20,7 @@ from PyFoam.IPythonHelpers import create_code_cell
 from PyFoam.IPythonHelpers.PermanentStorage import PermanentStorage
 
 from IPython.display import HTML,display
-from IPython.html import widgets
+import ipywidgets as widgets
 from IPython import get_ipython
 
 class Case(object):
@@ -30,7 +30,7 @@ class Case(object):
     """
 
     def __init__(self,input):
-        """@param input: either a SolutionDirectory-instance or a string
+        """:param input: either a SolutionDirectory-instance or a string
         with a pathname"""
         if isinstance(input,SolutionDirectory):
             self.__sol=input
@@ -204,9 +204,9 @@ class Case(object):
 
     def timelineSelector(self,directoryName):
         info=self.timelineInfo(directoryName)
-        lst=[widgets.LatexWidget(value="Fields:")]
+        lst=[widgets.Label(value="Fields:")]
         fieldsSelected=set()
-        storeButton=widgets.ButtonWidget(description="Store to",disabled=True)
+        storeButton=widgets.Button(description="Store to",disabled=True)
         def make_field_toggle(fName):
             def f(name,value):
                 if value:
@@ -222,12 +222,12 @@ class Case(object):
                     storeButton.disabled=True
             return f
         for f in info["fields"]:
-            w=widgets.ToggleButtonWidget(description=f)
+            w=widgets.ToggleButton(description=f)
             w.on_trait_change(make_field_toggle(f), 'value')
             lst.append(w)
-        fields=widgets.ContainerWidget(description="Fields",children=lst)
+        fields=widgets.Box(description="Fields",children=lst)
         fields.add_class("hbox")
-        varName=widgets.TextWidget(description="Variable Name")
+        varName=widgets.Text(description="Variable Name")
         def varname_change(name,value):
             storeButton.description="Store to "+value
             if len(value)==0 or len(fieldsSelected)==0:
@@ -259,18 +259,19 @@ class Case(object):
             get_ipython().push({v:val})
             varName.value=""
         storeButton.on_click(store_clicked)
-        total=widgets.ContainerWidget(children=[fields,varName,storeButton])
+        total=widgets.Box(children=[fields,varName,storeButton])
         total.add_class("vbox")
         display(total)
 
     def sampleSelector(self,directoryName):
         info=self.sampleInfo(directoryName)
-        mode=widgets.ToggleButtonsWidget(description="Mode",values=["Time","Field"])
-        field=widgets.DropdownWidget(description="Field",values=info["values"])
-        time=widgets.DropdownWidget(description="Time",values=info["times"],value=info["times"][-1])
-        line=widgets.DropdownWidget(description="Sample line",values=info["lines"])
-        varName=widgets.TextWidget(description="Variable Name")
-        storeButton=widgets.ButtonWidget(description="Store to",disabled=True)
+        mode=widgets.ToggleButtons(description="Mode",values=["Time","Field"])
+        field=widgets.Dropdown(description="Field",values=info["values"])
+        time=widgets.Dropdown(description="Time",values=info["times"])
+                              # ,value=info["times"][-1])
+        line=widgets.Dropdown(description="Sample line",values=info["lines"])
+        varName=widgets.Text(description="Variable Name")
+        storeButton=widgets.Button(description="Store to",disabled=True)
         def mode_changed(name,value):
             if value=="Time":
                 time.disabled=False
@@ -324,16 +325,16 @@ class Case(object):
             get_ipython().push({v:val})
             varName.value=""
         storeButton.on_click(store_clicked)
-        total=widgets.ContainerWidget(children=[mode,line,field,time,varName,storeButton])
+        total=widgets.Box(children=[mode,line,field,time,varName,storeButton])
         total.add_class("vbox")
         display(total)
 
     def distributionSelector(self,directoryName):
         info=self.distributionInfo(directoryName)
-        time=widgets.DropdownWidget(description="Time",values=info["times"],value=info["times"][-1])
-        line=widgets.DropdownWidget(description="Sample line",values=info["lines"])
-        varName=widgets.TextWidget(description="Variable Name")
-        storeButton=widgets.ButtonWidget(description="Store to",disabled=True)
+        time=widgets.Dropdown(description="Time",values=info["times"],value=info["times"][-1])
+        line=widgets.Dropdown(description="Sample line",values=info["lines"])
+        varName=widgets.Text(description="Variable Name")
+        storeButton=widgets.Button(description="Store to",disabled=True)
         def varname_change(name,value):
             storeButton.description="Store to "+value
             if len(value)==0:
@@ -366,16 +367,16 @@ class Case(object):
             get_ipython().push({v:val})
             varName.value=""
         storeButton.on_click(store_clicked)
-        total=widgets.ContainerWidget(children=[line,time,varName,storeButton])
+        total=widgets.Box(children=[line,time,varName,storeButton])
         total.add_class("vbox")
         display(total)
 
     def pickledPlotSelector(self):
-        pPlot=widgets.DropdownWidget(description="Pickled plot file",
+        pPlot=widgets.Dropdown(description="Pickled plot file",
                                      values=self.sol.pickledPlots,
                                      value=self.sol.pickledPlots[0])
-        varName=widgets.TextWidget(description="Variable Name")
-        storeButton=widgets.ButtonWidget(description="Store to",disabled=True)
+        varName=widgets.Text(description="Variable Name")
+        storeButton=widgets.Button(description="Store to",disabled=True)
         def varname_change(name,value):
             storeButton.description="Store to "+value
             if len(value)==0:
@@ -407,16 +408,16 @@ class Case(object):
             get_ipython().push({v:val})
             varName.value=""
         storeButton.on_click(store_clicked)
-        total=widgets.ContainerWidget(children=[pPlot,varName,storeButton])
+        total=widgets.Box(children=[pPlot,varName,storeButton])
         total.add_class("vbox")
         display(total)
 
     def pickledDataSelector(self):
-        pData=widgets.DropdownWidget(description="Pickled data file",
+        pData=widgets.Dropdown(description="Pickled data file",
                                      values=self.sol.pickledData,
                                      value=self.sol.pickledData[0])
-        varName=widgets.TextWidget(description="Variable Name")
-        storeButton=widgets.ButtonWidget(description="Store to",disabled=True)
+        varName=widgets.Text(description="Variable Name")
+        storeButton=widgets.Button(description="Store to",disabled=True)
         def varname_change(name,value):
             storeButton.description="Store to "+value
             if len(value)==0:
@@ -448,6 +449,6 @@ class Case(object):
             get_ipython().push({v:val})
             varName.value=""
         storeButton.on_click(store_clicked)
-        total=widgets.ContainerWidget(children=[pData,varName,storeButton])
+        total=widgets.Box(children=[pData,varName,storeButton])
         total.add_class("vbox")
         display(total)

@@ -24,7 +24,7 @@ class FoamMetaServer(object):
     register themselves. Checks at regular intervalls whether the processes are still alive
     """
     def __init__(self,port=None):
-        """@param port: The port on which the server should listen"""
+        """:param port: The port on which the server should listen"""
         if port==None:
             port=config().getint("Metaserver","port")
             
@@ -78,7 +78,7 @@ class FoamMetaServer(object):
     
     def scan(self,additional):
         """Starts a thread that collects the data of the servers from the net
-        @param additional: a string with a list of additional subnets that should be scanned"""
+        :param additional: a string with a list of additional subnets that should be scanned"""
         collector=MetaCollector(self,additional=additional)
         collector.setDaemon(True)
         collector.start()
@@ -97,20 +97,20 @@ class FoamMetaServer(object):
         
     def registerServer(self,ip,pid,port,sync=True,external=False):
         """Registers a new server via XMLRPC
-        @param ip: IP of the server
-        @param pid: Die PID at the server
-        @param port: the port at which the server is listening
-        @param sync: (optional) if to sync with the webserver or not
+        :param ip: IP of the server
+        :param pid: Die PID at the server
+        :param port: the port at which the server is listening
+        :param sync: (optional) if to sync with the webserver or not
         """
         return self._registerServer(ip,pid,port,sync=sync,external=True)
     
     def _registerServer(self,ip,pid,port,sync=True,external=False):
         """Registers a new server
-        @param ip: IP of the server
-        @param pid: Die PID at the server
-        @param port: the port at which the server is listening
-        @param external: was called via XMLRPC
-        @param sync: (optional) if to sync with the webserver or not
+        :param ip: IP of the server
+        :param pid: Die PID at the server
+        :param port: the port at which the server is listening
+        :param external: was called via XMLRPC
+        :param sync: (optional) if to sync with the webserver or not
         """
         self.dataLock.acquire()
         serverID="%s:%d" % (ip,port)
@@ -159,10 +159,10 @@ class FoamMetaServer(object):
     
     def deregisterServer(self,ip,pid,port,sync=True):
         """Deregisters a server
-        @param ip: IP of the server
-        @param pid: Die PID at the server
-        @param port: the port at which the server is listening
-        @param sync: (optional) if to sync with the webserver or not
+        :param ip: IP of the server
+        :param pid: Die PID at the server
+        :param port: the port at which the server is listening
+        :param sync: (optional) if to sync with the webserver or not
         """
         self.dataLock.acquire()
         serverID="%s:%d" % (ip,port)
@@ -191,10 +191,10 @@ class FoamMetaServer(object):
 
     def forwardCommand(self,ip,port,cmd):
         """Forwards a RPC to another machine
-        @param ip: IP of the server
-        @param port: the port at which the server is listening
-        @param cmd: the command that should be executed there
-        @return: the result of the command
+        :param ip: IP of the server
+        :param port: the port at which the server is listening
+        :param cmd: the command that should be executed there
+        :return: the result of the command
         """
         result=""
         try:
@@ -219,9 +219,9 @@ class ServerInfo(object):
     """Contains the information about a server"""
     def __init__(self,ip,pid,port):
         """
-        @param ip: IP of the server
-        @param pid: Die PID at the server
-        @param port: the port at which the server is listening
+        :param ip: IP of the server
+        :param pid: Die PID at the server
+        :param port: the port at which the server is listening
         """
         self._info={}
         self._info["ip"]=ip
@@ -266,7 +266,7 @@ class ServerInfo(object):
 class MetaChecker(Thread):
     """Checks regularily whether the registered Servers are still alive"""
     def __init__(self,parent):
-        """@param parent: the FoamMetaServer that gets the information"""
+        """:param parent: the FoamMetaServer that gets the information"""
         Thread.__init__(self)
         self.parent=parent
         self.sleepTime=config().getfloat("Metaserver","checkerSleeping")
@@ -310,8 +310,8 @@ class MetaChecker(Thread):
 class MetaCollector(Thread):
     """Scans the net in a separate thread"""
     def __init__(self,parent,additional=None):
-        """@param parent: the FoamMetaServer that gets the information
-        @param additional: A string with alist of additional subnets that should be scanned"""
+        """:param parent: the FoamMetaServer that gets the information
+        :param additional: A string with alist of additional subnets that should be scanned"""
         Thread.__init__(self)
         self.parent=parent
         self.additional=additional

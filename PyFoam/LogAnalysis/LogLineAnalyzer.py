@@ -29,7 +29,7 @@ class LogLineAnalyzer(object):
     def setParent(self,parent):
         """Introduces the LineAnalyzer to its supervisor
 
-        @param parent: The Analyzer class of which this is a part"""
+        :param parent: The Analyzer class of which this is a part"""
         self.parent=parent
 
     def writeProgress(self,msg):
@@ -48,18 +48,18 @@ class LogLineAnalyzer(object):
         return True
 
     def getTime(self):
-        """@returns: current time"""
+        """:returns: current time"""
         return self.parent.getTime()
 
     def addListener(self,func):
-        """@param func: a new listener-function that gets notified every time
+        """:param func: a new listener-function that gets notified every time
         the line-analyzer encounters something interesting"""
 
         self.eventListeners.append(func)
 
     def notify(self,*data):
         """Notifys the event listeners of an event
-        @param data: The data of the event. Everything is possible"""
+        :param data: The data of the event. Everything is possible"""
 
         for f in self.eventListeners:
             f(*data)

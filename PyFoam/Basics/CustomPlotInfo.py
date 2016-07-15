@@ -35,10 +35,10 @@ class CustomPlotInfo(object):
     nr=1
 
     def __init__(self,raw=None,name=None,enabled=True):
-        """@param raw: The raw data. Either a string for the two legacy-formats or a
+        """:param raw: The raw data. Either a string for the two legacy-formats or a
         dictionary for the new format
-        @param name: Name of the expression (only to be used for the new format)
-        @param enabled: Should this plot be actually used?"""
+        :param name: Name of the expression (only to be used for the new format)
+        :param enabled: Should this plot be actually used?"""
         self.nr=CustomPlotInfo.nr
         CustomPlotInfo.nr+=1
 
@@ -59,7 +59,9 @@ class CustomPlotInfo(object):
         self.end=None
         self.persist=False
         self.raisit=False
+        self.enhanced=False
         self.with_="lines"
+        #        self.with_="points"
         self.type="regular";
         self.master=None
         self.progress=None
@@ -67,6 +69,7 @@ class CustomPlotInfo(object):
         self.xlabel="Time [s]"
         self.ylabel=None
         self.gnuplotCommands=[]
+        self.enhanced=False
 
         # Legacy format
         if raw==None:
@@ -141,7 +144,7 @@ class CustomPlotInfo(object):
 def readCustomPlotInfo(rawData,useName=None):
     """Determines which of the three possible formats for custom-plotting is used
     and returns a list of CustomPlotInfo-objects
-    @param rawData: a string that contains the raw data"""
+    :param rawData: a string that contains the raw data"""
     info=[]
 
     try:

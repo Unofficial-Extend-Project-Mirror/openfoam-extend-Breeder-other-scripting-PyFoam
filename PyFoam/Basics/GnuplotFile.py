@@ -6,7 +6,7 @@ import re
 class GnuplotFile(object):
     def __init__(self,fname):
         """
-        @param fname: The filename
+        :param fname: The filename
         """
         self.fname=fname
 
@@ -52,7 +52,7 @@ class GnuplotFile(object):
         """
         Writes a file that can be used by Gnuplot
 
-        @param name: name of the file
+        :param name: name of the file
         """
         fh=open(name,'w')
 

@@ -14,8 +14,8 @@ class BlockMesh(FileBasisBackup):
     """Represents a C{blockMeshDict}-file"""
 
     def __init__(self,name,backup=False):
-        """@param name: The name of the parameter file
-        @param backup: create a backup-copy of the file"""
+        """:param name: The name of the parameter file
+        :param backup: create a backup-copy of the file"""
 
         FileBasisBackup.__init__(self,name,backup=backup)
 
@@ -193,7 +193,7 @@ class BlockMesh(FileBasisBackup):
 
     def numberVertices(self,prefix=""):
         """Add comments with the number of the vertex after them
-        @param prefix: a string to add before the number"""
+        :param prefix: a string to add before the number"""
 
         startPattern=re.compile("^\s*vertices")
         endPattern=re.compile("^\s*\);")
@@ -227,11 +227,11 @@ class BlockMesh(FileBasisBackup):
 
     def refineMesh(self,factors,offset=(0,0,0),getContent=False,addOld=True):
         """Refine the Mesh by multiplying the number of cells in the blocks
-        @param factors: either a scalar to scale in all directions or a
+        :param factors: either a scalar to scale in all directions or a
         tuple with the value for each direction
-        @param offset: an optional tuple for an additionnal offset value
+        :param offset: an optional tuple for an additionnal offset value
         for each direction
-        @param getContent: Return the contents instead of writing a fil. Main purpose
+        :param getContent: Return the contents instead of writing a fil. Main purpose
         of this parameter is not to break compatibility with old versions"""
 
         if type(factors)!=tuple:

@@ -45,7 +45,7 @@ class CommonPlotLines(object):
 
     def addFileRegexps(self,fName):
         """Adds the lines from a file to the custom regular expressions
-        @param fName: The name of the file"""
+        :param fName: The name of the file"""
         f=open(fName)
         txt=f.read()
         f.close()

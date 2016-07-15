@@ -32,11 +32,11 @@ class Utilities(object):
     def __init__(self):
         pass
 
-    def execute(self,cmd,debug=False,workdir=None,echo=None):
+    def execute(self,cmd,debug=False,workdir=None,echo=None,getReturnCode=False):
         """Execute the command cmd. If specified change the working directory
 
         Currently no error-handling is done
-        @return: A list with all the output-lines of the execution"""
+        :return: A list with all the output-lines of the execution"""
         if debug:
             print_(cmd)
 
@@ -79,7 +79,10 @@ class Utilities(object):
         if oldDir:
             os.chdir(oldDir)
 
-        return tmp
+        if getReturnCode:
+            return p.returncode,tmp
+        else:
+            return tmp
 
     def remove(self,f):
         """Remove a file if it exists."""
@@ -136,8 +139,8 @@ class Utilities(object):
 
     def writeDictionaryHeader(self,f):
         """Writes a dummy header so OpenFOAM accepts the file as a dictionary
-        @param f: The file to write to
-        @type f: file"""
+        :param f: The file to write to
+        :type f: file"""
 
         f.write("""
 // * * * * * * * * * //
@@ -157,8 +160,8 @@ FoamFile
     def listDirectory(self,d):
         """Lists the files in a directory, but excludes certain names
         and files with certain endings
-        @param d: The directory to list
-        @return: List of the found files and directories"""
+        :param d: The directory to list
+        :return: List of the found files and directories"""
 
         result=[]
 
@@ -200,9 +203,9 @@ FoamFile
 
     def find(self,pattern, path,directoriesToo=True):
         """Find all files whose names match
-        @param pattern: glob-style pattern
-        @param path: path under which this files are to be searched
-        @param directoriesToo: also match directories?"""
+        :param pattern: glob-style pattern
+        :param path: path under which this files are to be searched
+        :param directoriesToo: also match directories?"""
         result = []
         for root, dirs, files in os.walk(path):
             for name in files:
@@ -252,9 +255,9 @@ def which(prog):
     """Calls the method of the same name from the Utilites class"""
     return Utilities().which(prog)
 
-def execute(cmd,debug=False,workdir=None,echo=None):
+def execute(cmd,debug=False,workdir=None,echo=None,getReturnCode=False):
     """Calls the method of the same name from the Utilites class"""
-    return Utilities().execute(cmd,debug,workdir,echo)
+    return Utilities().execute(cmd,debug,workdir,echo,getReturnCode=getReturnCode)
 
 def writeDictionaryHeader(f):
     """Calls the method of the same name from the Utilites class"""
