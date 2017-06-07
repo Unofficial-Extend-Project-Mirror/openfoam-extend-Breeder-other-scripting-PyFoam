@@ -6,18 +6,20 @@ from os import path,environ,remove,system
 from tempfile import mktemp
 from shutil import copyfile
 
-from .TimeDirectory import damBreakTutorial,gammaName
-from PyFoam.FoamInformation import foamVersionNumber
+from .test_TimeDirectory import damBreakTutorial,gammaName
+from PyFoam.FoamInformation import foamVersionNumber,foamFork
 
 theSuite=unittest.TestSuite()
 
 class SolutionFileTest(unittest.TestCase):
     def setUp(self):
         self.theFile=mktemp()
-        if foamVersionNumber()>=(2,0):
-            extension=".org"
-        else:
+        if foamVersionNumber()<(2,0):
             extension=""
+        elif foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+            extension=".orig"
+        else:
+            extension=".org"
         copyfile(path.join(damBreakTutorial(),"0",gammaName()+extension),self.theFile)
 
     def tearDown(self):
@@ -38,10 +40,12 @@ theSuite.addTest(unittest.makeSuite(SolutionFileTest,"test"))
 class SolutionFileTestZipped(unittest.TestCase):
     def setUp(self):
         self.theFile=mktemp()
-        if foamVersionNumber()>=(2,0):
-            extension=".org"
-        else:
+        if foamVersionNumber()<(2,0):
             extension=""
+        elif foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+            extension=".orig"
+        else:
+            extension=".org"
         copyfile(path.join(damBreakTutorial(),"0",gammaName()+extension),self.theFile)
         system("gzip -f "+self.theFile)
 

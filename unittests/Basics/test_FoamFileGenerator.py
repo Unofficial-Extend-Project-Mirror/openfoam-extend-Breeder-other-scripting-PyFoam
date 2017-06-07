@@ -4,7 +4,8 @@ from PyFoam.Basics.FoamFileGenerator import FoamFileGenerator,makeString,FoamFil
 from PyFoam.Basics.DataStructures import DictProxy,TupleProxy,Unparsed,UnparsedList,BoolProxy
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,FoamStringParser
 
-from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
+from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber,foamFork
+
 from os import system,path,remove
 from copy import deepcopy
 import warnings
@@ -27,6 +28,8 @@ def damBreakTutorial():
         prefix=path.join(prefix,"interFoam")
     else:
         prefix=path.join(prefix,"multiphase","interFoam","laminar")
+        if foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+            prefix=path.join(prefix,"damBreak")
     return path.join(prefix,"damBreak")
 
 def bubbleColumnTutorial():
@@ -450,6 +453,8 @@ class IncludeFilesRoundTrip(unittest.TestCase):
         self.theDir=mkdtemp()
         if oldTutorialStructure():
             null="0"
+        elif foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+            null="0.orig"
         else:
             null="0.org"
 

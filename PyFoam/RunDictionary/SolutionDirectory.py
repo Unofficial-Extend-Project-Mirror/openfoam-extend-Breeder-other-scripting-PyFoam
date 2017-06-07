@@ -557,7 +557,7 @@ class SolutionDirectory(Utilities):
         for f in listdir(self.name):
             if re.compile("processor[0-9]+").match(f):
                 self.procDirs.append(f)
-
+        self.procDirs.sort(key=lambda x:int(x[len("processor"):]))
         return self.procDirs
 
     def nrProcs(self):
@@ -929,8 +929,10 @@ class SolutionDirectory(Utilities):
             # this seems to fail when no stdin is available
             username=getlogin()
         except OSError:
-            username=environ["USER"]
-
+            try:
+                username=environ["USER"]
+            except KeyError:
+                username="unknown"
         hist.write("%s by %s in %s :" % (asctime(),username,uname()[1]))
 
         for t in text:

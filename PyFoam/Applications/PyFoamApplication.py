@@ -136,16 +136,26 @@ class PyFoamApplication(object):
                                           usage=usage,
                                           interspersed=interspersed)
 
-        self.calledName=sys.argv[0]
+        try:
+             self.calledName=sys.argv[0]
+        except AttributeError:
+             self.calledName="unknown"
+
         self.calledAsClass=(args!=None)
         if self.calledAsClass:
-            self.calledName=self.__class__.__name__+" used by "+sys.argv[0]
+            try:
+                self.calledName=self.__class__.__name__+" used by "+sys.argv[0]
+            except AttributeError:
+                self.calledName= self.__class__.__name__+" used by unknown program"
             self.parser.prog=self.calledName
         elif not _LocalConfigurationFile and findLocalConfigurationFile:
             if args:
                 usedArgs=args
             else:
-                usedArgs=sys.argv[1:]
+                try:
+                     usedArgs=sys.argv[1:]
+                except AttributeError:
+                     usedArgs=[]
             _LocalConfigurationFile=findLocalConfigurationFile(usedArgs)
             if _LocalConfigurationFile and not path.exists(_LocalConfigurationFile):
                 # Fix functions that do not check for the existence
@@ -620,14 +630,40 @@ with these option for commands that generate a lot of output""")
 
         return True
 
+    def escapeArgument(self,arg):
+        """
+        Check if this argument has spaces etc and surround it with
+        " to make it copy\pastable
+        """
+        import string
+        hasSpace=False
+        forbidden="'\""
+        for c in arg:
+            if c in string.whitespace+forbidden:
+                hasSpace=True
+                break
+        if not hasSpace:
+            return arg
+        isLongArg=False
+        if len(arg)>2:
+            if arg[:2]=="--" and arg.find("="):
+               isLongArg=True
+        if not isLongArg:
+           return '"'+arg.replace('"','\\"')+'"'
+        pos=arg.find('=')+1
+        return arg[:pos]+'"'+arg[pos:].replace('"','\\"')+'"'
+
     def addToCaseLog(self,name,*text):
         """
         Add information about the application that was run to the case-log
         """
+        hasSpace=0
 
         logline=[NoTouchSolutionDirectory(name)]
         if self.calledName==sys.argv[0]:
-            logline+=["Application:",path.basename(sys.argv[0])]+sys.argv[1:]
+            logline+=["Application:",
+                      path.basename(sys.argv[0])]+ \
+                      [self.escapeArgument(a) for a in sys.argv[1:]]
         else:
             logline+=["Application:",self.calledName]
 
@@ -641,6 +677,40 @@ with these option for commands that generate a lot of output""")
         """
         if directory!=None:
             configuration().addFile(path.join(directory,"LocalConfigPyFoam"),silent=True)
+
+    def getCasePath(self,args):
+        """Try to determine the actual case location from the arguments"""
+        from os import path
+        val="."
+        for i in range(len(args)-1):
+            if args[i]=="-case":
+                val=args[i+1]
+        val=path.abspath(val)
+        if not path.isdir(val):
+           self.warning("Specified case",val,"is not a directory")
+        return val
+
+    def replaceAutoInArgs(self,args):
+        """
+        If the first argument is 'auto' replace it with the 'application' entry from
+        the controlDict
+        """
+        if len(args)==0:
+            return args
+        if args[0]!="auto":
+            return args
+
+        if not hasattr(self,"_replacedSolver"):
+            from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+            sol=SolutionDirectory(self.getCasePath(args))
+            try:
+                self._replacedSolver=sol.getDictionaryContents("system","controlDict")["application"]
+                self.warning("Replacing solver 'auto' with",
+                             self._replacedSolver,"in arguments")
+            except KeyError:
+                self.warning("No entry 'application' in controlDict. Staying with 'auto'")
+                return args
+        return [self._replacedSolver]+args[1:]
 
     def localConfigFromCasename(self,args):
         """Look for the local configuration assuming that the first argument

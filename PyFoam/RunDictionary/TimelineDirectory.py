@@ -254,7 +254,12 @@ class TimelineValue(object):
         if len(poses)+1==len(firstData.split()):
             #scalar
             for i,v in enumerate(firstData.split()[1:]):
-                if abs(float(v))<float_maximum:
+                try:
+                    if abs(float(v))<float_maximum:
+                        self.positions.append(poses[i])
+                        self.positionIndex.append(i)
+                except ValueError:
+                    # Assuming string
                     self.positions.append(poses[i])
                     self.positionIndex.append(i)
         elif 3*len(poses)+1==len(firstData.split()):
@@ -339,21 +344,29 @@ class TimelineValue(object):
                         error("Unknown vector mode",vectorMode)
             else:
                 for v in d:
-                    if abs(float(v))<1e40:
-                        tmp.append(float(v))
+                    try:
+                        if abs(float(v))<1e40:
+                            tmp.append(float(v))
+                    except ValueError:
+                        tmp.append(v)
             result.append(tmp)
 
         return result
 
-    def __call__(self):
+    def __call__(self,addTitle=True):
         """Return the data as a SpreadsheetData-object"""
 
+        def safeFloat(v):
+            try:
+                return float(v)
+            except ValueError:
+                return v
         lines=open(self.file).readlines()
         data=[]
         for l in lines:
             v=l.split()
             if v[0][0]!='#':
-                data.append([float(x.replace('(','').replace(')','')) for x in v])
+                data.append([safeFloat(x.replace('(','').replace(')','')) for x in v])
         names=["time"]
         if self.isVector:
             for p in self.positions:
@@ -363,6 +376,6 @@ class TimelineValue(object):
 
         return SpreadsheetData(data=data,
                                names=names,
-                               title="%s_t=%s" % (self.val,self.time))
+                               title="%s_t=%s" % (self.val,self.time) if addTitle else None)
 
 # Should work with Python3 and Python2

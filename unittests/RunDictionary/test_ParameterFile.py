@@ -7,7 +7,7 @@ from os import path
 from shutil import rmtree
 from tempfile import mktemp
 
-from .TimeDirectory import damBreakTutorial
+from .test_TimeDirectory import damBreakTutorial
 
 theSuite=unittest.TestSuite()
 

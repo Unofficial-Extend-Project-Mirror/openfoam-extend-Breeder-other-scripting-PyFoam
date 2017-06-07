@@ -1,33 +1,42 @@
 import os
+import subprocess
+from platform import system as _curos
+CUR_OS = _curos()
+IS_WIN = CUR_OS in ['Windows', 'cli']
+IS_NIX = (not IS_WIN) and any(
+    CUR_OS.startswith(i) for i in
+    ['CYGWIN', 'MSYS', 'Linux', 'Darwin', 'SunOS', 'FreeBSD'])
 
-try:    # pragma: no cover
-    _range = xrange
-except NameError:    # pragma: no cover
-    _range = range
 
+if True:  # pragma: no cover
+    try:
+        _range = xrange
+    except NameError:
+        _range = range
 
-try:    # pragma: no cover
-    _unich = unichr
-except NameError:    # pragma: no cover
-    _unich = chr
+    try:
+        _unich = unichr
+    except NameError:
+        _unich = chr
 
-try:  # pragma: no cover
-    _unicode = unicode
-except NameError:  # pragma: no cover
-    _unicode = str  # in Py3, all strings are unicode
+    try:
+        _unicode = unicode
+    except NameError:
+        _unicode = str
 
-try:  # pragma: no cover
-    import colorama
-    colorama.init()
-except ImportError:  # pragma: no cover
-    colorama = None
-except:  # pragma: no cover
-    raise  # try updating colorama?
+    try:
+        if IS_WIN:
+            import colorama
+            colorama.init()
+        else:
+            colorama = None
+    except ImportError:
+        colorama = None
 
-try:  # pragma: no cover
-    from weakref import WeakSet
-except ImportError:  # pragma: nocover
-    WeakSet = set
+    try:
+        from weakref import WeakSet
+    except ImportError:
+        WeakSet = set
 
 
 def _is_utf(encoding):
@@ -35,12 +44,10 @@ def _is_utf(encoding):
 
 
 def _supports_unicode(file):
-    if not getattr(file, 'encoding', None):
-        return False
-    if not getattr(file, 'interface', None):  # pragma: no cover
+    return _is_utf(file.encoding) if (
+        getattr(file, 'encoding', None) or
         # FakeStreams from things like bpython-curses can lie
-        return _is_utf(file.encoding)
-    return False  # pragma: no cover
+        getattr(file, 'interface', None)) else False  # pragma: no cover
 
 
 def _environ_cols_wrapper():  # pragma: no cover
@@ -48,15 +55,12 @@ def _environ_cols_wrapper():  # pragma: no cover
     Return a function which gets width and height of console
     (linux,osx,windows,cygwin).
     """
-    import platform
-    current_os = platform.system()
     _environ_cols = None
-    if current_os in ['Windows', 'cli']:
+    if IS_WIN:
         _environ_cols = _environ_cols_windows
         if _environ_cols is None:
             _environ_cols = _environ_cols_tput
-    if any(current_os.startswith(i) for i in
-           ['CYGWIN', 'MSYS', 'Linux', 'Darwin', 'SunOS', 'FreeBSD']):
+    if IS_NIX:
         _environ_cols = _environ_cols_linux
     return _environ_cols
 
@@ -103,12 +107,6 @@ def _environ_cols_tput(*args):  # pragma: no cover
 
 def _environ_cols_linux(fp):  # pragma: no cover
 
-    # import os
-    # if fp is None:
-    #     try:
-    #         fp = os.open(os.ctermid(), os.O_RDONLY)
-    #     except:
-    #         pass
     try:
         from termios import TIOCGWINSZ
         from fcntl import ioctl
@@ -128,7 +126,9 @@ def _environ_cols_linux(fp):  # pragma: no cover
 
 
 def _term_move_up():  # pragma: no cover
-    if os.name == 'nt':
-        if colorama is None:
-            return ''
-    return '\x1b[A'
+    return '' if (os.name == 'nt') and (colorama is None) else '\x1b[A'
+
+
+def _sh(*cmd, **kwargs):
+    return subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            **kwargs).communicate()[0].decode('utf-8')

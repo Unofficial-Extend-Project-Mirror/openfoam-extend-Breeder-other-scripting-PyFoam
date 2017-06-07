@@ -70,6 +70,8 @@ class CustomPlotInfo(object):
         self.ylabel=None
         self.gnuplotCommands=[]
         self.enhanced=False
+        self.stringValues=None
+        self.dataTransformations=None
 
         # Legacy format
         if raw==None:

@@ -3,13 +3,17 @@
 tqdm
 ====
 
-|PyPi Status| |PyPi Downloads|
-|Build Status| |Coverage Status| |Branch Coverage Status|
+|PyPI-Status| |PyPI-Versions|
+
+|Build-Status| |Coverage-Status| |Branch-Coverage-Status|
+
+|DOI-URI| |LICENCE|
+
 
 ``tqdm`` (read taqadum, تقدّم) means "progress" in arabic.
 
 Instantly make your loops show a smart progress meter - just wrap any
-iterable with "tqdm(iterable)", and you're done!
+iterable with ``tqdm(iterable)``, and you're done!
 
 .. code:: python
 
@@ -19,23 +23,23 @@ iterable with "tqdm(iterable)", and you're done!
 
 Here's what the output looks like:
 
-76%\|████████████████████\             \| 7641/10000 [00:34<00:10,
-222.22 it/s]
+``76%|████████████████████████████         | 7568/10000 [00:33<00:10, 229.00it/s]``
 
 ``trange(N)`` can be also used as a convenient shortcut for
 ``tqdm(xrange(N))``.
 
 |Screenshot|
+    Screenshot using `bpython <http://www.bpython-interpreter.org/>`__
 
 It can also be executed as a module with pipes:
 
 .. code:: sh
 
-    $ seq 9999999 | tqdm --unit_scale True | wc -l
+    $ seq 9999999 | tqdm --unit_scale | wc -l
     10.0Mit [00:02, 3.58Mit/s]
     9999999
 
-Overhead is low -- about 60ns per iteration (80ns with ``gui=True``), and is
+Overhead is low -- about 60ns per iteration (80ns with ``tqdm_gui``), and is
 unit tested against performance regression.
 By comparison, the well established
 `ProgressBar <https://github.com/niltonvolpato/python-progressbar>`__ has
@@ -62,8 +66,10 @@ return \r`` and ``line feed \n`` control characters.
 Installation
 ------------
 
-Latest pypi stable release
+Latest PyPI stable release
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+|PyPI-Status|
 
 .. code:: sh
 
@@ -71,6 +77,8 @@ Latest pypi stable release
 
 Latest development release on github
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+|GitHub-Status| |GitHub-Stars| |GitHub-Forks|
 
 Pull and install in the current directory:
 
@@ -82,9 +90,8 @@ Pull and install in the current directory:
 Changelog
 ---------
 
-The list of all changes is available either on
-`Github's Releases <https://github.com/tqdm/tqdm/releases>`_
-or on crawlers such as
+The list of all changes is available either on GitHub's Releases:
+|GitHub-Status| or on crawlers such as
 `allmychanges.com <https://allmychanges.com/p/python/tqdm/>`_.
 
 
@@ -144,7 +151,6 @@ but in this case don't forget to ``del`` or ``close()`` at the end:
         pbar.update(10)
     pbar.close()
 
-
 Module
 ~~~~~~
 
@@ -177,12 +183,41 @@ Note that the usual arguments for ``tqdm`` can also be specified.
 .. code:: sh
 
     $ find . -name '*.py' -exec cat \{} \; |
-        tqdm --unit loc --unit_scale True --total 857366 >> /dev/null
+        tqdm --unit loc --unit_scale --total 857366 >> /dev/null
     100%|███████████████████████████████████| 857K/857K [00:04<00:00, 246Kloc/s]
 
+Backing up a large directory?
+
+.. code:: sh
+
+    $ 7z a -bd -r backup.7z docs/ | grep Compressing |
+        tqdm --total $(find docs/ -type f | wc -l) --unit files >> backup.log
+    100%|███████████████████████████████▉| 8014/8014 [01:37<00:00, 82.29files/s]
+
+
+Help!
+-----
+
+The most common issues relate to excessive output on multiple lines, instead
+of a neat one-line progress bar.
+
+- Consoles in general: require support for carriage return (``CR``, ``\r``).
+- Nested progress bars:
+    * Consoles in general: require support for moving cursors up to the
+      previous line. For example, `IDLE won't work <https://github.com/tqdm/tqdm/issues/191#issuecomment-230168030>`__.
+    * Windows: additionally may require the python module ``colorama``.
+- Wrapping enumerated iterables: use ``enumerate(tqdm(...))`` instead of
+  ``tqdm(enumerate(...))``. The same applies to ``numpy.ndenumerate``.
+  This is because enumerate functions tend to hide the length of iterables.
+  ``tqdm`` does not.
+
+If you come across any other difficulties, browse/open issues
+`here <https://github.com/tqdm/tqdm/issues?q=is%3Aissue>`__.
 
 Documentation
 -------------
+
+|PyPI-Versions| |README-Hits| (Since 19 May 2016)
 
 .. code:: python
 
@@ -204,17 +239,18 @@ Parameters
 
 * iterable  : iterable, optional  
     Iterable to decorate with a progressbar.
-    Leave blank [default: None] to manually manage the updates.
+    Leave blank to manually manage the updates.
 * desc  : str, optional  
-    Prefix for the progressbar [default: None].
+    Prefix for the progressbar.
 * total  : int, optional  
-    The number of expected iterations. If [default: None], len(iterable)
-    is used if possible. As a last resort, only basic progress
-    statistics are displayed (no ETA, no progressbar). If `gui` is
-    True and this parameter needs subsequent updating, specify an
-    initial arbitrary large positive integer, e.g. int(9e9).
+    The number of expected iterations. If (default: None),
+    len(iterable) is used if possible. As a last resort, only basic
+    progress statistics are displayed (no ETA, no progressbar).
+    If `gui` is True and this parameter needs subsequent updating,
+    specify an initial arbitrary large positive integer,
+    e.g. int(9e9).
 * leave  : bool, optional  
-    If [default: True], removes all traces of the progressbar
+    If [default: True], keeps all traces of the progressbar
     upon termination of iteration.
 * file  : `io.TextIOWrapper` or `io.StringIO`, optional  
     Specifies where to output the progress messages
@@ -223,7 +259,7 @@ Parameters
 * ncols  : int, optional  
     The width of the entire output message. If specified,
     dynamically resizes the progressbar to stay within this bound.
-    If [default: None], attempts to use environment width. The
+    If unspecified, attempts to use environment width. The
     fallback is a meter width of 10 and no limit for the counter and
     statistics. If 0, will not print any meter (only stats).
 * mininterval  : float, optional  
@@ -231,12 +267,12 @@ Parameters
 * maxinterval  : float, optional  
     Maximum progress update interval, in seconds [default: 10.0].
 * miniters  : int, optional  
-    Minimum progress update interval, in iterations [default: None].
+    Minimum progress update interval, in iterations.
     If specified, will set `mininterval` to 0.
 * ascii  : bool, optional  
-    If [default: None] or False, use unicode (smooth blocks) to fill
+    If unspecified or False, use unicode (smooth blocks) to fill
     the meter. The fallback is to use ASCII characters `1-9 #`.
-* disable  : bool  
+* disable  : bool, optional  
     Whether to disable the entire progressbar wrapper
     [default: False].
 * unit  : str, optional  
@@ -250,15 +286,15 @@ Parameters
 * dynamic_ncols  : bool, optional  
     If set, constantly alters `ncols` to the environment (allowing
     for window resizes) [default: False].
-* smoothing  : float  
+* smoothing  : float, optional  
     Exponential moving average smoothing factor for speed estimates
     (ignored in GUI mode). Ranges from 0 (average speed) to 1
     (current/instantaneous speed) [default: 0.3].
 * bar_format  : str, optional  
     Specify a custom bar string formatting. May impact performance.
-    If [default: None], will use '{l_bar}{bar}{r_bar}', where l_bar is
+    If unspecified, will use '{l_bar}{bar}{r_bar}', where l_bar is
     '{desc}{percentage:3.0f}%|' and r_bar is
-    '| {n_fmt}/{total_fmt} [{elapsed_str}<{remaining_str}, {rate_fmt}]'.
+    '| {n_fmt}/{total_fmt} [{elapsed_str}<{remaining_str}, {rate_fmt}]'
     Possible vars: bar, n, n_fmt, total, total_fmt, percentage,
     rate, rate_fmt, elapsed, remaining, l_bar, r_bar, desc.
 * initial  : int, optional  
@@ -266,8 +302,18 @@ Parameters
     bar [default: 0].
 * position  : int, optional  
     Specify the line offset to print this bar (starting from 0)
-    Automatic if [default: None].
+    Automatic if unspecified.
     Useful to manage multiple bars at once (eg, from threads).
+
+Extra CLI Options
+~~~~~~~~~~~~~~~~~
+
+* delim  : chr, optional  
+    Delimiting character [default: '\n']. Use '\0' for null.
+    N.B.: on Windows systems, Python converts '\n' to '\r\n'.
+* buf_size  : int, optional  
+    String buffer size in bytes [default: 256]
+    used when `delim` is specified.
 
 Returns
 ~~~~~~~
@@ -302,6 +348,21 @@ Returns
           Cleanup and (if leave=False) close the progressbar.
           """
 
+      def clear(self):
+          """
+          Clear current bar display
+          """
+
+      def refresh(self):
+          """
+          Force refresh the display of this bar
+          """
+
+      def write(cls, s, file=sys.stdout, end="\n"):
+          """
+          Print a message via tqdm (without overlap with bars)
+          """
+
     def trange(*args, **kwargs):
         """
         A shortcut for tqdm(xrange(*args), **kwargs).
@@ -318,12 +379,47 @@ Returns
         Experimental GUI version of trange!
         """
 
+    class tqdm_notebook(tqdm):
+        """
+        Experimental IPython/Jupyter Notebook widget using tqdm!
+        """
+
+    def tnrange(*args, **kwargs):
+        """
+        Experimental IPython/Jupyter Notebook widget using tqdm!
+        """
+
 
 Examples and Advanced Usage
 ---------------------------
 
-See the `examples <https://github.com/tqdm/tqdm/tree/master/examples>`__
-folder or import the module and run ``help()``.
+- See the `examples <https://github.com/tqdm/tqdm/tree/master/examples>`__
+  folder;
+- import the module and run ``help()``, or
+- consult the `wiki <https://github.com/tqdm/tqdm/wiki>`__.
+    - this has an `excellent article <https://github.com/tqdm/tqdm/wiki/How-to-Make-a-Great-Progressbar>`__ on how to make a **great** progressbar.
+
+Nested progress bars
+~~~~~~~~~~~~~~~~~~~~
+
+``tqdm`` supports nested progress bars. Here's an example:
+
+.. code:: python
+
+    from tqdm import trange
+    from time import sleep
+
+    for i in trange(10, desc='1st loop'):
+        for j in trange(5, desc='2nd loop', leave=False):
+            for k in trange(100, desc='3nd loop'):
+                sleep(0.01)
+
+On Windows `colorama <https://github.com/tartley/colorama>`__ will be used if
+available to produce a beautiful nested display.
+
+For manual control over positioning (e.g. for multi-threaded use),
+you may specify `position=n` where `n=0` for the outermost bar,
+`n=1` for the next, and so on.
 
 Hooks and callbacks
 ~~~~~~~~~~~~~~~~~~~
@@ -379,7 +475,7 @@ Here's an example with ``urllib``:
       return inner
 
     eg_link = 'http://www.doc.ic.ac.uk/~cod11/matryoshka.zip'
-    with tqdm(unit='B', unit_scale=True, leave=True, miniters=1,
+    with tqdm(unit='B', unit_scale=True, miniters=1,
               desc=eg_link.split('/')[-1]) as t:  # all optional kwargs
         urllib.urlretrieve(eg_link, filename='/dev/null',
                            reporthook=my_hook(t), data=None)
@@ -392,216 +488,164 @@ Pandas Integration
 ~~~~~~~~~~~~~~~~~~
 
 Due to popular demand we've added support for ``pandas`` -- here's an example
-for ``DataFrameGroupBy.progress_apply``:
+for ``DataFrame.progress_apply`` and ``DataFrameGroupBy.progress_apply``:
 
 .. code:: python
 
     import pandas as pd
     import numpy as np
-    from tqdm import tqdm, tqdm_pandas
+    from tqdm import tqdm
 
     df = pd.DataFrame(np.random.randint(0, 100, (100000, 6)))
 
-    # Create and register a new `tqdm` instance with `pandas`
-    # (can use tqdm_gui, optional kwargs, etc.)
-    tqdm_pandas(tqdm())
+    # Register `pandas.progress_apply` and `pandas.Series.map_apply` with `tqdm`
+    # (can use `tqdm_gui`, `tqdm_notebook`, optional kwargs, etc.)
+    tqdm.pandas(desc="my bar!")
 
     # Now you can use `progress_apply` instead of `apply`
-    df.groupby(0).progress_apply(lambda x: x**2)
+    # and `progress_map` instead of `map`
+    df.progress_apply(lambda x: x**2)
+    # can also groupby:
+    # df.groupby(0).progress_apply(lambda x: x**2)
 
 In case you're interested in how this works (and how to modify it for your
 own callbacks), see the
 `examples <https://github.com/tqdm/tqdm/tree/master/examples>`__
 folder or import the module and run ``help()``.
 
-Nested progress bars
-~~~~~~~~~~~~~~~~~~~~
+IPython/Jupyter Integration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``tqdm`` supports nested progress bars. Here's an example:
+IPython/Jupyter is supported via the `tqdm_notebook` submodule:
 
 .. code:: python
 
-    from tqdm import trange
+    from tqdm import tnrange, tqdm_notebook
     from time import sleep
 
-    for i in trange(10, desc='1st loop'):
-        for j in trange(5, desc='2nd loop', leave=False):
-            for k in trange(100, desc='3nd loop'):
-                sleep(0.01)
+    for i in tnrange(10, desc='1st loop'):
+        for j in tqdm_notebook(xrange(100), desc='2nd loop'):
+            sleep(0.01)
 
-On Windows `colorama <https://github.com/tartley/colorama>`__ will be used if
-available to produce a beautiful nested display.
+In addition to `tqdm` features, the submodule provides a native Jupyter
+widget (compatible with IPython v1-v4 and Jupyter), fully working nested bars
+and color hints (blue: normal, green: completed, red: error/interrupt,
+light blue: no ETA); as demonstrated below.
 
-For manual control over positioning (e.g. for multi-threaded use),
-you may specify `position=n` where `n=0` for the outermost bar,
-`n=1` for the next, and so on.
+|Screenshot-Jupyter1|
+|Screenshot-Jupyter2|
+|Screenshot-Jupyter3|
 
+Writing messages
+~~~~~~~~~~~~~~~~
 
-How to make a good progress bar
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Since ``tqdm`` uses a simple printing mechanism to display progress bars,
+you should not write any message in the terminal using ``print()``.
 
-A good progress bar is a useful progress bar. To be useful, ``tqdm`` displays
-statistics and uses smart algorithms to predict and automagically adapt to
-a variety of use cases with no or minimal configuration.
-
-However, there is one thing that ``tqdm`` cannot do: choose a pertinent
-progress indicator. To display a useful progress bar, it is very important that
-``tqdm`` is supplied with the most pertinent progress indicator.
-This will reflect most accurately the current state of your program.
-Usually, a good way is to preprocess quickly to first evaluate the total amount
-of work to do before beginning the real processing.
-
-To illustrate the importance of a good progress indicator, take the
-following example: you want to walk through all files of a directory and
-process their contents with some external function:
+To write messages in the terminal without any collision with ``tqdm`` bar
+display, a ``.write()`` method is provided:
 
 .. code:: python
 
-    import os
     from tqdm import tqdm, trange
     from time import sleep
 
-    def dosomething(buf):
-        """Do something with the content of a file"""
-        sleep(0.01)
-        pass
+    bar = trange(10)
+    for i in bar:
+        # Print using tqdm class method .write()
+        sleep(0.1)
+        if not (i % 3):
+            tqdm.write("Done task %i" % i)
+        # Can also use bar.write()
 
-    def walkdir(folder):
-        """Walk through each files in a directory"""
-        for dirpath, dirs, files in os.walk(folder):
-            for filename in files:
-                yield os.path.abspath(os.path.join(dirpath, filename))
+By default, this will print to standard output ``sys.stdout``. but you can
+specify any file-like object using the ``file`` argument. For example, this
+can be used to redirect the messages writing to a log file or class.
 
-    def process_content_no_progress(inputpath, blocksize=1024):
-        for filepath in walkdir(inputpath):
-            with open(filepath, 'rb') as fh:
-                buf = 1
-                while (buf):
-                    buf = fh.read(blocksize)
-                    dosomething(buf)
+Redirecting writing
+~~~~~~~~~~~~~~~~~~~
 
-``process_content_no_progress()`` does the job, but does not show
-any information about the current progress, nor how long it will take.
+If using a library that can print messages to the console, editing the library
+by  replacing ``print()`` with ``tqdm.write()`` may not be desirable.
+In that case, redirecting ``sys.stdout`` to ``tqdm.write()`` is an option.
 
-To quickly fix that using ``tqdm``, we can use this naive approach:
+To redirect ``sys.stdout``, create a file-like class that will write
+any input string to ``tqdm.write()``, and supply the arguments
+``file=sys.stdout, dynamic_ncols=True``.
 
-.. code:: python
-
-    def process_content_with_progress1(inputpath, blocksize=1024):
-        for filepath in tqdm(walkdir(inputpath), leave=True):
-            with open(filepath, 'rb') as fh:
-                buf = 1
-                while (buf):
-                    buf = fh.read(blocksize)
-                    dosomething(buf)
-
-``process_content_with_progress1()`` will load ``tqdm()``, but since the
-iterator does not provide any length (``os.walkdir()`` does not have a
-``__len__()`` method for the total files count), there is only an indication
-of the current and past program state, no prediction:
-
-``4it [00:03,  2.79it/s]``
-
-The way to get predictive information is to know the total amount of work to be
-done. Since ``os.walkdir()`` cannot give us this information, we need to
-precompute this by ourselves:
+A reusable canonical example is given below:
 
 .. code:: python
 
-    def process_content_with_progress2(inputpath, blocksize=1024):
-        # Preprocess the total files count
-        filecounter = 0
-        for dirpath, dirs, files in tqdm(os.walk(inputpath)):
-            for filename in files:
-                filecounter += 1
+    from time import sleep
 
-        for filepath in tqdm(walkdir(inputpath), total=filecounter, leave=True):
-            with open(filepath, 'rb') as fh:
-                buf = 1
-                while (buf):
-                    buf = fh.read(blocksize)
-                    dosomething(buf)
+    import contextlib
+    import sys
 
-``process_content_with_progress2()`` is better than the naive approach because
-now we have predictive information:
+    from tqdm import tqdm
 
-50%|██████████████████████\                      \| 2/4 [00:00<00:00,  4.06it/s]
+    class DummyTqdmFile(object):
+        """Dummy file-like that will write to tqdm"""
+        file = None
+        def __init__(self, file):
+            self.file = file
 
-However, the progress is not smooth: it increments in steps, 1 step being
-1 file processed. The problem is that we do not just walk through files tree,
-but we process the files contents. Thus, if we stumble on one very large file
-which takes a great deal more time to process than other smaller files,
-the progress bar
-will still considers that file is of equal processing weight.
+        def write(self, x):
+            # Avoid print() second call (useless \n)
+            if len(x.rstrip()) > 0:
+                tqdm.write(x, file=self.file)
 
-To fix this, we should use another indicator than the files count: the total
-sum of all files sizes. This would be more pertinent since the data we
-process is the files' content, so there is a direct relation between size and
-content.
+    @contextlib.contextmanager
+    def stdout_redirect_to_tqdm():
+        save_stdout = sys.stdout
+        try:
+            sys.stdout = DummyTqdmFile(sys.stdout)
+            yield save_stdout
+        # Relay exceptions
+        except Exception as exc:
+            raise exc
+        # Always restore sys.stdout if necessary
+        finally:
+            sys.stdout = save_stdout
 
-Below we implement this approach using a manually updated ``tqdm`` bar, where
-``tqdm`` will work on size, while the ``for`` loop works on files paths:
+    def blabla():
+        print("Foo blabla")
 
-.. code:: python
+    # Redirect stdout to tqdm.write() (don't forget the `as save_stdout`)
+    with stdout_redirect_to_tqdm() as save_stdout:
+        # tqdm call need to specify sys.stdout, not sys.stderr (default)
+        # and dynamic_ncols=True to autodetect console width
+        for _ in tqdm(range(3), file=save_stdout, dynamic_ncols=True):
+            blabla()
+            sleep(.5)
 
-    def process_content_with_progress3(inputpath, blocksize=1024):
-        # Preprocess the total files sizes
-        sizecounter = 0
-        for dirpath, dirs, files in tqdm(os.walk(inputpath)):
-            for filename in files:
-                fullpath = os.path.abspath(os.path.join(dirpath, filename))
-                sizecounter += os.stat(fullpath).st_size
-
-        # Load tqdm with size counter instead of files counter
-        with tqdm(total=sizecounter, leave=True, unit='B', unit_scale=True) as pbar:
-            for dirpath, dirs, files in os.walk(inputpath):
-                for filename in files:
-                    fullpath = os.path.abspath(os.path.join(dirpath, filename))
-                    with open(fullpath, 'rb') as fh:
-                        buf = 1
-                        while (buf):
-                            buf = fh.read(blocksize)
-                            dosomething(buf)
-                            if buf: pbar.update(len(buf))
-
-And here is the result: a much smoother progress bar with meaningful
-predicted time and statistics:
-
-47%|██████████████████▍\                    \| 152K/321K [00:03<00:03, 46.2KB/s]
+    # After the `with`, printing is restored
+    print('Done!')
 
 
 Contributions
 -------------
 
-To run the testing suite please make sure tox (https://testrun.org/tox/latest/)
-is installed, then type ``tox`` from the command line.
-
-Where ``tox`` is unavailable, a Makefile-like setup is
-provided with the following command:
-
-.. code:: sh
-
-    $ python setup.py make alltests
-
-To see all options, run:
-
-.. code:: sh
-
-    $ python setup.py make
+All source code is hosted on `GitHub <https://github.com/tqdm/tqdm>`__.
+Contributions are welcome.
 
 See the
 `CONTRIBUTE <https://raw.githubusercontent.com/tqdm/tqdm/master/CONTRIBUTE>`__
 file for more information.
 
 
-License
+LICENCE
 -------
 
-Multiple licences, mostly `MPLv2.0, MIT licences <https://raw.githubusercontent.com/tqdm/tqdm/master/LICENCE>`__.
+Open Source (OSI approved): |LICENCE|
+
+Citation information: |DOI-URI|
 
 
 Authors
 -------
+
+Ranked by contributions.
 
 -  Casper da Costa-Luis (casperdcl)
 -  Stephen Larroque (lrq3000)
@@ -612,15 +656,33 @@ Authors
 
 `*` Original author
 
+|README-Hits| (Since 19 May 2016)
+
 .. |Logo| image:: https://raw.githubusercontent.com/tqdm/tqdm/master/logo.png
-.. |Build Status| image:: https://travis-ci.org/tqdm/tqdm.svg?branch=master
+.. |Screenshot| image:: https://raw.githubusercontent.com/tqdm/tqdm/master/images/tqdm.gif
+.. |Build-Status| image:: https://travis-ci.org/tqdm/tqdm.svg?branch=master
    :target: https://travis-ci.org/tqdm/tqdm
-.. |Coverage Status| image:: https://coveralls.io/repos/tqdm/tqdm/badge.svg
+.. |Coverage-Status| image:: https://coveralls.io/repos/tqdm/tqdm/badge.svg
    :target: https://coveralls.io/r/tqdm/tqdm
-.. |Branch Coverage Status| image:: https://codecov.io/github/tqdm/tqdm/coverage.svg?branch=master
+.. |Branch-Coverage-Status| image:: https://codecov.io/github/tqdm/tqdm/coverage.svg?branch=master
    :target: https://codecov.io/github/tqdm/tqdm?branch=master
-.. |PyPi Status| image:: https://img.shields.io/pypi/v/tqdm.svg
+.. |GitHub-Status| image:: https://img.shields.io/github/tag/tqdm/tqdm.svg?maxAge=2592000
+   :target: https://github.com/tqdm/tqdm/releases
+.. |GitHub-Forks| image:: https://img.shields.io/github/forks/tqdm/tqdm.svg
+   :target: https://github.com/tqdm/tqdm/network
+.. |GitHub-Stars| image:: https://img.shields.io/github/stars/tqdm/tqdm.svg
+   :target: https://github.com/tqdm/tqdm/stargazers
+.. |PyPI-Status| image:: https://img.shields.io/pypi/v/tqdm.svg
    :target: https://pypi.python.org/pypi/tqdm
-.. |PyPi Downloads| image:: https://img.shields.io/pypi/dm/tqdm.svg
+.. |PyPI-Downloads| image:: https://img.shields.io/pypi/dm/tqdm.svg
    :target: https://pypi.python.org/pypi/tqdm
-.. |Screenshot| image:: https://raw.githubusercontent.com/tqdm/tqdm/master/tqdm.gif
+.. |PyPI-Versions| image:: https://img.shields.io/pypi/pyversions/tqdm.svg
+   :target: https://pypi.python.org/pypi/tqdm
+.. |LICENCE| image:: https://img.shields.io/pypi/l/tqdm.svg
+   :target: https://raw.githubusercontent.com/tqdm/tqdm/master/LICENCE
+.. |DOI-URI| image:: https://zenodo.org/badge/21637/tqdm/tqdm.svg
+   :target: https://zenodo.org/badge/latestdoi/21637/tqdm/tqdm
+.. |Screenshot-Jupyter1| image:: https://raw.githubusercontent.com/tqdm/tqdm/master/images/tqdm-jupyter-1.gif
+.. |Screenshot-Jupyter2| image:: https://raw.githubusercontent.com/tqdm/tqdm/master/images/tqdm-jupyter-2.gif
+.. |Screenshot-Jupyter3| image:: https://raw.githubusercontent.com/tqdm/tqdm/master/images/tqdm-jupyter-3.gif
+.. |README-Hits| image:: http://hitt.herokuapp.com/tqdm/tqdm.svg

@@ -128,7 +128,7 @@ variables
                                                    singleFile=self.opts.singleDataFilesOnly,
                                                    doTimelines=True),
                                silent=self.opts.progress or self.opts.silent,
-                               argv=args,
+                               argv=self.replaceAutoInArgs(args),
                                server=self.opts.server,
                                lam=lam,
                                restart=self.opts.restart,

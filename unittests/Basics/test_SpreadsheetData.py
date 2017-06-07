@@ -1,4 +1,3 @@
-
 import unittest
 import math
 import numpy
@@ -80,6 +79,9 @@ theSuite.addTest(unittest.makeSuite(SpreadsheetDataTest,"test"))
 names3 = ['t','val']
 data3=[[k,k*k]for k in range(10)]
 
+names3a = ['t','val','descr']
+data3a=[[k,k*k,"val_%d" % k] for k in range(10)]
+
 class SpreadsheetInterpolationTest(unittest.TestCase):
     def testSpreadsheetDataInterpolation(self):
         sp=SpreadsheetData(data=data3,names=names3)
@@ -103,6 +105,43 @@ class SpreadsheetInterpolationTest(unittest.TestCase):
         self.assertAlmostEqual(sp(9,"val",noInterpolation=True),81)
         self.assertAlmostEqual(sp(0,"val"),0)
         self.assertAlmostEqual(sp(9,"val"),81)
+
+    def testSpreadsheetDataInterpolationWithString(self):
+        sp=SpreadsheetData(data=data3a,names=names3a)
+        self.assertAlmostEqual(sp(-1,"val",invalidExtend=True),0)
+        self.assert_(numpy.isnan(sp(-1,"val")))
+        self.assertAlmostEqual(sp(10,"val",invalidExtend=True),81)
+        self.assert_(numpy.isnan(sp(10,"val")))
+        self.assertAlmostEqual(sp(1,"val"),1)
+        self.assertAlmostEqual(sp(1.5,"val"),2.5)
+        self.assertAlmostEqual(sp(5,"val"),25)
+        self.assertAlmostEqual(sp(5.1,"val"),26.1)
+        self.assertAlmostEqual(sp(8.9,"val"),79.3)
+        self.assertAlmostEqual(sp(8.9,"t"),8.9)
+
+        self.assertAlmostEqual(sp(1,"val",noInterpolation=True),1)
+        self.assert_(numpy.isnan(sp(1.5,"val",noInterpolation=True)))
+
+        self.assertEqual(sp(-1,"descr",invalidExtend=True),b('val_0'))
+        self.assertEqual(sp(-1,"descr"),'')
+        self.assertEqual(sp(2,"descr"),b('val_2'))
+        self.assertEqual(sp(3,"descr"),b('val_3'))
+        self.assertEqual(sp(2.4,"descr"),b('val_2'))
+        self.assertEqual(sp(2.5,"descr"),b('val_3'))
+        self.assertEqual(sp(2.7,"descr"),b('val_3'))
+
+    def testSpreadsheetDataInterpolateNoName(self):
+        sp=SpreadsheetData(data=data3a,names=names3a)
+        data=sp(-1,invalidExtend=True)
+        self.assertEqual(len(data),2)
+        self.assertAlmostEqual(data["val"],0)
+        self.assertEqual(data["descr"],b('val_0'))
+        data=sp(2,invalidExtend=True)
+        self.assertAlmostEqual(data["val"],4)
+        self.assertEqual(data["descr"],b('val_2'))
+        data=sp(5.1,invalidExtend=True)
+        self.assertAlmostEqual(data["val"],26.1)
+        self.assertEqual(data["descr"],b('val_5'))
 
 theSuite.addTest(unittest.makeSuite(SpreadsheetInterpolationTest,"test"))
 

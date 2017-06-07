@@ -1,6 +1,6 @@
 import unittest
 
-from pandas import DataFrame,TimeSeries
+from pandas import DataFrame,Series
 from PyFoam.Wrappers.Pandas import PyFoamDataFrame,PandasWrapperPyFoamException
 
 from math import isnan

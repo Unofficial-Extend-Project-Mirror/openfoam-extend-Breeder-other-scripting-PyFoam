@@ -12,6 +12,7 @@ from nose.plugins.skip import SkipTest
 
 from tqdm import tqdm
 from tqdm import trange
+from tqdm import TqdmDeprecationWarning
 
 try:
     from StringIO import StringIO
@@ -19,6 +20,10 @@ except:
     from io import StringIO
 
 from io import IOBase  # to support unicode strings
+
+
+class DeprecationError(Exception):
+    pass
 
 # Ensure we can use `with closing(...) as ... :` syntax
 if getattr(StringIO, '__exit__', False) and \
@@ -52,6 +57,7 @@ CTRLCHR = [r'\r', r'\n', r'\x1b\[A']  # Need to escape [ for regex
 RE_rate = re.compile(r'(\d+\.\d+)it/s')
 RE_ctrlchr = re.compile("(%s)" % '|'.join(CTRLCHR))  # Match control chars
 RE_ctrlchr_excl = re.compile('|'.join(CTRLCHR))  # Match and exclude ctrl chars
+RE_pos = re.compile(r'((\x1b\[A|\r|\n)+((pos\d+) bar:\s+\d+%|\s{3,6})?)')  # NOQA
 
 
 class DiscreteTimer(object):
@@ -105,6 +111,9 @@ class UnicodeIO(IOBase):
         self.text = ''
         self.cursor = 0
 
+    def __len__(self):
+        return len(self.text)
+
     def seek(self, offset):
         self.cursor = offset
 
@@ -112,11 +121,15 @@ class UnicodeIO(IOBase):
         return self.cursor
 
     def write(self, s):
-        self.text += s
-        self.cursor = len(self.text)
+        self.text = self.text[:self.cursor] + s + \
+            self.text[self.cursor + len(s):]
+        self.cursor += len(s)
 
-    def read(self):
-        return self.text[self.cursor:]
+    def read(self, n=-1):
+        _cur = self.cursor
+        self.cursor = len(self) if n < 0 \
+            else min(_cur + n, len(self))
+        return self.text[_cur:self.cursor]
 
     def getvalue(self):
         return self.text
@@ -132,6 +145,51 @@ def get_bar(all_bars, i):
 
 def progressbar_rate(bar_str):
     return float(RE_rate.search(bar_str).group(1))
+
+
+def squash_ctrlchars(s):
+    """ Apply control characters in a string just like a terminal display """
+    # List of supported control codes
+    ctrlcodes = [r'\r', r'\n', r'\x1b\[A']
+
+    # Init variables
+    curline = 0  # current line in our fake terminal
+    lines = ['']  # state of our fake terminal
+
+    # Split input string by control codes
+    RE_ctrl = re.compile("(%s)" % ("|".join(ctrlcodes)), flags=re.DOTALL)
+    s_split = RE_ctrl.split(s)
+    s_split = filter(None, s_split)  # filter out empty splits
+
+    # For each control character or message
+    for nextctrl in s_split:
+        # If it's a control character, apply it
+        if nextctrl == '\r':
+            # Carriage return
+            # Go to the beginning of the line
+            # simplified here: we just empty the string
+            lines[curline] = ''
+        elif nextctrl == '\n':
+            # Newline
+            # Go to the next line
+            if curline < (len(lines) - 1):
+                # If already exists, just move cursor
+                curline += 1
+            else:
+                # Else the new line is created
+                lines.append('')
+                curline += 1
+        elif nextctrl == '\x1b[A':
+            # Move cursor up
+            if curline > 0:
+                curline -= 1
+            else:
+                raise ValueError("Cannot go up, anymore!")
+        # Else, it is a message, we print it on current line
+        else:
+            lines[curline] += nextctrl
+
+    return lines
 
 
 def test_format_interval():
@@ -168,9 +226,23 @@ def test_format_meter():
         "100KiB [00:13, 7.69KiB/s]"
     assert format_meter(100, 1000, 12, ncols=0, rate=7.33) == \
         " 10% 100/1000 [00:12<02:02,  7.33it/s]"
-    assert format_meter(20, 100, 12, ncols=30, rate=8.1,
+    # Check that bar_format correctly adapts {bar} size to the rest
+    assert format_meter(20, 100, 12, ncols=13, rate=8.1,
                         bar_format=r'{l_bar}{bar}|{n_fmt}/{total_fmt}') == \
         " 20%|" + unich(0x258f) + "|20/100"
+    assert format_meter(20, 100, 12, ncols=14, rate=8.1,
+                        bar_format=r'{l_bar}{bar}|{n_fmt}/{total_fmt}') == \
+        " 20%|" + unich(0x258d) + " |20/100"
+    # Check that bar_format can print only {bar} or just one side
+    assert format_meter(20, 100, 12, ncols=2, rate=8.1,
+                        bar_format=r'{bar}') == \
+        unich(0x258d) + " "
+    assert format_meter(20, 100, 12, ncols=7, rate=8.1,
+                        bar_format=r'{l_bar}{bar}') == \
+        " 20%|" + unich(0x258d) + " "
+    assert format_meter(20, 100, 12, ncols=6, rate=8.1,
+                        bar_format=r'{bar}|test') == \
+        unich(0x258f) + "|test"
 
 
 def test_si_format():
@@ -210,10 +282,10 @@ def test_all_defaults():
             for _ in progressbar:
                 pass
     # restore stdout/stderr output for `nosetest` interface
-    try:
-        sys.stderr.write('\x1b[A')
-    except:
-        pass
+    # try:
+    #     sys.stderr.write('\x1b[A')
+    # except:
+    #     pass
     sys.stderr.write('\rTest default kwargs ... ')
 
 
@@ -756,12 +828,12 @@ def test_deprecated_nested():
     our_file = StringIO()
     try:
         tqdm(total=2, file=our_file, nested=True)
-    except DeprecationWarning as e:
-        if str(e) != ("nested is deprecated and automated.\nUse position"
-                      " instead for manual control"):
+    except TqdmDeprecationWarning:
+        if """`nested` is deprecated and automated.\
+ Use position instead for manual control.""" not in our_file.getvalue():
             raise
     else:
-        raise DeprecationWarning("Should not allow nested kwarg")
+        raise DeprecationError("Should not allow nested kwarg")
 
 
 @with_setup(pretest, posttest)
@@ -809,9 +881,6 @@ def test_position():
     """ Test positioned progress bars """
     if nt_and_no_colorama:
         raise SkipTest
-
-    # Use regexp because the it rates can change
-    RE_pos = re.compile(r'((\x1b\[A|\r|\n)+((pos\d+) bar:\s+\d+%|\s{3,6})?)')  # NOQA
 
     # Artificially test nested loop printing
     # Without leave
@@ -961,13 +1030,13 @@ def test_deprecated_gui():
         assert not hasattr(t, "sp")
         try:
             t.update(1)
-        except DeprecationWarning as e:
-            if str(e) != ('Please use tqdm_gui(...) instead of'
-                          ' tqdm(..., gui=True)'):
+        except TqdmDeprecationWarning as e:
+            if 'Please use `tqdm_gui(...)` instead of `tqdm(..., gui=True)`' \
+                    not in our_file.getvalue():
                 raise
         else:
-            raise DeprecationWarning('Should not allow manual gui=True without'
-                                     ' overriding __iter__() and update()')
+            raise DeprecationError('Should not allow manual gui=True without'
+                                   ' overriding __iter__() and update()')
         finally:
             t._instances.clear()
             # t.close()
@@ -978,13 +1047,13 @@ def test_deprecated_gui():
         try:
             for _ in t:
                 pass
-        except DeprecationWarning as e:
-            if str(e) != ('Please use tqdm_gui(...) instead of'
-                          ' tqdm(..., gui=True)'):
+        except TqdmDeprecationWarning as e:
+            if 'Please use `tqdm_gui(...)` instead of `tqdm(..., gui=True)`' \
+                    not in our_file.getvalue():
                 raise e
         else:
-            raise DeprecationWarning('Should not allow manual gui=True without'
-                                     ' overriding __iter__() and update()')
+            raise DeprecationError('Should not allow manual gui=True without'
+                                   ' overriding __iter__() and update()')
         finally:
             t._instances.clear()
             # t.close()
@@ -1029,3 +1098,138 @@ def test_repr():
     with closing(StringIO()) as our_file:
         with tqdm(total=10, ascii=True, file=our_file) as t:
             assert str(t) == '  0%|          | 0/10 [00:00<?, ?it/s]'
+
+
+@with_setup(pretest, posttest)
+def test_clear():
+    """ Test clearing bar display """
+    with closing(StringIO()) as our_file:
+        t1 = tqdm(total=10, file=our_file, desc='pos0 bar',
+                  bar_format='{l_bar}')
+        t2 = trange(10, file=our_file, desc='pos1 bar',
+                    bar_format='{l_bar}')
+        before = squash_ctrlchars(our_file.getvalue())
+        t2.clear()
+        t1.clear()
+        after = squash_ctrlchars(our_file.getvalue())
+        t1.close()
+        t2.close()
+        assert before == ['pos0 bar:   0%|', 'pos1 bar:   0%|']
+        assert after == ['', '']
+
+
+@with_setup(pretest, posttest)
+def test_refresh():
+    """ Test refresh bar display """
+    with closing(StringIO()) as our_file:
+        t1 = tqdm(total=10, file=our_file, desc='pos0 bar',
+                  bar_format='{l_bar}', mininterval=999, miniters=999)
+        t2 = tqdm(total=10, file=our_file, desc='pos1 bar',
+                  bar_format='{l_bar}', mininterval=999, miniters=999)
+        t1.update()
+        t2.update()
+        before = squash_ctrlchars(our_file.getvalue())
+        t1.refresh()
+        t2.refresh()
+        after = squash_ctrlchars(our_file.getvalue())
+        t1.close()
+        t2.close()
+
+        # Check that refreshing indeed forced the display to use realtime state
+        assert before == [u'pos0 bar:   0%|', u'pos1 bar:   0%|']
+        assert after == [u'pos0 bar:  10%|', u'pos1 bar:  10%|']
+
+
+@with_setup(pretest, posttest)
+def test_write():
+    """ Test write messages """
+    s = "Hello world"
+    with closing(StringIO()) as our_file:
+        # Change format to keep only left part w/o bar and it/s rate
+        t1 = tqdm(total=10, file=our_file, desc='pos0 bar',
+                  bar_format='{l_bar}', mininterval=0, miniters=1)
+        t2 = trange(10, file=our_file, desc='pos1 bar', bar_format='{l_bar}',
+                    mininterval=0, miniters=1)
+        t3 = tqdm(total=10, file=our_file, desc='pos2 bar',
+                  bar_format='{l_bar}', mininterval=0, miniters=1)
+        t1.update()
+        t2.update()
+        t3.update()
+        before = our_file.getvalue()
+
+        # Write msg and see if bars are correctly redrawn below the msg
+        t1.write(s, file=our_file)  # call as an instance method
+        tqdm.write(s, file=our_file)  # call as a class method
+        after = our_file.getvalue()
+
+        t1.close()
+        t2.close()
+        t3.close()
+
+        before_squashed = squash_ctrlchars(before)
+        after_squashed = squash_ctrlchars(after)
+
+        assert after_squashed == [s, s] + before_squashed
+
+    # Check that no bar clearing if different file
+    with closing(StringIO()) as our_file_bar:
+        with closing(StringIO()) as our_file_write:
+            t1 = tqdm(total=10, file=our_file_bar, desc='pos0 bar',
+                      bar_format='{l_bar}', mininterval=0, miniters=1)
+
+            t1.update()
+            before_bar = our_file_bar.getvalue()
+
+            tqdm.write(s, file=our_file_write)
+
+            after_bar = our_file_bar.getvalue()
+            t1.close()
+
+            assert before_bar == after_bar
+
+    # Test stdout/stderr anti-mixup strategy
+    # Backup stdout/stderr
+    stde = sys.stderr
+    stdo = sys.stdout
+    # Mock stdout/stderr
+    with closing(StringIO()) as our_stderr:
+        with closing(StringIO()) as our_stdout:
+            sys.stderr = our_stderr
+            sys.stdout = our_stdout
+            t1 = tqdm(total=10, file=sys.stderr, desc='pos0 bar',
+                      bar_format='{l_bar}', mininterval=0, miniters=1)
+
+            t1.update()
+            before_err = sys.stderr.getvalue()
+            before_out = sys.stdout.getvalue()
+
+            tqdm.write(s, file=sys.stdout)
+            after_err = sys.stderr.getvalue()
+            after_out = sys.stdout.getvalue()
+
+            t1.close()
+
+            assert before_err == '\rpos0 bar:   0%|\rpos0 bar:  10%|'
+            assert before_out == ''
+            after_err_res = [m[0] for m in RE_pos.findall(after_err)]
+            assert after_err_res == [u'\rpos0 bar:   0%',
+                                     u'\rpos0 bar:  10%',
+                                     u'\r      ',
+                                     u'\r\r      ',
+                                     u'\rpos0 bar:  10%']
+            assert after_out == s + '\n'
+    # Restore stdout and stderr
+    sys.stderr = stde
+    sys.stdout = stdo
+
+
+@with_setup(pretest, posttest)
+def test_len():
+    """Test advance len (numpy array shape)"""
+    try:
+        import numpy as np
+    except:
+        raise SkipTest
+    with closing(StringIO()) as f:
+        with tqdm(np.zeros((3, 4)), file=f) as t:
+            assert len(t) == 3

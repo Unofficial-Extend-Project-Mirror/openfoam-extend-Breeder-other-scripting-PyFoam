@@ -18,6 +18,7 @@ _defaults={
         "portWait"         : "1.",
         "socketTimeout"    : "1.",
         "socketRetries"    : "10",
+        "startServerThread": "True",
     },
     "Metaserver": {
         "port"             : "17999",
@@ -38,13 +39,13 @@ _defaults={
     },
     "OpenFOAM": {
         "Forks" : 'openfoam,extend,openfoamplus',
-        "DirPatterns-openfoam" : '"^OpenFOAM-(([0-9]\.[0-9]|dev).*)$","^openfoam([0-9]+)$"',
+        "DirPatterns-openfoam" : '"^OpenFOAM-(([0-9]\.([0-9]|x)|dev).*)$","^openfoam([0-9]+)$"',
         "DirPatterns-extend" : '"^foam-extend-([0-9]\.[0-9].*)$"',
-        "DirPatterns-openfoamplus" : '"^OpenFOAM-((v[0-9]\.[0-9]\+|plus).*)$"',
+        "DirPatterns-openfoamplus" : '"^OpenFOAM-((v[0-9]\.[0-9]\+|plus|v1[0-9]+\+).*)$"',
         "Installation-openfoam" : "~/OpenFOAM",
         "Installation-openfoamplus" : "~/OpenFOAM",
         "Installation-extend" : "~/foam",
-        "AdditionalInstallation-openfoam" : '"~/OpenFOAM"',
+        "AdditionalInstallation-openfoam" : '"~/OpenFOAM","/opt/OpenFOAM"',
         "Version" : "1.5",
     },
     "MPI": {
@@ -88,6 +89,7 @@ _defaults={
     },
     "CommandOptionDefaults":{
         "sortListCases":"mtime",
+        "deadThresholdListCases":3601,
     },
     "Plotting":{
         "preferredImplementation":"gnuplot",
@@ -98,6 +100,13 @@ _defaults={
         "hardcopyOptions_postscript" : "color",
         "hardcopyOptions_eps" : "color",
         "autoplots" : [],
+        "plotlinear" : True,
+        "plotcontinuity" : True,
+        "plotbound" : True,
+        "plotiterations" : False,
+        "plotcourant" : False,
+        "plotexecution" : False,
+        "plotdeltat" : False,
     },
     "OutfileCollection": {
         "maximumOpenFiles":"100",

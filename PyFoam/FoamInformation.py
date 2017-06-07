@@ -392,4 +392,18 @@ def injectVariables(script,
             cnt+=1
             environ[m.groups()[0]]=m.groups()[1]
 
+def getUserTempDir():
+    """Return path to a user-specific private directory. Create directory if not existing"""
+    from os import path
+    import tempfile,getpass,os
+
+    tempDir=path.join(tempfile.gettempdir(),
+                      "PyFoam_"+getpass.getuser())
+    if not path.isdir(tempDir):
+        try:
+            os.mkdir(tempDir)
+        except OSError:
+            tempDir=tempfile.gettempdir()
+    return tempDir
+
 # Should work with Python3 and Python2

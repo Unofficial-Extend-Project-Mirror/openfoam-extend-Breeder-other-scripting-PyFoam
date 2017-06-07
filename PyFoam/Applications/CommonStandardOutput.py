@@ -99,4 +99,5 @@ class CommonStandardOutput(object):
         if self.opts.logname==None or force:
             self.opts.logname=default
         if useApplication:
-            self.opts.logname+="."+path.basename(self.parser.getArgs()[0])
+            self.opts.logname+="."+path.basename(
+                self.replaceAutoInArgs(self.parser.getArgs())[0])

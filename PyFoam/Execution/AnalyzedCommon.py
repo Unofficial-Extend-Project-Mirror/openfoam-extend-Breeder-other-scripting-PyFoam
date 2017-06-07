@@ -393,9 +393,11 @@ class AnalyzedCommon(object):
                                                     doTimelines=True,
                                                     doFiles=writeFiles,
                                                     accumulation=custom.accumulation,
+                                                    dataTransformations=custom.dataTransformations,
                                                     progressTemplate=custom.progress,
                                                     singleFile=True,
                                                     idNr=custom.idNr,
+                                                    stringValues=custom.stringValues,
                                                     startTime=custom.start,
                                                     endTime=custom.end))
 
@@ -407,7 +409,9 @@ class AnalyzedCommon(object):
                                                     doTimelines=True,
                                                     doFiles=writeFiles,
                                                     accumulation=custom.accumulation,
+                                                    dataTransformations=custom.dataTransformations,
                                                     progressTemplate=custom.progress,
+                                                    stringValues=custom.stringValues,
                                                     singleFile=True,
                                                     startTime=custom.start,
                                                     endTime=custom.end))

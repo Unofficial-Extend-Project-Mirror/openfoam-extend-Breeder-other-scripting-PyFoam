@@ -4,6 +4,7 @@ Class that implements common functionality for plotting options
 
 from optparse import OptionGroup
 from PyFoam.Basics.GnuplotTimelines import validTerminals
+from PyFoam import configuration as conf
 
 class CommonPlotOptions(object):
     """ The class that adds plot options
@@ -85,47 +86,37 @@ class CommonPlotOptions(object):
 
         plotItGroup=OptionGroup(self.parser,
                                 "What to plot",
-                                "Predefined quantities that the program looks for and plots")
+                                "Predefined quantities that the program looks for and plots. Defaults for this can be set in the [Plotting]-section of the configuration")
+
+        def addPlotOption(name,helpText):
+            defaultValue=conf().getboolean("Plotting","plot"+name)
+
+            plotItGroup.add_option("--"+("no" if defaultValue else "with")+"-"+name,
+                                   action="store_"+("false" if defaultValue else "true"),
+                                   default=defaultValue,
+                                   dest=name,
+                                   help=("Don't plot " if defaultValue else "Plot ")+helpText)
+
         plotItGroup.add_option("--no-default",
                                action="store_true",
                                default=False,
                                dest="nodefault",
-                               help="Switch off the default plots (linear, continuity and bound)")
-        plotItGroup.add_option("--no-linear",
-                               action="store_false",
-                               default=True,
-                               dest="linear",
-                               help="Don't plot the linear solver convergence")
-        plotItGroup.add_option("--no-continuity",
-                               action="store_false",
-                               default=True,
-                               dest="cont",
-                               help="Don't plot the continuity info")
-        plotItGroup.add_option("--no-bound",
-                               action="store_false",
-                               default=True,
-                               dest="bound",
-                               help="Don't plot the bounding of variables")
-        plotItGroup.add_option("--with-iterations",
-                               action="store_true",
-                               default=False,
-                               dest="iterations",
-                               help="Plot the number of iterations of the linear solver")
-        plotItGroup.add_option("--with-courant",
-                               action="store_true",
-                               default=False,
-                               dest="courant",
-                               help="Plot the courant-numbers of the flow")
-        plotItGroup.add_option("--with-execution",
-                               action="store_true",
-                               default=False,
-                               dest="execution",
-                               help="Plot the execution time of each time-step")
-        plotItGroup.add_option("--with-deltat",
-                               action="store_true",
-                               default=False,
-                               dest="deltaT",
-                               help="'Plot the timestep-size time-step")
+                               help="Switch off the default plots")
+        addPlotOption("linear",
+                      "the linear solver initial residual")
+        addPlotOption("continuity",
+                      "the continuity info")
+        addPlotOption("bound",
+                       "the bounding of variables")
+        addPlotOption("iterations",
+                      "the number of iterations of the linear solver")
+        addPlotOption("courant",
+                       "the courant-numbers of the flow")
+        addPlotOption("execution",
+                       "the execution time of each time-step")
+        addPlotOption("deltat",
+                       "the timestep-size time-step")
+
         plotItGroup.add_option("--with-all",
                                action="store_true",
                                default=False,
@@ -136,17 +127,21 @@ class CommonPlotOptions(object):
     def processPlotOptions(self):
         if self.opts.nodefault:
             self.opts.linear=False
-            self.opts.cont=False
+            self.opts.continuity=False
             self.opts.bound=False
+            self.opts.iterations=False
+            self.opts.courant=False
+            self.opts.execution=False
+            self.opts.deltat=False
 
         if self.opts.withAll:
             self.opts.linear=True
-            self.opts.cont=True
+            self.opts.continuity=True
             self.opts.bound=True
             self.opts.iterations=True
             self.opts.courant=True
             self.opts.execution=True
-            self.opts.deltaT=True
+            self.opts.deltat=True
 
         if self.opts.hardcopy and self.opts.hardcopyTerminalOptions=="":
             from PyFoam import configuration as conf

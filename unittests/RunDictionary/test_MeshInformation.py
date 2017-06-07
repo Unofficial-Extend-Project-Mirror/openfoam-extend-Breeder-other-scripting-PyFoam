@@ -12,7 +12,7 @@ from os import path,environ
 from shutil import rmtree
 from tempfile import mktemp
 
-from .TimeDirectory import damBreakTutorial
+from .test_TimeDirectory import damBreakTutorial
 
 theSuite=unittest.TestSuite()
 
@@ -26,7 +26,7 @@ class MeshInformationTest(unittest.TestCase):
         else:
             pathSpec=["-case",self.dest]
 
-        run=UtilityRunner(argv=["blockMesh"]+pathSpec,silent=True,server=False)
+        run=UtilityRunner(argv=["blockMesh"]+pathSpec,silent=False,server=False)
         run.start()
 
     def tearDown(self):

@@ -14,9 +14,12 @@ class CommonSelectTimesteps(object):
     def __init__(self):
         pass
 
-    def addOptions(self,defaultUnique):
+    def addOptions(self,defaultUnique,singleTime=False):
         """Add the necessary options
-        :param defaultUnique: whether timesteps are unique by default"""
+        :param defaultUnique: whether timesteps are unique by default
+        :param singleTime: only a single timestep may be selected"""
+
+        self.singleTime=singleTime
 
         time=OptionGroup(self.parser,
                          "Time Specification",
@@ -26,29 +29,30 @@ class CommonSelectTimesteps(object):
                         dest="time",
                         default=[],
                         action="append",
-                        help="Timestep that should be processed. Can be used more than once")
+                        help="Timestep that should be processed."+"" if singleTime else "Can be used more than once")
         time.add_option("--latest-time",
                         dest="latest",
                         action="store_true",
                         default=False,
                         help="Use the latest time")
-        time.add_option("--all-times",
-                        dest="all",
-                        action="store_true",
-                        default=False,
-                        help="Process all times")
-        time.add_option("--after-time",
-                        type="float",
-                        dest="afterTime",
-                        action="store",
-                        default=None,
-                        help="Process all after this time")
-        time.add_option("--before-time",
-                        type="float",
-                        dest="beforeTime",
-                        action="store",
-                        default=None,
-                        help="Process all before this time")
+        if not self.singleTime:
+            time.add_option("--all-times",
+                            dest="all",
+                            action="store_true",
+                            default=False,
+                            help="Process all times")
+            time.add_option("--after-time",
+                            type="float",
+                            dest="afterTime",
+                            action="store",
+                            default=None,
+                            help="Process all after this time")
+            time.add_option("--before-time",
+                            type="float",
+                            dest="beforeTime",
+                            action="store",
+                            default=None,
+                            help="Process all before this time")
 
         if defaultUnique:
             time.add_option("--duplicate-times",
@@ -87,20 +91,25 @@ class CommonSelectTimesteps(object):
 
         if self.opts.latest:
             self.opts.time.append(float(sol.getLast()))
-        if self.opts.all:
-            for t in sol.getTimes():
-                self.opts.time.append(float(t))
-        if self.opts.beforeTime or self.opts.afterTime:
-            start=float(sol.getFirst())
-            end=float(sol.getLast())
-            if self.opts.beforeTime:
-                end=self.opts.beforeTime
-            if self.opts.afterTime:
-                start=self.opts.afterTime
-            for t in sol.getTimes():
-                tVal=float(t)
-                if tVal>=start and tVal<=end:
-                    self.opts.time.append(tVal)
+        if self.singleTime:
+            if len(self.opts.time)>1:
+                self.error("Only a single time allow. We got",len(self.opts.time)," : ",
+                           ", ".join(self.opts.time))
+        else:
+            if self.opts.all:
+                for t in sol.getTimes():
+                    self.opts.time.append(float(t))
+            if self.opts.beforeTime or self.opts.afterTime:
+                start=float(sol.getFirst())
+                end=float(sol.getLast())
+                if self.opts.beforeTime:
+                    end=self.opts.beforeTime
+                if self.opts.afterTime:
+                    start=self.opts.afterTime
+                for t in sol.getTimes():
+                    tVal=float(t)
+                    if tVal>=start and tVal<=end:
+                        self.opts.time.append(tVal)
 
         self.opts.time.sort()
 
@@ -131,5 +140,10 @@ class CommonSelectTimesteps(object):
             print_("Used times:",times)
 
         return times
+    def processTimestepOptionsIndex(self,sol):
+        """Process the time options and return a list of (time,index) tuples"""
+        times=self.processTimestepOptions(sol)
+
+        return [(t,sol.timeIndex(t,True)) for t in times]
 
 # Should work with Python3 and Python2

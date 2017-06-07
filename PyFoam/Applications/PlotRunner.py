@@ -108,16 +108,16 @@ read and the regular expressions in it are displayed
 
         self.initBlink()
 
-        run=GnuplotRunner(argv=self.parser.getArgs(),
+        run=GnuplotRunner(argv=self.replaceAutoInArgs(self.parser.getArgs()),
                           smallestFreq=self.opts.frequency,
                           persist=self.opts.persist,
                           plotLinear=self.opts.linear,
-                          plotCont=self.opts.cont,
+                          plotCont=self.opts.continuity,
                           plotBound=self.opts.bound,
                           plotIterations=self.opts.iterations,
                           plotCourant=self.opts.courant,
                           plotExecution=self.opts.execution,
-                          plotDeltaT=self.opts.deltaT,
+                          plotDeltaT=self.opts.deltat,
                           customRegexp=self.plotLines(),
                           writeFiles=self.opts.writeFiles,
                           hardcopy=self.opts.hardcopy,

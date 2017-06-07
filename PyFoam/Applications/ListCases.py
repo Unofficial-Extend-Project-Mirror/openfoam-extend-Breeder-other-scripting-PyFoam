@@ -23,7 +23,7 @@ from PyFoam import configuration
 from PyFoam.ThirdParty.six import print_,iteritems,PY3
 from PyFoam.ThirdParty.tqdm import tqdm
 
-from PyFoam.Basics.Utilities import humanReadableSize,diskUsage
+from PyFoam.Basics.Utilities import humanReadableSize,diskUsage,humanReadableDuration
 
 if PY3:
     long=int
@@ -160,6 +160,12 @@ etc). Currently doesn't honor the parallel data
                           dest="progressBar",
                           default=True,
                           help="Do not show a progress bar as directories are being processed")
+        behave.add_option("--dead-threshold",
+                          action="store",
+                          type="float",
+                          dest="deadThreshold",
+                          default=configuration().get("CommandOptionDefaults","deadThresholdListCases"),
+                          help="Number of seconds without updates after which the case is assumed to be dead. Default: %default")
 
         select=OptionGroup(self.parser,
                            "Selection",
@@ -300,6 +306,12 @@ etc). Currently doesn't honor the parallel data
                                     if re.compile("processor[0-9]+").match(f):
                                         data["mtime"]=max(stat(path.join(cName,f))[ST_MTIME],data["mtime"])
 
+                            if self.opts.state or self.opts.estimateEndTime:
+                                try:
+                                    data["startedAt"]=time.mktime(time.strptime(self.readState(sol,"StartedAt")))
+                                except ValueError:
+                                    data["startedAt"]="nix"
+
                             if self.opts.state:
                                 try:
                                     data["nowTime"]=float(self.readState(sol,"CurrentTime"))
@@ -312,12 +324,15 @@ etc). Currently doesn't honor the parallel data
                                     data["lastOutput"]="nix"
 
                                 data["state"]=self.readState(sol,"TheState")
-
-                            if self.opts.state or self.opts.estimateEndTime:
-                                try:
-                                    data["startedAt"]=time.mktime(time.strptime(self.readState(sol,"StartedAt")))
-                                except ValueError:
-                                    data["startedAt"]="nix"
+                                if data["state"]=="Running":
+                                    try:
+                                        gone=time.time()-data["lastOutput"]
+                                        if gone>self.opts.deadThreshold:
+                                            data["state"]="Dead "+humanReadableDuration(gone)
+                                    except KeyError:
+                                        pass
+                                    except KeyError:
+                                        pass
 
                             if self.opts.startEndTime or self.opts.estimateEndTime:
                                 try:
@@ -370,8 +385,8 @@ etc). Currently doesn't honor the parallel data
                                 if useSolverInData:
                                     data["solver"]="none found"
                                     # try to find the oldest pickled file
+                                    dirAndTime=[]
                                     for f in ["pickledData","pickledUnfinishedData","pickledStartData"]:
-                                        dirAndTime=[]
                                         for g in glob(path.join(cName,"*.analyzed")):
                                             pName=path.join(g,f)
                                             base=path.basename(g)
@@ -381,11 +396,11 @@ etc). Currently doesn't honor the parallel data
                                                 solverName=None
                                             if path.exists(pName):
                                                 dirAndTime.append((path.getmtime(pName),solverName,pName))
-                                        dirAndTime.sort(key=lambda x:x[0])
-                                        if len(dirAndTime)>0:
-                                            data["solver"]=dirAndTime[-1][1]
-                                            pickleFile=dirAndTime[-1][2]
-                                            break
+                                    dirAndTime.sort(key=lambda x:x[0])
+
+                                    if len(dirAndTime)>0:
+                                        data["solver"]=dirAndTime[-1][1]
+                                        pickleFile=dirAndTime[-1][2]
 
                                     solverName=data["solver"]
                                 else:

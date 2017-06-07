@@ -36,8 +36,13 @@ class RegionCases:
                 self._mklink(self.master.name,r,"system",prefix=path.pardir,postfix=f)
             symlink(path.join(path.pardir,path.pardir,self.master.name,"system","controlDict"),
                     path.join(rName,"system","controlDict"))
-            symlink(path.join(path.pardir,path.pardir,self.master.name,"system","decomposeParDict"),
-                    path.join(rName,"system","decomposeParDict"))
+            origSys=path.join(path.pardir,path.pardir,
+                              self.master.name,"system")
+            for f in listdir(origSys):
+                destFile=path.join(rName,"system",f)
+                if not path.exists(destFile):
+                    symlink(path.join(origSys,f),
+                            destFile)
 
             self._mklink(self.master.name,r,"constant")
             for t in self.master.getTimes():

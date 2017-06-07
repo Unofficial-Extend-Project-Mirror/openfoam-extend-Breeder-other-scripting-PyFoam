@@ -8,7 +8,10 @@ class CommonServer(object):
 
     def addOptions(self,haveServer=True):
         self.ensureGeneralOptions()
-        if haveServer:
+        from PyFoam import configuration as conf
+        defaultForServer=conf().getboolean("Network","startServerThread")
+
+        if haveServer and defaultForServer:
             self.generalOpts.add_option("--no-server-process",
                                         action="store_false",
                                         default=True,
@@ -20,5 +23,3 @@ class CommonServer(object):
                                         default=True,
                                         dest="server",
                                         help="Start a server process that can control the process")
-            
-        

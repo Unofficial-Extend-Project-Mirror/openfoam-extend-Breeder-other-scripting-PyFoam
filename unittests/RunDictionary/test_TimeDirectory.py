@@ -5,7 +5,7 @@ from PyFoam.RunDictionary.TimeDirectory import TimeDirectory
 from PyFoam.RunDictionary.SolutionFile import SolutionFile
 from PyFoam.RunDictionary.FileBasis import FileBasis
 
-from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
+from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber,foamFork
 from os import path,environ,remove,system
 from shutil import copytree,rmtree,copyfile
 from tempfile import mktemp,mkdtemp
@@ -18,6 +18,8 @@ def damBreakTutorial():
         prefix=path.join(prefix,"interFoam")
     else:
         prefix=path.join(prefix,"multiphase","interFoam","laminar")
+        if foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+            prefix=path.join(prefix,"damBreak")
     return path.join(prefix,"damBreak")
 
 def gammaName():
@@ -34,7 +36,11 @@ class TimeDirectoryTest(unittest.TestCase):
         self.theFile=path.join(self.theDir,"damBreak")
         copytree(damBreakTutorial(),self.theFile)
         if foamVersionNumber()>=(2,):
-            copyfile(path.join(self.theFile,"0",gammaName()+".org"),
+            if foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+                extension=".orig"
+            else:
+                extension=".org"
+            copyfile(path.join(self.theFile,"0",gammaName()+extension),
                      path.join(self.theFile,"0",gammaName()))
 
     def tearDown(self):
@@ -82,7 +88,11 @@ class TimeDirectoryTestZipped(unittest.TestCase):
         self.theFile=path.join(self.theDir,"damBreak")
         copytree(damBreakTutorial(),self.theFile)
         if foamVersionNumber()>=(2,):
-            copyfile(path.join(self.theFile,"0",gammaName()+".org"),
+            if foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+                extension=".orig"
+            else:
+                extension=".org"
+            copyfile(path.join(self.theFile,"0",gammaName()+extension),
                      path.join(self.theFile,"0",gammaName()))
         system("gzip "+path.join(self.theFile,"0",gammaName()))
 
@@ -92,7 +102,11 @@ class TimeDirectoryTestZipped(unittest.TestCase):
     def testTimeReplacingZippedFile(self):
         test=SolutionDirectory(self.theFile)["0"]
         self.assertEqual(len(test),4)
-        test[gammaName()]=test[gammaName()+".org"]
+        if foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+            extension=".orig"
+        else:
+            extension=".org"
+        test[gammaName()]=test[gammaName()+extension]
         self.assertEqual(len(test),4)
 
 theSuite.addTest(unittest.makeSuite(TimeDirectoryTestZipped,"test"))
@@ -103,7 +117,11 @@ class TimeDirectoryTestCopy(unittest.TestCase):
         self.theFile=path.join(self.theDir,"damBreak")
         copytree(damBreakTutorial(),self.theFile)
         if foamVersionNumber()>=(2,):
-            copyfile(path.join(self.theFile,"0",gammaName()+".org"),
+            if foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+                extension=".orig"
+            else:
+                extension=".org"
+            copyfile(path.join(self.theFile,"0",gammaName()+extension),
                      path.join(self.theFile,"0",gammaName()))
 
     def tearDown(self):

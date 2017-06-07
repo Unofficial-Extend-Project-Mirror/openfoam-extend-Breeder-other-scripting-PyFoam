@@ -25,7 +25,7 @@ def checkForTests(lib,test):
                 dMissing+=1
             checkForTests(lib+[f],test+[f])
         elif f[-3:]==".py":
-            newFile=path.join(testDir,f)
+            newFile=path.join(testDir,"test_"+f)
             className=f[:-3]
             if not path.exists(newFile):
                 print_("Creating",newFile)

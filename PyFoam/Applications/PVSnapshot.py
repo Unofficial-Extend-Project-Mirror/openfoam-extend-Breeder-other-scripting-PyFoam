@@ -60,7 +60,7 @@ casename. Additional replacements can be specified
                    "pov"   : "POVExporter"}
 
     def addOptions(self):
-        CommonSelectTimesteps.addOptions(self,defaultUnique=False)
+        CommonSelectTimesteps.addOptions(self,defaultUnique=True)
 
         paraview=OptionGroup(self.parser,
                            "Paraview specifications",
@@ -147,6 +147,11 @@ casename. Additional replacements can be specified
                             action="store_false",
                             default=True,
                             help="Do not generate an automatic filename prefix if --colors-for-filters is used")
+        filename.add_option("--consecutive-index-for-timesteps",
+                            dest="consecutiveIndex",
+                            action="store_true",
+                            default=False,
+                            help="Instead of using the index of the time-steps from the case number the timesteps witgh consecutive numbers (if all timesteps are selected this should be the same)")
         self.parser.add_option_group(filename)
 
         replace=OptionGroup(self.parser,
@@ -416,7 +421,12 @@ casename. Additional replacements can be specified
                 self.warning("Resetting parallel mode",newParallelMode)
                 self.opts.parallelTimes=newParallelMode
 
-        times=self.processTimestepOptions(sol)
+        if self.opts.consecutiveIndex:
+            times=self.processTimestepOptions(sol)
+            times=zip(times,range(0,len(times)))
+        else:
+            times=self.processTimestepOptionsIndex(sol)
+
         if len(times)<1:
             self.warning("Can't continue without time-steps")
             return
@@ -502,8 +512,8 @@ casename. Additional replacements can be specified
         allSources=None
         alwaysSources=None
 
-        self.say("Starting times",times)
-        for i,t in enumerate(times):
+        self.say("Starting times",times[0][0],"(Index",times[0][1],")")
+        for t,i in times:
             self.say("Nr",i,"time",t)
             print "Snapshot ",i," for t=",t,
             sys.stdout.flush()

@@ -42,6 +42,7 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
         Gnuplot.__init__(self,persist=self.spec.persist)
 
         self.itemlist=[]
+        self.terminal=terminal
 
         if self.spec.start or self.spec.end:
             rng="["
@@ -98,7 +99,7 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
             x11addition.append("noenhanced")
 
         if showWindow:
-            self.set_string("terminal "+terminal+" "+" ".join(x11addition))
+            self.set_string("terminal "+self.terminal+" "+" ".join(x11addition))
             if uname()[0]=="Darwin":
                 GnuplotTimelines.terminalNr+=1
         else:
@@ -150,6 +151,8 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
 
         self.title(title)
 
+        self.set_string("terminal "+self.terminal+' title "pyFoam: '+title+'"')
+
     def setYLabel(self,title):
         """Sets the label on the first Y-Axis"""
 
@@ -166,7 +169,7 @@ class GnuplotTimelines(GeneralPlotTimelines,Gnuplot):
         self("set terminal "+terminal)
         self.refresh()
         # reset the terminal to its `default' setting:
-        self('set terminal %s' % gp.GnuplotOpts.default_term)
+        self('set terminal %s' % self.terminal)
         self.set_string('output')
 
     def doHardcopy(self,filename,form,termOpts=""):

@@ -114,3 +114,43 @@ setPlotData(self.GetOutput(),"compressibleInterFoam","linear")
         tbl.AddColumn(col)
 
     return tbl
+
+def setCurrentTimeline(tbl,dirName,position):
+    """Read timeline data at a specified position. Return the interpolated
+    values from the current simulation time as a table
+
+    Use in 'Programmable Filter'. Set output type to 'vtkTable'.
+    To get the values from a timeline 'postProcessing/swakExpression_pseudoTime/0/pseudoTime' use
+from PyFoam.Paraview.Data import setCurrentTimeline
+setCurrentTimeline(self.GetOutput(),"swakExpression_pseudoTime","pseudoTime")
+
+    To print the values pipe into a 'PythonAnnotation'-filter. Set
+    ArrayAssociation to 'Row Data' and use an Expression like
+    '"Time = %.1f (%.1f)" % (average,t_value)' (this assumes that there is a
+    column 'average')
+
+    Hint: this reads string values as well. But in that case the value has to be
+    converted with 'val.GetValue(0)' in the expression
+"""
+
+    from PyFoam.RunDictionary.TimelineDirectory import TimelineDirectory
+    from vtk import vtkStringArray,vtkFloatArray
+
+    dirName=checkDir(dirName)
+    tld=TimelineDirectory(case().name,dirName)
+    spread=tld[position](False)
+    data=spread(vTime())
+    for k in data:
+        try:
+            val=float(data[k])
+            col=vtkFloatArray()
+        except ValueError:
+            val=data[k]
+            col=vtkStringArray()
+        col.SetNumberOfComponents(1)
+        col.SetName(k)
+        col.InsertNextValue(val)
+
+        tbl.AddColumn(col)
+
+    return col

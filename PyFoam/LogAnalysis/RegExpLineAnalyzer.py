@@ -3,7 +3,12 @@
 
 import re
 
+# for the eval
+from math import *
+
 from .GeneralLineAnalyzer import GeneralLineAnalyzer
+from PyFoam.Error import warning
+from PyFoam.ThirdParty.six import integer_types
 
 class RegExpLineAnalyzer(GeneralLineAnalyzer):
     """Parses lines for an arbitrary regular expression
@@ -24,6 +29,8 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
                  name,
                  exp,
                  idNr=None,
+                 dataTransformations=None,
+                 stringValues=None,
                  titles=[],
                  doTimelines=False,
                  doFiles=True,
@@ -38,6 +45,10 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
         regular expression for a float
         :param idNr: number of the pattern group that is used as an identifier
         :param titles: titles of the columns
+        :param dataTransformations: List of expression strings with replacement
+        values of the form "$1", "$2" which are replaced with the groups of the
+        regular expression. If this is set the original data is discarded and
+        the values when inserting them to the replacements are used
         :param accumulation: How multiple values should be accumulated
         """
         GeneralLineAnalyzer.__init__(self,
@@ -52,6 +63,21 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
 
         self.name=name
         self.idNr=idNr
+        if isinstance(self.idNr,integer_types):
+            self.idNr=[self.idNr]
+
+        self.stringValues=stringValues if stringValues is not None else []
+        self.stringValues.sort()
+
+        if self.idNr is not None:
+            for iNr in self.idNr:
+                if iNr in self.stringValues:
+                    self.stringValues.remove(iNr)
+            stringValues=[]
+            for v in self.stringValues:
+                sm=sum(1 for i in self.idNr if i<v)
+                stringValues.append(v-sm)
+            self.stringValues=stringValues
 
         self.multiLine=False
         self.linesToMatch=None
@@ -71,6 +97,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
         self.exp=re.compile(self.strExp,reFlags)
 
         self.data={}
+        self.dataTransformations=dataTransformations
 
     def stringToMatch(self,line):
         """Returns string to match. To be overriden for multi-line expressions"""
@@ -87,26 +114,47 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
             self.tm="-1e10"
 
     def makeID(self,match):
-        if isinstance(self.idNr,(int,)):
-            return match.group(self.idNr)
-        else:
-            return "_".join(match.group(i) for i in self.idNr)
+        return "_".join(match.group(i) for i in self.idNr)
 
     def filterIdFromData(self,fdata):
-        if isinstance(self.idNr,(int,)):
-            return fdata[:self.idNr-1]+fdata[self.idNr:]
-        else:
-            return [fdata[i] for i in range(len(fdata)) if i+1 not in self.idNr]
+        return tuple([fdata[i] for i in range(len(fdata)) if i+1 not in self.idNr])
+
+    def transformData(self,d):
+        # create in revers order so that $10 is replaced before $1
+        replacements=[]
+        for i in range(len(d),0,-1):
+            replacements.append(("$%d" % i,d[i-1]))
+
+        vals=[]
+
+        for tVal in self.dataTransformations:
+            for o,n in replacements:
+                tVal=tVal.replace(o,n)
+            try:
+                vals.append(eval(tVal))
+            except:
+                vals.append(0.)
+                warning("Problem evaluating",tVal)
+
+        # print(d,"to",vals)
+
+        return tuple(vals)
 
     def addToFiles(self,match):
         name=self.fName(self.name)
         fdata=match.groups()
-        if self.idNr!=None:
+        if self.dataTransformations:
+            tdata=self.transformData(fdata)
+
+        if self.idNr is not None:
             ID=self.makeID(match)
             name+="_"+ID
             fdata=self.filterIdFromData(fdata)
         else:
             ID=""
+
+        if self.dataTransformations:
+            fdata=tdata
 
         self.sub(ID)[float(self.tm)]=fdata
         if ID!="":
@@ -118,22 +166,32 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
         name=self.fName(self.name)
         fdata=match.groups()
 
+        if self.dataTransformations:
+            tdata=self.transformData(fdata)
+
         prefix=""
-        if self.idNr!=None:
+        if self.idNr is not None:
             ID=self.makeID(match)
             prefix=ID+"_"
             fdata=self.filterIdFromData(fdata)
 
+        if self.dataTransformations:
+            fdata=tdata
+
         for i in range(len(fdata)):
-            val=float(fdata[i])
+            if i in self.stringValues:
+                val=fdata[i]
+            else:
+                val=float(fdata[i])
             name=prefix+"value %d" % i
             if i<len(self.titles):
-                if self.idNr!=None and self.titles[i].find("%s")>=0:
+                if self.idNr is not None and self.titles[i].find("%s")>=0:
                     name=self.titles[i] % ID
                 else:
                     name=prefix+str(self.titles[i])
 
-            self.lines.setValue(self.fName(name),val)
+            if i not in self.stringValues:
+                self.lines.setValue(self.fName(name),val)
 
     def sub(self,ID):
         """ get the data set for the identifier ID"""

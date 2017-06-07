@@ -95,7 +95,7 @@ class Utilities(object):
         try:
             if path.isdir(dst):
                 shutil.rmtree(dst,ignore_errors=ignore_errors)
-            else:
+            elif path.exists(dst):
                 os.remove(dst)
         except NameError:
             self.execute("rm -rf "+dst)
@@ -156,6 +156,29 @@ FoamFile
 """)
 
     excludeNames=["^.svn$" , "~$"]
+
+    def findFileInDir(self,dName,fName):
+        """Find file in a directory (search recursively)
+        :param dName: name of the directory
+        :param fName: name of the file to look force
+        :return: the complete path. Directory and path joined if nothing
+        is found"""
+        def lookFor(dName,fName):
+            if path.exists(path.join(dName,fName)):
+                return path.join(dName,fName)
+            else:
+                for f in listdir(dName):
+                    if path.isdir(path.join(dName,f)):
+                        result=lookFor(path.join(dName,f),fName)
+                        if result:
+                            return result
+                return None
+        result=lookFor(dName,fName)
+
+        if result:
+            return result
+        else:
+            return path.join(dName,fName)
 
     def listDirectory(self,d):
         """Lists the files in a directory, but excludes certain names
@@ -226,6 +249,39 @@ FoamFile
             num /= 1024.0
         return "%3.1f%s" % (num, 'TB')
 
+    def humanReadableDuration(self,num):
+        """Creates a string that prints a duration in an easily readable form.
+        Easily readable means that the two highest non-zero values will be printed"""
+        intervals=[60*60*24*365,
+                   60*60*24,
+                   60*60,
+                   60]
+        names=["%dy",
+               "%dd",
+               "%dh",
+               "%dmin",
+               "%fs"]
+        vals=[]
+        for i in intervals:
+            if num<i:
+                vals.append(0)
+            else:
+                v=int(num/i)
+                num-=v*i
+                vals.append(v)
+        result=None
+        for v,s in zip(vals,names):
+            if v>0:
+                if result is None:
+                    result=s%v
+                else:
+                    result+=" "+s%v
+                    break
+        if result is None:
+            return " 0s"
+        else:
+            return result
+
     def diskUsage(self,fpath):
         """Calculate the disk space used at the specified path in bytes"""
         try:
@@ -251,6 +307,10 @@ def humanReadableSize(num):
     """Calls the method of the same name from the Utilites class"""
     return Utilities().humanReadableSize(num)
 
+def humanReadableDuration(num):
+    """Calls the method of the same name from the Utilites class"""
+    return Utilities().humanReadableDuration(num)
+
 def which(prog):
     """Calls the method of the same name from the Utilites class"""
     return Utilities().which(prog)
@@ -266,6 +326,10 @@ def writeDictionaryHeader(f):
 def listDirectory(d):
     """Calls the method of the same name from the Utilites class"""
     return Utilities().listDirectory(d)
+
+def findFileInDir(d,f):
+    """Calls the method of the same name from the Utilites class"""
+    return Utilities().findFileInDir(d,f)
 
 def rmtree(path,ignore_errors=False):
     """Calls the method of the same name from the Utilites class"""

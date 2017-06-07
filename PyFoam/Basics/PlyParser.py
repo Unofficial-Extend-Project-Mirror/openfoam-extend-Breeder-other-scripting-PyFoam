@@ -1,4 +1,4 @@
-#  ICE Revision: $Id$ 
+#  ICE Revision: $Id$
 """Base class for all parser classes based on PLY
 
 Most of this class was shamelessly stolen from the examples"""
@@ -13,6 +13,8 @@ import PyFoam.ThirdParty.ply.lex as lex
 import PyFoam.ThirdParty.ply.yacc as yacc
 
 import os
+
+from PyFoam.FoamInformation import getUserTempDir
 
 class PlyParser(object):
     """
@@ -40,10 +42,11 @@ class PlyParser(object):
                   debug=self.debug,
                   debugfile=self.debugfile,
                   tabmodule=self.tabmodule,
+                  outputdir=getUserTempDir(),
                   check_recursion=self.debug)
         self.lex=lex
         self.yacc=yacc
-        
+
     def parse(self,content):
         """Do the actual parsing
         :param content: String that is to be parsed
@@ -53,6 +56,5 @@ class PlyParser(object):
             debug=10
         else:
             debug=0
-            
-        return yacc.parse(content,debug=debug)
 
+        return yacc.parse(content,debug=debug)

@@ -11,6 +11,7 @@ Usage:
 # a result precise floating numbers (instead of truncated int)
 from __future__ import division, absolute_import
 # import compatibility functions and utilities
+import sys
 from time import time
 from ._utils import _range
 # to inherit from the tqdm class
@@ -25,15 +26,20 @@ class tqdm_gui(tqdm):  # pragma: no cover
     """
     Experimental GUI version of tqdm!
     """
-    def __init__(self, *args, **kwargs):
 
-        # try:  # pragma: no cover
+    @classmethod
+    def write(cls, s, file=sys.stdout, end="\n"):
+        """
+        Print a message via tqdm_gui (just an alias for print)
+        """
+        # TODO: print text on GUI?
+        file.write(s)
+        file.write(end)
+
+    def __init__(self, *args, **kwargs):
         import matplotlib as mpl
         import matplotlib.pyplot as plt
         from collections import deque
-        # except ImportError:  # gui not available
-        #   kwargs['gui'] = False
-        # else:
         kwargs['gui'] = True
 
         super(tqdm_gui, self).__init__(*args, **kwargs)
@@ -137,10 +143,10 @@ class tqdm_gui(tqdm):  # pragma: no cover
             if delta_it >= miniters:
                 cur_t = time()
                 delta_t = cur_t - last_print_t
-                if delta_t >= mininterval:  # pragma: no cover
+                if delta_t >= mininterval:
                     elapsed = cur_t - start_t
                     # EMA (not just overall average)
-                    if smoothing:  # and delta_it
+                    if smoothing and delta_t:
                         avg_time = delta_t / delta_it \
                             if avg_time is None \
                             else smoothing * delta_t / delta_it + \
@@ -242,7 +248,7 @@ class tqdm_gui(tqdm):  # pragma: no cover
             if delta_t >= self.mininterval:
                 elapsed = cur_t - self.start_t
                 # EMA (not just overall average)
-                if self.smoothing:  # and delta_it
+                if self.smoothing and delta_t:
                     self.avg_time = delta_t / delta_it \
                         if self.avg_time is None \
                         else self.smoothing * delta_t / delta_it + \

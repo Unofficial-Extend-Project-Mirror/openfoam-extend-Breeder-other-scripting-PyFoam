@@ -3,6 +3,8 @@ import unittest
 from PyFoam.RunDictionary.TimelineDirectory import TimelineDirectory
 from PyFoam.Basics.SpreadsheetData import SpreadsheetData
 
+from PyFoam.ThirdParty.six import b
+
 from os import path,mkdir
 from shutil import rmtree
 from tempfile import mkdtemp
@@ -89,6 +91,15 @@ def createDirectory():
 1 0 0 1 1
 3 1 1 1 1
 """)
+    mkdir(path.join(theDir,"state"))
+    mkdir(path.join(theDir,"state","0"))
+    open(path.join(theDir,"state","0","state"),"w").write(
+"""# time state code
+0 nix 1
+1 da 2
+3 hier 3
+""")
+
     return theDir
 
 class TimelineDirectoryTest(unittest.TestCase):
@@ -155,5 +166,37 @@ class TimelineValueTest(unittest.TestCase):
         st=sd["p"]
         spread=st()
         spread.writeCSV(path.join(self.theDir,"nix2.csv"))
+
+    def testGetTimesTimelineWithString(self):
+        sd=TimelineDirectory(self.theDir,dirName="state")
+        st=sd["state"]
+        self.assertEqual(st.getData([0.5,1,2,4]),[['nix', 1.0], ['da', 2.0], ['da', 2.0], ['hier', 3.0]])
+        self.assert_(not st.isProbe())
+        spread=st()
+
+        self.assertEqual(spread(-1,"state_t=0 state"),"")
+        self.assertEqual(spread(1,"state_t=0 state"),b("da"))
+        self.assertEqual(spread(2.7,"state_t=0 state"),b("hier"))
+        self.assertAlmostEqual(spread(2.7,"state_t=0 code"),2.85)
+        data=spread(2.7)
+        self.assertEqual(len(data),2)
+        self.assertEqual(data["state_t=0 state"],b("hier"))
+        self.assertAlmostEqual(data["state_t=0 code"],2.85)
+
+    def testGetTimesTimelineWithStringNoTitle(self):
+        sd=TimelineDirectory(self.theDir,dirName="state")
+        st=sd["state"]
+        spread=st(False)
+
+        self.assertEqual(spread(-1,"state"),"")
+        self.assertEqual(spread(1,"state"),b("da"))
+        self.assertEqual(spread(2.7,"state"),b("hier"))
+        self.assertAlmostEqual(spread(2.7,"code"),2.85)
+        data=spread(2.7)
+        self.assertEqual(len(data),2)
+        self.assertEqual(data["state"],b("hier"))
+        self.assertAlmostEqual(data["code"],2.85)
+        import numpy as np
+        self.assertEqual(spread.data.dtype[1].kind,"S")
 
 theSuite.addTest(unittest.makeSuite(TimelineValueTest,"test"))

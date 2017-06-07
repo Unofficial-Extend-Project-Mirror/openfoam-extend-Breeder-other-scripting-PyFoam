@@ -8,7 +8,7 @@ from .PyFoamApplication import PyFoamApplication
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.Basics.DataStructures import DictProxy
 from PyFoam.Basics.Utilities import rmtree,copytree,execute,remove
-from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,WriteParameterFile
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,WriteParameterFile,FoamStringParser
 from PyFoam.Basics.TemplateFile import TemplateFile
 from PyFoam.Execution.BasicRunner import BasicRunner
 from PyFoam.Basics.RestructuredTextHelper import RestructuredTextHelper
@@ -198,7 +198,7 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           action="append",
                           default=[],
                           dest="values",
-                          help="String with the values that are to be inserted into the template as a dictionaty in Python-format. Can be specified more than once and overrides values from the parameter-files")
+                          help="String with the values that are to be inserted into the template as a dictionaty in Python-format if the string starts with '{' and ends with '}'. Otherwise it is assumed that the string is a dictionary in OpenFOAM-format. Can be specified more than once and overrides values from the parameter-files")
 
         special=OptionGroup(self.parser,
                            "Special files and directories",
@@ -646,8 +646,24 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
 
     def executeScript(self,scriptName,workdir,echo):
         """Execute a script and write a corresponding logfile"""
+        import sys,os,shutil
 
-        ret,txt=execute([scriptName],
+        scriptRun=scriptName
+        if sys.platform in ["darwin"]:
+            scriptRun=path.join(path.dirname(scriptName),
+                                "runOnMacVersionOf_"+path.basename(scriptName))
+            with open(scriptName) as i:
+                with open(scriptRun,"w") as o:
+                    o.write(i.readline())
+                    o.write("\n# Necessary because Mac OS X does not pass this variable\n")
+                    o.write("export LD_LIBRARY_PATH="+os.environ["LD_LIBRARY_PATH"]+"\n\n")
+                    o.write(i.read())
+            shutil.copymode(scriptName,scriptRun)
+
+            self.warning("Executing modified script",scriptRun,
+                         "instead of",scriptName)
+
+        ret,txt=execute([scriptRun],
                         workdir=workdir,
                         echo=echo,
                         getReturnCode=True)
@@ -707,9 +723,14 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
 
         setValues={}
         for v in self.opts.values:
+            v=v.strip()
             self.info("Updating values",v)
-            vals.update(eval(v))
-            setValues.update(eval(v))
+            if v[0]=="{" and v[-1]=="}":
+                newValues=eval(v)
+            else:
+                newValues=FoamStringParser(v).data
+            vals.update(newValues)
+            setValues.update(newValues)
 
         if overrideParameters:
             vals.update(overrideParameters)
@@ -740,9 +761,16 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
         if path.exists(derivedScript):
             self.info("Deriving variables in script",derivedScript)
             scriptText=open(derivedScript).read()
-            glob={}
+            def printError(*args):
+                raise(Exception("Problem in "+derivedScript+"\n"+
+                                " ".join(str(a) for a in args)))
+            glob={'error':printError}
             oldVals=vals.copy()
-            exec_(scriptText,glob,vals)
+            try:
+                exec_(scriptText,glob,vals)
+            except Exception as e:
+                print_(e)
+                self.error("Problem in",derivedScript)
             derivedAdded=[]
             derivedChanged=[]
             for k,v in iteritems(vals):

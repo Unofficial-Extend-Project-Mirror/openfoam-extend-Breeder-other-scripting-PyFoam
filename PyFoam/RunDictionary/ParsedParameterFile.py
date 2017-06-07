@@ -425,6 +425,7 @@ class FoamFileParser(PlyParser):
         'DEFAULT',
         'INCLUDE',
         'INCLUDE_ETC',
+        'INCLUDE_FUNC',
         'INCLUDEIFPRESENT',
         'REMOVE',
         'INPUTMODE',
@@ -441,6 +442,7 @@ class FoamFileParser(PlyParser):
         'nonuniform' : 'NONUNIFORM',
         'include'    : 'INCLUDE',
         'includeEtc' : 'INCLUDE_ETC',
+        'includeFunc' : 'INCLUDE_FUNC',
         'includeIfPresent': 'INCLUDEIFPRESENT',
         'remove'     : 'REMOVE',
         'inputMode'  : 'INPUTMODE',
@@ -595,7 +597,12 @@ class FoamFileParser(PlyParser):
 
     t_ignorerestofline_ignore = ""
 
-    t_ignorerestofline_SCONST = t_SCONST
+    # t_ignorerestofline_SCONST = t_SCONST
+
+    def t_ignorerestofline_SCONST(self,t):
+        r'\"([^\\\n]|(\\.))*?\"'
+        t.type = "SCONST"
+        return t
 
     def t_ignorerestofline_restofline(self,t):
         r'[^\n]+'
@@ -611,7 +618,7 @@ class FoamFileParser(PlyParser):
         return t
 
     def t_ignorerestofline_error(self,t):
-        print_("Error",t.lexer.lexdata[t.lexer.lexpos])
+        print_("Error Reading rest of line",t.lexer.lexdata[t.lexer.lexpos])
         t.lexer.skip(1)
 
     # C++ comment (ignore)
@@ -733,14 +740,22 @@ class FoamFileParser(PlyParser):
         p.lexer.begin("ignorerestofline")
 
     def p_include(self,p):
-        '''include : INCLUDE ignore_rest_of_line SCONST
-                   | INCLUDE_ETC ignore_rest_of_line SCONST
-                   | INCLUDEIFPRESENT ignore_rest_of_line SCONST'''
+        '''include : INCLUDE SCONST ignore_rest_of_line
+                   | INCLUDE_ETC SCONST ignore_rest_of_line
+                   | INCLUDE_FUNC NAME ignore_rest_of_line
+                   | INCLUDEIFPRESENT SCONST ignore_rest_of_line'''
         if self.doMacros:
-            fName=path.join(self.directory(),p[3][1:-1])
+            fName=path.join(self.directory(),p[2][1:-1])
             if p[1]=="includeEtc":
                 from PyFoam.FoamInformation import foamEtc
-                fName=path.join(foamEtc(),p[3][1:-1])
+                fName=path.join(foamEtc(),p[2][1:-1])
+            elif p[1]=="includeFunc"and not path.exists(fName):
+                from PyFoam.FoamInformation import foamEtc
+                from PyFoam.Basics.Utilities import findFileInDir
+
+                fName=findFileInDir(self.directory(),p[2])
+                if not path.exists(fName):
+                    fName=findFileInDir(foamEtc(),p[2])
 
             read=True
             if p[1]=="includeIfPresent" and not path.exists(fName):
@@ -763,7 +778,7 @@ class FoamFileParser(PlyParser):
                 for k in data:
                     into[k]=data[k]
 
-        p[0] = p[1] + " " + p[3]
+        p[0] = p[1] + " " + p[2]
 
     def p_inputMode(self,p):
         '''inputMode : INPUTMODE ignore_rest_of_line ERROR

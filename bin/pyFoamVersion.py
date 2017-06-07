@@ -80,8 +80,8 @@ if PyFoam.FoamInformation.oldAppConvention():
     print_("  This version of OpenFOAM uses the old calling convention")
 print_()
 print_("pyFoam-Version:",PyFoam.versionString())
-# hardcodedVersion=(0,6,7,"development") # Change in PyFoam/__init__.py as well
-hardcodedVersion=(0,6,6)
+# hardcodedVersion=(0,6,8,"development") # Change in PyFoam/__init__.py as well
+hardcodedVersion=(0,6,7)
 if PyFoam.version()!=hardcodedVersion:
     print_("ALERT: Reported version",PyFoam.version(),
            "is different from hardcoded version",
@@ -101,7 +101,7 @@ def testLibrary(name,
                 minVersion=None,
                 versionAttribute="__version__"):
     global libLoc
-    print_("%-20s : " % name, end=' ')
+    print_("%-30s : " % name, end=' ')
 
     try:
         module=name
@@ -202,11 +202,13 @@ testLibrary("xlwt","Not a problem. Only used for exporting pandas-data to Excel-
 testLibrary("xlrd","Not a problem. Only used for importing Excel-files to pandas-data",
             versionAttribute="__VERSION__")
 testLibrary("requests","Not a problem. Currently only needed for the blink(1)-support")
+for p in ["ply.yacc","Gnuplot","tqdm","IPy","pyratemp","six","winhacks"]:
+    testLibrary("PyFoam.ThirdParty."+p,"This is our own. If it is not found we've got problems")
 
 print_()
 print_("Library locations")
 for l in sorted(libLoc.keys(),key=lambda a:a.lower()):
-    print_("%-20s : %s" % (l,libLoc[l]))
+    print_("%-30s : %s" % (l,libLoc[l]))
 
 from os import path
 
@@ -265,5 +267,8 @@ def checkPyFoamSiteLocation(name):
 checkVar("PYFOAM_SITE_DIR",
          "Location of non-PyFoam-disctributions script. Set and used by some Foam-distributions",
          checkPyFoamSiteLocation)
+
+print_("\nUser information")
+print_("Temporary directory: ",PyFoam.FoamInformation.getUserTempDir())
 
 # Should work with Python3 and Python2

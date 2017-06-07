@@ -1,5 +1,5 @@
 import unittest
 
-from PyFoam.Error import Error
+from PyFoam.FoamInformation import foamEtc
 
 theSuite=unittest.TestSuite()

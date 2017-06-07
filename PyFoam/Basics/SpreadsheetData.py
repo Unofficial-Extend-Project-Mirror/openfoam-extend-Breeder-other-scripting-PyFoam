@@ -1,3 +1,5 @@
+# coding: utf-8
+
 #  ICE Revision: $Id: $
 """
 Data that can go into a spreadsheet (title line and rectangular data)
@@ -57,16 +59,23 @@ class SpreadsheetData(object):
         :param title: a name that is used to make unique heades names"""
 
         def filterChars(fName):
-            with open(fName) as f:
-                first=True
-                for l in f.readlines():
-                    if first and replaceFirstLine:
-                        l=replaceFirstLine+"\n"
-                    elif stripCharacters:
-                        l=l.translate(None,stripCharacters)
-                    first=False
+            if "readlines" in dir(fName):
+                f=fName
+            else:
+                f=open(fName)
+            first=True
+            for l in f.readlines():
+                if first and replaceFirstLine:
+                    l=replaceFirstLine+"\n"
+                elif stripCharacters:
+                    l=l.translate(None,stripCharacters)
+                first=False
+                try:
                     yield toByte(l)
-
+                except AttributeError:
+                    yield l
+            if "close" in dir(f):
+                f.close()
         self.title=title
 
         nrFileSpec=len([1 for i in [csvName,txtName,excelName] if not i is None])
@@ -152,9 +161,20 @@ class SpreadsheetData(object):
             if data is not None and names is None:
                 error("No names given for the data")
 
-            self.data=numpy.array([tuple(v) for v in data],
-                                  dtype=list(zip(names,['f8']*len(names))))
+            types=[]
+            for d in data[0]:
+                try:
+                    float(d)
+                    types.append('f8')
+                except ValueError:
+                    types.append('S')
 
+            for i,t in enumerate(types):
+                if t=="S":
+                    l=max(len(str(d[i])) for d in data)+1
+                    types[i]="S%d" % l
+            self.data=numpy.array([tuple(v) for v in data],
+                                  dtype=list(zip(names,types)))
         if timeName:
             try:
                 index=list(self.data.dtype.names).index(timeName)
@@ -336,14 +356,14 @@ class SpreadsheetData(object):
 
     def __call__(self,
                  t,
-                 name,
+                 name=None,
                  time=None,
                  invalidExtend=False,
                  noInterpolation=False):
         """'Evaluate' the data at a specific time by linear interpolation
         :param t: the time at which the data should be evaluated
         :param name: name of the data column to be evaluated. Assumes that that column
-        is ordered in ascending order
+        is ordered in ascending order. If unspecified a dictionary with the values from all columns is returned
         :param time: name of the time column. If none is given then the first column is assumed
         :param invalidExtend: if t is out of the valid range then use the smallest or the biggest value. If False use nan
         :param noInterpolation: if t doesn't exactly fit a data-point return 'nan'"""
@@ -351,20 +371,33 @@ class SpreadsheetData(object):
         if time==None:
             time=self.time
 
+        if name is None:
+            result={}
+            for n in self.names():
+                if n!=time:
+                    result[n]=self(t,
+                                   name=n,
+                                   time=time,
+                                   invalidExtend=invalidExtend,
+                                   noInterpolation=noInterpolation)
+            return result
+
         x=self.data[time]
         y=self.data[name]
+
+        isString=y.dtype!=numpy.float64
 
         # get extremes
         if t<x[0]:
             if invalidExtend:
                 return y[0]
             else:
-                return float('nan')
+                return float('nan') if not isString else ""
         elif t>x[-1]:
             if invalidExtend:
                 return y[-1]
             else:
-                return float('nan')
+                return float('nan') if not isString else ""
 
         if noInterpolation:
             if t==x[0]:
@@ -386,9 +419,12 @@ class SpreadsheetData(object):
             else:
                 iLow=iNew
         if noInterpolation:
-            return float('nan')
+            return float('nan') if not isString else ""
         else:
-            return y[iLow] + (y[iHigh]-y[iLow])*(t-x[iLow])/(x[iHigh]-x[iLow])
+            if isString:
+                return y[iLow] if (t-x[iLow])/(x[iHigh]-x[iLow])<0.5 else y[iHigh]
+            else:
+                return y[iLow] + (y[iHigh]-y[iLow])*(t-x[iLow])/(x[iHigh]-x[iLow])
 
     def addTimes(self,times,time=None,interpolate=False,invalidExtend=False):
         """Extend the data so that all new times are represented (add rows

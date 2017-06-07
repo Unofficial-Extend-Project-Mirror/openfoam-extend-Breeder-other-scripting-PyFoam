@@ -1,6 +1,6 @@
 import unittest
 
-from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber
+from PyFoam.FoamInformation import oldTutorialStructure,foamTutorials,foamVersionNumber,foamFork
 from os import path,remove
 from tempfile import mktemp,mkdtemp
 from shutil import copyfile,rmtree,copytree
@@ -11,7 +11,7 @@ from PyFoam.Basics.FoamFileGenerator import Vector,Dimension,Field,Tensor,SymmTe
 
 from PyFoam.FoamInformation import oldAppConvention as oldApp
 
-from .TimeDirectory import damBreakTutorial,gammaName
+from .test_TimeDirectory import damBreakTutorial,gammaName
 
 from PyFoam.Error import error
 
@@ -49,7 +49,12 @@ def XoodlesPitzTutorial():
 
 def XiFoamMoriyoshiTutorial():
     prefix=foamTutorials()
-    return path.join(prefix,"combustion","XiFoam","ras","moriyoshiHomogeneous")
+    if foamFork()=="openfoamplus" and foamVersionNumber()>=(1612,):
+        ras="RAS"
+    else:
+        ras="ras"
+
+    return path.join(prefix,"combustion","XiFoam",ras,"moriyoshiHomogeneous")
 
 def dieselAachenTutorial():
     prefix=foamTutorials()
@@ -574,10 +579,12 @@ theSuite.addTest(unittest.makeSuite(ParsedParameterFileTest,"test"))
 class ParsedParameterFileTest2(unittest.TestCase):
     def setUp(self):
         self.theFile=mktemp()
-        if foamVersionNumber()>=(2,0):
-            extension=".org"
-        else:
+        if foamVersionNumber()<=(2,0):
             extension=""
+        elif foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+            extension=".orig"
+        else:
+            extension=".org"
         copyfile(path.join(damBreakTutorial(),"0",gammaName()+extension),self.theFile)
 
     def tearDown(self):
@@ -692,6 +699,8 @@ class ParsedParameterFileIncludeTest(unittest.TestCase):
     def setUp(self):
         if oldTutorialStructure():
             null="0"
+        elif foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+            null="0.orig"
         else:
             null="0.org"
         self.fileName=path.join(simpleBikeTutorial(),null,"U")
@@ -719,7 +728,13 @@ class ParsedParameterFileCodeStreamTest(unittest.TestCase):
         test=ParsedParameterFile(self.fileName)
         if foamVersionNumber()<(2,):
             return
-        self.assertEqual(type(test["functions"]["difference"]["code"]),Codestream)
+        if foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+            key="error"
+            code="codeEnd"
+        else:
+            key="difference"
+            code="code"
+        self.assertEqual(type(test["functions"][key][code]),Codestream)
 
 if foamVersionNumber()>=(2,):
     theSuite.addTest(unittest.makeSuite(ParsedParameterFileCodeStreamTest,"test"))
@@ -915,7 +930,12 @@ class ReadIncludeAndMacroExpansionTest(unittest.TestCase):
     def setUp(self):
         self.testDir=mkdtemp()
         self.dest=path.join(self.testDir,"0.org")
-        copytree(path.join(foamTutorials(),"incompressible","simpleFoam","motorBike","0.org"),
+        if foamFork() in ["openfoam","openfoamplus"] and foamVersionNumber()>=(4,):
+            null="0.orig"
+        else:
+            null="0.org"
+
+        copytree(path.join(foamTutorials(),"incompressible","simpleFoam","motorBike",null),
                  self.dest)
 
     def tearDown(self):
