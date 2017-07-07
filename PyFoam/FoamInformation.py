@@ -81,9 +81,10 @@ def foamVersion(useConfigurationIfNoInstallation=False):
 
     vStr=foamVersionString(useConfigurationIfNoInstallation=useConfigurationIfNoInstallation)
 
-    if len(vStr)>0 and vStr[0]=="v" and vStr[-1]=="+":
-        vStr=vStr[1:-1]
-
+    if len(vStr)>0 and vStr[0]=="v":
+        vStr=vStr[1:]
+        if vStr[-1]=="+":
+            vStr=vStr[:-1]
     if vStr=="":
         return ()
     else:
@@ -392,13 +393,28 @@ def injectVariables(script,
             cnt+=1
             environ[m.groups()[0]]=m.groups()[1]
 
+def getUserName():
+    """Get the current username"""
+    import getpass
+    return getpass.getuser()
+
+def getPublicKey():
+    from PyFoam.Infrastructure.Authentication import myPublicKeyText,ensureKeyPair
+    ensureKeyPair()
+    return myPublicKeyText()
+
+def getAuthenticatedKeys():
+    from PyFoam.Infrastructure.Authentication import authenticatedKeys,ensureKeyPair
+    ensureKeyPair()
+    return authenticatedKeys()
+
 def getUserTempDir():
     """Return path to a user-specific private directory. Create directory if not existing"""
     from os import path
-    import tempfile,getpass,os
+    import tempfile,os
 
     tempDir=path.join(tempfile.gettempdir(),
-                      "PyFoam_"+getpass.getuser())
+                      "PyFoam_"+getUserName())
     if not path.isdir(tempDir):
         try:
             os.mkdir(tempDir)

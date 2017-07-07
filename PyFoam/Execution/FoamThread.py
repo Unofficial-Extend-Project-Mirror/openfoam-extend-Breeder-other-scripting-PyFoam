@@ -82,27 +82,44 @@ def getLinuxMem(thrd):
     mem=0
 
     try:
-        t=open('/proc/%d/status' % thrd.threadPid)
-        v=t.read()
-        t.close()
-        #        f=open('/tmp/test%dstatus' % thrd.threadPid,'w')
-        #        f.write(v)
-        #        f.close()
+        import psutil
+        me=psutil.Process(thrd.threadPid)
+        procs=[me]+me.children(True)
+        try:
+            for p in procs:
+                try:
+                    mInfo=p.memory_full_info()
+                    mem+=mInfo.uss+mInfo.pss # Unique-memory and proportional
+                                         # of shared memory. smaller than
+                                         # RSS
+                except AttributeError:
+                    mInfo=p.memory_info()
+                    mem+=mInfo.rss
+        except psutil.NoSuchProcess:
+            pass
+    except ImportError:
+        try:
+            t=open('/proc/%d/status' % thrd.threadPid)
+            v=t.read()
+            t.close()
+            #        f=open('/tmp/test%dstatus' % thrd.threadPid,'w')
+            #        f.write(v)
+            #        f.close()
 
-        i=v.index('VmRSS')
-        tmp=v[i:].split()
-        if len(tmp)>=3:
-            mem=long(tmp[1])
-            if tmp[2].lower()=='kb':
-                mem*=1024
-            elif tmp[2].lower()=='mb':
-                mem*=1024*1024
-            else:
-                mem=-1
-    except Exception:
-        e = sys.exc_info()[1] # compatible with 2.x and 3.x
-        print_("Getting LinuxMem:",e)
-        mem=-1
+            i=v.index('VmRSS')
+            tmp=v[i:].split()
+            if len(tmp)>=3:
+                mem=int(tmp[1])
+                if tmp[2].lower()=='kb':
+                    mem*=1024
+                elif tmp[2].lower()=='mb':
+                    mem*=1024*1024
+                else:
+                    mem=-1
+        except Exception:
+            e = sys.exc_info()[1] # compatible with 2.x and 3.x
+            print_("Getting LinuxMem:",e)
+            mem=-1
 
     if mem>thrd.linuxMaxMem:
         #        print "Setting Memory to: ",mem

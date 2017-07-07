@@ -10,7 +10,7 @@ then
 fi
 
 # make path absolute
-thisFile=`python -c "from os import path; print path.abspath('$thisFile')"`
+thisFile=`python2 -c "from os import path; print path.abspath('$thisFile')"`
 
 # now get the directory
 DEVELOPMENTDIR=`dirname $thisFile`
@@ -19,3 +19,6 @@ unset thisFile
 
 export PATH=$DEVELOPMENTDIR/bin:$PATH
 export PYTHONPATH=$DEVELOPMENTDIR:$PYTHONPATH
+
+export PYFOAM_SITE_DIR=$DEVELOPMENTDIR/exampleSite
+export PATH=$PYFOAM_SITE_DIR/bin:$PATH

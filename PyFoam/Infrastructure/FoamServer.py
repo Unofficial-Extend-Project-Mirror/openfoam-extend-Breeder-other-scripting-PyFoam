@@ -24,6 +24,7 @@ from PyFoam.RunDictionary.ParameterFile import ParameterFile
 from PyFoam.Error import warning
 from PyFoam.Basics.GeneralPlotTimelines import allPlots
 from PyFoam.Basics.TimeLineCollection import allLines
+from PyFoam.Infrastructure.ZeroConf import ZeroConfFoamServer
 
 from PyFoam.Infrastructure.Hardcoded import userName
 
@@ -36,7 +37,7 @@ import socket
 import sys,string
 from traceback import extract_tb
 
-def findFreePort():
+def findFreePort(useSSL=None):
     """Finds a free server port on this machine and returns it
 
     Valid server ports are in the range 18000 upward (the function tries to
@@ -44,8 +45,25 @@ def findFreePort():
 
     ATTENTION: this part may introduce race conditions"""
 
-    return freeServerPort(config().getint("Network","startServerPort"),
-                          length=config().getint("Network","nrServerPorts"))
+    if useSSL is None:
+        useSSL=config().getboolean("Network","SSLServerDefault")
+
+    if useSSL:
+        startPort=config().getint("Network","startServerPortSSL")
+    else:
+        startPort=config().getint("Network","startServerPort")
+    return useSSL,freeServerPort(startPort,
+                                 length=config().getint("Network","nrServerPorts"))
+
+# Wrapper that checks if the method was authenticated
+from functools import wraps
+def needsAuthentication(func):
+    @wraps(func)
+    def wrap(s,*args):
+        if not s._foamserver._server.authOK:
+            return "Sorry. You're not authenticated for this"
+        return func(s,*args)
+    return wrap
 
 class FoamAnswerer(object):
     """The class that handles the actual requests (only needed to hide the
@@ -83,6 +101,7 @@ class FoamAnswerer(object):
         """The calculation still generates output and therefor seems to be living"""
         return self.elapsedTime()<self._maxOutputTime
 
+    @needsAuthentication
     def _kill(self):
         """Interrupts the FOAM-process"""
         if self._run:
@@ -92,11 +111,19 @@ class FoamAnswerer(object):
         else:
             return False
 
+    @needsAuthentication
     def stop(self):
         """Stops the run gracefully (after writing the last time-step to disk)"""
         self._master.stopGracefully()
         return True
 
+    @needsAuthentication
+    def stopAtNextWrite(self):
+        """Stops the run gracefully the next time data is written to disk"""
+        self._master.stopAtNextWrite()
+        return True
+
+    @needsAuthentication
     def write(self):
         """Makes the program write the next time-step to disk and the continue"""
         self._master.writeResults()
@@ -133,6 +160,7 @@ class FoamAnswerer(object):
         else:
             return 0
 
+    @needsAuthentication
     def nrWarnings(self):
         """Number of warnings the executable emitted"""
         if self._master:
@@ -147,6 +175,7 @@ class FoamAnswerer(object):
         else:
             return ""
 
+    @needsAuthentication
     def actualCommandLine(self):
         """The actual command line used"""
         if self._master:
@@ -154,10 +183,12 @@ class FoamAnswerer(object):
         else:
             return ""
 
+    @needsAuthentication
     def scriptName(self):
         """Name of the Python-Script that runs the show"""
         return sys.argv[0]
 
+    @needsAuthentication
     def runnerData(self):
         """:return: the data the runner collected so far"""
         return self._master.data
@@ -170,6 +201,7 @@ class FoamAnswerer(object):
         """:return: the time at which the last log-line was seen"""
         return self._master.lastTimeStepSeen
 
+    @needsAuthentication
     def lastLine(self):
         """:return: the last line that was output by the running FOAM-process"""
         self._linesLock.acquire()
@@ -179,6 +211,7 @@ class FoamAnswerer(object):
             return ""
             return result
 
+    @needsAuthentication
     def tail(self):
         """:return: the current last lines as a string"""
         self._linesLock.acquire()
@@ -198,6 +231,7 @@ class FoamAnswerer(object):
 
         return result
 
+    @needsAuthentication
     def getEnviron(self,name):
         """:param name: name of an environment variable
         :return: value of the variable, empty string if non-existing"""
@@ -233,7 +267,7 @@ class FoamAnswerer(object):
             # ...the hard way.
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             try:
-                s.connect(('4.2.2.1', 0))
+                s.connect(('10.255.255.255', 1))
                 address = s.getsockname()[0]
             except:
                 # Got no internet connection
@@ -244,14 +278,17 @@ class FoamAnswerer(object):
         """:return: The name of the computer"""
         return uname()[1]
 
+    @needsAuthentication
     def configuration(self):
         """:return: all the configured parameters"""
         return config().dump()
 
+    @needsAuthentication
     def cwd(self):
         """:return: the current working directory"""
         return path.abspath(path.curdir)
 
+    @needsAuthentication
     def pid(self):
         """:return: the PID of the script"""
         return getpid()
@@ -305,36 +342,43 @@ class FoamAnswerer(object):
         """:return: parameter startTime from the controlDict"""
         return float(self._readParameter("deltaT"))
 
+    @needsAuthentication
     def pathToSolution(self):
         """:return: the path to the solution directory"""
         return self._master.getSolutionDirectory().name
 
+    @needsAuthentication
     def writtenTimesteps(self):
         """:return: list of the timesteps on disc"""
         return self._master.getSolutionDirectory().getTimes()
 
+    @needsAuthentication
     def solutionFiles(self,time):
         """:param time: name of the timestep
         :return: list of the solution files at that timestep"""
         return self._master.getSolutionDirectory()[time].getFiles()
 
+    @needsAuthentication
     def listFiles(self,directory):
         """:param directory: Sub-directory of the case
         :return: List of the filenames (not directories) in that case"""
         return self._master.getSolutionDirectory().listFiles(directory)
 
+    @needsAuthentication
     def getDictionaryText(self,directory,name):
         """:param directory: Sub-directory of the case
         :param name: name of the dictionary file
         :return: the contents of the file as a big string"""
         return self._master.getSolutionDirectory().getDictionaryText(directory,name)
 
+    @needsAuthentication
     def getDictionaryContents(self,directory,name):
         """:param directory: Sub-directory of the case
         :param name: name of the dictionary file
         :return: the contents of the file as a python data-structure"""
         return self._master.getSolutionDirectory().getDictionaryContents(directory,name)
 
+    @needsAuthentication
     def writeDictionaryText(self,directory,name,text):
         """Writes the contents of a dictionary
         :param directory: Sub-directory of the case
@@ -345,6 +389,7 @@ class FoamAnswerer(object):
 
         return True
 
+    @needsAuthentication
     def writeDictionaryContents(self,directory,name,contents):
         """Writes the contents of a dictionary
         :param directory: Sub-directory of the case
@@ -354,14 +399,17 @@ class FoamAnswerer(object):
         self._master.getSolutionDirectory().writeDictionaryContents(directory,name,contents)
         return True
 
+    @needsAuthentication
     def getPlots(self):
         """Get all the information about the plots"""
         return allPlots().prepareForTransfer()
 
+    @needsAuthentication
     def getPlotData(self):
         """Get all the data for the plots"""
         return allLines().prepareForTransfer()
 
+    @needsAuthentication
     def controlDictUnmodified(self):
         """Checks whether there is a pending change to the controlDict"""
         return self._master.controlDict == None
@@ -373,6 +421,7 @@ class FoamAnswerer(object):
         else:
             return ""
 
+    @needsAuthentication
     def setRemark(self,remark):
         """Overwrite the user-defined remark
         :return: True if the remark was set previously"""
@@ -405,11 +454,13 @@ class FoamServer(Thread):
 
         ok=False
 
+        self._zConf=ZeroConfFoamServer()
+
         while not ok and tries<maxTries:
             ok=True
             tries+=1
 
-            self._port=findFreePort()
+            self.__ssl,self._port=findFreePort()
 
             self._running=False
 
@@ -419,7 +470,8 @@ class FoamServer(Thread):
 
             try:
                 foamLogger().info("Serving on port %d" % self._port)
-                self._server=ServerBase(('',self._port),logRequests=False)
+                self._server=ServerBase(('',self._port),useSSL=self.__ssl,logRequests=False)
+                self.__ssl=self._server.useSSL
                 self._server.register_introspection_functions()
                 self._answerer=FoamAnswerer(run=run,master=master,lines=lines,foamserver=self)
                 self._server.register_instance(self._answerer)
@@ -489,6 +541,9 @@ class FoamServer(Thread):
         foamLogger().info("Trying to register as IP:%s PID:%d Port:%d"
                           % (self._answerer.ip(),
                              self._answerer.pid(),self._port))
+
+        self._zConf.register(self._answerer,self._port,self.__ssl)
+
         try:
             try:
                 meta=ServerProxy(
@@ -512,6 +567,8 @@ class FoamServer(Thread):
 
     def deregister(self):
         """Tries to deregister with the Meta-Server"""
+
+        self._zConf.deregister()
 
         if  self.isRegistered:
             try:

@@ -57,9 +57,7 @@ class CommonPrePostHooks(object):
 
     def hookmessage(self,*args):
         if self.opts.verboseHooks:
-            for a in args:
-                print_(a,end="")
-            print_()
+            print_(*args)
 
     def stopExecutionOnHookError(self,spec=False):
          if spec or self.opts.hookErrorsFatal:
@@ -143,8 +141,8 @@ class CommonPrePostHooks(object):
             self.hookmessage("Checking",h)
             if configuration().getboolean(h,"enabled",default=True):
                 subdict={}
-                mod=configuration().get(h,"module",default="")
-                if mod=="":
+                modName=configuration().get(h,"module",default="")
+                if modName=="":
                     self.warning("No module specified for",h)
                     continue
                 subdict["minRunTime"]=configuration().getfloat(h,
@@ -153,28 +151,31 @@ class CommonPrePostHooks(object):
                 subdict["stopOnError"]=configuration().getboolean(h,
                                                                   "stopOnError",
                                                                   default=False)
-                self.hookmessage("Trying to import",mod)
-                try:
+                self.hookmessage("Trying to import",modName)
+
+                module=None
+                modNames=[modName,
+                          "PyFoam.Site."+modName,
+                          "PyFoam.Infrastructure.RunHooks."+modName]
+                for mod in modNames:
                     try:
+                        self.hookmessage("Trying module:",mod)
                         module=__import__(mod,globals(),locals(),["dummy"])
+                        self.hookmessage("Got module:",mod)
+                        break
                     except ImportError:
                         e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
-                        self.hookmessage("ImportError:",e)
-                        mod="PyFoam.Infrastructure.RunHooks."+mod
-                        self.hookmessage("Trying to import",mod)
-                        try:
-                            module=__import__(mod,globals(),locals(),["dummy"])
-                        except ImportError:
-                            self.hookmessage("ImportError:",e)
-                            self.warning("Could not import module",
-                                         mod.split(".")[-1],"for",h,
-                                         "(Tried",mod,"too)")
-                            continue
-                except SyntaxError:
-                    e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
-                    self.hookmessage("SyntaxError:",e)
-                    self.warning("Syntax error when trying to import",mod)
+                        self.hookmessage("ImportError:",e,"for",modName)
+                    except SyntaxError:
+                        e = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'
+                        self.hookmessage("SyntaxError:",e)
+                        self.warning("Syntax error when trying to import",mod)
+                        break
+                if module is None:
+                    self.warning("Could not import module",modName,
+                                 "for",h,"(Tried",", ".join(modNames),")")
                     continue
+
                 try:
                     theClass=getattr(module,mod.split(".")[-1])
                 except AttributeError:
@@ -182,7 +183,7 @@ class CommonPrePostHooks(object):
                     self.hookmessage("AttributeError:",e)
                     self.hookmessage("Attributes:",dir(module))
                     self.warning("Class",mod.split(".")[-1],"missing form",
-                                 mod)
+                             mod)
                     continue
                 try:
                     subdict["instance"]=theClass(self,h)

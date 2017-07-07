@@ -80,8 +80,8 @@ if PyFoam.FoamInformation.oldAppConvention():
     print_("  This version of OpenFOAM uses the old calling convention")
 print_()
 print_("pyFoam-Version:",PyFoam.versionString())
-# hardcodedVersion=(0,6,8,"development") # Change in PyFoam/__init__.py as well
-hardcodedVersion=(0,6,7)
+# hardcodedVersion=(0,6,9,"development") # Change in PyFoam/__init__.py as well
+hardcodedVersion=(0,6,8)
 if PyFoam.version()!=hardcodedVersion:
     print_("ALERT: Reported version",PyFoam.version(),
            "is different from hardcoded version",
@@ -202,6 +202,8 @@ testLibrary("xlwt","Not a problem. Only used for exporting pandas-data to Excel-
 testLibrary("xlrd","Not a problem. Only used for importing Excel-files to pandas-data",
             versionAttribute="__VERSION__")
 testLibrary("requests","Not a problem. Currently only needed for the blink(1)-support")
+testLibrary("zeroconf","Not a problem. Necessary to find existing runs. Install with 'pip install zeroconf'")
+testLibrary("psutil","Not a problem. Provides better calculation of the maximum used memory")
 for p in ["ply.yacc","Gnuplot","tqdm","IPy","pyratemp","six","winhacks"]:
     testLibrary("PyFoam.ThirdParty."+p,"This is our own. If it is not found we've got problems")
 
@@ -269,6 +271,13 @@ checkVar("PYFOAM_SITE_DIR",
          checkPyFoamSiteLocation)
 
 print_("\nUser information")
+print_("Username:            ",PyFoam.FoamInformation.getUserName())
 print_("Temporary directory: ",PyFoam.FoamInformation.getUserTempDir())
+print_("Public key:          ",PyFoam.FoamInformation.getPublicKey())
+keys=PyFoam.FoamInformation.getAuthenticatedKeys()
+if len(keys)>0:
+    print_("\nAuthenticated keys")
+    for k in keys:
+        print("%20s : %s" %(k,keys[k]))
 
 # Should work with Python3 and Python2

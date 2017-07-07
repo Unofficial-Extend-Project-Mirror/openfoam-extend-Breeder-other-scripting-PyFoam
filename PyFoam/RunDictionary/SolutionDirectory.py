@@ -613,7 +613,9 @@ class SolutionDirectory(Utilities):
                      keepRegular=False,
                      keepParallel=False,
                      keepInterval=None,
+                     keepTimes=[],
                      functionObjectData=False,
+                     dryRun=False,
                      verbose=False,
                      additional=[]):
         """remove all time-directories after a certain time. If not time ist
@@ -655,19 +657,24 @@ class SolutionDirectory(Utilities):
                     thisIndex=int((float(f)+1e-10)/keepInterval)
                     if thisIndex!=lastKeptIndex:
                         keep=True
+                for k in keepTimes:
+                    if self.timeIndex(float(f),True)==self.timeIndex(k,True):
+                        keep=True
                 if float(f)>time and not (keepLast and f==last) and not keep:
                     #                   print "Removing",path.join(self.name,f)
                     if path.exists(path.join(self.name,f)):
                         if verbose:
                             print_("Clearing",path.join(self.name,f))
-                        self.rmtree(path.join(self.name,f))
+                        if not dryRun:
+                            self.rmtree(path.join(self.name,f))
                 elif keepInterval!=None:
                     lastKeptIndex=int((float(f)+1e-10)/keepInterval)
 
         if path.exists(path.join(self.name,"VTK")) and vtk:
             if verbose:
                 print_("Clearing",path.join(self.name,"VTK"))
-            self.rmtree(path.join(self.name,"VTK"))
+            if not dryRun:
+                self.rmtree(path.join(self.name,"VTK"))
 
         if self.nrProcs() and not keepParallel and not self.firstParallel is None:
             lastKeptIndex=int(-1e5)
@@ -677,7 +684,8 @@ class SolutionDirectory(Utilities):
                     if removeProcs:
                         if verbose:
                             print_("Clearing",path.join(self.name,f))
-                        self.rmtree(path.join(self.name,f))
+                        if not dryRun:
+                            self.rmtree(path.join(self.name,f))
                     else:
                         pDir=path.join(self.name,f)
                         for t in listdir(pDir):
@@ -685,16 +693,20 @@ class SolutionDirectory(Utilities):
                                 keep=False
                                 val=float(t)
                                 if keepInterval!=None:
-                                    thisIndex=int((float(f)+1e-10)/keepInterval)
+                                    thisIndex=int((float(t)+1e-10)/keepInterval)
                                     if thisIndex!=lastKeptIndex:
+                                        keep=True
+                                for k in keepTimes:
+                                    if self.timeIndex(val,True)==self.timeIndex(k,True):
                                         keep=True
                                 if val>time and not (keepLast and t==last) and not keep:
                                     if path.exists(path.join(pDir,t)):
                                         if verbose:
                                             print_("Clearing",path.join(pDir,t))
-                                        self.rmtree(path.join(pDir,t))
+                                        if not dryRun:
+                                            self.rmtree(path.join(pDir,t))
                                 elif keepInterval!=None:
-                                    lastKeptIndex=int((float(f)+1e-10)/keepInterval)
+                                    lastKeptIndex=int((float(t)+1e-10)/keepInterval)
                             except ValueError:
                                 pass
 
@@ -707,36 +719,44 @@ class SolutionDirectory(Utilities):
                         if path.exists(pth):
                             if verbose:
                                 print_("Clearing",pth)
-                            self.rmtree(pth)
+                            if not dryRun:
+                                self.rmtree(pth)
                 else:
                     for f in cd["functions"][0::2]:
                         pth=path.join(self.name,f)
                         if path.exists(pth):
                             if verbose:
                                 print_("Clearing",pth)
-                            self.rmtree(pth)
+                            if not dryRun:
+                                self.rmtree(pth)
 
         additional+=eval(conf().get("Clearing","additionalpatterns"))
         for a in additional:
             self.clearPattern(a,
+                              dryRun=dryRun,
                               verbose=verbose)
 
-    def clearPattern(self,globPat,verbose=False):
+    def clearPattern(self,
+                     globPat,
+                     dryRun=False,
+                     verbose=False):
         """Clear all files that fit a certain shell (glob) pattern
         :param glob: the pattern which the files are going to fit"""
 
         for f in glob.glob(path.join(self.name,globPat)):
             if verbose:
                 print_("Clearing",f)
-            if path.isdir(f):
-                self.rmtree(f,ignore_errors=False)
-            else:
-                os.unlink(f)
+            if not dryRun:
+                if path.isdir(f):
+                    self.rmtree(f,ignore_errors=False)
+                else:
+                    os.unlink(f)
 
     def clearOther(self,
                    pyfoam=True,
                    removeAnalyzed=False,
                    verbose=False,
+                   dryRun=False,
                    clearHistory=False,
                    clearParameters=False):
         """Remove additional directories
@@ -744,15 +764,19 @@ class SolutionDirectory(Utilities):
 
         if pyfoam:
             self.clearPattern("PyFoam.?*",
+                              dryRun=dryRun,
                               verbose=verbose)
             if removeAnalyzed:
                 self.clearPattern("*?.analyzed",
+                                  dryRun=dryRun,
                                   verbose=verbose)
         if clearParameters:
             self.clearPattern("PyFoamPrepareCaseParameters",
+                              dryRun=dryRun,
                               verbose=verbose)
         if clearHistory:
             self.clearPattern("PyFoamHistory",
+                              dryRun=dryRun,
                               verbose=verbose)
 
     def clear(self,
@@ -765,10 +789,12 @@ class SolutionDirectory(Utilities):
               keepRegular=False,
               keepParallel=False,
               keepInterval=None,
+              keepTimes=[],
               removeAnalyzed=False,
               clearHistory=False,
               clearParameters=False,
               functionObjectData=False,
+              dryRun=False,
               additional=[]):
         """One-stop-shop to remove data
         :param after: time after which directories ar to be removed
@@ -780,16 +806,19 @@ class SolutionDirectory(Utilities):
                           removeProcs=processor,
                           keepLast=keepLast,
                           keepInterval=keepInterval,
+                          keepTimes=keepTimes,
                           vtk=vtk,
                           verbose=verbose,
                           keepRegular=keepRegular,
                           keepParallel=keepParallel,
                           functionObjectData=functionObjectData,
+                          dryRun=dryRun,
                           additional=additional)
         self.clearOther(pyfoam=pyfoam,
                         removeAnalyzed=removeAnalyzed,
                         clearParameters=clearParameters,
                         clearHistory=clearHistory,
+                        dryRun=dryRun,
                         verbose=verbose)
 
     def initialDir(self):

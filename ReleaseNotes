@@ -1,4 +1,60 @@
 # -*- mode: org -*-
+* Version 0.6.8 - 2017-07-06
+** Major changes
+*** =pyFoamNet=-utilities now work without a Meta-Server
+    As described in other changenotes below the Server process now
+    announces its presence with ZeroConf. This means that a central
+    Meta-Server is no longer necessary. But the =zeroconf= library has
+    to be present on all involved machines (server and client). It is
+    installed with
+: pip install zeroconf
+** New features/utilities
+*** Added module =PyFoam.Infrastructure.Authentication=
+    This module implements a simple public key authentication. For
+    authentication a username and a challenge are sent. If the
+    username is in the set of authenticated keys (or is the own
+    username) then this key is used to check the challenge.
+** Enhancements to Utilities
+*** =pyFoamClearCase.py= now has =-dry-run= option
+    This option doesn't clear anything but prints the things that will
+    be erased
+*** New option =--keep-time= for =pyFoamClearCase.py=
+    This option (which can be specified more than once) allows
+    specifying single time-steps that should be kept
+*** =pyFoamNetList.py= no longer needs a meta-server to work
+    Due to the addition of =ZeroConf= this utility no longer needs a
+    Meta-Server to find running calculations in the same subnet
+** Enhancements to the Library
+*** Better calculation of used memory in runs
+    If the =psutil=-library is installed then the memory used by
+    parallel runs is calculated as well
+*** Pre and post-hooks are now also searched in =PyFoam.Site=
+    =module= specified in =preRunHook_= and =postRunHook_= is now
+    searched in =PyFoam.Site.= as well. This module is the
+    =lib=-directory in the directory specified by the environment
+    variable =PYFOAM_SITE_DIR= (which allows adding user-scripts and
+    modules)
+*** Adapted to correctly detect =OpenFOAM+ v1706=
+    This fork has changed its numbering scheme (dropped the =+= in the
+    version string). This broke a regular expression and a function to
+    detect the number
+** Infrastructure
+*** The =Runner=-utilities now register as =ZeroConf=-services
+    Unless switched off every =pyFoam(Plot)Runner.py=-controlled run
+    already had a server process that allowed controlling the
+    process. Now the process also advertises itself via =ZeroConf=
+    (aka =Avahi=, =Bonjour=, =mDNS=. See
+    https://www.wikiwand.com/en/Zero-configuration_networking)
+
+    This allows the =Net=-utilities to operate without a
+    meta-server.
+
+    Due to the limitation of the protocol this only works reliable in
+    the same broadcast-subnet
+** Bug fixes
+*** =--keep-interval= in =pyFoamClearCase.py= not working for parallel-cases
+    Due to a copy/past error this option did not work for parallel
+    cases. This is now fixed
 * Version 0.6.7 - 2017-06-04
 ** Requirements
 *** Now at least Python 2.6 required

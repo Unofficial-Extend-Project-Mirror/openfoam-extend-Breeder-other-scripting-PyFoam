@@ -14,11 +14,17 @@ import glob,re
 _defaults={
     "Network": {
         "startServerPort"  : "18000",
+        "startServerPortSSL" : "18100",
+        "SSLServerDefault" : True,
         "nrServerPorts"    : "100",
         "portWait"         : "1.",
         "socketTimeout"    : "1.",
+        "zeroconfTimeout"  : "5.",
         "socketRetries"    : "10",
         "startServerThread": "True",
+        "personalSSLCertificate" : path.join(userDirectory(),"foamServerCertificate.cert"),
+        "privateSSLKey" :  path.join(userDirectory(),"foamServerCertificate.key"),
+        "allowSelfSignedSSL" : True ,
     },
     "Metaserver": {
         "port"             : "17999",
@@ -41,7 +47,7 @@ _defaults={
         "Forks" : 'openfoam,extend,openfoamplus',
         "DirPatterns-openfoam" : '"^OpenFOAM-(([0-9]\.([0-9]|x)|dev).*)$","^openfoam([0-9]+)$"',
         "DirPatterns-extend" : '"^foam-extend-([0-9]\.[0-9].*)$"',
-        "DirPatterns-openfoamplus" : '"^OpenFOAM-((v[0-9]\.[0-9]\+|plus|v1[0-9]+\+).*)$"',
+        "DirPatterns-openfoamplus" : '"^OpenFOAM-((v[0-9]\.[0-9]\+|plus|v1[0-9]+(\+|)).*)$"',
         "Installation-openfoam" : "~/OpenFOAM",
         "Installation-openfoamplus" : "~/OpenFOAM",
         "Installation-extend" : "~/foam",

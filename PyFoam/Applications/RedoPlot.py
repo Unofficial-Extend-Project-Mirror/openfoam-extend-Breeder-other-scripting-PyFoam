@@ -7,9 +7,11 @@ from PyFoam.Applications.PyFoamApplication import PyFoamApplication
 
 from PyFoam.ThirdParty.six import PY3
 if PY3:
-    from xmlrpc.client import ServerProxy,Fault,ProtocolError
+    from xmlrpc.client import Fault,ProtocolError
 else:
-    from xmlrpclib import ServerProxy,Fault,ProtocolError
+    from xmlrpclib import Fault,ProtocolError
+
+from PyFoam.Infrastructure.ServerBase import getServerProxy
 
 import socket
 
@@ -168,7 +170,7 @@ and either displays the plot or writes the plots to file
             port=int(self.parser.getArgs()[1])
 
             try:
-                self.server=ServerProxy("http://%s:%d" % (host,port))
+                self.server=getServerProxy(host,port)
                 methods=self.server.system.listMethods()
             except socket.error:
                 reason = sys.exc_info()[1] # Needed because python 2.5 does not support 'as e'

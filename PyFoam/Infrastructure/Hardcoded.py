@@ -71,9 +71,14 @@ def logDirectory():
     else:
         return path.join(userDirectory(),"log")
 
-def assertDirectory(name):
+def authDirectory():
+    """Path to the directory with authentication data"""
+    return path.join(userDirectory(),"auth")
+
+def assertDirectory(name,dirMode=None):
     """Makes sure that the directory exists
-    :param name: the directory"""
+    :param name: the directory
+    :param dirMode: string to set mode of the directory"""
     if path.exists(name):
         return
     else:
@@ -83,5 +88,12 @@ def assertDirectory(name):
             perm=eval("0755")
 
         makedirs(name,mode=perm)
+    if dirMode is not None:
+        if PY3:
+            perm=eval("0o"+dirMode)
+        else:
+            perm=eval("0"+dirMode)
+        from os import chmod
+        chmod(name,perm)
 
 # Should work with Python3 and Python2
