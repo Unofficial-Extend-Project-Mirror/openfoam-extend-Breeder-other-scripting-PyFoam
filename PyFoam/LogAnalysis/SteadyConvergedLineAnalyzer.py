@@ -18,6 +18,7 @@ class SteadyConvergedLineAnalyzer(LogLineAnalyzer):
     def __init__(self):
         LogLineAnalyzer.__init__(self)
         self.exp=re.compile(self.linearRegExp)
+        self.registerRegexp(self.exp)
         self.firstTime=True
         self.lastTime=""
         self.isConverged=False

@@ -278,6 +278,10 @@ class GnuplotWatcher(GnuplotCommon,BasicWatcher):
         self.hasPlotted=False
         self.replotFrequency=replotFrequency
 
+        if self.analyzer.hasAnalyzer("Time"):
+            self.addChangeFileHook(self.analyzer.getAnalyzer("Time").reset)
+
+
     def startHandle(self):
         self.bakFreq=self.freq
         if self.endTime!=None:

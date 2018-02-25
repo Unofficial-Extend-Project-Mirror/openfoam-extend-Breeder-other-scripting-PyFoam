@@ -10,6 +10,8 @@ from .PyFoamApplication import PyFoamApplication
 from .CommonPlotLines import CommonPlotLines
 from .CommonPlotOptions import CommonPlotOptions
 
+from .CursesApplicationWrapper import CWindowAnalyzed
+
 from os import path
 from optparse import OptionGroup
 
@@ -22,6 +24,9 @@ if PY3:
 class PlotWatcher(PyFoamApplication,
                   CommonPlotOptions,
                   CommonPlotLines):
+
+    CWindowType=CWindowAnalyzed
+
     def __init__(self,
                  args=None,
                  **kwargs):
@@ -41,6 +46,7 @@ file until interrupted.
                                    changeVersion=False,
                                    interspersed=True,
                                    nr=1,
+                                   exactNr=False,
                                    findLocalConfigurationFile=self.localConfigInArgsFile,
                                    **kwargs)
 
@@ -57,6 +63,11 @@ file until interrupted.
                           dest="solverNotRunning",
                           default=False,
                           help="It makes no sense to wait for further output, because the solver is not running anymore. Watcher ends as soon as he encounters the end of the file. Only makes sense with --persist or --hardcopy")
+        input.add_option("--no-auto-add-restart-files",
+                         action="store_false",
+                         dest="autoAddRestart",
+                         default=True,
+                         help="Do not automatically add restart logfiles if only one log-file was specified and files with similar names are present")
 
         output=OptionGroup(self.parser,
                            "Output",
@@ -108,11 +119,27 @@ file until interrupted.
 
     def run(self):
         self.processPlotOptions()
+
         hereDir=path.dirname(self.parser.getArgs()[0])
         self.processPlotLineOptions(autoPath=hereDir)
         # self.addLocalConfig(hereDir)
 
-        run=GnuplotWatcher(self.parser.getArgs()[0],
+        if len(self.parser.getArgs())==1:
+            logFile=self.parser.getArgs()[0]
+            if self.opts.autoAddRestart:
+                import re,os
+                pattern=re.compile(
+                    path.basename(logFile)+"\.restart[0-9]+")
+                rest=[]
+                logDir=path.dirname(path.abspath(logFile))
+                for fName in os.listdir(logDir):
+                    if pattern.match(path.basename(fName)):
+                        rest.append(path.join(logDir,fName))
+                if len(rest)>0:
+                    logFile=[logFile]+rest
+        else:
+            logFile=self.parser.getArgs()
+        run=GnuplotWatcher(logFile,
                            smallestFreq=self.opts.frequency,
                            persist=self.opts.persist,
                            tailLength=self.opts.tail,
@@ -140,6 +167,12 @@ file until interrupted.
                            plottingImplementation=self.opts.implementation,
                            gnuplotTerminal=self.opts.gnuplotTerminal,
                            solverNotRunning=self.opts.solverNotRunning)
+
+        if self.cursesWindow:
+            def fileChanged():
+                self.cursesWindow.setAnalyzer(run.analyzer)
+            run.analyzer.addTimeListener(self.cursesWindow)
+            run.addChangeFileHook(fileChanged)
 
         run.start()
 

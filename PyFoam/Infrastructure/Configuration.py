@@ -52,7 +52,7 @@ _defaults={
         "Installation-openfoamplus" : "~/OpenFOAM",
         "Installation-extend" : "~/foam",
         "AdditionalInstallation-openfoam" : '"~/OpenFOAM","/opt/OpenFOAM"',
-        "Version" : "1.5",
+        "Version" : "4.0",
     },
     "MPI": {
 #    "run_OPENMPI":"mpirun",
@@ -114,6 +114,14 @@ _defaults={
         "plotexecution" : False,
         "plotdeltat" : False,
     },
+    "Curses": {
+        "headerTextColor": "red",
+        "headerBackgroundColor": "white",
+        "textBackgroundColor": "black",
+        "textColor": "green",
+        "textMatchColor": "cyan",
+        "textGroupColor": "yellow",
+    },
     "OutfileCollection": {
         "maximumOpenFiles":"100",
     },
@@ -167,8 +175,12 @@ Full command: |-commandLine-|""",
         "noForceSymlink":"[]",
     },
     "PrepareCase" : {
+        "ClearCaseScript":"clearCase.sh",
         "MeshCreateScript":"meshCreate.sh",
         "CaseSetupScript":"caseSetup.sh",
+        "DecomposeMeshScript":"decomposeMesh.sh",
+        "DecomposeFieldsScript":"decomposeFields.sh",
+        "DecomposeCaseScript":"decomposeCase.sh",
         "DefaultParameterFile":"default.parameters",
         "AllowDerivedChanges":False,
         "ignoreDirectories": '"processor[0-9]+","postProcessing",".*.analyzed","VTK"'
@@ -233,6 +245,52 @@ Full command: |-commandLine-|""",
                 "alternateAxis" : [ ".+_mass" ],
                 "ylabel" : "Particle number",
                 "y2label" : "Mass in system"
+            }
+        },
+        "surfaceFilmMass" : {
+            "solvers" : [ ".+Film.*Foam" ],
+            "plotinfo" : {
+                "theTitle" : "Surface film mass",
+                "expr" : r"Surface film: (.+)\n +added mass         = (.+)\n +current mass       = (.+)",
+                "type" : "dynamic",
+                "idNr" : 1,
+                "titles" : [ "added" , "current" ],
+                "alternateAxis" : [ ".+_added" ],
+                "ylabel" : "Current mass",
+                "y2label" : "Added mass"
+            }
+        },
+        "surfaceFilmCoverage" : {
+            "solvers" : [ ".+Film.*Foam" ],
+            "plotinfo" : {
+                "theTitle" : "Surface film coverage",
+                "expr" : r"Surface film: (.+)\n.+\n.+\n.+\n.+\n    coverage           = (.+)",
+                "type" : "dynamic",
+                "idNr" : 1,
+                "titles" : [ "coverage" ],
+                "ylabel" : "Ratio",
+            }
+        },
+        "surfaceFilmVelocity" : {
+            "solvers" : [ ".+Film.*Foam" ],
+            "plotinfo" : {
+                "theTitle" : "Surface film velocity",
+                "expr" : r"Surface film: (.+)\n.+\n.+\n    min/max\(mag\(U\)\)    = (.+), (.+)",
+                "type" : "dynamic",
+                "idNr" : 1,
+                "titles" : [ "min","max" ],
+                "ylabel" : "[m/s]",
+            }
+        },
+        "surfaceFilmThickness" : {
+            "solvers" : [ ".+Film.*Foam" ],
+            "plotinfo" : {
+                "theTitle" : "Surface film thickness",
+                "expr" : r"Surface film: (.+)\n.+\n.+\n.+\n    min/max\(delta\)     = (.+), (.+)",
+                "type" : "dynamic",
+                "idNr" : 1,
+                "titles" : [ "min","max" ],
+                "ylabel" : "[m]",
             }
         },
         "chtPhase" : {
@@ -320,6 +378,24 @@ Full command: |-commandLine-|""",
                 "master" : "nonorhogonalitydynamicmesh",
                 "expr" : r"Max aspect ratio = (\S+)",
                 "titles" : ["max aspect"]
+            }
+        },
+        "interfaceCourant" : {
+            "solvers" : [ "inter.*" ],
+            "plotinfo" : {
+#                "type" : "slave",
+#                "master" : "courant",
+                "theTitle" : "Interface courant number",
+                "expr" : r"Interface Courant Number mean: (.+) max: (.+)",
+                "titles" : ["mean","max"]
+            }
+        },
+        "isoAdvectorNrCells" : {
+            "solvers" : [ "interIso.*" ],
+            "plotinfo" : {
+                "expr" : r"Number of isoAdvector surface cells = (\S+)",
+                "titles" : ["nr"],
+                "theTitle" : "Number of Cells in the interface"
             }
         }
     }
@@ -478,6 +554,31 @@ class Configuration(configparser.ConfigParser):
             return configparser.ConfigParser.getboolean(self,
                                            self.bestSection(section,option),
                                            option)
+        except configparser.NoOptionError:
+            if default!=None:
+                return default
+            else:
+                raise
+
+    def getchoice(self,section,option,choices,default=None):
+        """Overrides the original implementation from ConfigParser
+        :param section: the section
+        :param option: the option
+        :param choices: list of valid values
+        :param default: if set and the option is not found, then this value is used"""
+
+        try:
+            val=configparser.ConfigParser.get(self,
+                                              self.bestSection(section,option),
+                                              option)
+            if val not in choices:
+                raise ValueError("The option %s in section %s is %s but must be one of %s" % (
+                    option,
+                    section,
+                    val,
+                    ", ".join(choices)
+                ))
+            return val
         except configparser.NoOptionError:
             if default!=None:
                 return default

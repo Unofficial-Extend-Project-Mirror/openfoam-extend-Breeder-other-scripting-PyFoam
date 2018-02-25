@@ -21,11 +21,16 @@ class LineReader(object):
         self.line=""
         self.goOn=True
         self.wasInterupted=False
-        self.bytes=0
+        self.keyboardInterupted=False
+        self.reset()
 
     def bytesRead(self):
         """:return: number of bytes that were already read"""
         return self.bytes
+
+    def reset(self):
+        """Reset the reader"""
+        self.bytes=0
 
     def userSaidStop(self):
         """:return: whether the reader caught a Keyboard-interrupt"""
@@ -53,6 +58,7 @@ class LineReader(object):
             foamLogger().warning("Keyboard Interrupt")
             print_(" Interrupted by the Keyboard")
             self.wasInterupted=True
+            self.keyboardInterupted=True
             self.goOn=False
             self.line=""
             return False

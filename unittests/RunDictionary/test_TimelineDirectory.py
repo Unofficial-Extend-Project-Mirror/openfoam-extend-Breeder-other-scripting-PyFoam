@@ -157,11 +157,13 @@ class TimelineValueTest(unittest.TestCase):
         sd=TimelineDirectory(self.theDir)
         st=sd["p"]
         spread=st()
+        assert len(spread.names())==5
+        assert spread.size()==3
         spread.writeCSV(csvName)
-        self.assertEqual(len(st.positions)+1,len(spread.names()))
+        assert len(st.positions)+1==len(spread.names())
         rereadSpread=SpreadsheetData(csvName=csvName)
-        self.assertEqual(len(spread.names()),len(rereadSpread.names()))
-        self.assertEqual(len(spread.data),len(rereadSpread.data))
+        assert len(spread.names())==len(rereadSpread.names())
+        assert len(spread.data)==len(rereadSpread.data)
         sd=TimelineDirectory(self.theDir,"timeline")
         st=sd["p"]
         spread=st()

@@ -11,7 +11,7 @@ from PrepareCase import PrepareCase
 from CommonSelectTimesteps import CommonSelectTimesteps
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
-from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile,FoamStringParser
 
 from PyFoam.Paraview.ServermanagerWrapper import ServermanagerWrapper as SM
 from PyFoam.Paraview.StateFile import StateFile
@@ -39,6 +39,9 @@ StateFile was generated using paraFoam)
 
 In TextSources the string "%(casename)s" gets replaced by the
 casename. Additional replacements can be specified
+
+If the utility has Mesa in the name then instead of the native
+OpenGL Mesa is used (if compiled into the used Paraview)
 """
         CommonSelectTimesteps.__init__(self)
 
@@ -160,7 +163,7 @@ casename. Additional replacements can be specified
         replace.add_option("--replacements",
                             dest="replacements",
                             default="{}",
-                            help="Dictionary with replacement strings. Default: %default")
+                            help="Dictionary with replacement strings. May also be in OpenFOAM-format.  Default: %default")
         replace.add_option("--casename-key",
                             dest="casenameKey",
                             default="casename",
@@ -229,6 +232,26 @@ casename. Additional replacements can be specified
                             action="store_true",
                             default=False,
                             help="Print more information")
+        behaviour.add_option("--analyze-state-file",
+                             dest="analyzeState",
+                             action="store_true",
+                             default=False,
+                             help="Print important properties about the state file and exit")
+        behaviour.add_option("--rewrite-only",
+                             dest="rewriteOnly",
+                             action="store_true",
+                             default=False,
+                             help="Stop execution after rewriting")
+        behaviour.add_option("--list-properties",
+                             dest="listProperties",
+                             action="store",
+                             default=None,
+                             help="List the properties for this source and stop")
+        behaviour.add_option("--set-property",
+                             dest="setProperties",
+                             action="append",
+                             default=[],
+                             help="Set the property for a filter. The syntax of an entry is <source>:<property>:<id>=<value> which sets the value of a property of the source. The index entry is optional (then the index 0 is used). If the source or the property is not found then the utility fails. Can be specified more than once")
         self.parser.add_option_group(behaviour)
 
     def say(self,*stuff):
@@ -293,9 +316,15 @@ casename. Additional replacements can be specified
 
         try:
             rng=getRange(wrapped.CellData[nm])
+            if rng is None:
+                rng=getRange(wrapped.PointData[nm])
+            if rng is None:
+                rng=getRange(wrapped.FieldData[nm])
         except AttributeError:
             try:
                 rng=getRange(wrapped.PointData[nm])
+                if rng is None:
+                    rng=getRange(wrapped.FieldData[nm])
             except AttributeError:
                 try:
                     rng=getRange(wrapped.FieldData[nm])
@@ -392,6 +421,33 @@ casename. Additional replacements can be specified
         self.say("Opening state file",self.opts.state)
         sf=StateFile(self.opts.state)
 
+        if self.opts.analyzeState:
+            print "\n\nReaders:\n   ","\n    ".join([p.type_()+" \t: "+p.getProperty("FileName") for p in sf.getProxy(".+Reader",regexp=True)])
+            print "Source Proxies:"
+            for i,name in sf.sourceIds():
+                print "  ",name," \t: ",sf[i].type_()
+            return
+
+        if self.opts.listProperties:
+            print "\n\nProperties for",self.opts.listProperties,":"
+            srcs=[]
+            for i,name in sf.sourceIds():
+                srcs.append(name)
+                if name==self.opts.listProperties:
+                    for namee,el in sf[i].listProperties():
+                        print "  ",namee," \t: ",
+                        if len(el)==1:
+                            print "Single element:",el[0][1],
+                        elif len(el)>1:
+                            print len(el),"Elements:",
+                            for j,v in el:
+                                print "%d:%s" % (j,v),
+                        else:
+                            print "No value",
+                        print
+                    return
+            self.error("Not found. Available:"," ".join(srcs))
+
         decoResult=None
         newParallelMode=None
         if self.opts.decomposeMode=="keep":
@@ -452,22 +508,69 @@ casename. Additional replacements can be specified
             else:
                 self.say("No file",fName)
 
-        values.update(eval(self.opts.replacements))
+        replString=self.opts.replacements.strip()
+        if replString[0]=='{' and replString[-1]=='}':
+            values.update(eval(self.opts.replacements))
+        else:
+            values.update(FoamStringParser(replString).data)
         values[self.opts.casenameKey]=short
         if self.opts.listReplacements:
             rKeys=sorted(values.keys())
             kLen=max([len(k) for k in rKeys])
-            vLen=max([len(str(values[k])) for k in rKeys])
+            maxLen=100
+            vLen=min(max([len(str(values[k])) for k in rKeys]),maxLen)
             kFormat=" %"+str(kLen)+"s | %"+str(vLen)+"s"
             print
             print kFormat % ("Key","Value")
             print "-"*(kLen+2)+"|"+"-"*(vLen+2)
             for k in rKeys:
-                print kFormat % (k,str(values[k]))
+                valStr=str(values[k])
+                if len(valStr)>maxLen:
+                    valStr=valStr[:maxLen]+" .. cut"
+                print kFormat % (k,valStr)
             print
 
         sf.rewriteTexts(values)
+
+        for setProp in self.opts.setProperties:
+            parts=setProp.split("=",1)
+            if len(parts)!=2:
+                self.error("'=' missing in",setProp)
+            value=parts[1]
+            left=parts[0].split(":")
+            if len(left)==2:
+                src,prop=left
+                index=None
+            elif len(left)==3:
+                src,prop,index=left
+            else:
+                self.error(setProp,"not a proper left side")
+
+            print "Setting on",src,"the property",prop,"index",index,"to",value
+            srcs=[]
+            for i,name in sf.sourceIds():
+                srcs.append(name)
+                if name==src:
+                    srcs=None
+                    props=[]
+                    for namee,el in sf[i].listProperties():
+                        props.append(namee)
+                        if namee==prop:
+                            props=None
+                            sf[i].setProperty(name=prop,index=index,value=value)
+                            break
+                    if props is not None:
+                        self.error("No propery",prop,"in",src,
+                                   "Available:"," ".join(props))
+                    break
+            if srcs is not None:
+                self.error(src,"not found. Available:"," ".join(srcs))
+
         newState=sf.writeTemp()
+
+        if self.opts.rewriteOnly:
+            print "Written new statefile to",newState
+            return
 
         self.say("Setting session manager with reader type",sf.readerType())
         sm=SM(requiredReader=sf.readerType())

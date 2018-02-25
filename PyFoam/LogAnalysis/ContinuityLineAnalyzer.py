@@ -27,6 +27,7 @@ class GeneralContinuityLineAnalyzer(GeneralLineAnalyzer):
                                      startTime=startTime,
                                      endTime=endTime)
         self.exp=re.compile(continutityRegExp)
+        self.registerRegexp(self.exp)
 
     def addToFiles(self,match):
         self.files.write(self.fName("continuity"),self.parent.getTime(),match.groups())

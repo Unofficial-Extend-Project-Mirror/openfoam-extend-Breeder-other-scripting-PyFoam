@@ -30,6 +30,7 @@ class GeneralLinearSolverLineAnalyzer(GeneralLineAnalyzer):
                                      startTime=startTime,
                                      endTime=endTime)
         self.exp=re.compile(linearRegExp)
+        self.registerRegexp(self.exp)
 
         if self.doTimelines:
             self.lines.setDefault(1.)

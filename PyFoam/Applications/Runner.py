@@ -27,6 +27,8 @@ from .CommonVCSCommit import CommonVCSCommit
 from .CommonPrePostHooks import CommonPrePostHooks
 from .CommonBlink1 import CommonBlink1
 
+from .CursesApplicationWrapper import CWindowAnalyzed
+
 from PyFoam.ThirdParty.six import print_
 
 class Runner(PyFoamApplication,
@@ -44,6 +46,9 @@ class Runner(PyFoamApplication,
              CommonVCSCommit,
              CommonPrePostHooks,
              CommonBlink1):
+
+    CWindowType=CWindowAnalyzed
+
     def __init__(self,
                  args=None,
                  **kwargs):
@@ -143,6 +148,11 @@ variables
 
             run.createPlots(customRegexp=self.lines_,
                             writeFiles=self.opts.writeFiles)
+
+            if self.cursesWindow:
+                self.cursesWindow.setAnalyzer(run.analyzer)
+                self.cursesWindow.setRunner(run)
+                run.analyzer.addTimeListener(self.cursesWindow)
 
             self.addWriteAllTrigger(run,SolutionDirectory(casePath,archive=None))
             self.addLibFunctionTrigger(run,SolutionDirectory(casePath,archive=None))

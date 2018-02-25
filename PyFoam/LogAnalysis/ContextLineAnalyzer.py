@@ -16,6 +16,7 @@ class ContextLineAnalyzer(LogLineAnalyzer):
         LogLineAnalyzer.__init__(self)
 
         self.trigger=re.compile(trigger)
+        self.registerRegexp(self.trigger)
         self.nr=nr
 
         self.cnt=0

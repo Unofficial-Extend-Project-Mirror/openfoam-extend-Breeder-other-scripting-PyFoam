@@ -43,6 +43,7 @@ class GeneralSimpleLineAnalyzer(GeneralLineAnalyzer):
         self.idList=idList
         self.strExp=exp
         self.exp=re.compile(self.strExp)
+        self.registerRegexp(self.exp)
 
     def addToFiles(self,match):
         tm=self.parent.getTime()

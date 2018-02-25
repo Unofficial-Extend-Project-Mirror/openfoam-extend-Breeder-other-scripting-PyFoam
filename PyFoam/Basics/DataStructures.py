@@ -321,7 +321,7 @@ class BoolProxy(object):
         "no",
         "false",
 #        "n",           # this breaks parsing certain files
-        "none",
+#        "none",        # this breaks parsing of cases where the word none is needed
         "invalid"
     ]
 

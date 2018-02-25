@@ -146,6 +146,7 @@ class FoamThread(Thread):
         self.runner=runner
         self.output=None
         self.reader=LineReader(config().getboolean("SolverOutput","stripSpaces"))
+        self.keyboardInterupted=False
 
         self.isLinux=False
         self.isDarwin=False
@@ -278,6 +279,8 @@ class FoamThread(Thread):
         self.stateLock.acquire()
         self.hasSomethingToSay=state
         if not self.hasSomethingToSay and self.timeStart and self.reader.wasInterupted:
+            self.keyboardInterupted=self.reader.keyboardInterupted
+
             if self.threadPid>0:
                 msg="Killing PID %d" % self.threadPid
                 print_(msg)

@@ -45,6 +45,7 @@ etc). Currently doesn't honor the parallel data
                                    changeVersion=False,
                                    nr=0,
                                    exactNr=False,
+                                   allowCurses=False,
                                    **kwargs)
 
     sortChoices=["name","first","last","mtime","nrSteps","procs","diskusage","pFirst","pLast","nrParallel","nowTime","state","lastOutput","startedAt"]
@@ -331,7 +332,7 @@ etc). Currently doesn't honor the parallel data
                                             data["state"]="Dead "+humanReadableDuration(gone)
                                     except KeyError:
                                         pass
-                                    except KeyError:
+                                    except TypeError:
                                         pass
 
                             if self.opts.startEndTime or self.opts.estimateEndTime:
@@ -414,25 +415,30 @@ etc). Currently doesn't honor the parallel data
                                         if path.exists(fp):
                                             fn=fp
                                             break
+                                pickleOK=False
                                 if fn:
-                                    raw=pickle.Unpickler(open(fn,"rb")).load()
-                                    for n,spec in customData:
-                                        dt=raw
-                                        for k in spec:
+                                    try:
+                                        raw=pickle.Unpickler(open(fn,"rb")).load()
+                                        pickleOK=True
+                                        for n,spec in customData:
+                                            dt=raw
+                                            for k in spec:
+                                                try:
+                                                    dt=dt[k]
+                                                except KeyError:
+                                                    dt="No key '"+k+"'"
+                                                    break
+                                                if isinstance(dt,string_types):
+                                                    break
+                                            data[n]=dt
+                                        if self.opts.hostname:
                                             try:
-                                                dt=dt[k]
+                                                data["hostname"]=raw["hostname"].split(".")[0]
                                             except KeyError:
-                                                dt="No key '"+k+"'"
-                                                break
-                                            if isinstance(dt,string_types):
-                                                break
-                                        data[n]=dt
-                                    if self.opts.hostname:
-                                        try:
-                                            data["hostname"]=raw["hostname"].split(".")[0]
-                                        except KeyError:
-                                            data["hostname"]="<unspecified>"
-                                else:
+                                                data["hostname"]="<unspecified>"
+                                    except ValueError:
+                                        pass
+                                if not pickleOK:
                                     for n,spec in customData:
                                         data[n]="<no file>"
                                     if self.opts.hostname:
@@ -464,6 +470,8 @@ etc). Currently doesn't honor the parallel data
                     if c[k]!=None:
                         if self.opts.relativeTime:
                             c[k]=datetime.timedelta(seconds=long(time.time()-c[k]))
+                            if k in ["endTimeEstimate"]:
+                                c[k]=-c[k]
                         else:
                             c[k]=time.asctime(time.localtime(c[k]))
                 except KeyError:

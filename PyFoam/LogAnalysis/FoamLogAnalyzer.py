@@ -33,11 +33,12 @@ class FoamLogAnalyzer(object):
 
         self.customExpr=re.compile("Custom([0-9]+)_(.+)")
 
-        self.progressOut=None
         if progress:
             self.progressOut=ProgressOutput(stdout)
+        else:
+            self.progressOut=ProgressOutput()
 
-        tm=TimeLineAnalyzer(progress=progress)
+        tm=TimeLineAnalyzer()
         self.addAnalyzer("Time",tm)
         tm.addListener(self.setTime)
 
@@ -77,8 +78,7 @@ class FoamLogAnalyzer(object):
         :param time: the new value of the time
         """
         if time!=self.time:
-            if self.progressOut:
-                self.progressOut.reset()
+            self.progressOut.reset()
 
             self.time=time
             for listener in self.timeListeners:
@@ -96,10 +96,14 @@ class FoamLogAnalyzer(object):
                     # seems that the listener doesn't want the data
                     pass
 
+    def resetFile(self):
+        """Propagate a reset to the actual analyzers"""
+        for nm in self.analyzers:
+            self.analyzers[nm].resetFile()
+
     def writeProgress(self,msg):
         """Write a message to the progress output"""
-        if self.progressOut:
-            self.progressOut(msg)
+        self.progressOut(msg)
 
     def addTimeListener(self,listener):
         """:param listener: An object that is notified when the time changes. Has to
@@ -160,6 +164,16 @@ class FoamLogAnalyzer(object):
     def getTime(self):
         """Gets the current time"""
         return str(self.time)
+
+    def isPastTime(self,check):
+        """Are we past a given Time?"""
+        if check is None:
+            return False
+        try:
+            t=float(self.getTime())
+            return t>check
+        except ValueError:
+            return False
 
     def setDirectory(self,d):
         """Sets the output directory for all the analyzers"""

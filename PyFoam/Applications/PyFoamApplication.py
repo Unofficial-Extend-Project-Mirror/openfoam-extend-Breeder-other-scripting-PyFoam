@@ -12,6 +12,8 @@ from PyFoam.FoamInformation import ensureDynamicLibraries
 from PyFoam.Basics.TerminalFormatter import TerminalFormatter
 from PyFoam import configuration
 
+from .CursesApplicationWrapper import cursesWrap,CWindow,hasCurses
+
 format=TerminalFormatter()
 format.getConfigFormat("error")
 format.getConfigFormat("warn")
@@ -71,6 +73,8 @@ class PyFoamApplication(object):
               except KeyError:
                    raise AttributeError(key)
 
+    CWindowType=CWindow
+
     def __init__(self,
                  args=None,
                  description=None,
@@ -85,6 +89,7 @@ class PyFoamApplication(object):
                  inputApp=None,
                  localConfigurationFile=None,
                  findLocalConfigurationFile=None,
+                 allowCurses=True,
                  **kwArgs):
         """
         :param description: description of the command
@@ -100,9 +105,13 @@ class PyFoamApplication(object):
         :param inputApp: Application with input data. Used to allow a 'pipe-like' behaviour if the class is used from a Script
         :param localConfigurationFile: Use this file (or list of files) as a local configuration
         :param findLocalConfigurationFile: Method to find a configuration file BEFORE the actual parameters are parsed
+        :param allowCurses: This application can wrap the output in a curses-window
         """
 
         global _LocalConfigurationFile
+
+        self.allowCurses=allowCurses
+        self.cursesWindow=None
 
         if _LocalConfigurationFile is not None:
              configuration().addFile(_LocalConfigurationFile)
@@ -323,6 +332,35 @@ with these option for commands that generate a lot of output""")
         self.parser.add_option_group(grp)
         self.parser.add_option_group(dbg)
 
+        if self.allowCurses:
+             crs=OptionGroup(self.parser,
+                             "Curses",
+                             "Wrap and color output using the curses-library")
+             crs.add_option("--curses-wrap",
+                            dest="cursesWrap",
+                            default=False,
+                            action="store_true",
+                            help="Switch on curses wrapping (if possible)")
+             crs.add_option("--output-buffer-curses",
+                            dest="outputBufferCurses",
+                            default=2000,
+                            action="store",
+                            type="int",
+                            help="Number of lines that the curses buffer should store. Default: %default")
+             crs.add_option("--sleep-time-end-curses",
+                            dest="sleepTimeEndCurses",
+                            default=0,
+                            action="store",
+                            type="int",
+                            help="Number of seconds to sleep before dropping back onto the regular terminal when the command ended. Default: %default")
+             crs.add_option("--no-powerline-font",
+                            dest="powerlineFont",
+                            default=True,
+                            action="store_false",
+                            help="The current terminal does not use a powerline-font and therefor the delimiters look weird (Powerline only works with Python3 because it needs native Unicode-support)")
+
+             self.parser.add_option_group(crs)
+
         self.addOptions()
         self.parser.parse(nr=nr,exactNr=exactNr)
         ensureDynamicLibraries()
@@ -424,6 +462,20 @@ with these option for commands that generate a lot of output""")
             self.parser.restoreEnvironment()
         else:
             try:
+                doCurses=False
+                if self.allowCurses:
+                     if self.opts.cursesWrap:
+                          if not sys.__stdout__.isatty():
+                               self.warning("Stdout is not a terminal. Not using curses for output wrapping")
+                          elif getattr(self.opts,"progress",False):
+                               self.warning("Not using curses with progress")
+                          elif getattr(self.opts,"silent",False):
+                               self.warning("Not using curses with silent")
+                          elif not hasCurses:
+                               self.warning("Python has no curses library")
+                          else:
+                               doCurses=True
+
                 if self.opts.pickleApplicationData=="stdout":
                     # Redirect output to memory
                     from PyFoam.ThirdParty.six.moves import StringIO
@@ -432,8 +484,15 @@ with these option for commands that generate a lot of output""")
                     oldStderr=sys.stderr
                     sys.stdout=StringIO()
                     sys.stderr=StringIO()
+                    doCurses=False
 
-                result=self.run()
+                if doCurses:
+                     result=cursesWrap(self,
+                                       bufflen=self.opts.outputBufferCurses,
+                                       powerline=self.opts.powerlineFont,
+                                       endSleepTime=self.opts.sleepTimeEndCurses)
+                else:
+                     result=self.run()
 
                 # do this at the earliest possible moment
                 self.parser.restoreEnvironment()
@@ -711,6 +770,12 @@ with these option for commands that generate a lot of output""")
                 self.warning("No entry 'application' in controlDict. Staying with 'auto'")
                 return args
         return [self._replacedSolver]+args[1:]
+
+    def getApplication(self):
+        if not hasattr(self,"_replacedSolver"):
+             return self.parser.getApplication()
+        else:
+             return self.parser.getApplication()+" ("+self._replacedSolver+")"
 
     def localConfigFromCasename(self,args):
         """Look for the local configuration assuming that the first argument

@@ -28,6 +28,16 @@ from collections import OrderedDict
 import time
 import re
 
+from .CursesApplicationWrapper import addExpr
+
+prepareExpr=[r'^Executing',
+             r'^Looking for',
+             r'^Skipping',
+             r'^Found template']
+
+for e in prepareExpr:
+    addExpr(e)
+
 def buildFilenameExtension(paraList,valueStrings):
     ext=""
     if len(paraList)>0:
@@ -57,8 +67,12 @@ class PrepareCase(PyFoamApplication,
                  nr=1,
                  description=None,
                  **kwargs):
+        self.defaultClearCase=configuration().get("PrepareCase","ClearCaseScript")
         self.defaultMeshCreate=configuration().get("PrepareCase","MeshCreateScript")
         self.defaultCaseSetup=configuration().get("PrepareCase","CaseSetupScript")
+        self.defaultDecomposeMesh=configuration().get("PrepareCase","DecomposeMeshScript")
+        self.defaultDecomposeFields=configuration().get("PrepareCase","DecomposeFieldsScript")
+        self.defaultDecomposeCase=configuration().get("PrepareCase","DecomposeCaseScript")
         self.defaultParameterFile=configuration().get("PrepareCase","DefaultParameterFile")
         self.defaultIgnoreDirecotries=configuration().getList("PrepareCase","IgnoreDirectories")
 
@@ -68,7 +82,7 @@ boiler-plate scripts. The steps done are
 
   1. Clear old data from the case (including processor directories)
 
-  2. if a folder 0.org is present remove the 0 folder too
+  2. if a folder 0.org or 0.orig is present remove the 0 folder too
 
   3. go through all folders and for every found file with the extension .template
 do template expansion using the pyratemp-engine (automatically create variables
@@ -76,14 +90,14 @@ casePath and caseName)
 
   4. create a mesh (either by using a script or if a blockMeshDict is present by
 running blockMesh. If none of these is present assume that there is a valid mesh
-present)
+present). Afterwards (if present) a script decomposeMesh.sh is executed
 
-  5. copy every foo.org that is found to to foo (recursively if directory)
+  5. copy every foo.org that is found to to foo (recursively if directory). Afterwards (if present) a script decomposeFields.sh is executed
 
   6. do template-expansion for every file with the extension .postTemplate
 
   7. execute another preparation script (caseSetup.sh). If no such script is found
-but a setFieldsDict in system then setFields is executed
+but a setFieldsDict in system then setFields is executed. Afterwards (if present) a script decomposeCase.sh is executed
 
   8. do final template-expansion for every file with the extension .finalTemplate
 
@@ -173,6 +187,11 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                               dest="originalExt",
                               default=".org",
                               help="Extension for files and directories that are copied. Default: %default")
+        extensions.add_option("--zero-time-original-extensions",
+                              action="append",
+                              dest="zeroTimeOriginalExtensions",
+                              default=[".orig"],
+                              help="Additional extensions to be used for the original of the zero time directory. The first one is used. Default: %default")
         extensions.add_option("--extension-addition",
                               action="append",
                               dest="extensionAddition",
@@ -261,12 +280,23 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           default=True,
                           help="Do not execute a script to create a mesh")
 
+        stages.add_option("--force-mesh-decompose",
+                          action="store_true",
+                          dest="doMeshDecompose",
+                          default=False,
+                          help="Execute the script for mesh decomposition even if the mesh has not been created")
+
         stages.add_option("--no-copy",
                           action="store_false",
                           dest="doCopy",
                           default=True,
                           help="Do not copy original directories")
 
+        stages.add_option("--force-decompose-field",
+                          action="store_true",
+                          dest="doFieldDecompose",
+                          default=False,
+                          help="Execute a script to decompose the fields even if no originals were copied")
         stages.add_option("--no-post-templates",
                           action="store_false",
                           dest="doPostTemplates",
@@ -278,6 +308,11 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           dest="doCaseSetup",
                           default=True,
                           help="Do not execute a script to set initial conditions etc")
+        stages.add_option("--force-case-decompose",
+                          action="store_true",
+                          dest="doCaseDecompose",
+                          default=False,
+                          help="Execute the script for case decomposition even if the case setup was not done")
 
         stages.add_option("--no-final-templates",
                           action="store_false",
@@ -291,16 +326,47 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           default=True,
                           help="Do not clean template files from 0-directory")
 
+        stages.add_option("--no-paraview-file",
+                          action="store_false",
+                          dest="paraviewFile",
+                          default=True,
+                          help="Do not create a .foam file that allows paraview to open the case")
+
         scripts=OptionGroup(self.parser,
                             "Scripts",
                             "Specification of scripts to be executed")
         self.parser.add_option_group(scripts)
 
+        scripts.add_option("--case-clear-script",
+                          action="store",
+                          dest="clearCaseScript",
+                          default=None,
+                          help="Script that is executed in addition to the regular clearing of the case data. If not specified then the utility looks for "+self.defaultClearCase+" and executes this.")
+        scripts.add_option("--additional-clear-case-scripts",
+                           action="append",
+                           dest="additionalClearCase",
+                           default=["Allclean"],
+                           help="Additional script names to try if no case clearing script is found. Can be used more than once Default: %default")
         scripts.add_option("--mesh-create-script",
                           action="store",
                           dest="meshCreateScript",
                           default=None,
                           help="Script that is executed after the template expansion to create the mesh. If not specified then the utility looks for "+self.defaultMeshCreate+" and executes this. If this is also not found blockMesh is executed if a blockMeshDict is found")
+        scripts.add_option("--decompose-mesh-script",
+                          action="store",
+                          dest="decomposeMeshScript",
+                          default=None,
+                           help="Script that is executed after the mesh is created. If not specified then the utility looks for "+self.defaultDecomposeMesh+" and executes this.")
+        scripts.add_option("--decompose-fields-script",
+                          action="store",
+                          dest="decomposeFieldsScript",
+                          default=None,
+                           help="Script that is executed after the mesh is created and decomposed. If not specified then the utility looks for "+self.defaultDecomposeFields+" and executes this")
+        scripts.add_option("--additional-mesh-create-scripts",
+                           action="append",
+                           dest="additionalMeshCreate",
+                           default=["Allrun.pre","Allrun.mesh"],
+                           help="Additional script names to try if no mesh creation script is found. Can be used more than once Default: %default")
         stages.add_option("--no-keep-zero-directory-from-mesh-create",
                           action="store_false",
                           dest="keepZeroDirectoryFromMesh",
@@ -311,6 +377,11 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                           dest="caseSetupScript",
                           default=None,
                           help="Script that is executed after the original files have been copied to set initial conditions or similar. If not specified then the utility looks for "+self.defaultCaseSetup+" and executes this.")
+        scripts.add_option("--decompose-case-script",
+                           action="store",
+                           dest="decomposeCaseScript",
+                           default=None,
+                           help="Script that is executed after the case setup is finished. If not specified then the utility looks for "+self.defaultDecomposeCase+" and executes this")
         scripts.add_option("--derived-parameters-script",
                           action="store",
                           dest="derivedParametersScript",
@@ -378,10 +449,12 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
 
         return result
 
-    def copyOriginals(self,startDir):
+    def copyOriginals(self,startDir,extension=None,recursive=True):
         """Go recursivly through directories and copy foo.org to foo"""
         self.info("Looking for originals in",startDir)
-        for f,t in self.listdir(startDir,self.opts.originalExt):
+        if extension is None:
+            extension=self.opts.originalExt
+        for f,t in self.listdir(startDir,extension):
             if f[0]==".":
                 self.info("Skipping",f)
                 continue
@@ -394,8 +467,10 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 else:
                     self.info("Copying",src,"to",dst)
                 copytree(src,dst,force=True)
-            elif path.isdir(src):
-                self.copyOriginals(src)
+            elif path.isdir(src) and recursive:
+                self.copyOriginals(src,
+                                   extension=extension,
+                                   recursive=recursive)
 
     def cleanExtension(self,
                        startDir,
@@ -504,13 +579,15 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 self.addLocalConfig(self.opts.cloneCase)
             orig=SolutionDirectory(self.opts.cloneCase,
                                    archive=None,paraviewLink=False)
-            sol=orig.cloneCase(cName)
+            sol=orig.cloneCase(cName,
+                               paraviewLink=self.opts.paraviewFile)
         else:
             if self.checkCase(cName,
                               fatal=self.opts.fatal,
                               verbose=not self.opts.noComplain):
                 self.addLocalConfig(cName)
-            sol=SolutionDirectory(cName,archive=None,paraviewLink=False)
+            sol=SolutionDirectory(cName,archive=None,
+                                  paraviewLink=self.opts.paraviewFile)
         try:
             self.__lastMessage=None
             self.prepare(sol,cName=cName)
@@ -663,13 +740,12 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
             self.warning("Executing modified script",scriptRun,
                          "instead of",scriptName)
 
-        ret,txt=execute([scriptRun],
-                        workdir=workdir,
-                        echo=echo,
-                        getReturnCode=True)
-
-        result="".join(txt)
-        open(scriptName+".log","w").write(result)
+        with open(scriptName+".log","w") as outfile:
+            ret,txt=execute([scriptRun],
+                            workdir=workdir,
+                            echo=echo,
+                            outfile=outfile,
+                            getReturnCode=True)
 
         if ret not in [0,None]:
             self.info(scriptName,"failed with code",ret)
@@ -807,6 +883,26 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                       clearHistory=False,
                       clearParameters=True,
                       additional=["postProcessing"])
+            if self.opts.clearCaseScript:
+                scriptName=path.join(sol.name,self.opts.clearCaseScript)
+                if not path.exists(scriptName):
+                    self.error("Script",scriptName,"does not exist")
+            elif path.exists(path.join(sol.name,self.defaultClearCase)):
+                scriptName=path.join(sol.name,self.defaultClearCase)
+            else:
+                scriptName=None
+                for scr in self.opts.additionalClearCase:
+                    s=path.join(sol.name,scr)
+                    if path.exists(s):
+                        scriptName=s
+                        break
+            if scriptName:
+                self.info("Executing",scriptName,"for case clearing")
+                if self.opts.verbose:
+                    echo="Clearing: "
+                else:
+                    echo=None
+                self.executeScript(scriptName,workdir=sol.name,echo=echo)
             self.__writeToStateFile(sol,"Done clearing")
 
         if self.opts.writeParameters:
@@ -884,8 +980,15 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
 
         self.__writeToStateFile(sol,"Initial")
 
-        zeroOrig=path.join(sol.name,"0.org")
-
+        zeroOrig=None
+        for ext in [self.opts.originalExt]+self.opts.zeroTimeOriginalExtensions:
+            zo=path.join(sol.name,"0"+ext)
+            if path.exists(zo):
+                zeroOrig=zo
+                break
+        if zeroOrig is None:
+            zeroOrig=path.join(sol.name,"0.org")
+        zeroOrigShort=path.basename(zeroOrig)
         hasOrig=path.exists(zeroOrig)
         cleanZero=True
 
@@ -896,7 +999,7 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
 
         if self.opts.doCopy:
             if hasOrig:
-                self.info("Found 0.org. Clearing 0")
+                self.info("Found",zeroOrigShort,". Clearing 0")
                 zeroDir=path.join(sol.name,"0")
                 if path.exists(zeroDir):
                     rmtree(zeroDir)
@@ -928,7 +1031,11 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 scriptName=path.join(sol.name,self.defaultMeshCreate)
             else:
                 scriptName=None
-
+                for scr in self.opts.additionalMeshCreate:
+                    s=path.join(sol.name,scr)
+                    if path.exists(s):
+                        scriptName=s
+                        break
             if scriptName:
                 self.info("Executing",scriptName,"for mesh creation")
                 if self.opts.verbose:
@@ -947,7 +1054,7 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 for r in sol.regions():
                     self.info("Checking region",r)
                     s=SolutionDirectory(sol.name,region=r,
-                                        archive=None,paraviewLink=False)
+                                        archive=None,paraviewLink=self.opts.paraviewFile)
                     if s.blockMesh()!="":
                         self.info(s.blockMesh(),"found. Executing 'blockMesh'")
                         bm=BasicRunner(argv=["blockMesh","-case",sol.name,
@@ -968,10 +1075,33 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                     self.info("Data in",zeroDir,"will be removed")
             self.__writeToStateFile(sol,"Done Meshing")
 
+        if self.opts.doMeshCreate or self.opts.doMeshDecompose:
+            self.__writeToStateFile(sol,"Decompose Mesh")
+            if self.opts.decomposeMeshScript:
+                scriptName=path.join(sol.name,self.opts.decomposeMeshScript)
+                if not path.exists(scriptName):
+                    self.error("Script",scriptName,"does not exist")
+            elif path.exists(path.join(sol.name,self.defaultDecomposeMesh)):
+                scriptName=path.join(sol.name,self.defaultDecomposeMesh)
+            else:
+                scriptName=None
+            if scriptName:
+                self.info("Executing",scriptName,"for mesh decomposition")
+                if self.opts.verbose:
+                    echo="Decompose Mesh: "
+                else:
+                    echo=None
+                self.executeScript(scriptName,workdir=sol.name,echo=echo)
+            else:
+                self.info("No script for mesh decomposition found")
+
         if self.opts.doCopy:
             self.__writeToStateFile(sol,"Copying")
             self.copyOriginals(sol.name)
-
+            if path.splitext(zeroOrig)[1]!=self.opts.originalExt:
+                self.copyOriginals(sol.name,
+                                 extension=path.splitext(zeroOrig)[1],
+                                 recursive=False)
             self.info("")
 
             if backupZeroDir:
@@ -979,6 +1109,26 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 self.overloadDir(zeroDir,backupZeroDir)
                 self.info("Removing backup",backupZeroDir)
                 rmtree(backupZeroDir)
+
+        if self.opts.doCopy or self.opts.doFieldDecompose:
+            self.__writeToStateFile(sol,"Decompose Fields")
+            if self.opts.decomposeFieldsScript:
+                scriptName=path.join(sol.name,self.opts.decomposeFieldsScript)
+                if not path.exists(scriptName):
+                    self.error("Script",scriptName,"does not exist")
+            elif path.exists(path.join(sol.name,self.defaultDecomposeFields)):
+                scriptName=path.join(sol.name,self.defaultDecomposeFields)
+            else:
+                scriptName=None
+            if scriptName:
+                self.info("Executing",scriptName,"for fields decomposition")
+                if self.opts.verbose:
+                    echo="Decompose Fields: "
+                else:
+                    echo=None
+                self.executeScript(scriptName,workdir=sol.name,echo=echo)
+            else:
+                self.info("No script for fields decomposition found")
 
         if self.opts.doPostTemplates:
             self.__writeToStateFile(sol,"Post-templates")
@@ -1017,6 +1167,27 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 self.info("No script for case-setup found. Nothing done")
             self.info("")
             self.__writeToStateFile(sol,"Done case setup")
+
+
+        if self.opts.doCaseSetup or self.opts.doCaseDecompose:
+            self.__writeToStateFile(sol,"Decompose Case")
+            if self.opts.decomposeCaseScript:
+                scriptName=path.join(sol.name,self.opts.decomposeCaseScript)
+                if not path.exists(scriptName):
+                    self.error("Script",scriptName,"does not exist")
+            elif path.exists(path.join(sol.name,self.defaultDecomposeCase)):
+                scriptName=path.join(sol.name,self.defaultDecomposeCase)
+            else:
+                scriptName=None
+            if scriptName:
+                self.info("Executing",scriptName,"for case decomposition")
+                if self.opts.verbose:
+                    echo="Decompose Case: "
+                else:
+                    echo=None
+                self.executeScript(scriptName,workdir=sol.name,echo=echo)
+            else:
+                self.info("No script for case decomposition found")
 
         if self.opts.doFinalTemplates:
             self.__writeToStateFile(sol,"Final templates")

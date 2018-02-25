@@ -62,16 +62,35 @@ with ~. Symbolic links are replaced with the actual files
                          action="store_true",
                          dest="noPloyMesh",
                          help="Exclude the polyMesh-directory")
-        self.parser.add_option("--tarname",
+        what.add_option("--parallel",
+                        action="store_true",
+                        dest="parallel",
+                        default=False,
+                        help="Store processor directories instead of serial")
+
+        where=OptionGroup(self.parser,
+                         "Where",
+                         "Define where it should be packaged to")
+        self.parser.add_option_group(where)
+        where.add_option("--tarname",
                          action="store",
                          dest="tarname",
                          default=None,
                          help='Name of the tarfile. If unset the name of the case plus ".tgz" will be used')
-        self.parser.add_option("--base-name",
+        where.add_option("--base-name",
                          action="store",
                          dest="basename",
                          default=None,
                          help='Name of the case inside the tar-file. If not set the actual basename of the case is used')
+        how=OptionGroup(self.parser,
+                         "How",
+                         "How should it be done")
+        self.parser.add_option_group(how)
+        how.add_option("--verbose",
+                        action="store_true",
+                        dest="verbose",
+                        default=False,
+                        help="Report every file that is added")
 
     def run(self):
         sName=self.parser.getArgs()[0]
@@ -91,6 +110,7 @@ with ~. Symbolic links are replaced with the actual files
 
         sol=SolutionDirectory(sName,
                               archive=None,
+                              parallel=self.parser.getOptions().parallel,
                               addLocalConfig=True,
                               paraviewLink=False)
         if not sol.isValid():
@@ -106,6 +126,7 @@ with ~. Symbolic links are replaced with the actual files
                      last=self.parser.getOptions().last,
                      additional=self.parser.getOptions().additional,
                      exclude=self.parser.getOptions().exclude,
+                     verbose=self.parser.getOptions().verbose,
                      base=self.parser.getOptions().basename)
 
 # Should work with Python3 and Python2

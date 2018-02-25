@@ -25,6 +25,7 @@ class PhaseChangerLineAnalyzer(GeneralLineAnalyzer):
 
         self.idNr=idNr
         self.exp=re.compile(exp)
+        self.registerRegexp(self.exp)
 
     def doAnalysis(self,line):
         """Look for the pattern. If it matches set the phase name"""

@@ -23,8 +23,6 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
     regular expression for a floating point number
     """
 
-    floatRegExp="[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?"
-
     def __init__(self,
                  name,
                  exp,
@@ -95,6 +93,7 @@ class RegExpLineAnalyzer(GeneralLineAnalyzer):
             reFlags=re.MULTILINE
 
         self.exp=re.compile(self.strExp,reFlags)
+        self.registerRegexp(self.exp)
 
         self.data={}
         self.dataTransformations=dataTransformations

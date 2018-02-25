@@ -21,6 +21,8 @@ from .CommonStandardOutput import CommonStandardOutput
 from .CommonServer import CommonServer
 from .CommonVCSCommit import CommonVCSCommit
 
+from .CursesApplicationWrapper import CWindowAnalyzed
+
 class SteadyRunner(PyFoamApplication,
                    CommonPlotLines,
                    CommonSafeTrigger,
@@ -33,6 +35,9 @@ class SteadyRunner(PyFoamApplication,
                    CommonRestart,
                    CommonStandardOutput,
                    CommonVCSCommit):
+
+    CWindowType=CWindowAnalyzed
+
     def __init__(self,
                  args=None,
                  **kwargs):
@@ -106,6 +111,11 @@ stopped and the last simulation state is written to disk
 
         run.createPlots(customRegexp=self.lines_,
                         writeFiles=self.opts.writeFiles)
+
+        if self.cursesWindow:
+            self.cursesWindow.setAnalyzer(run.analyzer)
+            self.cursesWindow.setRunner(run)
+            run.analyzer.addTimeListener(self.cursesWindow)
 
         self.addSafeTrigger(run,sol)
         self.addWriteAllTrigger(run,sol)

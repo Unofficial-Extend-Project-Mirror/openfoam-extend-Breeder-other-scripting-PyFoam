@@ -26,12 +26,17 @@ class AnalyzedCommon(object):
     handling analyzers"""
 
     def __init__(self,
-                 filename,
+                 filenames,
                  analyzer,
                  doPickling=True):
         """:param filename: name of the file that is being analyzed
         :param analyzer: the analyzer itself
         :param doPickling: write the pickled plot data"""
+
+        if type(filenames) is list:
+            filename=filenames[0]
+        else:
+            filename=filenames
 
         self.analyzer=analyzer
 
@@ -75,7 +80,12 @@ class AnalyzedCommon(object):
         pass
 
     def execNameFound(self,execName):
+        if hasattr(self,"oldExecName"):
+            if execName==self.oldExecName:
+                return
+
         self.automaticCustom=[]
+        self.oldExecName=execName
         from PyFoam import configuration as conf
         from PyFoam.Basics.CustomPlotInfo import CustomPlotInfo
 

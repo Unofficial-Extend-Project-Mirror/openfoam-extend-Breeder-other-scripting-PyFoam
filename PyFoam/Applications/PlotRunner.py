@@ -24,6 +24,8 @@ from .CommonServer import CommonServer
 from .CommonVCSCommit import CommonVCSCommit
 from .CommonBlink1 import CommonBlink1
 
+from .CursesApplicationWrapper import CWindowAnalyzed
+
 class PlotRunner(PyFoamApplication,
                  CommonPlotOptions,
                  CommonPlotLines,
@@ -39,6 +41,9 @@ class PlotRunner(PyFoamApplication,
                  CommonStandardOutput,
                  CommonVCSCommit,
                  CommonBlink1):
+
+    CWindowType=CWindowAnalyzed
+
     def __init__(self,
                  args=None,
                  **kwargs):
@@ -142,6 +147,11 @@ read and the regular expressions in it are displayed
                           parameters=self.getRunParameters(),
                           echoCommandLine=self.opts.echoCommandPrefix,
                           jobId=self.opts.jobId)
+
+        if self.cursesWindow:
+            self.cursesWindow.setAnalyzer(run.analyzer)
+            self.cursesWindow.setRunner(run)
+            run.analyzer.addTimeListener(self.cursesWindow)
 
         self.addSafeTrigger(run,sol,steady=self.opts.steady)
         self.addWriteAllTrigger(run,sol)

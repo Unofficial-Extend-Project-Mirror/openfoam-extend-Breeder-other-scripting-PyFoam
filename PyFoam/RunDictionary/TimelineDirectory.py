@@ -24,12 +24,15 @@ if PY3:
 class TimelineDirectory(object):
     """A directory of sampled times"""
 
-    def __init__(self,case,dirName="probes",writeTime=None):
+    def __init__(self,case=None,dirName="probes",writeTime=None):
         """:param case: The case directory
         :param dirName: Name of the directory with the timelines
         :param writeTime: The write time-directory where the data in question is to be plotted"""
 
-        self.dir=path.join(case,dirName)
+        if case is None:
+            self.dir=dirName
+        else:
+            self.dir=path.join(case,dirName)
         self.writeTimes=[]
 
         nearest=None

@@ -13,6 +13,7 @@ from PyFoam.FoamInformation import oldAppConvention as oldApp
 from PyFoam.ThirdParty.six import print_
 import PyFoam.Basics.FoamFileGenerator
 from PyFoam.Basics.DataStructures import makePrimitiveString
+from PyFoam.Basics.Utilities import rmtree
 
 if not 'curdir' in dir(path) or not 'sep' in dir(path):
     print_("Warning: Inserting symbols into os.path (Python-Version<2.3)")
@@ -32,6 +33,34 @@ def restoreControlDict(ctrl,runner):
     warning("Restoring the controlDict")
     ctrl.restore()
     runner.controlDict=None
+
+def calcLogname(logname,argv):
+    if logname==None:
+        return "PyFoam."+path.basename(argv[0])
+    else:
+        return logname
+
+def findRestartFiles(logfile,sol):
+    isRestart=False
+    restartnr=None
+    restartName=None
+    lastlog=None
+
+    if path.exists(logfile) or path.exists(logfile+".gz"):
+        ctrlDict=ParameterFile(path.join(sol.controlDict()),backup=False)
+        if ctrlDict.readParameter("startFrom")=="latestTime":
+            if len(sol)>1:
+                isRestart=True
+                restartnr=0
+                restartName=logfile+".restart00"
+                lastlog=logfile
+
+                while path.exists(restartName) or path.exists(restartName+".gz"):
+                    restartnr+=1
+                    lastlog=restartName
+                    restartName=logfile+".restart%02d" % restartnr
+
+    return isRestart,restartnr,restartName,lastlog
 
 class BasicRunner(object):
     """Base class for the running of commands
@@ -103,8 +132,7 @@ class BasicRunner(object):
             if "-case" in self.argv:
                 self.dir=self.argv[self.argv.index("-case")+1]
 
-        if logname==None:
-            logname="PyFoam."+path.basename(argv[0])
+        logname=calcLogname(logname,argv)
 
         try:
             sol=self.getSolutionDirectory()
@@ -128,6 +156,20 @@ class BasicRunner(object):
         foamLogger().info("Starting: "+self.cmd+" in "+path.abspath(path.curdir))
         self.logFile=path.join(self.dir,logname+".logfile")
 
+        isRestart,restartnr,restartName,lastlog=findRestartFiles(self.logFile,sol)
+
+        if restartName:
+            self.logFile=restartName
+
+        if not isRestart:
+            from os import unlink
+            from glob import glob
+            for g in glob(self.logFile+".restart*"):
+                if path.isdir(g):
+                    rmtree(g)
+                else:
+                    unlink(g)
+
         self.noLog=noLog
         self.logTail=logTail
         if self.logTail:
@@ -143,7 +185,7 @@ class BasicRunner(object):
         self.fatalError=False
         self.fatalFPE=False
         self.fatalStackdump=False
-
+        self.endSeen=False
         self.warnings=0
         self.started=False
 
@@ -306,6 +348,7 @@ class BasicRunner(object):
                     self.data["lasttimesteptime"]=asctime()
 
                 tmp=check.getCreateTime(line)
+                self.endSeen=check.endSeen
                 if tmp!=None:
                     self.createTime=tmp
 
@@ -373,10 +416,15 @@ class BasicRunner(object):
                 foamLogger().warning("Keyboard Interrupt")
                 self.run.interrupt()
                 self.writeTheState("Interrupted")
+                self.data["keyboardInterrupt"]=True
                 interrupted=True
+
+        if not "keyboardInterrupt" in self.data:
+            self.data["keyboardInterrupt"]=self.run.keyboardInterupted
 
         self.data["interrupted"]=interrupted
         self.data["OK"]=self.runOK()
+        self.data["endSeen"]=self.endSeen
         self.data["cpuTime"]=self.run.cpuTime()
         self.data["cpuUserTime"]=self.run.cpuUserTime()
         self.data["cpuSystemTime"]=self.run.cpuSystemTime()
@@ -393,7 +441,10 @@ class BasicRunner(object):
         self.stopHandle()
 
         if not interrupted:
-            self.writeTheState("Finished")
+            if self.endSeen:
+                self.writeTheState("Finished - Ended")
+            else:
+                self.writeTheState("Finished")
 
         for t in self.endTriggers:
             t()
@@ -517,17 +568,21 @@ class BasicRunnerCheck(object):
         #        self.timeExpr=re.compile("^Time = (%f%)$".replace("%f%",self.floatRegExp))
         self.timeExpr=config().getRegexp("SolverOutput","timeregexp")
         self.createExpr=re.compile("^Create mesh for time = (%f%)$".replace("%f%",self.floatRegExp))
+        self.endSeen=False
 
     def getTime(self,line):
         """Does this line contain time information?"""
         m=self.timeExpr.match(line)
         if m:
+            self.endSeen=False
             try:
                 return float(m.group(2))
             except ValueError:
                 warning("Problem while converting",m.group(2),"to float")
                 return None
         else:
+            if line.strip()=="End":
+                self.endSeen=True
             return None
 
     def getCreateTime(self,line):

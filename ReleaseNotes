@@ -1,4 +1,147 @@
 # -*- mode: org -*-
+* Version 0.6.9 - 2018-02-25
+** Major changes
+*** Add =curses=-output to Utilities
+    On terminals that support it there is now an additional option
+    =--curses= that enhances the output of the utility. It adds a
+    header and a footer-line and colors the output if it finds special
+    strings like the current time.
+
+    Some utilities enhance the output event further: the Runner and
+    Watches utilities color lines that match regular expressions that
+    are sought for: the line is colored differently and data items
+    (which are usually plotted) are colored even more
+    differently. There is also an additional footer-line with the
+    string that is usally printed by the =--progress=-option
+
+    Output can be paused by pressing =space= and resumed by pressing
+    =space= again. This behavior may be overridden by some utilities
+
+    Caution: on some terminal implementations resizing the terminal
+    causes a segmentation fault of Python which may stop your
+    simulation
+** Incompatibilities
+*** =pyFoamPrepareCase.py= creates =.foam=-file
+    The utility now automatically creates a file that allows Paraview
+    to open the case
+*** Hardcoded Foam-Version upgraded to =4.0=
+    The hardcoded Foam-version that is used if the
+    =WM_PROJECT_VERSION= environment variable is not set is set to
+    =4.0= from the rather ancient version =1.5=
+*** =none= no longer parsed as an equivalent for =false=
+    This breaks the parsing of cases where =none= is used as a word.
+** New features/utilities
+*** =pyFoamJoinTimelines.py= to join Timelines from restarts
+    This utility joins timeline files from different restarts. The
+    lines from times that will be in the next file are discarded
+*** =pyFoamRestartRunner.py= to automatically restart runs
+    For cases that fail strangely (mostly due to problems in the
+    linear solver) but restart successfully this utility helps running
+    them.
+
+    The utility tries to restart the solver until either the =endTime=
+    is reached or no new time-step is written to disk (in this case it
+    makes no sense to run again)
+** Enhancements to Utilities
+*** Special snapshot utilities to use MESA
+    There have been variations of the regular =pyFoamPVSnapshot.py=
+    added. The only difference they have is that they set a option that
+    enforces the used =OpenGL=-implementation (especially Mesa). Use this run
+    the script on a machine that don't have hardware support for 3D-graphics
+*** Automated plotting of film properties
+    For the surface film solvers there now properties like the mass,
+    covered surface, thickness and velocity are automatically plotted
+*** =pyFoamClearCase.py= automatically executes an existing =Allclean=
+    If present the script (which is usually found in tutorial cases)
+    is executed before other cleaning takes places
+*** =pyFoamPrepareCase.py= executes tutorial scripts if available
+    If there are scripts present from the original tutorials that do
+    *only* case preparation (like =Allrun.pre=) but no solver running
+    and no special scripts are present then the original scripts are
+    executed
+*** Script for clearing in =pyFoamPrepareCase.py=
+    If a special script =clearCase.sh= is found this is used for
+    additional clearing. If instead a script =Allclean= is found then
+    this is used
+*** =pyFoamPlotWatcher.py= now can handle multiple files
+    If the utility gets more than one file it tries to concatenate the
+    data from theses files. It assumes:
+    - that the files are Log-files by a solver. It orders the files by
+      the time that the mesh was created. If noo string ~Create mesh
+      for time =~ appears in the file it is assumed that this file is
+      the last one in the sequence
+    - that all files except for the last one finished writing (this
+      basically follows from the previous condition)
+    If only one file is specified and matching logdfiles from restarts
+    are found then these are automatically added (there is an option
+    to prohibit this)
+*** =pyFoamPrepareCase.py= now allows separate decomposition scripts
+    After three of the phases
+    - mesh creation
+    - copying of the =.org= files
+    - case setup
+    the utility executes a script (=decomposeMesh.sh=,
+    =decomposeFields.sh= and =decomposeCase.sh=) if found. This allows
+    to adapt for different situations (for instance: the mesh already
+    being generated in parallel)
+*** Runner-utilities now create seperate logfiles on restart
+    If PyFoam thinks that a run is restarted (old time-files exist and
+    there already exists a logfile) it creates logfiles with
+    =.restart= appended. This allows joining the original log and the
+    restart log
+*** =pyFoamPVSnapshot.py= improves rewriting of state-files
+    The utility now allows changing properties before loading it into
+    paraview. There is also a number of options that allow setting up
+    this process.
+
+    First the available sources can be listed with
+    =--analyze-state-file=. From these sources the properties (with
+    values) for one of these sources can be listed like this
+: pyFoamPVSnapshot.py . --list-prop=probeCSV
+    then one propery can be changed like this
+: pyFoamPVSnapshot.py . --set-property=probeCSV:FileName=probes.csv
+    =--set-property= can be used more than once
+*** =pyFoamPackCase.py= adds parallel data
+    With the option =--parallel= now adds parallel data
+*** =--replacement=-option in =pyFoamPVSnapshot.py= supports Foam-format
+    The option can now alternatively use Foam-format instead of Python-format
+*** =pyFoamPVSnapshot.py= improved error messages with problems in replacement
+    Instead of a stack trace there is now an output of the template
+    string and the available values
+*** =customRegexp= now searched in parent directories
+    If in the directory of the log-file no =customRegexp= and the
+    log-file is not in the current directory then PyFoam looks for it
+    in all directories up to the current directories
+** Enhancements to the Library
+*** =Paraview.StateFile= extended
+    This module has been extended to allow more flexible manipulations
+    of the state-file
+*** =BasicRunner= now checks for regular End
+    The =BasicRunner= now checks whether the string =End= was seen and
+    *no* time-information after that. This means that the simulation
+    reached its "regular" end and is also reported in the
+    =PyFoamState.TheState=-file
+** Bug fixes
+*** =pyFoamPrepareCaser.py= ran out of memory for large script outputs
+    Because all the output from scripts was stored in memory before
+    being written to a log it was possible that the utility ran out of
+    memory when there was much output. The output is now written
+    directly to disk
+*** No Courant number plottet if =WM_PROJECT_VERSION= is unset
+    Scanning for the Courant number defaulted to the versy old
+    version. This has been fixed
+*** Rescale does not work for streamlines in =pyFoamPVSnapshot.py=
+    =--rescale-color-to-source= did not work for sources that have no
+    cell values (like streamlines). Fixed.
+*** Server not correctly running on Python 2.7 with =socketserver=
+    Some installations of Python 2.7 already have the
+    =socketserver=-module which does not have the required
+    =BaseServer=-module. Fixed
+* Version 0.6.8.1 - 2017-08-03
+** Bug fixes
+*** Fork not correctly detected for =v1706=
+    As the =+= is not present in the =WM_PROJECT_VERSION= this distro
+    was detected as the Foundation fork
 * Version 0.6.8 - 2017-07-06
 ** Major changes
 *** =pyFoamNet=-utilities now work without a Meta-Server
@@ -1974,3 +2117,7 @@ values {
 * Older Versions
   The changes for older versions can be found on
   [[http://openfoamwiki.net/index.php/Contrib_PyFoam#History][the Wiki-page]]
+
+# Local Variables:
+# eval: (add-hook 'after-save-hook 'org-md-export-to-markdown t t)
+# End:

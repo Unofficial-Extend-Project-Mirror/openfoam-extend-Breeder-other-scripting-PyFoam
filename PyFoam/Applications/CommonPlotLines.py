@@ -1,4 +1,3 @@
-
 """
 Class that implements common functionality for collecting plot-lines
 """
@@ -131,10 +130,19 @@ class CommonPlotLines(object):
 
 
         if autoPath!=None and  self.opts.autoCustom:
-            autoFile=path.join(autoPath,"customRegexp")
-            if path.exists(autoFile):
-                print_(" Reading regular expressions from",autoFile)
-                self.addFileRegexps(autoFile)
+            dirs=[autoPath]
+            # add additional paths to the current directory
+            if path.realpath(autoPath)!=path.os.getcwd():
+                common=path.commonprefix([path.realpath(autoPath),path.os.getcwd()])
+                if common==path.os.getcwd():
+                    parts=path.split(path.relpath(autoPath,path.os.getcwd()))
+                    dirs=reversed([path.join(*([path.os.getcwd()]+list(parts[:i+1]))) for i in range(len(parts))])
+            for d in dirs:
+                autoFile=path.join(d,"customRegexp")
+                if path.exists(autoFile):
+                    print_(" Reading regular expressions from",autoFile)
+                    self.addFileRegexps(autoFile)
+                    break
 
         for include,expr in ruleList:
             rexp=re.compile(expr)

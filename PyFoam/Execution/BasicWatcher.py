@@ -18,7 +18,7 @@ class BasicWatcher(object):
     Works like the UNIX-command 'tail -f <file>': the last lines of the file are output.
     If the file grows then these lines are output as they arrive"""
 
-    def __init__(self,filename,
+    def __init__(self,filenames,
                  silent=False,
                  tailLength=1000,
                  sleep=0.1,
@@ -30,7 +30,29 @@ class BasicWatcher(object):
         Because data is output on a per-line-basis
         :param sleep: interval to sleep if no line is returned"""
 
-        self.filename=filename
+        if type(filenames) is list:
+            meshTimes=[]
+            createMesh="Create mesh for time = "
+            for fName in filenames:
+                meshTime=None
+                with open(fName) as f:
+                    for l in f.readlines()[:100]:
+                        if l.find(createMesh)==0:
+                            meshTime=float(l[len(createMesh):])
+                            break
+                meshTimes.append((fName,meshTime))
+            meshTimes.sort(key=lambda x:1e50 if x[1] is None else x[1])
+            filenames=[m[0] for m in meshTimes]
+            self.filename=filenames[0]
+            self.nextFiles=filenames[1:]
+            self.changeTimes=[m[1] for m in meshTimes[1:]]
+        else:
+            self.filename=filenames
+            self.nextFiles=[]
+            self.changeTimes=[]
+
+        self._changeFileHooks=[]
+
         self.silent=silent
         self.tail=tailLength
         self.sleep=sleep
@@ -42,24 +64,53 @@ class BasicWatcher(object):
 
         self.reader=LineReader(config().getboolean("SolverOutput","stripSpaces"))
 
-    def getSize(self):
+    def getSize(self,filename):
         """:return: the current size (in bytes) of the file"""
-        return os.stat(self.filename)[stat.ST_SIZE]
+        return os.stat(filename)[stat.ST_SIZE]
+
+    def addChangeFileHook(self,func):
+        self._changeFileHooks.append(func)
+
+    def changeFile(self,filename):
+        currSize=self.getSize(filename)
+
+        fn,ext=path.splitext(filename)
+        if ext=='.gz':
+            fh=gzip.open(filename)
+        else:
+            fh=open(filename)
+
+        for f in self._changeFileHooks:
+            f()
+
+        return fh,currSize
 
     def start(self):
         """Reads the file and does the processing"""
 
-        currSize=self.getSize()
-
-        fn,ext=path.splitext(self.filename)
-        if ext=='.gz':
-            fh=gzip.open(self.filename)
-        else:
-            fh=open(self.filename)
+        fh,currSize=self.changeFile(self.filename)
+        switchTime=None if len(self.changeTimes)==0 else self.changeTimes[0]
+        self.changeTimes=self.changeTimes[1:]
 
         self.startHandle()
 
-        while self.follow or currSize>self.reader.bytesRead():
+        while self.follow or currSize>self.reader.bytesRead() or len(self.nextFiles)>0:
+            if not currSize>self.reader.bytesRead() or self.analyzer.isPastTime(switchTime):
+                if len(self.nextFiles)>0:
+                    print_("\n\nSwitching from logfile",self.filename,
+                           "to",self.nextFiles[0],"\n\n")
+                    self.filename=self.nextFiles[0]
+                    self.nextFiles=self.nextFiles[1:]
+                    fh,currSize=self.changeFile(self.filename)
+                    switchTime=None if len(self.changeTimes)==0 else self.changeTimes[0]
+                    self.changeTimes=self.changeTimes[1:]
+                    self.reader.reset()
+                    self.analyzer.resetFile()
+                    if currSize==0:
+                        continue
+                else:
+                    if not self.follow:
+                        break
             try:
                 status=self.reader.read(fh)
                 if status:

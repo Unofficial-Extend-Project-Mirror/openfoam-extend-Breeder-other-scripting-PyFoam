@@ -98,6 +98,10 @@ class FoamStringParserTest(unittest.TestCase):
         p1=FoamStringParser("test no;")
         self.assertEqual(p1["test"],False)
 
+    def testParseNoneAsWord(self):
+        p1=FoamStringParser("test none;")
+        self.assertEqual(p1["test"],"none")
+
     def testParseBoolKey(self):
         p1=FoamStringParser("yes test;")
         self.assertEqual(p1["yes"],"test")
@@ -956,3 +960,16 @@ class ReadIncludeAndMacroExpansionTest(unittest.TestCase):
 
 
 theSuite.addTest(unittest.makeSuite(WriteParameterFileTest,"test"))
+
+class RegexpFindingTests(unittest.TestCase):
+    def setUp(self):
+        self.parse=FoamStringParser("""
+aValue 1;
+".*Value" 2;
+abValue 3;
+""")
+
+    def testRegularExpression(self):
+        self.assertEqual(self.parse["aValue"],1)
+        self.assertEqual(self.parse["bValue"],2)
+        self.assertEqual(self.parse["abValue"],3)

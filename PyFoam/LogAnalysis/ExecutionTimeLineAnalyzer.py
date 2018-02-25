@@ -29,7 +29,7 @@ class GeneralExecutionLineAnalyzer(GeneralLineAnalyzer):
                  singleFile=False,
                  startTime=None,
                  endTime=None):
-        self.hasClock=(foamVersionNumber()>=(1,3))
+        self.hasClock=(foamVersionNumber(useConfigurationIfNoInstallation=True)>=(1,3))
         titles=["cumulated"]
         if self.hasClock:
             titles.append("delta")
@@ -43,7 +43,11 @@ class GeneralExecutionLineAnalyzer(GeneralLineAnalyzer):
                                      endTime=endTime)
 
         self.exp=re.compile(executionRegexp())
+        self.registerRegexp(self.exp)
 
+        self.resetFile()
+
+    def resetFile(self):
         self.lastTime=0.
         self.time=0.
         if self.hasClock:

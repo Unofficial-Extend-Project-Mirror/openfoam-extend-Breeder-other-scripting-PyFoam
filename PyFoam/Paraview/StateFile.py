@@ -32,6 +32,9 @@ class StateFile(object):
         predefined in the state-file
         :param case: The path to the new case-file"""
         reader=self.getReader()
+        caseDir=path.realpath(path.dirname(case))
+        origPath=path.dirname(reader.getProperty("FileName"))
+        print "Setting Foam-file",origPath,"to",caseDir
         typ=reader.data.getAttribute("type")
         if typ=="PV3FoamReader":
             reader.setProperty("FileName",case)
@@ -44,6 +47,15 @@ class StateFile(object):
             reader.setProperty("FileName",newFile)
         else:
             error("Reader type",typ,"not implemented for state-file rewritting")
+
+        for r in self.getProxy(".+Reader",regexp=True):
+            if r.id()!=reader.id():
+                oldPath=r.getProperty("FileName")
+                for p in [oldPath,path.realpath(oldPath)]:
+                    if p.find(origPath)==0:
+                        newPath=path.join(caseDir,p[len(origPath)+1:])
+                        print "Rewriting path",oldPath,"to",newPath
+                        r.setProperty("FileName",newPath)
 
     def setDecomposed(self,isDecomposed):
         """Sets whether the decomposed or the reconstructed data should be used
@@ -86,14 +98,23 @@ class StateFile(object):
 
         return tmp[0]
 
-    def getProxy(self,type_):
+    def getProxy(self,type_,regexp=False):
         """Return a list of Prxy-elements that fit a specific type"""
         result=[]
 
+        if regexp:
+            import re
+            exp=re.compile(type_)
+
         for p in self.serverState().getElementsByTagName("Proxy"):
             tp=p.getAttribute("type")
-            if type_==tp:
-                result.append(Proxy(p))
+
+            if regexp:
+                if exp.match(tp):
+                    result.append(Proxy(p))
+            else:
+                if type_==tp:
+                    result.append(Proxy(p))
 
         return result
 
@@ -112,10 +133,50 @@ class StateFile(object):
         for t in tmp:
             t.rewriteProperty("Text",values)
 
+    def sourceIds(self):
+        result=[]
+        for p in self.serverState().getElementsByTagName("ProxyCollection"):
+            if p.getAttribute("name")=="sources":
+                for i in p.getElementsByTagName("Item"):
+                    result.append((int(i.getAttribute("id")),
+                                   i.getAttribute("name")))
+                break
+        return result
+
+    def __getitem__(self,idNr):
+        """Get a proxy by id number"""
+        for p in self.serverState().getElementsByTagName("Proxy"):
+            idStr=p.getAttribute("id")
+            if idStr:
+                if idNr==int(idStr):
+                    return Proxy(p)
+
+        return None
+
 class Proxy(object):
     """Convenience class for handling proxies"""
     def __init__(self,xml):
         self.data=xml
+
+    def group(self):
+        return self.data.getAttribute("group")
+
+    def type_(self):
+        return self.data.getAttribute("type")
+
+    def id(self):
+        return int(self.data.getAttribute("id"))
+
+    def listProperties(self):
+        props=[]
+        for p in self.data.getElementsByTagName("Property"):
+            name=p.getAttribute("name")
+            elements=[]
+            for e in p.getElementsByTagName("Element"):
+                elements.append((int(e.getAttribute("index")),
+                                 e.getAttribute("value")))
+            props.append((name,elements))
+        return props
 
     def setProperty(self,name,value,index=None):
         """Set a property in a proxy
@@ -156,7 +217,12 @@ class Proxy(object):
                 for e in p.getElementsByTagName("Element"):
                     if index==None or index==int(e.getAttribute("index")):
                         old = e.getAttribute("value")
-                        new = old % values
+                        try:
+                            new = old % values
+                        except KeyError as e:
+                            error("Unknown value",e,"in replacement",old,"Values:",values)
+                        except ValueError as e:
+                            error("Problem with replacement",old,":",e)
                         if new!=old:
                             # print "Replacing",old,"with",new
                             e.setAttribute("value",new)

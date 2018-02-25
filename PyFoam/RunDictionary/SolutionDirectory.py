@@ -280,7 +280,11 @@ class SolutionDirectory(Utilities):
                 # no check for existence necessary
                 self.essential.add(f)
 
-    def cloneCase(self,name,svnRemove=True,followSymlinks=False):
+    def cloneCase(self,
+                  name,
+                  svnRemove=True,
+                  paraviewLink=True,
+                  followSymlinks=False):
         """create a clone of this case directory. Remove the target directory, if it already exists
 
         :param name: Name of the new case directory
@@ -325,7 +329,9 @@ class SolutionDirectory(Utilities):
         if svnRemove:
             self.execute("find "+name+" -name .svn -exec rm -rf {} \\; -prune")
 
-        return self.__class__(name,archive=self.archive)
+        return self.__class__(name,
+                              paraviewLink=paraviewLink,
+                              archive=self.archive)
 
     def symlinkCase(self,
                     name,
@@ -414,7 +420,12 @@ class SolutionDirectory(Utilities):
                 else:
                     self.copytree(there,here,symlinks=symlinks)
 
-    def packCase(self,tarname,last=False,exclude=[],additional=[],base=None):
+    def packCase(self,tarname,
+                 last=False,
+                 exclude=[],
+                 verbose=False,
+                 additional=[],
+                 base=None):
         """Packs all the important files into a compressed tarfile.
         Uses the essential-list and excludes the .svn-directories.
         Also excludes files ending with ~
@@ -427,33 +438,55 @@ class SolutionDirectory(Utilities):
 
         ex=["*~",".svn"]+exclude
         members=list(self.essential)
+        addClone=eval(conf().get("Cloning","addItem"))
+        members+=addClone
         if last:
             if self.getLast()!=self.first:
+                if verbose:
+                    print_("Adding last ",self.getLast())
                 members.append(self.latestDir())
         for p in additional:
             for f in listdir(self.name):
                 if (f not in members) and fnmatch.fnmatch(f,p):
+                    if verbose:
+                        print_("Adding additional",f)
                     members.append(path.join(self.name,f))
 
         tar=tarfile.open(tarname,"w:gz")
 
         for m in members:
-            self.addToTar(tar,m,exclude=ex,base=base)
+            self.addToTar(tar,m,
+                          verbose=verbose,
+                          exclude=ex,base=base)
 
         additional=eval(conf().get("Cloning","addItem"))
         for a in additional:
             self.addToTar(tar,
                           path.join(self.name,a),
+                          verbose=verbose,
                           exclude=ex,
                           base=base)
 
         tar.close()
 
-    def addToTar(self,tar,pattern,exclude=[],base=None):
+    def addToTar(self,tar,pattern,
+                 exclude=[],
+                 base=None,
+                 proc=None,
+                 verbose=False):
         """The workhorse for the packCase-method"""
 
         if base==None:
             base=path.basename(self.name)
+
+        if self.parallel and proc is None:
+            for p in self.processorDirs():
+                self.addToTar(tar,
+                              path.join(path.dirname(pattern),p,path.basename(pattern)),
+                              exclude=exclude,
+                              base=base,
+                              verbose=verbose,
+                              proc=p)
 
         for name in glob.glob(pattern):
             excluded=False
@@ -465,7 +498,12 @@ class SolutionDirectory(Utilities):
 
             if path.isdir(name):
                 for m in listdir(name):
-                    self.addToTar(tar,path.join(name,m),exclude=exclude,base=base)
+                    self.addToTar(tar,
+                                  path.join(name,m),
+                                  exclude=exclude,
+                                  verbose=verbose,
+                                  proc=proc,
+                                  base=base)
             else:
                 arcname=path.join(base,name[len(self.name)+1:])
                 if path.islink(name):
@@ -487,6 +525,8 @@ class SolutionDirectory(Utilities):
                     # don't add ... the file is already there'
                 except KeyError:
                     # file not in tar
+                    if verbose:
+                        print_("Adding",name,"to tar")
                     tar.add(name,arcname=arcname)
 
     def getParallelTimes(self):

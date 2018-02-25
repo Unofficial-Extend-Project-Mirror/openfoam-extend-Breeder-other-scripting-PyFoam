@@ -29,8 +29,10 @@ from subprocess import call
 
 from tempfile import mkstemp
 
-def changePython(pythonName,appClass):
-    print_("Executing",appClass,"with",pythonName,"trough a proxy-script")
+def changePython(pythonName,appClass,options=None):
+    options=[] if options is None else options
+    print_("Executing",appClass,"with",pythonName,"trough a proxy-script",
+           "options:"," ".join(options))
     if path.exists(pythonName):
         pyInterpreter=pythonName
     else:
@@ -38,6 +40,9 @@ def changePython(pythonName,appClass):
     if pyInterpreter is None:
         print_("Error: No interpreter",pythonName,"found")
         sys.exit(-1)
+    else:
+        pyInterpreter=pyInterpreter.strip()
+
     printDebug("Using interpreter",pyInterpreter)
     pyFoamLocation=path.dirname(path.dirname(path.dirname(__file__)))
     printDebug("PyFoam location",pyFoamLocation,".")
@@ -60,7 +65,7 @@ def changePython(pythonName,appClass):
 from PyFoam.Applications.%(appClass)s import %(appClass)s
 
 %(appClass)s()
-""" % {'appClass':appClass,'pyInterpreter':pyInterpreter}))
+""" % {'appClass':appClass,'pyInterpreter':" ".join([pyInterpreter]+options)}))
 
     ret=call([scriptName]+sys.argv[1:])
     printDebug("Return code:",ret)

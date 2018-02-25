@@ -254,6 +254,7 @@ class SpreadsheetData(object):
             f.write(delimiter.join(self.names())+"\n")
 
         numpy.savetxt(f,self.data,delimiter=delimiter)
+        f.close()
 
     def tRange(self,time=None):
         """Return the range of times

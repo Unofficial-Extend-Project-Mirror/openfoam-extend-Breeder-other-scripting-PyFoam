@@ -127,7 +127,7 @@ def oldTutorialStructure():
     """Returns true if the version of OpenFOAM is older than 1.6 and
     it therefor uses the 'old' (flat) structure for the tutorials
     """
-    return foamVersionNumber()<(1,6)
+    return foamVersionNumber()>() and foamVersionNumber()<(1,6)
 
 def installationPath():
     """Path to the installation"""
@@ -214,7 +214,7 @@ def foamFork():
         return environ["WM_FORK"]
     except KeyError:
         vStr=foamVersionString()
-        if len(vStr)>0 and vStr[0]=="v" and vStr[-1]=="+":
+        if len(vStr)>1 and vStr[0]=="v":
             return "openfoamplus"
         else:
             return "openfoam"

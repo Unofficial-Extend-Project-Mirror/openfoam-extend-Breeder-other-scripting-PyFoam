@@ -37,7 +37,7 @@ class BoundingLogAnalyzer(StandardLogAnalyzer):
                                                      startTime=startTime,
                                                      endTime=endTime))
 
-        if foamVersionNumber()<(1,4):
+        if foamVersionNumber(useConfigurationIfNoInstallation=True)<(1,4):
             courantExpression="^Mean and max Courant Numbers = (.+) (.+)$"
         else:
             courantExpression="^Courant Number mean: (.+) max: (\S+).*$"

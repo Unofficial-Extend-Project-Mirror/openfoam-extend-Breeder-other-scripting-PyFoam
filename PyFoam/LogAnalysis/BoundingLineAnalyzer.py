@@ -29,6 +29,7 @@ class GeneralBoundingLineAnalyzer(GeneralLineAnalyzer):
                                      startTime=startTime,
                                      endTime=endTime)
         self.exp=re.compile(boundingRegExp)
+        self.registerRegexp(self.exp)
 
     def addToFiles(self,match):
         name=self.fName(match.groups()[0])

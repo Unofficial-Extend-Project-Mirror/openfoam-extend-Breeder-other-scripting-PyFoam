@@ -46,10 +46,10 @@ class ServerBase(SimpleXMLRPCServer):
         if self.useSSL:
             try:
                 import ssl
-                try:
+                if PY3:
                     import socketserver
-                except ImportError:
-                    import SocketServer as socketserver # Python 2
+                else:
+                    import SocketServer as socketserver
                 import socket
             except ImportError:
                 warning("Problem with the imports. Dropping SSL-support")

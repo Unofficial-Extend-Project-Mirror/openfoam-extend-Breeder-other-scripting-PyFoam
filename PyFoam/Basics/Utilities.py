@@ -32,7 +32,13 @@ class Utilities(object):
     def __init__(self):
         pass
 
-    def execute(self,cmd,debug=False,workdir=None,echo=None,getReturnCode=False):
+    def execute(self,
+                cmd,
+                debug=False,
+                workdir=None,
+                echo=None,
+                outfile=None,
+                getReturnCode=False):
         """Execute the command cmd. If specified change the working directory
 
         Currently no error-handling is done
@@ -63,12 +69,16 @@ class Utilities(object):
                       stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True,
                       universal_newlines=True)
             (rein,raus)=(p.stdin,p.stdout)
-        if echo!=None:
+        if (echo is not None) or (outfile is not None):
             tmp=[]
             while p.poll()==None:
                 l=raus.readline()
-                print_(echo,l,end="")
-                tmp.append(l)
+                if echo is not None:
+                    print_(echo,l,end="")
+                if outfile is not None:
+                    outfile.write(l)
+                else:
+                    tmp.append(l)
         else:
             tmp=raus.readlines()
         # line=raus.readline()
@@ -315,9 +325,19 @@ def which(prog):
     """Calls the method of the same name from the Utilites class"""
     return Utilities().which(prog)
 
-def execute(cmd,debug=False,workdir=None,echo=None,getReturnCode=False):
+def execute(cmd,
+            debug=False,
+            workdir=None,
+            echo=None,
+            outfile=None,
+            getReturnCode=False):
     """Calls the method of the same name from the Utilites class"""
-    return Utilities().execute(cmd,debug,workdir,echo,getReturnCode=getReturnCode)
+    return Utilities().execute(cmd,
+                               debug=debug,
+                               workdir=workdir,
+                               echo=echo,
+                               outfile=outfile,
+                               getReturnCode=getReturnCode)
 
 def writeDictionaryHeader(f):
     """Calls the method of the same name from the Utilites class"""
