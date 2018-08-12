@@ -444,6 +444,7 @@ class FoamFileParser(PlyParser):
         'includeEtc' : 'INCLUDE_ETC',
         'includeFunc' : 'INCLUDE_FUNC',
         'includeIfPresent': 'INCLUDEIFPRESENT',
+        'sinclude'   : 'INCLUDEIFPRESENT',
         'remove'     : 'REMOVE',
         'inputMode'  : 'INPUTMODE',
         'merge'      : 'MERGE',
@@ -483,7 +484,7 @@ class FoamFileParser(PlyParser):
     t_unparsed_ignore = ' \t\n0123456789.-+e'
 
     def t_unparsed_error(self,t):
-        print_("Error",t.lexer.lexdata[t.lexer.lexpos])
+        print_("Error unparsed",t.lexer.lexdata[t.lexer.lexpos])
         t.lexer.skip(1)
 
     t_binaryblob_ignore = ''
@@ -513,7 +514,7 @@ class FoamFileParser(PlyParser):
         pass
 
     def t_binaryblob_error(self,t):
-        print_("Error",t.lexer.lexdata[t.lexer.lexpos])
+        print_("Error binaryblob",t.lexer.lexdata[t.lexer.lexpos])
         t.lexer.skip(1)
 
     def t_codestream_end(self,t):
@@ -532,7 +533,8 @@ class FoamFileParser(PlyParser):
         pass
 
     def t_codestream_error(self,t):
-        print_("Error",t.lexer.lexdata[t.lexer.lexpos])
+        if t.lexer.lexdata[t.lexer.lexpos]!='#':
+            print_("Error Codestream",t.lexer.lexdata[t.lexer.lexpos])
         t.lexer.skip(1)
 
     def t_NAME(self,t):
@@ -654,7 +656,7 @@ class FoamFileParser(PlyParser):
 
     def t_mlcomment_error(self,t):
         if t.lexer.lexdata[t.lexer.lexpos]!="*":
-            print_("Error",t.lexer.lexdata[t.lexer.lexpos])
+            print_("Error comment",t.lexer.lexdata[t.lexer.lexpos])
         t.lexer.skip(1)
 
     # Error handling rule

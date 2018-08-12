@@ -547,6 +547,9 @@ class SolutionDirectory(Utilities):
     def reread(self,force=False):
         """Rescan the directory for the time directories"""
 
+        if force:
+            del self.procDirs
+
         if not force and stat(self.name)[ST_CTIME]<=self.lastReread:
             return
 

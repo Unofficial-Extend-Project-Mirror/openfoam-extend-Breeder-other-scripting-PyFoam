@@ -202,8 +202,11 @@ Lists all the processes known to a meta-server
                 mem=self.forwardCommand(info,"usedMemory()")
                 loads=self.forwardCommand(info,"loadAvg()")
                 loadString=""
-                if len(loads)==3:
-                    loadString="  Load 1m: %.1f - 5m: %.1f - 15m: %.1f" % tuple(loads)
+                try:
+                    if len(loads)==3:
+                        loadString="  Load 1m: %.1f - 5m: %.1f - 15m: %.1f" % tuple(loads)
+                except TypeError:
+                    loadString="  Load: "+str(loads)
                 print(("   Max memory: %f MB" % mem)+loadString)
             if self.parser.options.process or self.parser.options.time:
                 print_(line)

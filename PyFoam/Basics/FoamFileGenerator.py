@@ -5,6 +5,7 @@ from PyFoam.Error import error,PyFoamException
 from PyFoam.Basics.DataStructures import Vector,Field,Dimension,TupleProxy,DictProxy,Tensor,SymmTensor,Unparsed,UnparsedList,Codestream,DictRedirection,BinaryList,BoolProxy
 
 from PyFoam.ThirdParty.six import string_types,integer_types
+from collections import OrderedDict
 
 class FoamFileGenerator(object):
     """Class that generates a OpenFOAM-compatible representation of a
@@ -58,7 +59,7 @@ class FoamFileGenerator(object):
         if self.header:
             result+="FoamFile\n{\n"+self.strDict(self.header,indent=1)+"}\n\n"
 
-        if type(self.data) in [dict,DictProxy]:
+        if type(self.data) in [dict,DictProxy,OrderedDict]:
             result+=self.strDict(self.data,firstLevel=firstLevel)
         elif type(self.data) in [tuple,TupleProxy]:
             result+=self.strTuple(self.data)
@@ -96,7 +97,8 @@ class FoamFileGenerator(object):
             order=dic._order
         else:
             order=list(dic.keys())
-            order.sort()
+            if not isinstance(dic,(OrderedDict,)):
+                order.sort()
 
         for k in order:
             if type(k)==DictRedirection:
@@ -133,7 +135,7 @@ class FoamFileGenerator(object):
                     s+=";"+end
                 else:
                     s+=" "+self.__quoteString(v)+";"+end
-            elif type(v) in [dict,DictProxy]:
+            elif type(v) in [dict,DictProxy,OrderedDict]:
                 s+="\n"+(" "*indent)+"{\n"
                 s+=self.strDict(v,indent+2)
                 s+=(" "*indent)+"}"+end

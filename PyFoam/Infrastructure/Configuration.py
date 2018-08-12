@@ -45,7 +45,7 @@ _defaults={
     },
     "OpenFOAM": {
         "Forks" : 'openfoam,extend,openfoamplus',
-        "DirPatterns-openfoam" : '"^OpenFOAM-(([0-9]\.([0-9]|x)|dev).*)$","^openfoam([0-9]+)$"',
+        "DirPatterns-openfoam" : '"^OpenFOAM-(([0-9]\.([0-9]|x)|dev).*)$","^OpenFOAM-([0-9]+)$","^openfoam([0-9]+)$"',
         "DirPatterns-extend" : '"^foam-extend-([0-9]\.[0-9].*)$"',
         "DirPatterns-openfoamplus" : '"^OpenFOAM-((v[0-9]\.[0-9]\+|plus|v1[0-9]+(\+|)).*)$"',
         "Installation-openfoam" : "~/OpenFOAM",

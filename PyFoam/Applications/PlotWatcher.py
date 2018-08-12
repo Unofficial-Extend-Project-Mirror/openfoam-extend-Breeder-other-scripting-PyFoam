@@ -15,7 +15,7 @@ from .CursesApplicationWrapper import CWindowAnalyzed
 from os import path
 from optparse import OptionGroup
 
-from PyFoam.ThirdParty.six import PY3
+from PyFoam.ThirdParty.six import PY3,print_
 
 if PY3:
     long=int
@@ -35,6 +35,9 @@ Gets the name of a logfile which is assumed to be the output of a
 OpenFOAM-solver. Parses the logfile for information about the
 convergence of the solver and generates gnuplot-graphs. Watches the
 file until interrupted.
+
+If a log-file 'auto' is specified the utility looks for the newest file with
+the extension '.logfile' in the directory and uses that
         """
 
         CommonPlotOptions.__init__(self,persist=False)
@@ -120,14 +123,27 @@ file until interrupted.
     def run(self):
         self.processPlotOptions()
 
-        hereDir=path.dirname(self.parser.getArgs()[0])
+        hereDir=path.abspath(path.dirname(self.parser.getArgs()[0]))
         self.processPlotLineOptions(autoPath=hereDir)
         # self.addLocalConfig(hereDir)
 
         if len(self.parser.getArgs())==1:
+            import re,os
             logFile=self.parser.getArgs()[0]
+            if logFile=="auto" and not path.exists("auto"):
+                print_("Automatically detecting latest logfile")
+                logFile,logDate=None,None
+                for f in os.listdir(hereDir):
+                    if path.splitext(f)[1]==".logfile":
+                        if logDate is None:
+                            logFile,logDate=f,path.getmtime(f)
+                        else:
+                            if logDate<path.getmtime(f):
+                                logFile,logDate=f,path.getmtime(f)
+                if logFile is None:
+                    self.error("Could not find an appropriate logfile in",
+                               hereDir)
             if self.opts.autoAddRestart:
-                import re,os
                 pattern=re.compile(
                     path.basename(logFile)+"\.restart[0-9]+")
                 rest=[]

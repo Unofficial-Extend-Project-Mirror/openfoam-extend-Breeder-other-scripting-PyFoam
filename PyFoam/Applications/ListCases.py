@@ -173,6 +173,11 @@ etc). Currently doesn't honor the parallel data
                            "Select which cases should be shown. First the select-patterns are applied then the ignore patterns. If no select-patterns are specified then all cases are processed")
         self.parser.add_option_group(select)
 
+        select.add_option("--recursive",
+                          action="store_true",
+                          dest="recursive",
+                          default=False,
+                          help="Recursively search for case directories")
         select.add_option("--substring-select",
                           action="append",
                           dest="substringSelect",
@@ -253,15 +258,10 @@ etc). Currently doesn't honor the parallel data
         elif  self.opts.hostname:
             useSolverInData=True
 
-        for d in tqdm(dirs,
-                      unit="dirs",
-                      disable=not self.opts.progressBar or len(dirs)<2):
-            if not path.isdir(d):
-                self.warning("There is no directory",d,"here")
-                continue
-
+        def lookForCases(d):
             for n in tqdm(listdir(d),
                           unit="entries",
+                          leave=False,
                           desc=path.basename(path.abspath(d)),
                           disable=not self.opts.progressBar):
                 if not self.fnmatch(n):
@@ -444,8 +444,20 @@ etc). Currently doesn't honor the parallel data
                                     if self.opts.hostname:
                                         data["hostname"]="<no file>"
                             cData.append(data)
+                        elif self.opts.recursive:
+                            # print("Recurse",cName)
+                            lookForCases(cName)
                     except OSError:
                         print_(cName,"is unreadable")
+
+        for d in tqdm(dirs,
+                      unit="dirs",
+                      disable=not self.opts.progressBar or len(dirs)<2):
+            if not path.isdir(d):
+                self.warning("There is no directory",d,"here")
+                continue
+
+            lookForCases(d)
 
         if self.opts.progress:
             print_("Sorting data")

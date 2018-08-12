@@ -281,7 +281,13 @@ class Subcommand(object):
      invoked by a SubcommandOptionParser.
      Taken from https://gist.github.com/sampsyo/462717
      """
-     def __init__(self, name, parser=None, help='', aliases=(),nr=None,exactNr=None):
+     def __init__(self,
+                  name,
+                  parser=None,
+                  help='',
+                  aliases=(),
+                  nr=None,
+                  exactNr=None):
           """Creates a new subcommand. name is the primary way to invoke
           the subcommand; aliases are alternate names. parser is an
           OptionParser responsible for parsing the subcommand's options.

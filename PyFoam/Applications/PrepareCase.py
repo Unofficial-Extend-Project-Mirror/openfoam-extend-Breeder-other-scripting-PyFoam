@@ -587,6 +587,7 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                               verbose=not self.opts.noComplain):
                 self.addLocalConfig(cName)
             sol=SolutionDirectory(cName,archive=None,
+                                  parallel=True,
                                   paraviewLink=self.opts.paraviewFile)
         try:
             self.__lastMessage=None
@@ -765,6 +766,8 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
         :param numberOfProcessors: If set this overrides the value set in the
         command line"""
 
+        didDecompose=False
+
         if cName==None:
             cName=sol.name
 
@@ -878,6 +881,7 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
             sol.clear(processor=True,
                       pyfoam=True,
                       vtk=True,
+                      verbose=True,
                       removeAnalyzed=True,
                       keepParallel=False,
                       clearHistory=False,
@@ -1085,15 +1089,19 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 scriptName=path.join(sol.name,self.defaultDecomposeMesh)
             else:
                 scriptName=None
-            if scriptName:
+            if vals["numberOfProcessors"]>1 and scriptName:
                 self.info("Executing",scriptName,"for mesh decomposition")
                 if self.opts.verbose:
                     echo="Decompose Mesh: "
                 else:
                     echo=None
                 self.executeScript(scriptName,workdir=sol.name,echo=echo)
+                didDecompose=True
             else:
-                self.info("No script for mesh decomposition found")
+                if vals["numberOfProcessors"]>1:
+                    self.info("No script for mesh decomposition found")
+                else:
+                    self.info("No mesh decomposition necessary")
 
         if self.opts.doCopy:
             self.__writeToStateFile(sol,"Copying")
@@ -1120,15 +1128,19 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 scriptName=path.join(sol.name,self.defaultDecomposeFields)
             else:
                 scriptName=None
-            if scriptName:
+            if vals["numberOfProcessors"]>1 and scriptName:
                 self.info("Executing",scriptName,"for fields decomposition")
                 if self.opts.verbose:
                     echo="Decompose Fields: "
                 else:
                     echo=None
                 self.executeScript(scriptName,workdir=sol.name,echo=echo)
+                didDecompose=True
             else:
-                self.info("No script for fields decomposition found")
+                if vals["numberOfProcessors"]>1:
+                    self.info("No script for fields decomposition found")
+                else:
+                    self.info("No field decomposition necessary")
 
         if self.opts.doPostTemplates:
             self.__writeToStateFile(sol,"Post-templates")
@@ -1179,15 +1191,19 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                 scriptName=path.join(sol.name,self.defaultDecomposeCase)
             else:
                 scriptName=None
-            if scriptName:
+            if vals["numberOfProcessors"]>1 and scriptName:
                 self.info("Executing",scriptName,"for case decomposition")
                 if self.opts.verbose:
                     echo="Decompose Case: "
                 else:
                     echo=None
                 self.executeScript(scriptName,workdir=sol.name,echo=echo)
+                didDecompose=True
             else:
-                self.info("No script for case decomposition found")
+                if vals["numberOfProcessors"]>1:
+                    self.info("No script for case decomposition found")
+                else:
+                    self.info("No case decomposition necessary")
 
         if self.opts.doFinalTemplates:
             self.__writeToStateFile(sol,"Final templates")
@@ -1205,5 +1221,23 @@ The used parameters are written to a file 'PyFoamPrepareCaseParameters' and are 
                     self.cleanExtension(path.join(sol.name,d),e)
             self.info("")
 
+        sol.reread(force=True)
+        nProcs=len(sol.processorDirs())
+
+        if vals["numberOfProcessors"]>1 and not didDecompose:
+            if nProcs!=vals["numberOfProcessors"]:
+                f=self.error
+            else:
+                f=self.warning
+            f("Case should be decomposed to",vals["numberOfProcessors"],
+                       "cpus but no decompose script (",self.defaultDecomposeMesh,
+                       self.defaultDecomposeFields,self.defaultDecomposeCase,") found")
+        if vals["numberOfProcessors"]>1:
+            if nProcs!=vals["numberOfProcessors"]:
+                self.error("Requested",vals["numberOfProcessors"],"but",nProcs,
+                           "processor directories present")
+        else:
+            if nProcs>0:
+                self.error(nProcs,"processor directories present although no decomposition was requested")
         self.info("Case setup finished")
         self.__writeToStateFile(sol,"Finished OK")

@@ -1,4 +1,60 @@
 # -*- mode: org -*-
+* Version 0.6.10 - 2018-08-12
+  This is only a minor release with the main purpose to recognize
+  OpenFOAM 6 installations with their new numbering scheme
+** Incompatibilities
+*** =pyFoamPrepareCase.py= does not execute decomposition scripts for single processor cases
+    If =numberOfProcessors= is smaller than 2 then the decomposition
+    scripts are ignored. This may cause problems in the unlikely case
+    that the setup process relied on these scripts being always
+    executed
+** New feature/utilities
+*** Utility =pyFoamFunkyDoCalc.py= to compare data from =funkyDoCalc=
+    This utility compares data written by the =funkyDoCalc=-utility from
+    =swak4Foam= (this data is written with the =-writeDict=-switch
+
+    For details on the usage see the online help of the utility
+** Enhancements to Utilities
+*** Recursive searching for =pyFoamListCases.py=
+    The =--recursive=-option now recursively searches the specified
+    directories for cases. Without the option it behaves the way it
+    did before
+*** Look for =customRegexp= in parent directories
+    The plotting utilities now look for =customRegexp=-files in parent
+    directories of the case directory. This allows to use one file for
+    a number of cases. The file in the directory is still used. The
+    behavior can be switched off with the
+    =--no-parent-customRegexp=-option
+*** =pyFoamPrepareCase.py= does not execute decomposition scripts for single processor cases
+    If =numberOfProcessors= is smaller than 2 then the decomposition
+    scripts are ignored
+*** =pyFoamPrepareCase.py= checks for proper decomposition
+    At the end the utility now checks if the number of processor
+    directories is consistent with the specified =--number-of-processors=
+*** =pyFoamPlotWatcher.py= automatically uses newest logfile
+    If a logfile =auto= is specified then the utility uses the newest
+    file with the extension =.logfile= in the current directory.
+
+    Like any automatism this might produce unexpected results. So use
+    with care
+** Enhancements to the Library
+*** =FoamFileGenerator= handles =OrderedDict=
+    The class now preserves the order if an instance of =OrderedDict=
+    is found (instead of the usual behaviour of sorting the keys to
+    always get the same output)
+*** =#sinclude= handled as an alias to =#includeIfPresent=
+    OpenFOAM v1812 introduces this as an alias. It is now handled by
+    the parser similarly
+*** OpenFOAM 6 correctly recognized
+    With OpenFOAM 6 the naming scheme changed again. Instead of 6.0
+    (which PyFoam would have recognized) it is now plain 6. PyFoam now
+    recognizes both forms in the directory name
+** Bug fixes
+*** =pyFoamPrepareCase.py= did not remove =processor=-directories
+
+** Infrastructure
+*** Single digit version numbers supported
+    Now installations with names like =OpenFOAM-6= are recognized
 * Version 0.6.9 - 2018-02-25
 ** Major changes
 *** Add =curses=-output to Utilities

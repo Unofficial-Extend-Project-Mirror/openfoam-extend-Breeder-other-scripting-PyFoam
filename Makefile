@@ -13,7 +13,10 @@ docset: docu
 	doc2dash -I index.html -n PyFoam doc/_build/html
 
 sdist: docu ReleaseNotes.md ReleaseNotes.html
-	python setup.py sdist bdist_wheel
+	python setup.py sdist
+
+wheel: sdist
+	python setup.py bdist_wheel --universal
 
 rpm:
 	python setup.py bdist_rpm

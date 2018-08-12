@@ -72,6 +72,11 @@ class CommonPlotLines(object):
                        default=True,
                        dest="autoCustom",
                        help="Do not automatically load the expressions from the file customRegexp")
+        grp.add_option("--no-parent-customRegexp",
+                       action="store_false",
+                       default=True,
+                       dest="parentCustom",
+                       help="Do not look for additional customRegexp in upward directories")
 
         grp.add_option("--dump-custom-regegexp",
                        action="store_true",
@@ -130,13 +135,19 @@ class CommonPlotLines(object):
 
 
         if autoPath!=None and  self.opts.autoCustom:
-            dirs=[autoPath]
+            ap=path.abspath(autoPath)
+            dirs=[ap]
+            if self.opts.parentCustom:
+                while path.dirname(ap)!=ap:
+                    ap=path.dirname(ap)
+                    dirs=[ap]+dirs
             # add additional paths to the current directory
             if path.realpath(autoPath)!=path.os.getcwd():
                 common=path.commonprefix([path.realpath(autoPath),path.os.getcwd()])
                 if common==path.os.getcwd():
                     parts=path.split(path.relpath(autoPath,path.os.getcwd()))
                     dirs=reversed([path.join(*([path.os.getcwd()]+list(parts[:i+1]))) for i in range(len(parts))])
+
             for d in dirs:
                 autoFile=path.join(d,"customRegexp")
                 if path.exists(autoFile):
